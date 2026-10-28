@@ -1360,7 +1360,7 @@ internal static partial class Program
     private sealed record PlcRecoveryCliResult(string Did, string Stage, int? StatusCode, string? RecoveryAction);
 
     /// <summary>Contains one command understood by the shared local and remote administration dispatchers.</summary>
-    private sealed record AdministrationCommand(
+    internal sealed record AdministrationCommand(
         string Method,
         string OperationId = "",
         string Reason = "",
@@ -1379,10 +1379,10 @@ internal static partial class Program
         PolicyCommand? Moderation = null);
 
     /// <summary>Separates a bounded administrative response from its presentation.</summary>
-    private sealed record AdministrationReply(string Body, HttpStatusCode StatusCode);
+    internal sealed record AdministrationReply(string Body, HttpStatusCode StatusCode);
 
     /// <summary>Sends commands through one authenticated administration connection.</summary>
-    private delegate Task<AdministrationReply> AdministrationSender(AdministrationCommand command, CancellationToken token);
+    internal delegate Task<AdministrationReply> AdministrationSender(AdministrationCommand command, CancellationToken token);
 
     /// <summary>Coordinates a bounded workflow without conflating administrator and labeler-account credentials.</summary>
     private delegate Task<int> AdministrationWorkflow(AdministrationSender sender, CancellationToken token);

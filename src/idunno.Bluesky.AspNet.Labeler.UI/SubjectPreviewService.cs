@@ -206,7 +206,7 @@ internal sealed partial class SubjectPreviewService(
                 CreatedAt: post && DateTimeOffset.TryParse(Text(value, "createdAt"), CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTimeOffset created) ? created : null,
                 Cid: record.Result.Cid.ToString(),
                 DifferentVersion: reportedCid is not null && reportedCid != record.Result.Cid.ToString(),
-                Images: photos.ToArray(),
+                Images: [.. photos],
                 MediaNotice: embed is not null && Text(embed, "$type") is not ("app.bsky.embed.images" or "app.bsky.embed.gallery") && videoToken is null
                     ? "Additional media, quoted posts or external cards are not expanded here. Open the post to inspect its complete content."
                     : null,

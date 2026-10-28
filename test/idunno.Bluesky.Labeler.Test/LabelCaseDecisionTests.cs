@@ -395,7 +395,7 @@ public class LabelCaseDecisionTests
             actions: [new(LabelOperationKind.Issue, "spam"), new(LabelOperationKind.Negate, "spam")]));
         Assert.Throws<ArgumentOutOfRangeException>(() => new LabelCaseDecision(
             operationId: "decision", caseId: 1, expectedRevision: 1, policyVersion: "v1", reason: "Review.",
-            actions: Enumerable.Range(0, 17).Select(index => new LabelCaseLabelAction(LabelOperationKind.Issue, "value-" + index)).ToArray()));
+            actions: [.. Enumerable.Range(0, 17).Select(index => new LabelCaseLabelAction(LabelOperationKind.Issue, "value-" + index))]));
     }
 
     [Fact]
@@ -410,7 +410,7 @@ public class LabelCaseDecisionTests
         Assert.Throws<ArgumentOutOfRangeException>(() => new LabelCaseDecision(
             operationId: "review", caseId: 1, expectedRevision: 1, policyVersion: "v1",
             reason: "Explicit review.", actions: [],
-            appealIds: Enumerable.Range(1, 17).Select(id => (long)id).ToArray(), appealOutcome: LabelAppealStatus.Upheld));
+            appealIds: [.. Enumerable.Range(1, 17).Select(id => (long)id)], appealOutcome: LabelAppealStatus.Upheld));
     }
 
     [Theory]
@@ -456,7 +456,7 @@ public class LabelCaseDecisionTests
         LabelSigningKey key,
         HttpClient http,
         TestLabelIssuancePolicyProvider? policy = null) => new(
-            issuer: StoreFixture.Issuer,
+            issuer: StoreFixture.s_issuer,
             signingKey: key,
             store: fixture.Store,
             authorizer: new LabelTeamAuthorizer((ILabelAdministrationStore)fixture.Store, caller),

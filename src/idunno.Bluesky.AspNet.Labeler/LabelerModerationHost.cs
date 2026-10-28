@@ -38,7 +38,11 @@ internal sealed partial class LabelerModerationHost(
     IMeterFactory meterFactory) : IHealthCheck, IDisposable
 {
     internal const string MeterName = "idunno.Bluesky.AspNet.Labeler.Moderation";
+#if NET9_0_OR_GREATER
+    private readonly Lock _admissionLock = new();
+#else
     private readonly object _admissionLock = new();
+#endif
     private long _windowStarted = clock.GetTimestamp();
     private int _windowCount;
     private int _active;
@@ -191,15 +195,17 @@ internal sealed partial class LabelerModerationHost(
                 return HealthCheckResult.Unhealthy("Moderation policy initialization is missing or inconsistent across hosts.");
             }
 
-            LabelServiceResult<LabelPolicyState> verified = await policies.GetVerifiedStateAsync(cancellationToken: linked.Token).ConfigureAwait(false);
-            return verified.Succeeded
+            DateTimeOffset now = gate.DatabaseTime;
+            return gate.Phase == LabelPolicyPhase.VerifiedActive &&
+                gate.VerifiedUntil is { } validUntil && now < validUntil &&
+                now >= validUntil - gate.VerificationFreshness
                 ? HealthCheckResult.Healthy()
                 : HealthCheckResult.Unhealthy("Moderation has no fresh independently verified declaration.");
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             Rejected(logger, "health-deadline");
-            return HealthCheckResult.Unhealthy("Moderation declaration verification exceeded its deadline.");
+            return HealthCheckResult.Unhealthy("Reading moderation policy health exceeded its deadline.");
         }
         catch (Exception exception) when (exception is DbException or InvalidDataException)
         {

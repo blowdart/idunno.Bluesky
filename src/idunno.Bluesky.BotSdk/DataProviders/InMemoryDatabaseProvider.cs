@@ -31,8 +31,11 @@ internal sealed class InMemoryDatabaseProvider(
         TimeSpan.FromDays(1)
     ];
 
+#if NET9_0_OR_GREATER
+    private readonly Lock _gate = new();
+#else
     private readonly object _gate = new();
-    private readonly Guid _owner = Guid.NewGuid();
+#endif
     private readonly Dictionary<ActionIdentity, WorkState> _work = [];
     private readonly List<RateReservation> _rateReservations = [];
     private readonly List<SkippedData> _skippedData = [];
@@ -47,7 +50,7 @@ internal sealed class InMemoryDatabaseProvider(
     private bool _initialized;
 
     /// <inheritdoc/>
-    public Guid Owner => _owner;
+    public Guid Owner { get; } = Guid.NewGuid();
 
     /// <inheritdoc/>
     public bool IsDatabaseException(Exception exception)
@@ -90,13 +93,13 @@ internal sealed class InMemoryDatabaseProvider(
         lock (_gate)
         {
             DateTimeOffset now = timeProvider.GetUtcNow();
-            if (_leaseOwner is not null && _leaseOwner != _owner && _leaseUntil > now)
+            if (_leaseOwner is not null && _leaseOwner != Owner && _leaseUntil > now)
             {
                 return Task.FromResult<DateTimeOffset?>(null);
             }
 
-            _readyAt = _leaseOwner == _owner && _leaseUntil > now ? _readyAt : now + s_readyDelay;
-            _leaseOwner = _owner;
+            _readyAt = _leaseOwner == Owner && _leaseUntil > now ? _readyAt : now + s_readyDelay;
+            _leaseOwner = Owner;
             _leaseUntil = now + s_leaseLength;
             return Task.FromResult<DateTimeOffset?>(_readyAt);
         }
@@ -108,7 +111,7 @@ internal sealed class InMemoryDatabaseProvider(
         cancellationToken.ThrowIfCancellationRequested();
         lock (_gate)
         {
-            if (_leaseOwner == _owner)
+            if (_leaseOwner == Owner)
             {
                 _leaseUntil = timeProvider.GetUtcNow();
             }
@@ -197,7 +200,7 @@ internal sealed class InMemoryDatabaseProvider(
             }
 
             List<(ActionIdentity Identity, WorkState Work)> newWork = [];
-            HashSet<ActionIdentity> identities = new(_work.Keys);
+            HashSet<ActionIdentity> identities = [.. _work.Keys];
             int inserted = 0;
             foreach (BotAction action in actions)
             {
@@ -634,7 +637,7 @@ internal sealed class InMemoryDatabaseProvider(
     {
         DateTimeOffset now = timeProvider.GetUtcNow();
         if (!_initialized ||
-            _leaseOwner != _owner ||
+            _leaseOwner != Owner ||
             _leaseUntil <= now + s_leaseReserve ||
             _readyAt > now)
         {

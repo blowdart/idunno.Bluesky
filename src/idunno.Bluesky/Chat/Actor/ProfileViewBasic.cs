@@ -86,11 +86,9 @@ public sealed record ProfileViewBasic : View
     /// </remarks>
     public IReadOnlyCollection<Label> Labels
     {
-        get => _labels;
-        init => _labels = value is null ? [] : ChatCollection.Copy(value);
-    }
-
-    private readonly IReadOnlyCollection<Label> _labels = [];
+        get;
+        init => field = value is null ? [] : ChatCollection.Copy(value);
+    } = [];
 
     /// <summary>
     /// Gets the date and time the actor was created at, if any

@@ -544,18 +544,18 @@ public class BuilderTests
 
         HttpClient httpClient = agent.HttpClient;
 
-        Assert.Single(httpClient.DefaultRequestHeaders.UserAgent);
+        ProductInfoHeaderValue item = Assert.Single(httpClient.DefaultRequestHeaders.UserAgent);
 
-        ProductInfoHeaderValue userAgent = httpClient.DefaultRequestHeaders.UserAgent.First();
+        ProductInfoHeaderValue userAgent = item;
         Assert.NotNull(userAgent);
         Assert.NotNull(userAgent.Product);
         Assert.Equal("testclient", userAgent.Product.Name);
 
         HttpClient directoryHttpClient = agent._directoryAgent.HttpClient;
 
-        Assert.Single(directoryHttpClient.DefaultRequestHeaders.UserAgent);
+        ProductInfoHeaderValue item_2 = Assert.Single(directoryHttpClient.DefaultRequestHeaders.UserAgent);
 
-        ProductInfoHeaderValue directoryUserAgent = directoryHttpClient.DefaultRequestHeaders.UserAgent.First();
+        ProductInfoHeaderValue directoryUserAgent = item_2;
         Assert.NotNull(directoryUserAgent);
         Assert.NotNull(directoryUserAgent.Product);
         Assert.Equal("testclient", directoryUserAgent.Product.Name);
@@ -577,18 +577,18 @@ public class BuilderTests
 
         HttpClient httpClient = agent.HttpClient;
 
-        Assert.Single(httpClient.DefaultRequestHeaders.UserAgent);
+        ProductInfoHeaderValue item = Assert.Single(httpClient.DefaultRequestHeaders.UserAgent);
 
-        ProductInfoHeaderValue userAgent = httpClient.DefaultRequestHeaders.UserAgent.First();
+        ProductInfoHeaderValue userAgent = item;
         Assert.NotNull(userAgent);
         Assert.NotNull(userAgent.Product);
         Assert.Equal("testclient", userAgent.Product.Name);
 
         HttpClient directoryHttpClient = agent._directoryAgent.HttpClient;
 
-        Assert.Single(directoryHttpClient.DefaultRequestHeaders.UserAgent);
+        ProductInfoHeaderValue item_2 = Assert.Single(directoryHttpClient.DefaultRequestHeaders.UserAgent);
 
-        ProductInfoHeaderValue directoryUserAgent = directoryHttpClient.DefaultRequestHeaders.UserAgent.First();
+        ProductInfoHeaderValue directoryUserAgent = item_2;
         Assert.NotNull(directoryUserAgent);
         Assert.NotNull(directoryUserAgent.Product);
         Assert.Equal("testclient", directoryUserAgent.Product.Name);

@@ -710,9 +710,10 @@ public class DraftTests
     {
         DraftPost draftPost = new(
             text: "Text",
-            embedVideo: new DraftEmbedVideo(new DraftEmbedLocalRef("video:abc")));
-
-        draftPost.Text = string.Empty;
+            embedVideo: new DraftEmbedVideo(new DraftEmbedLocalRef("video:abc")))
+        {
+            Text = string.Empty
+        };
 
         Assert.Equal(string.Empty, draftPost.Text);
     }

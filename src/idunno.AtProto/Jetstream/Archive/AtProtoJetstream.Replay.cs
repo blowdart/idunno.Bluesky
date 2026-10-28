@@ -292,7 +292,7 @@ public partial class AtProtoJetstream
                     lock (terminalLock)
                     {
                         // A queued error parser can identify the initiating failure after the close starts draining.
-                        var cause = terminalCause ?? throw new InvalidOperationException("No terminal cause was recorded.");
+                        (string Reason, Exception Exception, int Priority) cause = terminalCause ?? throw new InvalidOperationException("No terminal cause was recorded.");
                         Complete(completed.IsFaulted ? "Parser drain failure" : cause.Reason,
                             completed.Exception?.GetBaseException() ?? cause.Exception);
                     }

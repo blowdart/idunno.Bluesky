@@ -35,12 +35,12 @@ internal sealed partial class AdministrationDispatcher
 
         if (command.Target.Length == 0)
         {
-            return new(true, Moderation: new(LabelChoices: definition.Issuance.DeclaredValues
+            return new(true, Moderation: new(LabelChoices: [.. definition.Issuance.DeclaredValues
                 .Order(StringComparer.Ordinal).Select(value => new ModerationLabelChoiceView(
                     Value: value,
                     Applied: false,
                     Sequence: 0,
-                    OtherVersion: false)).ToArray()));
+                    OtherVersion: false))]));
         }
 
         if (command.Target.Length > 2048 || command.Cid is { Length: > 128 } ||
@@ -93,7 +93,7 @@ internal sealed partial class AdministrationDispatcher
             .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).Chunk(400))
         {
             IReadOnlyList<LabelServiceResult<LabelDecisionSnapshot>> snapshots = await store.ReadDecisionBatchAsync(
-                values.Select(value => (target, value)).ToArray(), token).ConfigureAwait(false);
+                [.. values.Select(value => (target, value))], token).ConfigureAwait(false);
             for (int index = 0; index < values.Length; index++)
             {
                 LabelServiceResult<LabelDecisionSnapshot> snapshot = snapshots[index];

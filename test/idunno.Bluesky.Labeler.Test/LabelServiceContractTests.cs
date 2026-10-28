@@ -51,15 +51,15 @@ public class LabelServiceContractTests
     [InlineData("audit")]
     public void RejectsNullRequiredReceiptInputs(string parameterName)
     {
-        LabelTarget target = LabelTarget.Account(StoreFixture.Issuer);
+        LabelTarget target = LabelTarget.Account(StoreFixture.s_issuer);
         LabelOperationRequest request = LabelOperationRequest.Issue(
             operationId: "contract",
             target: target,
             value: "spam",
-            context: new(StoreFixture.Issuer, "contract validation"));
+            context: new(StoreFixture.s_issuer, "contract validation"));
         LabelStoreState state = new(
             StreamId: Guid.Empty,
-            Issuer: StoreFixture.Issuer.ToString(),
+            Issuer: StoreFixture.s_issuer.ToString(),
             Revision: 0,
             IssuedThrough: 0,
             PublishedThrough: 0,

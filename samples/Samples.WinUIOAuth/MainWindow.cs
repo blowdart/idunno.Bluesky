@@ -14,6 +14,7 @@ using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Imaging;
+
 using Windows.System;
 
 namespace Samples.WinUIOAuth;
@@ -206,7 +207,7 @@ internal sealed class MainWindow : Window
                 return;
             }
 
-            (Uri callback, OAuthLoginState pendingState) = await _callback.Task.WaitAsync(OAuthCallbackRouter.LoginLifetime, cancellationToken);
+            (Uri callback, OAuthLoginState pendingState) = await _callback.Task.WaitAsync(OAuthCallbackRouter.s_loginLifetime, cancellationToken);
             bool authenticated = await Task.Run(() => agent.ProcessOAuth2LoginResponse(
                 agent.CreateOAuthClient(pendingState), callback.OriginalString, cancellationToken), cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();

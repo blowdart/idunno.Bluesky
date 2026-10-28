@@ -31,19 +31,19 @@ public class LabelAppealStoreTests
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         DateTimeOffset time = policy.DatabaseTime.AddHours(-4);
         SignedLabelSnapshot original = new(key.CreateLabel(
-            source: StoreFixture.Issuer, uri: s_account.Subject, value: "spam", creationTimestamp: time));
+            source: StoreFixture.s_issuer, uri: s_account.Subject, value: "spam", creationTimestamp: time));
         await fixture.Store.AppendAsync(
             operationId: "manual-history",
             labels:
             [
                 original,
-                new(key.CreateLabel(source: StoreFixture.Issuer, uri: s_account.Subject, value: "scam", creationTimestamp: time)),
-                new(key.CreateNegation(source: StoreFixture.Issuer, uri: s_account.Subject, value: "scam", creationTimestamp: time.AddHours(1))),
+                new(key.CreateLabel(source: StoreFixture.s_issuer, uri: s_account.Subject, value: "scam", creationTimestamp: time)),
+                new(key.CreateNegation(source: StoreFixture.s_issuer, uri: s_account.Subject, value: "scam", creationTimestamp: time.AddHours(1))),
                 new(key.CreateLabel(
-                    source: StoreFixture.Issuer, uri: s_account.Subject, value: "expired",
+                    source: StoreFixture.s_issuer, uri: s_account.Subject, value: "expired",
                     creationTimestamp: time, expiresAt: time.AddHours(1))),
-                new(key.CreateLabel(source: StoreFixture.Issuer, uri: s_account.Subject, value: "spam", creationTimestamp: time.AddHours(-1))),
-                new(key.CreateLabel(source: StoreFixture.Issuer, uri: "did:plc:other", value: "spam", creationTimestamp: time))
+                new(key.CreateLabel(source: StoreFixture.s_issuer, uri: s_account.Subject, value: "spam", creationTimestamp: time.AddHours(-1))),
+                new(key.CreateLabel(source: StoreFixture.s_issuer, uri: "did:plc:other", value: "spam", creationTimestamp: time))
             ],
             cancellationToken: token);
         LabelModerationReport first = await SubmitAsync(fixture.Store, policy, "first", s_account);
@@ -56,7 +56,7 @@ public class LabelAppealStoreTests
         Assert.Equal(LabelAppealStatus.Pending, appeal.Status);
         Assert.Equal(first.CaseId, appeal.CaseId);
         Assert.Equal(second.CaseId, appeal.CaseId);
-        Assert.Equal(new[] { first.Id, second.Id },
+        Assert.Equal<long>([first.Id, second.Id],
             Success(await restarted.GetAppealReportsAsync(caller, appeal.Id, cancellationToken: token)));
         Assert.Single(Success(await restarted.GetAppealReportsAsync(
             caller: caller, appealId: appeal.Id, afterReportId: first.Id, limit: 1, cancellationToken: token)));
@@ -81,9 +81,9 @@ public class LabelAppealStoreTests
             operationId: "manual-history",
             labels:
             [
-                new(key.CreateLabel(source: StoreFixture.Issuer, uri: uri.ToString(), value: "spam", creationTimestamp: created, cid: oldCid)),
-                new(key.CreateLabel(source: StoreFixture.Issuer, uri: uri.ToString(), value: "spam", creationTimestamp: created.AddMinutes(1), cid: newCid)),
-                new(key.CreateLabel(source: StoreFixture.Issuer, uri: s_account.Subject, value: "spam", creationTimestamp: created))
+                new(key.CreateLabel(source: StoreFixture.s_issuer, uri: uri.ToString(), value: "spam", creationTimestamp: created, cid: oldCid)),
+                new(key.CreateLabel(source: StoreFixture.s_issuer, uri: uri.ToString(), value: "spam", creationTimestamp: created.AddMinutes(1), cid: newCid)),
+                new(key.CreateLabel(source: StoreFixture.s_issuer, uri: s_account.Subject, value: "spam", creationTimestamp: created))
             ],
             cancellationToken: token);
         await SubmitAsync(fixture.Store, policy, "old", LabelReportSubject.Record(uri, oldCid));
@@ -149,7 +149,7 @@ public class LabelAppealStoreTests
         LabelCaseDecisionReceipt replay = Success(await service.ExecuteCaseDecisionAsync(caller, decision, token));
         Assert.Equal(receipt.CaseEvent.Sequence, replay.CaseEvent.Sequence);
         Assert.Equal(outcome, replay.Request.AppealOutcome);
-        Assert.Equal(new[] { appeal.Id }, replay.Request.AppealIds);
+        Assert.Equal<long>([appeal.Id], replay.Request.AppealIds);
         Assert.Equal(receipt.Labels.Select(label => label.Label!.SignedLabel.GetJsonBytes()),
             replay.Labels.Select(label => label.Label!.SignedLabel.GetJsonBytes()));
     }
@@ -401,14 +401,14 @@ public class LabelAppealStoreTests
         DateTimeOffset created = policy.DatabaseTime.AddHours(-1);
         await fixture.Store.AppendAsync(
             "original",
-            [new(key.CreateLabel(source: StoreFixture.Issuer, uri: uri.ToString(), value: "spam", creationTimestamp: created, cid: originalCid))],
+            [new(key.CreateLabel(source: StoreFixture.s_issuer, uri: uri.ToString(), value: "spam", creationTimestamp: created, cid: originalCid))],
             cancellationToken: token);
         LabelModerationReport report = await SubmitAsync(fixture.Store, policy, "appeal", subject);
         LabelAppeal appeal = Assert.Single(Success(await ((ILabelAppealStore)fixture.Store).GetAppealsAsync(caller, cancellationToken: token)));
         await fixture.Store.AppendAsync(
             "later-version",
             [new(key.CreateLabel(
-                source: StoreFixture.Issuer, uri: uri.ToString(), value: "spam", creationTimestamp: created.AddMinutes(1),
+                source: StoreFixture.s_issuer, uri: uri.ToString(), value: "spam", creationTimestamp: created.AddMinutes(1),
                 cid: new("bafyreif2pall7yry6b3sh5rttgeczzmhnnemy6rtbwwsvxeceebzxtpfwu")))],
             cancellationToken: token);
         ILabelModerationStore cases = (ILabelModerationStore)fixture.Store;
@@ -504,15 +504,15 @@ public class LabelAppealStoreTests
         CancellationToken token = TestContext.Current.CancellationToken;
         (LabelAdministrationCaller caller, LabelPolicyState policy) = await ActivateAsync(fixture);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
-        SignedLabelSnapshot[] history = Enumerable.Range(0, 1001).Select(index => new SignedLabelSnapshot(
+        SignedLabelSnapshot[] history = [.. Enumerable.Range(0, 1001).Select(index => new SignedLabelSnapshot(
             key.CreateLabel(
-                source: StoreFixture.Issuer,
+                source: StoreFixture.s_issuer,
                 uri: s_account.Subject,
                 value: "historical-" + index,
-                creationTimestamp: policy.DatabaseTime.AddHours(-1)))).ToArray();
+                creationTimestamp: policy.DatabaseTime.AddHours(-1))))];
         await fixture.Store.AppendAsync(
             operationId: "history-first",
-            labels: history.Take(1000).ToArray(),
+            labels: [.. history.Take(1000)],
             cancellationToken: token);
         LabelModerationReport accepted = await SubmitAsync(fixture.Store, policy, "at-capture-limit", s_account);
         LabelAppeal original = Assert.Single(Success(await ((ILabelAppealStore)fixture.Store).GetAppealsAsync(caller, cancellationToken: token)));
@@ -566,7 +566,7 @@ public class LabelAppealStoreTests
         LabelPolicyState policy,
         LabelSigningKey key,
         HttpClient http) => new(
-            issuer: StoreFixture.Issuer,
+            issuer: StoreFixture.s_issuer,
             signingKey: key,
             store: fixture.Store,
             authorizer: new LabelTeamAuthorizer((ILabelAdministrationStore)fixture.Store, caller),

@@ -102,9 +102,9 @@ public sealed record MessageView : MessageViewBase
     [NotNull]
     public IReadOnlyCollection<Facet> Facets
     {
-        get => _facets;
-        init => _facets = value is null ? [] : ChatCollection.Copy(value);
-    }
+        get;
+        init => field = value is null ? [] : ChatCollection.Copy(value);
+    } = null!;
 
     /// <summary>
     /// Gets a view over the embedded record, if any.
@@ -137,9 +137,9 @@ public sealed record MessageView : MessageViewBase
     [NotNull]
     public IReadOnlyCollection<ReactionView> Reactions
     {
-        get => _reactions;
-        init => _reactions = value is null ? [] : ChatCollection.Copy(value);
-    }
+        get;
+        init => field = value is null ? [] : ChatCollection.Copy(value);
+    } = null!;
 
     /// <summary>
     /// Gets a view over the message author.
@@ -147,8 +147,4 @@ public sealed record MessageView : MessageViewBase
     [JsonInclude]
     [JsonRequired]
     public MessageViewSender Sender { get; init; }
-
-    private readonly IReadOnlyCollection<Facet> _facets = null!;
-
-    private readonly IReadOnlyCollection<ReactionView> _reactions = null!;
 }

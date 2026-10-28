@@ -1134,8 +1134,8 @@ public class ServerTests
         Assert.False(response.Result.PhoneVerificationRequired);
         Assert.Equal(10000000, response.Result.BlobUploadLimit);
 
-        Assert.Single(response.Result.AvailableUserDomains);
-        Assert.Equal(response.Result.AvailableUserDomains[0], domainName);
+        string item = Assert.Single(response.Result.AvailableUserDomains);
+        Assert.Equal(item, domainName);
 
         Assert.NotNull(response.Result.Links);
         Assert.Equal(new Uri($"https://{domainName}/privacy"), response.Result.Links.PrivacyPolicy);
@@ -1185,8 +1185,8 @@ public class ServerTests
             Assert.False(response.Result.PhoneVerificationRequired);
             Assert.Equal(10000000, response.Result.BlobUploadLimit);
 
-            Assert.Single(response.Result.AvailableUserDomains);
-            Assert.Equal(response.Result.AvailableUserDomains[0], domainName);
+            string item = Assert.Single(response.Result.AvailableUserDomains);
+            Assert.Equal(item, domainName);
 
             Assert.NotNull(response.Result.Links);
             Assert.Equal(new Uri($"https://{domainName}/privacy"), response.Result.Links.PrivacyPolicy);

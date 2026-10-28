@@ -95,11 +95,10 @@ internal sealed partial class SubjectPreviewService
             }
 
             DateTimeOffset now = clock.GetUtcNow();
-            Label[] active = labels
+            Label[] active = [.. labels
                 .GroupBy(label => (label.Uri, label.Cid, label.Value))
                 .Select(group => group.OrderByDescending(label => label.CreationTimestamp).ThenByDescending(label => label.IsNegationLabel).First())
-                .Where(label => !label.IsNegationLabel && (label.ExpiresAt is null || label.ExpiresAt > now))
-                .ToArray();
+                .Where(label => !label.IsNegationLabel && (label.ExpiresAt is null || label.ExpiresAt > now))];
             foreach (Label label in active)
             {
                 if (MediaWarning(label.Value) is { } warning)

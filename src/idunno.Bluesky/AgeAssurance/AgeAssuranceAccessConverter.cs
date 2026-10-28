@@ -34,13 +34,7 @@ internal sealed class AgeAssuranceAccessConverter : JsonConverter<AgeAssuranceAc
             AgeAssuranceAccess.Safe => "safe",
             AgeAssuranceAccess.Full => "full",
             _ => null
-        };
-
-        if (serialized is null)
-        {
-            throw new JsonException($"The {nameof(AgeAssuranceAccess)} value '{value}' is not supported.");
-        }
-
+        } ?? throw new JsonException($"The {nameof(AgeAssuranceAccess)} value '{value}' is not supported.");
         writer.WriteStringValue(serialized);
     }
 }

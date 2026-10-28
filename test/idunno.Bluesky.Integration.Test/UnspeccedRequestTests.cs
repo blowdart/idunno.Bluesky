@@ -111,7 +111,7 @@ public class UnspeccedRequestTests
         BlueskyAgent agent = CreateAgent(testServer);
 
         AtProtoHttpResult<ICollection<Suggestion>> result = await agent.GetTaggedSuggestions(
-            new List<KeyValuePair<string, object>> { new(key, value) },
+            [new(key, value)],
             cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);
@@ -133,7 +133,7 @@ public class UnspeccedRequestTests
         using CultureScope cultureScope = new("de-DE");
 
         AtProtoHttpResult<ICollection<Suggestion>> result = await agent.GetTaggedSuggestions(
-            new List<KeyValuePair<string, object>> { new("score", 3.5d) },
+            [new("score", 3.5d)],
             cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);

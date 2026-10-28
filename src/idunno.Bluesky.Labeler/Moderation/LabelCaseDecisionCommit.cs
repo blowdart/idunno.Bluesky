@@ -30,7 +30,7 @@ public sealed class LabelCaseDecisionCommit
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(preparedActions);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(expectedPolicyRevision);
-        LabelDecisionCommit[] copy = preparedActions.ToArray();
+        LabelDecisionCommit[] copy = [.. preparedActions];
         if (copy.Length != request.Actions.Count || copy.Any(action => action is null))
         {
             throw new ArgumentException("Every requested action requires exactly one prepared action.", nameof(preparedActions));

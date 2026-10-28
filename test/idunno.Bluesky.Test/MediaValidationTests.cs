@@ -14,27 +14,58 @@ namespace idunno.Bluesky.Test;
 [ExcludeFromCodeCoverage]
 public class MediaValidationTests
 {
-    public static IEnumerable<TheoryDataRow<IValidatableObject>> ValidMedia =>
+    public static TheoryData<Type> ValidMedia =>
     [
-        new(new AspectRatio(1, 1)),
-        new(new EmbeddedImage(CreateBlob("image/jpeg", 2_000_000), "")),
-        new(new GalleryImage(CreateBlob("image/png", 2_000_000), "", new AspectRatio(1, 1))),
-        new(new Caption("en", CreateBlob("text/vtt", 20_000))),
-        new(new EmbeddedVideo(CreateBlob("video/mp4", 300_000_000), presentation: "future-hint")),
-        new(new EmbeddedImages([new EmbeddedImage(CreateBlob("image/jpeg", 1), new string('x', 10_000))])),
-        new(new EmbeddedImages()),
-        new(new EmbeddedGallery()),
-        new(new EmbeddedExternal("https://example.com", "", "")),
-        new(new EmbeddedExternalMedia(new Embed.External.Properties("https://example.com", "", ""))),
-        new(new Embed.External.Properties("https://example.com", "", "", CreateBlob("image/jpeg", 1_000_000))),
-        new(new EmbeddedRecord(CreateReference())),
-        new(new EmbeddedRecordWithMedia(new EmbeddedRecord(CreateReference()), new EmbeddedImages())),
-        new(new Profile("name", "description", "pronouns", avatar: CreateBlob("image/jpeg", 1_000_000)))
+        typeof(AspectRatio),
+        typeof(EmbeddedImage),
+        typeof(GalleryImage),
+        typeof(Caption),
+        typeof(EmbeddedVideo),
+        typeof(EmbeddedImages),
+        typeof(EmbeddedGallery),
+        typeof(EmbeddedExternal),
+        typeof(EmbeddedExternalMedia),
+        typeof(Embed.External.Properties),
+        typeof(EmbeddedRecord),
+        typeof(EmbeddedRecordWithMedia),
+        typeof(Profile)
     ];
 
     [Theory]
     [MemberData(nameof(ValidMedia))]
-    public void ValidModelsReturnNoFailuresAndRejectNullContexts(IValidatableObject value)
+    public void ValidModelsReturnNoFailuresAndRejectNullContexts(Type type)
+    {
+        IValidatableObject value = type switch
+        {
+            Type t when t == typeof(AspectRatio) => new AspectRatio(1, 1),
+            Type t when t == typeof(EmbeddedImage) => new EmbeddedImage(CreateBlob("image/jpeg", 2_000_000), ""),
+            Type t when t == typeof(GalleryImage) => new GalleryImage(CreateBlob("image/png", 2_000_000), "", new AspectRatio(1, 1)),
+            Type t when t == typeof(Caption) => new Caption("en", CreateBlob("text/vtt", 20_000)),
+            Type t when t == typeof(EmbeddedVideo) => new EmbeddedVideo(CreateBlob("video/mp4", 300_000_000), presentation: "future-hint"),
+            Type t when t == typeof(EmbeddedImages) => new EmbeddedImages([new EmbeddedImage(CreateBlob("image/jpeg", 1), new string('x', 10_000))]),
+            Type t when t == typeof(EmbeddedGallery) => new EmbeddedGallery(),
+            Type t when t == typeof(EmbeddedExternal) => new EmbeddedExternal("https://example.com", "", ""),
+            Type t when t == typeof(EmbeddedExternalMedia) => new EmbeddedExternalMedia(new Embed.External.Properties("https://example.com", "", "")),
+            Type t when t == typeof(Embed.External.Properties) => new Embed.External.Properties("https://example.com", "", "", CreateBlob("image/jpeg", 1_000_000)),
+            Type t when t == typeof(EmbeddedRecord) => new EmbeddedRecord(CreateReference()),
+            Type t when t == typeof(EmbeddedRecordWithMedia) => new EmbeddedRecordWithMedia(new EmbeddedRecord(CreateReference()), new EmbeddedImages()),
+            Type t when t == typeof(Profile) => new Profile(
+                displayName: "name",
+                description: "description",
+                pronouns: "pronouns",
+                avatar: CreateBlob("image/jpeg", 1_000_000)),
+            _ => throw new ArgumentOutOfRangeException(nameof(type))
+        };
+        AssertValidModel(value);
+    }
+
+    [Fact]
+    public void EmptyImagesReturnNoFailuresAndRejectNullContexts() => AssertValidModel(new EmbeddedImages());
+
+    /// <summary>
+    /// Checks both validation entry points without serializing the model as theory data.
+    /// </summary>
+    private static void AssertValidModel(IValidatableObject value)
     {
         Assert.Empty(value.Validate(new ValidationContext(value)));
         Assert.Throws<ArgumentNullException>(() => value.Validate(null!));
@@ -87,7 +118,7 @@ public class MediaValidationTests
     public void VideoValidationChecksCaptionCount(int count, bool valid)
     {
         Caption caption = new("en", CreateBlob("text/vtt", 1024));
-        EmbeddedVideo video = new(CreateBlob("video/mp4", 1024), Enumerable.Repeat(caption, count).ToArray());
+        EmbeddedVideo video = new(CreateBlob("video/mp4", 1024), [.. Enumerable.Repeat(caption, count)]);
 
         Assert.Equal(valid, !video.Validate(new ValidationContext(video)).Any());
     }

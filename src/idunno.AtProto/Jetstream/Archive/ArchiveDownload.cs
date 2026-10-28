@@ -165,14 +165,8 @@ internal sealed class ArchiveDownload(
             if (response.StatusCode == HttpStatusCode.TooManyRequests)
             {
                 metrics.ArchiveRateLimits.Add(1, new KeyValuePair<string, object?>("server", _serverTag));
-                TimeSpan? retry = GetRetryAfter(response.HttpResponseHeaders, _timeProvider);
-
-                if (retry is null)
-                {
-                    throw new HttpRequestException("Jetstream archive is rate limited without a Retry-After header.",
+                TimeSpan? retry = GetRetryAfter(response.HttpResponseHeaders, _timeProvider) ?? throw new HttpRequestException("Jetstream archive is rate limited without a Retry-After header.",
                         null, response.StatusCode);
-                }
-
                 await Task.Delay(retry.Value > TimeSpan.Zero ? retry.Value : TimeSpan.Zero, _timeProvider, cancellationToken).ConfigureAwait(false);
                 continue;
             }

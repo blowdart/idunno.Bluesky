@@ -8,7 +8,7 @@ namespace idunno.AtProto.Authentication;
 /// </summary>
 /// <remarks>
 /// <para>The authorization server resolves the lexicon; the client does not expand its permissions.</para>
-/// <para>Configuration binding accepts a string <c>Nsid</c> and an optional string <c>Audience</c>.
+/// <para>Configuration binding accepts a string <see cref="Nsid"/> and an optional string <see cref="Audience"/>.
 /// Enable <c>ErrorOnUnknownConfiguration</c> when binding to reject invalid collection entries.</para>
 /// <para>See <see href="https://atproto.com/specs/permission#permission-sets">Permission Sets</see>.</para>
 /// </remarks>

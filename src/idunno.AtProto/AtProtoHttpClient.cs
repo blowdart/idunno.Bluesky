@@ -57,24 +57,20 @@ public class AtProtoHttpClient(
     /// </remarks>
     public int MaximumResponseSize
     {
-        get => _maximumResponseSize;
+        get;
 
         init
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
-            _maximumResponseSize = value;
+            field = value;
         }
-    }
-
-    private readonly int _maximumResponseSize = DefaultMaximumResponseSize;
+    } = DefaultMaximumResponseSize;
 
     readonly SocketsHttpHandler _defaultClientHandler = SsrfSocketsHttpHandlerFactory.Create(
                         automaticDecompression: DecompressionMethods.All,
                         loggerFactory: loggerFactory);
 
     private AtProtoHttpClient<string>? _internalAtProtoHttpClient;
-
-    private HttpClient? _defaultHttpClient;
 
     /// <summary>
     /// Gets the <see cref="HttpClient"/> used when a caller does not supply one of their own.
@@ -93,7 +89,7 @@ public class AtProtoHttpClient(
         {
             lock (_internalAtProtoHttpClientLock)
             {
-                return _defaultHttpClient ??= new HttpClient(
+                return field ??= new HttpClient(
                     handler: _defaultClientHandler,
                     disposeHandler: false)
                 {
@@ -125,16 +121,12 @@ public class AtProtoHttpClient(
                     errorMappers: errorMappers)
                 {
                     MaximumResponseSize = MaximumResponseSize,
-                    OnSendingRequest = _onSendingRequest,
-                    OnResponseReceived = _onResponseReceived
+                    OnSendingRequest = OnSendingRequest,
+                    OnResponseReceived = OnResponseReceived
                 };
             }
         }
     }
-
-    private Func<HttpRequestMessage, CancellationToken, Task> _onSendingRequest = AtProtoHttpClientDefaults.s_onSendingRequest;
-
-    private Func<HttpResponseMessage, CancellationToken, Task> _onResponseReceived = AtProtoHttpClientDefaults.s_onResponseReceived;
 
     /// <summary>
     /// Gets or sets a function called when a request is about to be sent.
@@ -142,7 +134,7 @@ public class AtProtoHttpClient(
     /// <exception cref="ArgumentNullException">Thrown when the value is <see langword="null"/>.</exception>
     public Func<HttpRequestMessage, CancellationToken, Task> OnSendingRequest
     {
-        get => _onSendingRequest;
+        get;
 
         set
         {
@@ -152,15 +144,12 @@ public class AtProtoHttpClient(
             // before an object initializer had the chance to run the MaximumResponseSize init accessor.
             lock (_internalAtProtoHttpClientLock)
             {
-                _onSendingRequest = value;
+                field = value;
 
-                if (_internalAtProtoHttpClient is not null)
-                {
-                    _internalAtProtoHttpClient.OnSendingRequest = value;
-                }
+                _internalAtProtoHttpClient?.OnSendingRequest = value;
             }
         }
-    }
+    } = AtProtoHttpClientDefaults.s_onSendingRequest;
 
     /// <summary>
     /// Gets or sets a function called when a response has been received.
@@ -174,7 +163,7 @@ public class AtProtoHttpClient(
     /// </remarks>
     public Func<HttpResponseMessage, CancellationToken, Task> OnResponseReceived
     {
-        get => _onResponseReceived;
+        get;
 
         set
         {
@@ -184,15 +173,12 @@ public class AtProtoHttpClient(
             // before an object initializer had the chance to run the MaximumResponseSize init accessor.
             lock (_internalAtProtoHttpClientLock)
             {
-                _onResponseReceived = value;
+                field = value;
 
-                if (_internalAtProtoHttpClient is not null)
-                {
-                    _internalAtProtoHttpClient.OnResponseReceived = value;
-                }
+                _internalAtProtoHttpClient?.OnResponseReceived = value;
             }
         }
-    }
+    } = AtProtoHttpClientDefaults.s_onResponseReceived;
 
     /// <summary>
     /// Gets the result of an AT Proto GET request, returning the raw response wrapped in an <see cref="AtProtoHttpResult{TResult}"/>.
@@ -404,8 +390,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
 
     private readonly bool _suppressProxyHeaderCheck;
 
-    private readonly int _maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize;
-
     /// <summary>
     /// Gets the maximum number of bytes buffered from an XRPC response body.
     /// </summary>
@@ -428,14 +412,14 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// </remarks>
     public int MaximumResponseSize
     {
-        get => _maximumResponseSize;
+        get;
 
         init
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
-            _maximumResponseSize = value;
+            field = value;
         }
-    }
+    } = AtProtoHttpClient.DefaultMaximumResponseSize;
 
     private readonly JsonSerializerOptions _jsonSerializationOptionsDefault = new(JsonSerializerDefaults.Web)
     {
@@ -697,24 +681,20 @@ public class AtProtoHttpClient<TResult> where TResult : class
         }
     }
 
-    private Func<HttpRequestMessage, CancellationToken, Task> _onSendingRequest = AtProtoHttpClientDefaults.s_onSendingRequest;
-
-    private Func<HttpResponseMessage, CancellationToken, Task> _onResponseReceived = AtProtoHttpClientDefaults.s_onResponseReceived;
-
     /// <summary>
     /// Gets or sets a function called when a request is about to be sent.
     /// </summary>
     /// <exception cref="ArgumentNullException">Thrown when the value is <see langword="null"/>.</exception>
     public Func<HttpRequestMessage, CancellationToken, Task> OnSendingRequest
     {
-        get => _onSendingRequest;
+        get;
 
         set
         {
             ArgumentNullException.ThrowIfNull(value);
-            _onSendingRequest = value;
+            field = value;
         }
-    }
+    } = AtProtoHttpClientDefaults.s_onSendingRequest;
 
     /// <summary>
     /// Gets or sets a function called when a response has been received.
@@ -733,14 +713,14 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// </remarks>
     public Func<HttpResponseMessage, CancellationToken, Task> OnResponseReceived
     {
-        get => _onResponseReceived;
+        get;
 
         set
         {
             ArgumentNullException.ThrowIfNull(value);
-            _onResponseReceived = value;
+            field = value;
         }
-    }
+    } = AtProtoHttpClientDefaults.s_onResponseReceived;
 
     /// <summary>
     /// Gets a flag indicating whether an <see cref="OnResponseReceived"/> handler has been attached.
@@ -750,7 +730,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
     ///   Used to avoid buffering the response body when nothing is going to read it before the bounded read does.
     /// </para>
     /// </remarks>
-    private bool HasOnResponseReceivedHandler => !ReferenceEquals(_onResponseReceived, AtProtoHttpClientDefaults.s_onResponseReceived);
+    private bool HasOnResponseReceivedHandler => !ReferenceEquals(OnResponseReceived, AtProtoHttpClientDefaults.s_onResponseReceived);
 
     /// <summary>
     /// Gets the collections of functions called to map any error returned from an API call to a more specific error.
@@ -1481,10 +1461,9 @@ public class AtProtoHttpClient<TResult> where TResult : class
         AtErrorDetail errorDetail = new()
         {
             Instance = request.RequestUri,
-            HttpMethod = request.Method
+            HttpMethod = request.Method,
+            RawContent = responseContent
         };
-
-        errorDetail.RawContent = responseContent;
 
         if (responseMessage.Content.Headers.ContentType is not null &&
             responseMessage.Content.Headers.ContentType.MediaType is not null &&

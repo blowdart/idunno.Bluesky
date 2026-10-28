@@ -43,8 +43,8 @@ internal sealed class PreferenceConverter : JsonConverter<Preference>
     /// <param name="typeToConvert">The type to check.</param>
     /// <returns><see langword="true"/> if <paramref name="typeToConvert"/> is <see cref="Preference"/>, otherwise <see langword="false"/>.</returns>
     /// <remarks>
-    /// Only the <see cref="Preference"/> base type is handled. Derived preferences are serialized by their own
-    /// contract, which is what stops the calls this converter makes to <see cref="JsonSerializer"/> re-entering it.
+    /// <para>Only the <see cref="Preference"/> base type is handled. Derived preferences are serialized by their own
+    /// contract, which is what stops the calls this converter makes to <see cref="JsonSerializer"/> re-entering it.</para>
     /// </remarks>
     public override bool CanConvert(Type typeToConvert) => typeToConvert == typeof(Preference);
 
@@ -191,8 +191,8 @@ internal sealed class PreferenceConverter : JsonConverter<Preference>
     /// Gets the preference types this converter can map to a type discriminator, keyed by that discriminator.
     /// </summary>
     /// <remarks>
-    /// Exposed so that tests can assert every type deriving from <see cref="Preference"/> is mapped. A type that is
-    /// missing from the map is treated as an unrecognized preference and loses its properties when written.
+    /// <para>Exposed so that tests can assert every type deriving from <see cref="Preference"/> is mapped. A type that is
+    /// missing from the map is treated as an unrecognized preference and loses its properties when written.</para>
     /// </remarks>
     internal static IReadOnlyDictionary<string, Type> DiscriminatorToType => s_discriminatorToType;
 }

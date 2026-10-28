@@ -16,7 +16,7 @@ internal class AddMembersRequest
         ArgumentNullException.ThrowIfNull(members);
         ArgumentOutOfRangeException.ThrowIfZero(members.Count);
         ConversationId = conversationId;
-        Members = new List<Did>(members);
+        Members = [.. members];
     }
 
     [JsonInclude]

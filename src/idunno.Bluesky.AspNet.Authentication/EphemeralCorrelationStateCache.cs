@@ -24,8 +24,6 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache, I
 
     private static volatile bool s_warned;
     private static volatile bool s_capacityWarned;
-
-    private readonly MemoryCache _cache;
     private readonly int _sizeLimit;
     private readonly TimeProvider _timeProvider;
 
@@ -55,7 +53,7 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache, I
         EntryTTL = entryTimeToLive ?? s_defaultEntryTimeToLive;
 
         _sizeLimit = sizeLimit ?? DefaultSizeLimit;
-        _cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = _sizeLimit, Clock = new TimeProviderSystemClock(_timeProvider) });
+        Cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = _sizeLimit, Clock = new TimeProviderSystemClock(_timeProvider) });
 
         if (!s_warned)
         {
@@ -70,7 +68,7 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache, I
         }
     }
 
-    private MemoryCache Cache => _cache;
+    private MemoryCache Cache { get; }
 
     private TimeSpan EntryTTL { get; }
 
@@ -202,7 +200,7 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache, I
         // Set before the cache is disposed so a concurrent caller fails its disposal guard rather than reaching a
         // half disposed cache.
         _disposed = true;
-        _cache.Dispose();
+        Cache.Dispose();
     }
 
     private async Task<OAuthLoginState?> Decode(string? encodedState)

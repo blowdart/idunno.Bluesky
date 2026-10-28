@@ -91,7 +91,7 @@ public class ChatGroupValidationTests
     [Fact]
     public void MessagesRejectsNullRelatedProfilesInBothCollectionOverloads()
     {
-        IReadOnlyCollection<Chat.Actor.ProfileViewBasic> relatedProfiles = new List<Chat.Actor.ProfileViewBasic> { null! };
+        IReadOnlyCollection<Chat.Actor.ProfileViewBasic> relatedProfiles = [null!];
 
         Assert.Throws<ArgumentException>(() => new Messages((IList<MessageViewBase>)[], relatedProfiles: relatedProfiles));
         Assert.Throws<ArgumentException>(() => new Messages((ICollection<MessageViewBase>)[], relatedProfiles: relatedProfiles));

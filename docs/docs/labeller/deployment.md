@@ -36,7 +36,7 @@ provider, or a host-owned configuration file:
 | `Labeler:AllowRecordLabels` | Whether the issuance policy permits record labels |
 | `LabelerAdministration:RemoteEnabled` | Whether HTTPS administration is enabled; defaults to `false` |
 | `LabelerModeration:Enabled` | Optional Xenon report/case/policy backend; defaults to `false` |
-| `LabelerModeration:VerificationFreshness` | Persisted declaration-observation lifetime; defaults to `00:01:00` |
+| `LabelerModeration:VerificationFreshness` | Persisted declaration-observation lifetime; defaults to `00:30:00`; active policies are checked in the background every five minutes |
 | `Labeler:TrustedProxies` | Optional array of exact proxy IP addresses trusted to forward client IP and HTTPS scheme |
 | `Labeler:ForwardLimit` | Positive maximum forwarding hops; defaults to `1` when trusted proxies are configured |
 

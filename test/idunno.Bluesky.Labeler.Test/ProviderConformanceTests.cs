@@ -25,8 +25,8 @@ public class ProviderConformanceTests
     private static readonly DateTimeOffset s_instant = new(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
 
     private static SignedLabelSnapshot Sign(LabelSigningKey key, string subject = "did:plc:subject", bool negation = false) =>
-        new(negation ? key.CreateNegation(StoreFixture.Issuer, subject, "spam", s_instant)
-            : key.CreateLabel(StoreFixture.Issuer, subject, "spam", s_instant));
+        new(negation ? key.CreateNegation(StoreFixture.s_issuer, subject, "spam", s_instant)
+            : key.CreateLabel(StoreFixture.s_issuer, subject, "spam", s_instant));
 
     private static DidDocument Document(LabelSigningKey key) => JsonSerializer.Deserialize<DidDocument>(
         $$"""
@@ -60,7 +60,7 @@ public class ProviderConformanceTests
                 Assert.Equal(receipt, await fixture.Store.AppendAsync(id, [signed], cancellationToken: TestContext.Current.CancellationToken));
                 await fixture.Store.PublishAsync(cancellationToken: TestContext.Current.CancellationToken);
                 ILabelStore restarted = fixture.NewStore();
-                await restarted.InitializeAsync(StoreFixture.Issuer, TestContext.Current.CancellationToken);
+                await restarted.InitializeAsync(StoreFixture.s_issuer, TestContext.Current.CancellationToken);
                 LabelStoreState state = await restarted.GetStateAsync(TestContext.Current.CancellationToken);
                 StoredLabel restored = Assert.Single((await restarted.ReplayAsync(state.StreamId, receipt.FirstSequence - 1, receipt.LastSequence, cancellationToken: TestContext.Current.CancellationToken)).Labels);
                 Assert.Equal(savedJson, restored.SignedLabel.GetJsonBytes());
@@ -96,7 +96,7 @@ public class ProviderConformanceTests
 
         SignedLabelSnapshot replacement = new(replacementKey.Sign(stored.SignedLabel.Label));
         SignedLabelSnapshot changed = new(replacementKey.CreateLabel(
-            StoreFixture.Issuer,
+            StoreFixture.s_issuer,
             "did:plc:subject",
             "changed",
             s_instant));
@@ -140,7 +140,7 @@ public class ProviderConformanceTests
         await maintenance.RegisterHostWithSigningRoleAsync(replica, requiresSigningKey: false, cancellationToken: token);
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             maintenance.RegisterHostWithSigningRoleAsync(replica, requiresSigningKey: true, cancellationToken: token));
-        await fixture.Store.InitializeAsync(StoreFixture.Issuer, token);
+        await fixture.Store.InitializeAsync(StoreFixture.s_issuer, token);
         const string operation = "keyless-conformance";
         await maintenance.BeginRotationAsync(
             operationId: operation,
@@ -186,8 +186,8 @@ public class ProviderConformanceTests
             cancellationToken: token);
         await fixture.ExecuteAsync("DROP TABLE label_host_roles; UPDATE label_schema SET version=6");
         await Assert.ThrowsAsync<InvalidDataException>(() => fixture.Store.GetStateAsync(token));
-        await fixture.Store.InitializeAsync(StoreFixture.Issuer, token);
-        await fixture.Store.InitializeAsync(StoreFixture.Issuer, token);
+        await fixture.Store.InitializeAsync(StoreFixture.s_issuer, token);
+        await fixture.Store.InitializeAsync(StoreFixture.s_issuer, token);
         LabelMaintenanceState upgraded = await maintenance.GetMaintenanceStateAsync(token);
         Assert.True(Assert.Single(upgraded.Hosts).RequiresSigningKey);
         Assert.False(upgraded.AllHostsDrained);
@@ -224,7 +224,7 @@ public class ProviderConformanceTests
             operationId: "postrotation-issue",
             target: target,
             value: "spam",
-            context: new(StoreFixture.Issuer, "Check the signing-key fence."));
+            context: new(StoreFixture.s_issuer, "Check the signing-key fence."));
         LabelServiceResult<LabelOperationReceipt> blocked = await fixture.Store.CommitDecisionAsync(
             new(
                 request: request,
@@ -278,7 +278,7 @@ public class ProviderConformanceTests
         Assert.True(progress.IsComplete);
 
         ILabelStore restartedStore = fixture.NewStore();
-        await restartedStore.InitializeAsync(StoreFixture.Issuer, TestContext.Current.CancellationToken);
+        await restartedStore.InitializeAsync(StoreFixture.s_issuer, TestContext.Current.CancellationToken);
         ILabelMaintenanceStore resumedMaintenance = (ILabelMaintenanceStore)restartedStore;
         state = await resumedMaintenance.GetMaintenanceStateAsync(TestContext.Current.CancellationToken);
         Assert.Equal(LabelMaintenancePhase.ReadyToReopen, state.Phase);
@@ -621,7 +621,7 @@ public class ProviderConformanceTests
         recovered = await restarted.PublishAsync(cancellationToken: TestContext.Current.CancellationToken);
         LabelPage replay = await restarted.ReplayAsync(recovered.StreamId, 0, recovered.PublishedThrough,
             cancellationToken: TestContext.Current.CancellationToken);
-        Assert.Equal(new long[] { 1, 2 }, replay.Labels.Select(label => label.Sequence));
+        Assert.Equal<long>([1, 2], replay.Labels.Select(label => label.Sequence));
         for (int i = 0; i < batch.Length; i++)
         {
             Assert.Equal(batch[i].GetJsonBytes(), replay.Labels[i].SignedLabel.GetJsonBytes());
@@ -720,7 +720,7 @@ public class ProviderConformanceTests
         Assert.Equal(3, (await fixture.Store.GetSnapshotAsync(TestContext.Current.CancellationToken)).PendingLabels);
         LabelStoreState[] promotions = await Task.WhenAll(stores.Take(3).Select(store =>
             Task.Run(() => store.PublishAsync(1, TestContext.Current.CancellationToken))));
-        Assert.Equal(new long[] { 4, 5, 6 }, promotions.Select(state => state.PublishedThrough).Order());
+        Assert.Equal<long>([4, 5, 6], promotions.Select(state => state.PublishedThrough).Order());
         published = await fixture.Store.GetStateAsync(TestContext.Current.CancellationToken);
         Assert.Equal(Enumerable.Range(1, 6).Select(i => (long)i),
             (await fixture.Store.ReplayAsync(published.StreamId, 0, 6, cancellationToken: TestContext.Current.CancellationToken)).Labels.Select(label => label.Sequence));
@@ -742,7 +742,7 @@ public class ProviderConformanceTests
         await fixture.Store.PublishAsync(cancellationToken: TestContext.Current.CancellationToken);
         LabelPage second = await fixture.NewStore().QueryAsync(["did:plc:*"], cursor: first.Cursor, limit: 100, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(3, second.Through);
-        Assert.Equal(new long[] { 2, 3 }, second.Labels.Select(label => label.Sequence));
+        Assert.Equal<long>([2, 3], second.Labels.Select(label => label.Sequence));
         Assert.Null(second.Cursor);
         Assert.Single((await fixture.Store.QueryAsync(["did:plc:two"], cancellationToken: TestContext.Current.CancellationToken)).Labels);
         Assert.Empty((await fixture.Store.QueryAsync(["did:plc:TWO"], cancellationToken: TestContext.Current.CancellationToken)).Labels);
@@ -842,17 +842,17 @@ public class ProviderConformanceTests
         string root = FindRoot();
         string schema = await File.ReadAllTextAsync(Path.Combine(root, "src", "idunno.Bluesky.Labeler." + package, "schema.sql"), TestContext.Current.CancellationToken);
         await fixture.ExecuteAsync(schema);
-        await fixture.Store.InitializeAsync(StoreFixture.Issuer, TestContext.Current.CancellationToken);
-        await fixture.Store.InitializeAsync(StoreFixture.Issuer, TestContext.Current.CancellationToken);
+        await fixture.Store.InitializeAsync(StoreFixture.s_issuer, TestContext.Current.CancellationToken);
+        await fixture.Store.InitializeAsync(StoreFixture.s_issuer, TestContext.Current.CancellationToken);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         SignedLabelSnapshot label = Sign(key);
         await fixture.Store.AppendAsync("preserve", [label], cancellationToken: TestContext.Current.CancellationToken);
         await fixture.ExecuteAsync("DELETE FROM label_schema");
-        await fixture.NewStore().InitializeAsync(StoreFixture.Issuer, TestContext.Current.CancellationToken);
+        await fixture.NewStore().InitializeAsync(StoreFixture.s_issuer, TestContext.Current.CancellationToken);
         Assert.Equal(1, (await fixture.Store.GetStateAsync(TestContext.Current.CancellationToken)).IssuedThrough);
         await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Store.InitializeAsync(new Did("did:plc:wrong"), TestContext.Current.CancellationToken));
         await fixture.ExecuteAsync("UPDATE label_schema SET version=999");
-        await Assert.ThrowsAsync<InvalidDataException>(() => fixture.Store.InitializeAsync(StoreFixture.Issuer, TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<InvalidDataException>(() => fixture.Store.InitializeAsync(StoreFixture.s_issuer, TestContext.Current.CancellationToken));
         await Assert.ThrowsAsync<InvalidDataException>(() => fixture.Store.GetStateAsync(TestContext.Current.CancellationToken));
     }
 
@@ -909,7 +909,7 @@ public class ProviderConformanceTests
             Path.Combine(FindRoot(), "src", "idunno.Bluesky.Labeler." + package, "schema.sql"), TestContext.Current.CancellationToken));
         await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Store.GetStateAsync(TestContext.Current.CancellationToken));
         ILabelStore[] stores = [.. Enumerable.Range(0, 4).Select(_ => fixture.NewStore())];
-        await Task.WhenAll(stores.Select(store => Task.Run(() => store.InitializeAsync(StoreFixture.Issuer, TestContext.Current.CancellationToken))));
+        await Task.WhenAll(stores.Select(store => Task.Run(() => store.InitializeAsync(StoreFixture.s_issuer, TestContext.Current.CancellationToken))));
         LabelStoreState[] states = await Task.WhenAll(stores.Select(store => store.GetStateAsync(TestContext.Current.CancellationToken)));
         Assert.Single(states.Distinct());
         Assert.NotEqual(Guid.Empty, states[0].StreamId);
@@ -974,7 +974,7 @@ public class ProviderConformanceTests
         string schema = await File.ReadAllTextAsync(
             Path.Combine(FindRoot(), "src", "idunno.Bluesky.Labeler." + package, "schema.sql"), TestContext.Current.CancellationToken);
         await fixture.ExecuteAsync(schema[..(schema.IndexOf(';', StringComparison.Ordinal) + 1)]);
-        await fixture.Store.InitializeAsync(StoreFixture.Issuer, TestContext.Current.CancellationToken);
+        await fixture.Store.InitializeAsync(StoreFixture.s_issuer, TestContext.Current.CancellationToken);
         LabelStoreState state = await fixture.Store.GetStateAsync(TestContext.Current.CancellationToken);
         state = await fixture.Store.BeginRetirementAsync(state.Revision, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(LabelerLifecyclePhase.Distributing, state.Phase);
@@ -1018,7 +1018,7 @@ public class ProviderConformanceTests
         canonical[0] ^= 1;
         Assert.Equal(signed.GetJsonBytes(), snapshot.GetJsonBytes());
         Assert.Equal(signed.GetCanonicalUnsignedBytes(), snapshot.GetCanonicalUnsignedBytes());
-        Assert.Throws<InvalidDataException>(() => new SignedLabelSnapshot(new Label(1, StoreFixture.Issuer, "did:plc:subject", null, "spam", false, s_instant, null)));
+        Assert.Throws<InvalidDataException>(() => new SignedLabelSnapshot(new Label(1, StoreFixture.s_issuer, "did:plc:subject", null, "spam", false, s_instant, null)));
     }
 
     [Theory(Timeout = 120_000)]
@@ -1043,7 +1043,7 @@ public class ProviderConformanceTests
         await using StoreFixture fixture = await StoreFixture.CreateAsync("mysql");
         await fixture.ExecuteAsync($"ALTER TABLE {table} ENGINE=MyISAM");
         await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.NewStore().GetStateAsync(TestContext.Current.CancellationToken));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Store.InitializeAsync(StoreFixture.Issuer, TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Store.InitializeAsync(StoreFixture.s_issuer, TestContext.Current.CancellationToken));
     }
 
     [Theory]

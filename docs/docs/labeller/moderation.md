@@ -36,19 +36,24 @@ publication and independently verifies the authoritative declaration.
 |---|---|---|
 | `MaximumConcurrentReports` | 16 | Concurrent report requests admitted by one process |
 | `ReportsPerMinute` | 120 | Requests admitted in one process's admission window |
-| `VerificationFreshness` | 60 seconds | Maximum persisted independent-observation age |
+| `VerificationFreshness` | 30 minutes | Maximum persisted independent-observation age |
 | `MaximumServiceTokenLifetime` | 15 minutes | Maximum reporting assertion lifetime |
 
 All hosts sharing a database must use its persisted verification freshness.
 Configure freshness in whole milliseconds; registration rejects fractional
 milliseconds rather than silently truncating them to database precision.
 Traffic limits are process-local, not cluster quotas. Apply additional
-deployment-wide limits at the trusted proxy. Report intake and policy-health
+deployment-wide limits at the trusted proxy. Report intake and scheduled
 verification have bounded deadlines; a lookup timeout does not refresh
-permission.
+permission. A background task checks the active public policy at startup and
+every five minutes, independently of traffic. Pending publications and recovery
+conflicts are not automatically activated by this task. A confirmed mismatch
+closes moderation immediately; an unavailable check leaves the previous
+verification deadline unchanged.
 
 `MapLabelerModeration()` maps `/health/labeler/moderation` for separate policy
-monitoring. Do not use this endpoint for traffic routing: a closed policy gate
+monitoring. This check reads stored policy state and freshness without making
+remote requests. Do not use this endpoint for traffic routing: a closed policy gate
 must not hide distribution or authenticated recovery routes.
 `/health/labeler/ready` continues to check only the distribution host and store.
 
@@ -184,13 +189,35 @@ Publication is deliberately separate from a database transaction:
 1. Save the complete intended immutable version.
 2. Begin publication with a stable operation identity, observed gate revision
    and expected previous record CID, or absence for creation. This closes
-   reports and new issuance.
-3. Explicitly sign in as the labeler account and use conditional declaration
+   reports and new issuance. Explicit confirmation also authorizes permanent
+   withdrawal of existing applications of any label values removed by the new
+   definition.
+3. If values were removed and label history exists, wait for the **Withdrawing**
+   phase to finish. The host signs and publishes negations in durable, bounded
+   batches before allowing declaration verification or the CLI's PDS write.
+4. Explicitly sign in as the labeler account and use conditional declaration
    creation/update against its discovered PDS. Do not retain PDS credentials in
    the host or send them through the administration API.
-4. Ask the host to independently resolve the issuer/PDS and verify
+5. Ask the host to independently resolve the issuer/PDS and verify
    `app.bsky.labeler.service/self`. Client assertions of publication success
    cannot reopen the gate.
+
+Withdrawal scans a fixed history boundary in pages of at most 250 entries and
+signs at most 250 negations per batch. Only the latest, unexpired, non-negated
+applications of removed values are withdrawn, preserving their account or exact
+record URI/CID scope. Values still declared by the replacement are unchanged.
+Saving a draft or deleting an unpublished draft does not withdraw labels.
+Cleanup does not reapply labels if a value is later reintroduced.
+
+The host resumes from durable checkpoints after restart; it does not depend on
+an open browser or enabled remote CLI administration. Each batch rechecks saved
+administrator authority, lifecycle/maintenance admission and the current policy
+revision. Expired or revoked authority pauses cleanup. An active administrator
+can explicitly resume the same selected operation from the UI or with
+`policy resume`; this renews authority without discarding completed work.
+Errors leave the gate closed and are surfaced in host logs; authorization pauses
+also retain a visible reason in policy state. Publication remains blocked until
+the required negations are durably published, not merely signed or queued.
 
 Keep the original creation time and extension data when constructing a new
 declaration. A concurrent `InvalidSwap` is a conflict, not permission to
@@ -219,7 +246,9 @@ issuance commits. Safe negations and recovery reads remain available.
 
 `AbandonPolicyPublicationAsync` records an explicit fail-closed recovery result.
 It does not cancel an in-flight PDS write or assume rollback. A late write may
-still become visible. Retained history includes publication intent, conditional
+still become visible. It stops pending withdrawal batches but cannot undo
+already committed negations, even if the new declaration is never published.
+Retained history includes publication intent, conditional
 CID, selected version, authoritative observations and abandonment. Historical
 gate freshness is not current permission.
 
@@ -298,7 +327,11 @@ the gate and preserves the declaration without injecting DTO defaults.
 
 `begin` records publication without signing in to the labeler account. `publish`
 and `recover` additionally perform the conditional PDS write and request
-independent host verification. For example, after saving the example draft:
+independent host verification. All publication commands explicitly confirm the
+irreversible cleanup of removed label values, including when later publication
+fails or is abandoned. `publish` and `recover` wait for cleanup before signing
+in to the labeler account or writing its declaration; cancellation does not roll
+back committed negations. For example, after saving the example draft:
 
 ```powershell
 .\idunno.Bluesky.Labeler.Cli.exe policy publish `
@@ -319,7 +352,8 @@ With local administration, replace the administrator's remote options with
 `--local-endpoint`; the separate labeler-account sign-in is still required.
 
 The administrator and labeler account need not be the same DID or team member.
-Administrative sign-in requests only the three publication/recovery RPC scopes;
+Administrative sign-in requests only the four publication/recovery RPC scopes,
+including the ability to renew paused cleanup authorization;
 labeler-account sign-in requests only create or update permission for
 `app.bsky.labeler.service`, never delete, identity, account or general repository
 authority. The authenticated labeler DID must match the issuer returned by the
@@ -339,3 +373,18 @@ an already admitted remote write cannot cancel it.
 `abandon --expected-revision ... --operation-id ... --reason ...` records a new,
 explicit fail-closed recovery decision. Neither command is an unconditional
 publication retry.
+
+If cleanup pauses because its original administrator authority expired or was
+revoked, an active administrator can explicitly renew it without a labeler-account
+sign-in:
+
+```powershell
+.\idunno.Bluesky.Labeler.Cli.exe policy resume `
+  --local-endpoint idunno-labeler `
+  --operation-id publish-v1 --reason "Continue reviewed label withdrawal." --yes
+```
+
+Use the currently selected publication operation ID, not a new one. `resume`
+returns the durable state; the background worker continues the batches.
+An actively waiting `publish` or `recover` command renews paused authorization
+through its live administrative connection before continuing.

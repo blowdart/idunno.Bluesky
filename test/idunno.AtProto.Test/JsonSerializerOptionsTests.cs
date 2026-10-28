@@ -22,12 +22,12 @@ public class JsonSerializerOptionsTests
         {"uri":"at://did:plc:ec72yg6n2sydzjvtovvdlxrk/app.bsky.feed.post/3kzmmwnqk2s2b","cid":"bafyreid27zk7lbis4zw5fz4podbvbs4fc5ivwji3dmrwa6zggnj4bnd57u","$type":"com.atproto.repo.strongRef"}
         """;
 
-    public static TheoryData<string> OptionsSurfaces => new()
-    {
+    public static TheoryData<string> OptionsSurfaces =>
+    [
         nameof(AtProtoJsonSerializerOptions.Options),
         nameof(AtProtoServer.AtProtoJsonSerializerOptions),
         nameof(AtProtoServer.DefaultJsonSerializerOptionsWithNoTypeResolution),
-    };
+    ];
 
     [Theory]
     [MemberData(nameof(OptionsSurfaces))]
@@ -346,7 +346,7 @@ public class JsonSerializerOptionsTests
         {
             supplied.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, TolerantTestContext.Default);
         }
-        var resolver = supplied.JsonSerializerOptions.TypeInfoResolver;
+        IJsonTypeInfoResolver? resolver = supplied.JsonSerializerOptions.TypeInfoResolver;
         int converters = supplied.JsonSerializerOptions.Converters.Count;
         using AtProtoAgent agent = builder
             ? agentBuilder.Build()
@@ -569,11 +569,11 @@ public class JsonSerializerOptionsTests
         Assert.Equal("extension", nested.ExtensionData!["$via"].GetString());
     }
 
-    public static TheoryData<string> SharedOptionsSurfaces => new()
-    {
+    public static TheoryData<string> SharedOptionsSurfaces =>
+    [
         nameof(AtProtoJsonSerializerOptions.Default),
         nameof(AtProtoServer.AtProtoJsonSerializerOptions),
-    };
+    ];
 
     [Theory]
     [MemberData(nameof(SharedOptionsSurfaces))]
@@ -714,10 +714,10 @@ public class JsonSerializerOptionsTests
         JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
             mutable.TypeInfoResolver = TolerantTestContext.Default);
 
-        PolymorphicListContract values = Assert.IsAssignableFrom<PolymorphicListContract>(
-            JsonSerializer.Deserialize<PolymorphicListContract>(json, options));
+        PolymorphicListContract values = Assert.IsType<PolymorphicListContract>(
+            JsonSerializer.Deserialize<PolymorphicListContract>(json, options), exactMatch: false);
 
-        Assert.Equal([1, 2], Assert.IsAssignableFrom<IList<int>>(values));
+        Assert.Equal([1, 2], Assert.IsType<IList<int>>(values, exactMatch: false));
     }
 
     [Theory]
@@ -978,10 +978,13 @@ public class JsonSerializerOptionsTests
             mutable.TypeInfoResolver = TolerantTestContext.Default;
             mutable.ReferenceHandler = ReferenceHandler.Preserve;
         });
-        NestedCustomRecord shared = new() { Value = "shared" };
-        shared.ExtensionData = new()
+        NestedCustomRecord shared = new()
         {
-            ["$via"] = JsonSerializer.SerializeToElement("extension")
+            Value = "shared",
+            ExtensionData = new()
+            {
+                ["$via"] = JsonSerializer.SerializeToElement("extension")
+            }
         };
         CollectionRecord record = new();
         record.Records.Add(shared);
@@ -1586,8 +1589,12 @@ public class JsonSerializerOptionsTests
             mutable.ReferenceHandler = ReferenceHandler.IgnoreCycles;
         });
         List<CycleNodeBase> nodes = [];
-        CycleNode node = new() { Value = "node", Parent = nodes };
-        node.ExtensionData = new() { ["$via"] = JsonSerializer.SerializeToElement("extension") };
+        CycleNode node = new()
+        {
+            Value = "node",
+            Parent = nodes,
+            ExtensionData = new() { ["$via"] = JsonSerializer.SerializeToElement("extension") }
+        };
         nodes.Add(node);
 
         string json = JsonSerializer.Serialize(nodes, options);
@@ -2025,7 +2032,7 @@ internal abstract class AliasComparerRecordBase;
 internal sealed class AliasComparerRecord : AliasComparerRecordBase
 {
     [JsonExtensionData]
-    public AliasComparerExtensionData ExtensionData { get; set; } = new();
+    public AliasComparerExtensionData ExtensionData { get; set; } = [];
 }
 
 internal sealed class AliasComparerExtensionData : Dictionary<string, JsonElement>

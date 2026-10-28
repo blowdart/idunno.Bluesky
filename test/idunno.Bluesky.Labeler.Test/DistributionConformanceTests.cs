@@ -41,7 +41,7 @@ public class DistributionConformanceTests
         await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         SignedLabelSnapshot scoped = new(key.CreateLabel(
-            source: StoreFixture.Issuer,
+            source: StoreFixture.s_issuer,
             uri: Subject,
             value: "spam",
             creationTimestamp: s_instant,
@@ -49,7 +49,7 @@ public class DistributionConformanceTests
         string json = Encoding.UTF8.GetString(scoped.GetJsonBytes());
         SignedLabelSnapshot raw = new(Encoding.UTF8.GetBytes(json.Replace("\"cid\":", "\"CID\":", StringComparison.Ordinal)));
         SignedLabelSnapshot wide = new(key.CreateLabel(
-            source: StoreFixture.Issuer,
+            source: StoreFixture.s_issuer,
             uri: Subject,
             value: "spam",
             creationTimestamp: s_instant));
@@ -61,7 +61,7 @@ public class DistributionConformanceTests
         }
 
         ILabelStore restarted = fixture.NewStore();
-        await restarted.InitializeAsync(StoreFixture.Issuer, token);
+        await restarted.InitializeAsync(StoreFixture.s_issuer, token);
         LabelStoreState state = await restarted.GetStateAsync(token);
         List<StoredLabel> actual = await ReadAllAsync(restarted, state);
         Assert.Equal([1L, 2L], actual.Select(label => label.Sequence));
@@ -86,41 +86,41 @@ public class DistributionConformanceTests
         SignedLabelSnapshot[] input =
         [
             new(key.CreateLabel(
-                source: StoreFixture.Issuer,
+                source: StoreFixture.s_issuer,
                 uri: Subject,
                 value: "spam",
                 creationTimestamp: s_instant)),
             new(key.CreateLabel(
-                source: StoreFixture.Issuer,
+                source: StoreFixture.s_issuer,
                 uri: Subject,
                 value: "spam",
                 creationTimestamp: s_instant,
                 cid: cid)),
             new(key.CreateNegation(
-                source: StoreFixture.Issuer,
+                source: StoreFixture.s_issuer,
                 uri: Subject,
                 value: "spam",
                 creationTimestamp: s_instant.AddSeconds(1))),
             new(key.CreateLabel(
-                source: StoreFixture.Issuer,
+                source: StoreFixture.s_issuer,
                 uri: Subject,
                 value: "expired",
                 creationTimestamp: s_instant,
                 cid: null,
                 expiresAt: s_instant.AddSeconds(1))),
             new(key.CreateLabel(
-                source: StoreFixture.Issuer,
+                source: StoreFixture.s_issuer,
                 uri: Subject,
                 value: "spam",
                 creationTimestamp: s_instant.AddSeconds(-1))),
             new(key.CreateNegation(
-                source: StoreFixture.Issuer,
+                source: StoreFixture.s_issuer,
                 uri: Subject,
                 value: "spam",
                 creationTimestamp: s_instant.AddSeconds(2),
                 cid: cid)),
             new(key.CreateLabel(
-                source: StoreFixture.Issuer,
+                source: StoreFixture.s_issuer,
                 uri: Subject,
                 value: "spam",
                 creationTimestamp: s_instant,
@@ -133,7 +133,7 @@ public class DistributionConformanceTests
         Assert.Equal([2L, 3L, 4L], (await ReadAllAsync(fixture.Store, initial)).Select(label => label.Sequence));
         LabelStoreState published = await fixture.Store.PublishAsync(cancellationToken: token);
         ILabelStore restarted = fixture.NewStore();
-        await restarted.InitializeAsync(StoreFixture.Issuer, token);
+        await restarted.InitializeAsync(StoreFixture.s_issuer, token);
         List<StoredLabel> actual = await ReadAllAsync(restarted, published);
 
         // Independent oracle mirrors INSERT ... ON CONFLICT (src, uri, cid, val) UPDATE id.
@@ -171,12 +171,12 @@ public class DistributionConformanceTests
         await fixture.Store.AppendAsync("subjects",
         [
             new(key.CreateLabel(
-                source: StoreFixture.Issuer,
+                source: StoreFixture.s_issuer,
                 uri: "did:plc:first",
                 value: "spam",
                 creationTimestamp: s_instant)),
             new(key.CreateLabel(
-                source: StoreFixture.Issuer,
+                source: StoreFixture.s_issuer,
                 uri: "did:plc:last",
                 value: "spam",
                 creationTimestamp: s_instant))
@@ -198,7 +198,7 @@ public class DistributionConformanceTests
             after: first.ScannedThrough,
             through: 2,
             uriPatterns: ["did:plc:last", "did:plc:*"],
-            sources: [StoreFixture.Issuer],
+            sources: [StoreFixture.s_issuer],
             limit: 1,
             scanLimit: 1,
             cancellationToken: token);
@@ -226,7 +226,7 @@ public class DistributionConformanceTests
         await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         SignedLabelSnapshot signed = new(key.CreateLabel(
-            source: StoreFixture.Issuer,
+            source: StoreFixture.s_issuer,
             uri: Subject,
             value: "spam",
             creationTimestamp: s_instant));
@@ -234,8 +234,8 @@ public class DistributionConformanceTests
         await fixture.Store.PublishAsync(cancellationToken: token);
         await fixture.ExecuteAsync($"UPDATE label_schema SET version={version}; DELETE FROM label_distribution");
         ILabelStore restarted = fixture.NewStore();
-        await restarted.InitializeAsync(StoreFixture.Issuer, token);
-        await restarted.InitializeAsync(StoreFixture.Issuer, token);
+        await restarted.InitializeAsync(StoreFixture.s_issuer, token);
+        await restarted.InitializeAsync(StoreFixture.s_issuer, token);
         LabelStoreState state = await restarted.GetStateAsync(token);
         Assert.Equal(signed.GetJsonBytes(), Assert.Single(await ReadAllAsync(restarted, state)).SignedLabel.GetJsonBytes());
     }
@@ -253,7 +253,7 @@ public class DistributionConformanceTests
         await Assert.ThrowsAsync<OverflowException>(() => fixture.Store.AppendAsync(
             "exhausted",
             [new(key.CreateLabel(
-                source: StoreFixture.Issuer,
+                source: StoreFixture.s_issuer,
                 uri: Subject,
                 value: "spam",
                 creationTimestamp: s_instant))],
@@ -273,7 +273,7 @@ public class DistributionConformanceTests
         Assert.Same(fixture.Store, fixture.Services.GetRequiredService<ILabelDistributionStore>());
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         SignedLabelSnapshot signed = new(key.CreateLabel(
-            source: StoreFixture.Issuer,
+            source: StoreFixture.s_issuer,
             uri: Subject,
             value: "spam",
             creationTimestamp: s_instant));
@@ -310,7 +310,7 @@ public class DistributionConformanceTests
             uriPatterns: ["*"],
             sources: [],
             cancellationToken: token));
-        await fixture.Store.InitializeAsync(StoreFixture.Issuer, token);
+        await fixture.Store.InitializeAsync(StoreFixture.s_issuer, token);
         LabelDistributionPage repaired = await fixture.Store.ReadDistributionAsync(
             streamId: state.StreamId,
             after: 1000,
@@ -332,7 +332,7 @@ public class DistributionConformanceTests
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         LabelTarget target = LabelTarget.Account(new Did("did:plc:subject"));
         SignedLabelSnapshot signed = new(key.CreateLabel(
-            source: StoreFixture.Issuer,
+            source: StoreFixture.s_issuer,
             uri: target.Subject,
             value: "spam",
             creationTimestamp: s_instant));
@@ -341,7 +341,7 @@ public class DistributionConformanceTests
                 operationId: id,
                 target: target,
                 value: "spam",
-                context: new LabelOperationContext(StoreFixture.Issuer, "Distribution boundary")),
+                context: new LabelOperationContext(StoreFixture.s_issuer, "Distribution boundary")),
             resolvedTarget: target,
             expectedRevision: revision,
             signedLabel: signed,
@@ -357,7 +357,7 @@ public class DistributionConformanceTests
         await fixture.ExecuteAsync("UPDATE label_state SET issued=9007199254740991,published=9007199254740991,replay_floor=9007199254740991");
         target = LabelTarget.Account(new Did("did:plc:second"));
         signed = new(key.CreateLabel(
-            source: StoreFixture.Issuer,
+            source: StoreFixture.s_issuer,
             uri: target.Subject,
             value: "spam",
             creationTimestamp: s_instant));

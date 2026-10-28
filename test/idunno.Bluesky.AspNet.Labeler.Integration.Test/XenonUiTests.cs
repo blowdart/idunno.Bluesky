@@ -85,7 +85,7 @@ public class XenonUiTests
         Assert.Contains("<code>did:plc:xenon-member</code>", teamHtml, StringComparison.Ordinal);
         Assert.Contains("Handle unavailable", teamHtml, StringComparison.Ordinal);
         Assert.DoesNotContain("@handle.invalid", teamHtml, StringComparison.Ordinal);
-        Assert.Contains("<td>Viewer</td>", teamHtml, StringComparison.Ordinal);
+        Assert.Matches("""<td>\s*<span class="fa-icon fa-eye" aria-hidden="true"></span>\s*Viewer</td>""", teamHtml);
 
         string[] invalidFilters =
         [

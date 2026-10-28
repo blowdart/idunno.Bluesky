@@ -22,31 +22,71 @@ public class RecordValidationTests
     private static readonly AtUri s_listUri = new("at://did:plc:ec72yg6n2sydzjvtovvdlxrk/app.bsky.graph.list/3ldegderd6s2e");
     private static readonly DateTimeOffset s_createdAt = new(2026, 10, 8, 15, 43, 6, TimeSpan.Zero);
 
-    public static IEnumerable<TheoryDataRow<IValidatableObject>> ValidRecords =>
-    [
-        new(new Graph.List("name", ListPurpose.CurateList, null, createdAt: s_createdAt)),
-        new(new StarterPack("name", null, s_listUri, [], s_createdAt, null)),
-        new(new ThreadGate(s_postUri, s_createdAt, [])),
-        new(new PostGate(s_postUri, s_createdAt, [], [])),
-        new(new MessageInput("")),
-        new(new Actor.Link(new Uri("https://example.com"), new string('x', 40), CreateBlob("image/webp", 100_000), null, s_createdAt)),
-        new(new Actor.Status("example.test#future", new EmbeddedExternal("https://example.com", "", ""), 1, s_createdAt)),
-        new(new Generator { Did = new Did("did:plc:ec72yg6n2sydzjvtovvdlxrk"), DisplayName = new string('x', 24), CreatedAt = s_createdAt, Description = new string('x', 300), Avatar = CreateBlob("image/jpeg", 1_000_000) }),
-        new(new Draft([new DraftPost("")], null, langs: [], postGateEmbeddingRules: [], threadGateAllowRules: [])),
-        new(new DraftPost("")),
-        new(new DraftEmbedImage(new DraftEmbedLocalRef("image.jpg"), "")),
-        new(new DraftEmbedVideo(new DraftEmbedLocalRef("video.mp4"), "", [new DraftEmbedCaption("", "en")])),
-        new(new DraftEmbedCaption("", "en")),
-        new(new DraftEmbedLocalRef("image.jpg")),
-        new(new DraftEmbedGallery([])),
-        new(new DraftEmbedExternal(new Uri("https://example.com"))),
-        new(new DraftEmbedRecord(new StrongReference(s_postUri, new Cid("bafyreiaahtgpdozb4wjdymb3tvifuwdmxjtumhjxl25lykvsoq3v3l4une"))))
-    ];
-
     [Theory]
-    [MemberData(nameof(ValidRecords))]
-    public void ValidRecordsSupportDataAnnotationsAndRejectNullContexts(IValidatableObject value)
+    [InlineData(nameof(Graph.List))]
+    [InlineData(nameof(StarterPack))]
+    [InlineData(nameof(ThreadGate))]
+    [InlineData(nameof(PostGate))]
+    [InlineData(nameof(MessageInput))]
+    [InlineData(nameof(Actor.Link))]
+    [InlineData(nameof(Actor.Status))]
+    [InlineData(nameof(Generator))]
+    [InlineData(nameof(Draft))]
+    [InlineData(nameof(DraftPost))]
+    [InlineData(nameof(DraftEmbedImage))]
+    [InlineData(nameof(DraftEmbedVideo))]
+    [InlineData(nameof(DraftEmbedCaption))]
+    [InlineData(nameof(DraftEmbedLocalRef))]
+    [InlineData(nameof(DraftEmbedGallery))]
+    [InlineData(nameof(DraftEmbedExternal))]
+    [InlineData(nameof(DraftEmbedRecord))]
+    public void ValidRecordsSupportDataAnnotationsAndRejectNullContexts(string model)
     {
+        IValidatableObject value = model switch
+        {
+            nameof(Graph.List) => new Graph.List("name", ListPurpose.CurateList, null, createdAt: s_createdAt),
+            nameof(StarterPack) => new StarterPack(
+                name: "name",
+                description: null,
+                list: s_listUri,
+                feeds: [],
+                createdAt: s_createdAt,
+                updatedAt: null),
+            nameof(ThreadGate) => new ThreadGate(s_postUri, s_createdAt, []),
+            nameof(PostGate) => new PostGate(
+                post: s_postUri,
+                createdAt: s_createdAt,
+                rules: [],
+                detachedEmbeddingUris: []),
+            nameof(MessageInput) => new MessageInput(""),
+            nameof(Actor.Link) => new Actor.Link(
+                url: new Uri("https://example.com"),
+                title: new string('x', 40),
+                icon: CreateBlob("image/webp", 100_000),
+                labels: null,
+                createdAt: s_createdAt),
+            nameof(Actor.Status) => new Actor.Status(
+                accountStatus: "example.test#future",
+                embed: new EmbeddedExternal("https://example.com", "", ""),
+                durationMinutes: 1,
+                createdAt: s_createdAt),
+            nameof(Generator) => new Generator { Did = new Did("did:plc:ec72yg6n2sydzjvtovvdlxrk"), DisplayName = new string('x', 24), CreatedAt = s_createdAt, Description = new string('x', 300), Avatar = CreateBlob("image/jpeg", 1_000_000) },
+            nameof(Draft) => new Draft(
+                posts: [new DraftPost("")],
+                deviceId: null,
+                langs: [],
+                postGateEmbeddingRules: [],
+                threadGateAllowRules: []),
+            nameof(DraftPost) => new DraftPost(""),
+            nameof(DraftEmbedImage) => new DraftEmbedImage(new DraftEmbedLocalRef("image.jpg"), ""),
+            nameof(DraftEmbedVideo) => new DraftEmbedVideo(new DraftEmbedLocalRef("video.mp4"), "", [new DraftEmbedCaption("", "en")]),
+            nameof(DraftEmbedCaption) => new DraftEmbedCaption("", "en"),
+            nameof(DraftEmbedLocalRef) => new DraftEmbedLocalRef("image.jpg"),
+            nameof(DraftEmbedGallery) => new DraftEmbedGallery([]),
+            nameof(DraftEmbedExternal) => new DraftEmbedExternal(new Uri("https://example.com")),
+            nameof(DraftEmbedRecord) => new DraftEmbedRecord(new StrongReference(s_postUri, new Cid("bafyreiaahtgpdozb4wjdymb3tvifuwdmxjtumhjxl25lykvsoq3v3l4une"))),
+            _ => throw new ArgumentOutOfRangeException(nameof(model))
+        };
         Assert.Empty(value.Validate(new ValidationContext(value)));
         Assert.Throws<ArgumentNullException>(() => value.Validate(null!));
         List<ValidationResult> results = [];
@@ -54,34 +94,94 @@ public class RecordValidationTests
         Assert.Empty(results);
     }
 
-    public static IEnumerable<TheoryDataRow<IValidatableObject, string>> InvalidRecords =>
-    [
-        new(new ThreadGate(s_postUri, s_createdAt, [null!]), "Rules[0]"),
-        new(new ThreadGate(s_postUri, s_createdAt, [], [null!]), "HiddenReplies[0]"),
-        new(new PostGate(s_postUri, s_createdAt, [null!], []), "Rules[0]"),
-        new(new PostGate(s_postUri, s_createdAt, [], [null!]), "DetachedEmbeddingUris[0]"),
-        new(new ThreadGate(s_postUri, s_createdAt) { Post = null! }, "Post"),
-        new(new PostGate(s_postUri, s_createdAt, [], []) { Post = s_listUri }, "Post"),
-        new(new StarterPack("name", null, s_listUri, [null!], s_createdAt, null), "Feeds[0]"),
-        new(new Draft([null!], null), "Posts[0]"),
-        new(new Draft([new DraftPost("")], null, langs: [null!]), "Langs[0]"),
-        new(new DraftPost("", new DraftEmbedImage[] { null! }), "EmbedImages[0]"),
-        new(new DraftEmbedGallery([null!]), "Items[0]"),
-        new(new DraftEmbedVideo(new DraftEmbedLocalRef("video.mp4"), captions: [null!]), "Captions[0]"),
-        new(new DraftEmbedExternal(new Uri("relative", UriKind.Relative)), "Uri"),
-        new(new Actor.Link(new Uri("http://example.com"), null, null, null, s_createdAt), "Url"),
-        new(new Actor.Link(new Uri("relative", UriKind.Relative), null, null, null, s_createdAt), "Url"),
-        new(new Actor.Link(new Uri("https://example.com"), null, null, null, s_createdAt) { Url = null! }, "Url"),
-        new(new Actor.Status("example.test#future", new EmbeddedImages(), null, s_createdAt), "Embed"),
-        new(new Generator { Did = null!, DisplayName = "", CreatedAt = s_createdAt }, "Did"),
-        new(new Generator { Did = new Did("did:plc:ec72yg6n2sydzjvtovvdlxrk"), DisplayName = null!, CreatedAt = s_createdAt }, "DisplayName"),
-        new(new Generator { Did = new Did("did:plc:ec72yg6n2sydzjvtovvdlxrk"), DisplayName = new string('x', 25), CreatedAt = s_createdAt }, "DisplayName")
-    ];
-
     [Theory]
-    [MemberData(nameof(InvalidRecords))]
-    public void ValidationReportsInvalidRequiredValuesAndIndexedCollectionMembers(IValidatableObject value, string member)
+    [InlineData("ThreadGateNullRule", "Rules[0]")]
+    [InlineData("ThreadGateNullReply", "HiddenReplies[0]")]
+    [InlineData("PostGateNullRule", "Rules[0]")]
+    [InlineData("PostGateNullEmbedding", "DetachedEmbeddingUris[0]")]
+    [InlineData("ThreadGateNullPost", "Post")]
+    [InlineData("PostGateWrongPostCollection", "Post")]
+    [InlineData("StarterPackNullFeed", "Feeds[0]")]
+    [InlineData("DraftNullPost", "Posts[0]")]
+    [InlineData("DraftNullLanguage", "Langs[0]")]
+    [InlineData("DraftPostNullImage", "EmbedImages[0]")]
+    [InlineData("DraftGalleryNullItem", "Items[0]")]
+    [InlineData("DraftVideoNullCaption", "Captions[0]")]
+    [InlineData("DraftExternalRelativeUri", "Uri")]
+    [InlineData("LinkHttpUrl", "Url")]
+    [InlineData("LinkRelativeUrl", "Url")]
+    [InlineData("LinkNullUrl", "Url")]
+    [InlineData("StatusWrongEmbed", "Embed")]
+    [InlineData("GeneratorNullDid", "Did")]
+    [InlineData("GeneratorNullName", "DisplayName")]
+    [InlineData("GeneratorLongName", "DisplayName")]
+    public void ValidationReportsInvalidRequiredValuesAndIndexedCollectionMembers(string model, string member)
     {
+        IValidatableObject value = model switch
+        {
+            "ThreadGateNullRule" => new ThreadGate(s_postUri, s_createdAt, [null!]),
+            "ThreadGateNullReply" => new ThreadGate(
+                post: s_postUri,
+                createdAt: s_createdAt,
+                rules: [],
+                hiddenReplies: [null!]),
+            "PostGateNullRule" => new PostGate(
+                post: s_postUri,
+                createdAt: s_createdAt,
+                rules: [null!],
+                detachedEmbeddingUris: []),
+            "PostGateNullEmbedding" => new PostGate(
+                post: s_postUri,
+                createdAt: s_createdAt,
+                rules: [],
+                detachedEmbeddingUris: [null!]),
+            "ThreadGateNullPost" => new ThreadGate(s_postUri, s_createdAt) { Post = null! },
+            "PostGateWrongPostCollection" => new PostGate(
+                post: s_postUri,
+                createdAt: s_createdAt,
+                rules: [],
+                detachedEmbeddingUris: []) { Post = s_listUri },
+            "StarterPackNullFeed" => new StarterPack(
+                name: "name",
+                description: null,
+                list: s_listUri,
+                feeds: [null!],
+                createdAt: s_createdAt,
+                updatedAt: null),
+            "DraftNullPost" => new Draft([null!], null),
+            "DraftNullLanguage" => new Draft([new DraftPost("")], null, langs: [null!]),
+            "DraftPostNullImage" => new DraftPost("", embedImages: [null!]),
+            "DraftGalleryNullItem" => new DraftEmbedGallery([null!]),
+            "DraftVideoNullCaption" => new DraftEmbedVideo(new DraftEmbedLocalRef("video.mp4"), captions: [null!]),
+            "DraftExternalRelativeUri" => new DraftEmbedExternal(new Uri("relative", UriKind.Relative)),
+            "LinkHttpUrl" => new Actor.Link(
+                url: new Uri("http://example.com"),
+                title: null,
+                icon: null,
+                labels: null,
+                createdAt: s_createdAt),
+            "LinkRelativeUrl" => new Actor.Link(
+                url: new Uri("relative", UriKind.Relative),
+                title: null,
+                icon: null,
+                labels: null,
+                createdAt: s_createdAt),
+            "LinkNullUrl" => new Actor.Link(
+                url: new Uri("https://example.com"),
+                title: null,
+                icon: null,
+                labels: null,
+                createdAt: s_createdAt) { Url = null! },
+            "StatusWrongEmbed" => new Actor.Status(
+                accountStatus: "example.test#future",
+                embed: new EmbeddedImages(),
+                durationMinutes: null,
+                createdAt: s_createdAt),
+            "GeneratorNullDid" => new Generator { Did = null!, DisplayName = "", CreatedAt = s_createdAt },
+            "GeneratorNullName" => new Generator { Did = new Did("did:plc:ec72yg6n2sydzjvtovvdlxrk"), DisplayName = null!, CreatedAt = s_createdAt },
+            "GeneratorLongName" => new Generator { Did = new Did("did:plc:ec72yg6n2sydzjvtovvdlxrk"), DisplayName = new string('x', 25), CreatedAt = s_createdAt },
+            _ => throw new ArgumentOutOfRangeException(nameof(model))
+        };
         Assert.Contains(value.Validate(new ValidationContext(value)), result => result.MemberNames.Contains(member));
         List<ValidationResult> results = [];
         Assert.False(Validator.TryValidateObject(value, new ValidationContext(value), results, validateAllProperties: true));

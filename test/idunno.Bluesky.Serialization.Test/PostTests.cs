@@ -181,7 +181,7 @@ public class PostTests
             GalleryImage galleryImage = new(blob, "alt text", new AspectRatio(1, 1));
             EmbeddedGallery embeddedGallery = new([galleryImage])
             {
-                Items = Enumerable.Repeat(galleryImage, 21).ToList()
+                Items = [.. Enumerable.Repeat(galleryImage, 21)]
             };
             embed = embeddedGallery;
             expectedMember = "EmbeddedRecord.Items";
@@ -190,7 +190,7 @@ public class PostTests
         {
             EmbeddedImages embeddedImages = new([image])
             {
-                Images = Enumerable.Repeat(image, Maximum.ImagesInPost + 1).ToList()
+                Images = [.. Enumerable.Repeat(image, Maximum.ImagesInPost + 1)]
             };
             embed = embeddedImages;
             expectedMember = "EmbeddedRecord.Images";

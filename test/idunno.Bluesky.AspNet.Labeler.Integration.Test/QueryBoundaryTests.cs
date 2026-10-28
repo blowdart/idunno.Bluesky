@@ -22,7 +22,7 @@ public class QueryBoundaryTests
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(initialize: async store =>
         {
-            SignedLabelSnapshot[] labels = Enumerable.Range(0, 260).Select(index => Signed(key, $"did:plc:subject{index}")).ToArray();
+            SignedLabelSnapshot[] labels = [.. Enumerable.Range(0, 260).Select(index => Signed(key, $"did:plc:subject{index}"))];
             await store.AppendAsync("boundary", labels, cancellationToken: token);
         });
         string filters = "uriPatterns=did:plc:subject*&sources=did:plc:other&sources=did:plc:label-issuer";

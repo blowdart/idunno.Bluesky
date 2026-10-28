@@ -10,7 +10,11 @@ namespace idunno.Bluesky.BotSdk;
 /// <param name="time">The clock used to evaluate operation deadlines.</param>
 internal sealed class WorkerHealth(TimeProvider time)
 {
+#if NET9_0_OR_GREATER
+    private readonly Lock _gate = new();
+#else
     private readonly object _gate = new();
+#endif
     private readonly Dictionary<string, HealthState> _states = new(StringComparer.Ordinal)
     {
         ["ownership"] = new("starting", time.GetUtcNow().AddSeconds(60), null),

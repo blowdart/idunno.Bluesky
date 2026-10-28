@@ -43,11 +43,11 @@ public class LabelSearchTests
         Success(await store.SaveHandleIndexBatchAsync(
             batch with
             {
-                Entries = batch.Entries.Select(entry => entry with
+                Entries = [.. batch.Entries.Select(entry => entry with
                 {
                     Handle = entry.Did == first.Repository.Value ? "blowdart.me" :
                         entry.Did == second.Repository.Value ? "ablow.com" : "other.example"
-                }).ToArray()
+                })]
             }, token));
         LabelSearchPage handles = Success(await store.SearchAsync(caller, "bLoW", 1, token));
         Assert.Equal(4, handles.Total);
@@ -73,7 +73,7 @@ public class LabelSearchTests
         Assert.Equal(16, pageOne.Hits.Count);
         Assert.Equal(2, pageTwo.Hits.Count);
         Assert.Equal(2, pageTwo.Page);
-        long[] ids = pageOne.Hits.Concat(pageTwo.Hits).Select(hit => hit.Report!.Id).ToArray();
+        long[] ids = [.. pageOne.Hits.Concat(pageTwo.Hits).Select(hit => hit.Report!.Id)];
         Assert.Equal(ids.OrderDescending(), ids);
         Assert.Equal(18, ids.Distinct().Count());
     }
@@ -143,7 +143,7 @@ public class LabelSearchTests
         for (int restart = 0; restart < 2; restart++)
         {
             ILabelStore reopened = fixture.NewStore();
-            await reopened.InitializeAsync(StoreFixture.Issuer, token);
+            await reopened.InitializeAsync(StoreFixture.s_issuer, token);
             Assert.Equal(2, Success(await ((ILabelSearchStore)reopened).SearchAsync(caller, "preserved message", 1, token)).Total);
         }
     }

@@ -71,7 +71,7 @@ public class LabelReportStoreTests
                 expectedPolicyRevision: policy.Revision,
                 preparedActions: []),
             token));
-        ILabelTableStore table = Assert.IsAssignableFrom<ILabelTableStore>(fixture.NewStore());
+        ILabelTableStore table = Assert.IsType<ILabelTableStore>(fixture.NewStore(), exactMatch: false);
         LabelTablePage page = Success(await table.ReadTableAsync(
             administrator, new(LabelTableKind.Cases), token));
         LabelAuthorReportSummary summary = Assert.Single(page.AuthorSummaries!, item => item.Did == s_account.Repository.Value);
@@ -128,7 +128,7 @@ public class LabelReportStoreTests
             modToolName: "test/tool", modToolMetadata: metadata.RootElement);
         LabelModerationReport accepted = Success(await store.SubmitReportAsync(reporter, submission, policy.Revision, token));
         Assert.Equal(s_reporter, accepted.ReportedBy);
-        Assert.Equal(legacy ? StoreFixture.Issuer.Value : StoreFixture.Issuer.Value + "#atproto_labeler", accepted.Audience);
+        Assert.Equal(legacy ? StoreFixture.s_issuer.Value : StoreFixture.s_issuer.Value + "#atproto_labeler", accepted.Audience);
         Assert.Equal("v1", accepted.PolicyVersion);
         Assert.Equal(Reason, accepted.Submission.ReasonType);
         Assert.Equal(submission.Reason, accepted.Submission.Reason);
@@ -204,8 +204,8 @@ public class LabelReportStoreTests
 
         Assert.Equal(3, ids.Distinct().Count());
         IReadOnlyList<LabelModerationReport> page = Success(await store.GetReportsAsync(caller: administrator, limit: 1, cancellationToken: token));
-        Assert.Single(page);
-        Assert.Equal(2, Success(await store.GetReportsAsync(caller: administrator, afterId: page[0].Id, cancellationToken: token)).Count);
+        LabelModerationReport item = Assert.Single(page);
+        Assert.Equal(2, Success(await store.GetReportsAsync(caller: administrator, afterId: item.Id, cancellationToken: token)).Count);
         Assert.Single(Success(await store.GetReportsAsync(caller: administrator, caseId: ids[1], cancellationToken: token)));
     }
 
@@ -342,7 +342,7 @@ public class LabelReportStoreTests
         {
             Assert.Equal(LabelCaseStatus.Resolved, current.Status);
         }
-        ILabelTableStore tables = Assert.IsAssignableFrom<ILabelTableStore>(fixture.NewStore());
+        ILabelTableStore tables = Assert.IsType<ILabelTableStore>(fixture.NewStore(), exactMatch: false);
         LabelNavigationCounts counts = Success(await tables.ReadNavigationCountsAsync(administrator, token));
         Assert.Equal(existingCase ? 1 : 0, counts.Reports);
         LabelTablePage openCases = Success(await tables.ReadTableAsync(administrator, new(LabelTableKind.Cases), token));
@@ -355,7 +355,7 @@ public class LabelReportStoreTests
         LabelAdministrationReceipt automatic = Assert.Single(Success(await ((ILabelAdministrationStore)fixture.Store)
             .GetAdministrationAuditAsync(administrator, cancellationToken: token)),
             entry => entry.Action == "report-not-applicable");
-        Assert.Equal(StoreFixture.Issuer, automatic.Actor);
+        Assert.Equal(StoreFixture.s_issuer, automatic.Actor);
         Assert.Equal("system:report-reason", automatic.LocalIdentity);
         Assert.Equal("Not Applicable", automatic.Reason);
         IReadOnlyList<LabelAppeal> appeals = Success(await ((ILabelAppealStore)fixture.Store)

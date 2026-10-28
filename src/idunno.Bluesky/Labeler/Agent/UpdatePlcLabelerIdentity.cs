@@ -113,7 +113,7 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentException"><paramref name="signedOperation"/> is not an object containing a PLC operation signature.</exception>
     /// <exception cref="AuthenticationRequiredException">The current session is not authenticated.</exception>
     /// <remarks>
-    /// <para>Use this to resume submission after <see cref="UpdatePlcLabelerIdentity(System.String,System.Uri,System.String,System.Threading.CancellationToken)"/> returns <see cref="PlcLabelerIdentityUpdateStage.SubmissionFailed"/>. Resolve the DID before retrying to avoid submitting an operation that already succeeded.</para>
+    /// <para>Use this to resume submission after <see cref="UpdatePlcLabelerIdentity(string,System.Uri,string,System.Threading.CancellationToken)"/> returns <see cref="PlcLabelerIdentityUpdateStage.SubmissionFailed"/>. Resolve the DID before retrying to avoid submitting an operation that already succeeded.</para>
     /// <para>The PLC operation is accepted as a <see cref="JsonElement"/> rather than an SDK DTO so unknown fields from the PDS-signed operation are preserved when forwarding it unchanged.</para>
     /// </remarks>
     [UnconditionalSuppressMessage("Trimming", "IL2026:RequiresUnreferencedCode",

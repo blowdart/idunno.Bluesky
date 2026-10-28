@@ -24,7 +24,7 @@
     <input type="hidden" name="Sort" value="@(Model.Table?.Query.Sort ?? LabelTableSort.Received)" />
     <input type="hidden" name="Ascending" value="@((Model.Table?.Query.Ascending ?? false).ToString())" />
     <label for="actor">Actor DID or handle</label>
-    <input id="actor" name="Actor" value="@Request.Query["Actor"]" maxlength="2048" />
+    <input id="actor" name="Actor" value="@Request.Query["Actor"]" maxlength="2048" placeholder="DID or handle" />
     <label for="outcome">Outcome</label>
     <select id="outcome" name="Outcome">
         <option value="">All</option>

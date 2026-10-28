@@ -60,26 +60,17 @@ internal partial class ProfileEditJsonContext : JsonSerializerContext;
 /// storage with equivalent encryption, expiry and atomic transitions; sharing a data protection key ring is not sufficient.
 /// </para>
 /// </remarks>
-public sealed class ProfileEditStore : IDisposable
+/// <param name="protection">The data protection provider.</param>
+/// <param name="clock">The expiry clock.</param>
+public sealed class ProfileEditStore(IDataProtectionProvider protection, TimeProvider clock) : IDisposable
 {
     private sealed record Entry(string Id, byte[] Payload, DateTimeOffset Expires, ProfileEditStatus Status, string? Message);
 
     private readonly MemoryCache _cache = new(new MemoryCacheOptions { SizeLimit = 1000 });
     private readonly Lock _gate = new();
     private readonly SemaphoreSlim _sessionGate = new(1, 1);
-    private readonly IDataProtector _protector;
-    private readonly TimeProvider _clock;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ProfileEditStore"/> class.
-    /// </summary>
-    /// <param name="protection">The data protection provider.</param>
-    /// <param name="clock">The expiry clock.</param>
-    public ProfileEditStore(IDataProtectionProvider protection, TimeProvider clock)
-    {
-        _protector = protection.CreateProtector("Samples.AspNetProgressiveAuthentication.ProfileEdit.v1");
-        _clock = clock;
-    }
+    private readonly IDataProtector _protector = protection.CreateProtector("Samples.AspNetProgressiveAuthentication.ProfileEdit.v1");
+    private readonly TimeProvider _clock = clock;
 
     /// <summary>
     /// Encrypts a newly submitted edit and replaces any draft belonging to the same owner.

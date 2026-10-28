@@ -195,13 +195,8 @@ public class AtProtoErrorTests
     }
 
     [ExcludeFromCodeCoverage]
-    private sealed class TestableAtProtoHttpClient : AtProtoHttpClient<string>
+    private sealed class TestableAtProtoHttpClient(IList<Func<AtErrorDetail?, AtErrorDetail?>>? errorMappers) : AtProtoHttpClient<string>(null, null, null, null, errorMappers)
     {
-        public TestableAtProtoHttpClient(IList<Func<AtErrorDetail?, AtErrorDetail?>>? errorMappers)
-            : base(null, null, null, null, errorMappers)
-        {
-        }
-
         public IReadOnlyCollection<Func<AtErrorDetail?, AtErrorDetail?>> Mappers => ErrorMapperChain;
     }
 }

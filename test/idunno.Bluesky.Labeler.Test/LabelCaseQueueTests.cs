@@ -122,7 +122,7 @@ public class LabelCaseQueueTests
         ILabelModerationStore restarted = (ILabelModerationStore)fixture.NewStore();
         LabelCasePage rest = Success(await restarted.GetCaseQueueAsync(
             caller: caller, query: query, cursor: first.Cursor, limit: 100, cancellationToken: token));
-        Assert.Equal(new long[] { 2, 3 }, rest.Cases.Select(item => item.Id));
+        Assert.Equal<long>([2, 3], rest.Cases.Select(item => item.Id));
         Assert.Null(rest.Cursor);
         LabelCaseQuery[] changes =
         [

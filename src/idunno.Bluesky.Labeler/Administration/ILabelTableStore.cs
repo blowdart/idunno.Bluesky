@@ -9,6 +9,14 @@ namespace idunno.Bluesky.Labeler.Administration;
 /// <summary>Reads counted, globally ordered administrative tables under the same live authority as other inspections.</summary>
 internal interface ILabelTableStore
 {
+    /// <summary>Deletes an unpublished draft under live policy authority while retaining immutable history and retry receipts.</summary>
+    Task<LabelServiceResult<LabelPolicyDefinition>> DeletePolicyDraftAsync(
+        LabelAdministrationCaller caller,
+        string operationId,
+        string version,
+        string reason,
+        CancellationToken cancellationToken);
+
     /// <summary>Records an authorized export start and captures its exclusive audit-event cutoff in the same transaction.</summary>
     Task<LabelServiceResult<LabelAdministrationReceipt>> BeginAuditExportAsync(
         LabelAdministrationCaller caller,
@@ -87,7 +95,8 @@ internal sealed record LabelTableQuery(
     DateTimeOffset? AuditFrom = null,
     DateTimeOffset? AuditTo = null,
     long AuditAfterSequence = 0,
-    long? AuditThroughSequence = null)
+    long? AuditThroughSequence = null,
+    string? TeamMember = null)
 {
     internal const int PageSize = 16;
 
@@ -107,6 +116,7 @@ internal sealed record LabelTableQuery(
     {
         if (Page <= 0 || !Columns.Contains(Sort) || !Enum.IsDefined(Queue) ||
             AuditActor is { Length: > 2048 } ||
+            TeamMember is not null && !idunno.AtProto.Did.TryParse(TeamMember, out _) ||
             AuditAfterSequence < 0 || AuditThroughSequence is < 0 ||
             AuditFrom is { } from && AuditTo is { } to && from > to ||
             AppealStatus is { } status && !Enum.IsDefined(status))

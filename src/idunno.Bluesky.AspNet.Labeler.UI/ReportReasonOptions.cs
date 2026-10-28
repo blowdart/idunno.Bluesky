@@ -1,4 +1,4 @@
-// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. s_all rights reserved.
 // Licensed under the MIT License.
 
 namespace idunno.Bluesky.AspNet.Labeler.UI;
@@ -7,7 +7,7 @@ namespace idunno.Bluesky.AspNet.Labeler.UI;
 internal static class ReportReasonOptions
 {
     /// <summary>Gets the standard Ozone and legacy AT Protocol reasons grouped for policy selection.</summary>
-    internal static readonly (string Group, string Id, string Title)[] All =
+    internal static readonly (string Group, string Id, string Title)[] s_all =
     [
         ("General", "tools.ozone.report.defs#reasonOther", "Other"),
         ("General", "tools.ozone.report.defs#reasonAppeal", "Appeal a moderation action"),

@@ -31,7 +31,7 @@ public class AdministrationCliValidationTests
     public void UriOptionsUseTheCommandLineParser(string value, bool valid)
     {
         Option<Uri?> option = Program.CreateUriOption("--endpoint", "The endpoint.", required: true);
-        RootCommand command = new();
+        RootCommand command = [];
         command.Options.Add(option);
         ParseResult parsed = command.Parse(["--endpoint", value]);
         Assert.Equal(valid, parsed.Errors.Count == 0);
@@ -47,7 +47,7 @@ public class AdministrationCliValidationTests
     public void MissingUriOptionsRespectRequiredness(bool required)
     {
         Option<Uri?> option = Program.CreateUriOption("--admin-url", "The endpoint.", required);
-        RootCommand command = new();
+        RootCommand command = [];
         command.Options.Add(option);
         ParseResult parsed = command.Parse([]);
         Assert.Equal(required, parsed.Errors.Count > 0);

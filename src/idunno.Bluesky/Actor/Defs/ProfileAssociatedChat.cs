@@ -3,7 +3,9 @@
 
 using System.Text.Json.Serialization;
 
+#pragma warning disable IDE0130 // Preserve the established namespace independently of folder layout.
 namespace idunno.Bluesky.Actor;
+#pragma warning restore IDE0130
 
 /// <summary>
 /// Encapsulates the chat configuration for an actor.

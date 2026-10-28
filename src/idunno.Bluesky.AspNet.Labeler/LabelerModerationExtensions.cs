@@ -75,6 +75,7 @@ public static class LabelerModerationExtensions
                 issuer: issuer, store: policies, httpClient: httpClient, loggerFactory: provider.GetRequiredService<ILoggerFactory>());
         });
         services.AddSingleton<ILabelIssuancePolicyProvider>(provider => provider.GetRequiredService<LabelPolicyService>());
+        services.AddHostedService<PolicyVerificationWorker>();
         services.AddSingleton(provider => new LabelerModerationHost(
             issuer: issuer,
             httpClient: httpClient,

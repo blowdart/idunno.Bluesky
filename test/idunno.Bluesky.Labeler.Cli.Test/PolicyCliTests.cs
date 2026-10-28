@@ -11,6 +11,7 @@ using idunno.AtProto.Authentication;
 using idunno.Bluesky.Labeler.Moderation;
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 
 namespace idunno.Bluesky.Labeler.Cli.Test;
 
@@ -52,6 +53,7 @@ public class PolicyCliTests
     [InlineData("VerifiedActive", "publication", Issuer, "v1", null, true)]
     [InlineData("Conflict", "publication", Issuer, "v1", null, false)]
     [InlineData("Unverified", "publication", Issuer, "v1", null, false)]
+    [InlineData("Withdrawing", "publication", Issuer, "v1", null, false)]
     [InlineData("Publishing", "replacement", Issuer, "v1", null, false)]
     [InlineData("Publishing", null, Issuer, "v1", null, false)]
     [InlineData("Publishing", "publication", "did:plc:other", "v1", null, false)]
@@ -79,6 +81,93 @@ public class PolicyCliTests
         Assert.Equal(expected, Program.MatchesPolicyPublication(current, intent));
         Assert.False(Program.MatchesPolicyPublication(current, intent with { PublicationOperationId = null }));
         Assert.False(Program.MatchesPolicyPublication(current with { Definition = null }, intent));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DeclarationPublicationWaitsForWithdrawalAndRenewsPausedAuthority(bool paused)
+    {
+        WithdrawalClock clock = new();
+        Program.PolicyState intent = new(
+            Issuer: Issuer,
+            Phase: "Withdrawing",
+            PublicationOperationId: "publication",
+            Definition: Definition(),
+            Withdrawal: new(paused ? "Authorization expired." : null));
+        int reads = 0;
+        int resumes = 0;
+        Task<(Program.PolicyState? State, int Failure)> pending = Program.WaitForPolicyWithdrawalAsync(
+            sender: (command, _) =>
+            {
+                if (command.Method == "resumePolicyPublication")
+                {
+                    resumes++;
+                    Assert.Equal("publication", command.OperationId);
+                }
+                else
+                {
+                    Assert.Equal("getPolicy", command.Method);
+                    reads++;
+                }
+                Program.PolicyState state = reads == 1 ? intent : intent with { Phase = "Publishing", Withdrawal = null };
+                return Task.FromResult(new Program.AdministrationReply(
+                    """{"succeeded":true,"moderation":{"policy":""" +
+                    JsonSerializer.Serialize(state, Program.PolicyJsonContext.Default.PolicyState) + "}}",
+                    HttpStatusCode.OK));
+            },
+            reason: "Confirm withdrawn values.",
+            intent: intent,
+            clock: clock,
+            cancellationToken: TestContext.Current.CancellationToken);
+        await clock.Registered.Task.WaitAsync(TestContext.Current.CancellationToken);
+        Assert.False(pending.IsCompleted);
+        Assert.Equal(1, reads);
+        Assert.Equal(paused ? 1 : 0, resumes);
+        clock.Advance(TimeSpan.FromSeconds(5));
+        (Program.PolicyState? ready, int failure) = await pending;
+        Assert.Equal(0, failure);
+        Assert.NotNull(ready);
+        Assert.True(Program.MatchesPolicyPublication(ready, intent));
+    }
+
+    [Fact]
+    public async Task CancellingWithdrawalWaitDoesNotPermitADeclarationWrite()
+    {
+        WithdrawalClock clock = new();
+        Program.PolicyState intent = new(
+            Issuer: Issuer,
+            Phase: "Withdrawing",
+            PublicationOperationId: "publication",
+            Definition: Definition());
+        using CancellationTokenSource cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        Task<(Program.PolicyState? State, int Failure)> pending = Program.WaitForPolicyWithdrawalAsync(
+            sender: (_, _) => Task.FromResult(new Program.AdministrationReply(
+                """{"succeeded":true,"moderation":{"policy":""" +
+                JsonSerializer.Serialize(intent, Program.PolicyJsonContext.Default.PolicyState) + "}}",
+                HttpStatusCode.OK)),
+            reason: "Confirmed cleanup.",
+            intent: intent,
+            clock: clock,
+            cancellationToken: cancellation.Token);
+        await clock.Registered.Task.WaitAsync(TestContext.Current.CancellationToken);
+        cancellation.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending);
+        Assert.False(Program.MatchesPolicyPublication(intent, intent));
+    }
+
+    /// <summary>Signals actual delay registration before tests advance the shared fixed clock.</summary>
+    private sealed class WithdrawalClock() : FakeTimeProvider(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero))
+    {
+        internal TaskCompletionSource Registered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <summary>Registers the real fake timer before releasing the test's phase barrier.</summary>
+        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+        {
+            ITimer timer = base.CreateTimer(callback, state, dueTime, period);
+            Registered.TrySetResult();
+            return timer;
+        }
     }
 
     [Theory]
@@ -125,7 +214,7 @@ public class PolicyCliTests
     [InlineData("abandon", "--expected-revision", "2", "--reason", "Reviewed", "--operation-id", "abandon", "--yes")]
     public void ExplicitPolicyCommandsParseWithoutGenericMethodOrCallerOverrides(params string[] arguments)
     {
-        RootCommand root = new();
+        RootCommand root = [];
         root.Subcommands.Add(Program.CreatePolicyCommand());
         Assert.Empty(root.Parse(["policy", .. arguments]).Errors);
         Assert.NotEmpty(root.Parse(["policy", .. arguments, "--method", "changeTeam"]).Errors);

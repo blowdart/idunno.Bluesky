@@ -34,15 +34,15 @@ public partial class ProfileTests
     private const string DidValue = "did:plc:ewvi7nxzyoun6zhxrhs64oiz";
     private const string OtherDid = "did:plc:ragtjsm2j2vknwkz3zp4oxrd";
     private const string ProfileCid = "bafyreie5cvv4hro5oz3x5i5m5agzojwzwczl7ddsxv2gm7vby7i2dqu2yi";
-    private static readonly ProfileEdit Edit = new("Edited name", "Edited description", "they/them", ProfileCid);
+    private static readonly ProfileEdit s_edit = new("Edited name", "Edited description", "they/them", ProfileCid);
 
     [Fact]
     public void InitialScopesAndBothMetadataFormsAreLeastPrivilege()
     {
         using var factory = new SampleFactory();
-        var oauth = factory.Services.GetRequiredService<IOptions<BlueskyAgentOptions>>().Value.OAuthOptions!;
+        OAuthOptions oauth = factory.Services.GetRequiredService<IOptions<BlueskyAgentOptions>>().Value.OAuthOptions!;
         Assert.Equal(ProfilePermissions.ReadScopes, oauth.GetRequestedScopes());
-        var authentication = factory.Services.GetRequiredService<IOptionsMonitor<BlueskyAuthenticationOptions>>()
+        BlueskyAuthenticationOptions authentication = factory.Services.GetRequiredService<IOptionsMonitor<BlueskyAuthenticationOptions>>()
             .Get(BlueskyAuthenticationDefaults.AuthenticationScheme);
         Assert.Equal(".AspNetCore.Bluesky.Progressive", authentication.Cookie.Name);
         Assert.Equal(".AspNetCore.Bluesky.Progressive.Correlation", authentication.CorrelationCookie.Name);
@@ -51,11 +51,11 @@ public partial class ProfileTests
         Assert.DoesNotContain(ProfilePermissions.CreateScope, oauth.GetRequestedScopes());
         Assert.DoesNotContain(oauth.GetRequestedScopes(), scope => scope.Contains("transition:", StringComparison.Ordinal));
         Assert.Equal(4, oauth.GetRequestedScopes().Count());
-        var query = QueryHelpers.ParseQuery(new Uri(oauth.ClientId).Query);
+        Dictionary<string, Microsoft.Extensions.Primitives.StringValues> query = QueryHelpers.ParseQuery(new Uri(oauth.ClientId).Query);
         Assert.Equal(string.Join(' ', ProfilePermissions.MaximumScopes), query["scope"].ToString());
         Assert.Equal("http://127.0.0.1/Bluesky/Callback", query["redirect_uri"].ToString());
 
-        var metadata = factory.Services.GetRequiredService<IOptions<BlueskyOAuthClientMetadataOptions>>().Value;
+        BlueskyOAuthClientMetadataOptions metadata = factory.Services.GetRequiredService<IOptions<BlueskyOAuthClientMetadataOptions>>().Value;
         var production = new OAuthOptions("https://app.example/oauth-client-metadata.json",
             new Uri("https://app.example/Bluesky/Callback"), oauth.GetRequestedScopes());
         using JsonDocument document = JsonDocument.Parse(metadata.GenerateJson(production));
@@ -70,11 +70,11 @@ public partial class ProfileTests
     public void LocalhostCallbackKeepsConfiguredPathAndBrowserPort(int port)
     {
         using var factory = new SampleFactory();
-        using var scope = factory.Services.CreateScope();
+        using IServiceScope scope = factory.Services.CreateScope();
         var context = new DefaultHttpContext();
         context.Request.Host = new HostString("127.0.0.1", port);
         scope.ServiceProvider.GetRequiredService<IHttpContextAccessor>().HttpContext = context;
-        var manager = scope.ServiceProvider.GetRequiredService<BlueskySignInManager>();
+        BlueskySignInManager manager = scope.ServiceProvider.GetRequiredService<BlueskySignInManager>();
         Assert.Equal(new Uri($"http://127.0.0.1:{port}/Bluesky/Callback"), manager.CreateReturnUri());
     }
 
@@ -92,12 +92,12 @@ public partial class ProfileTests
     public async Task ProductionMetadataUsesTransportMiddleware(string scheme)
     {
         await using var factory = new SampleFactory { Production = true };
-        using var browser = factory.CreateClient(new()
+        using HttpClient browser = factory.CreateClient(new()
         {
             AllowAutoRedirect = false,
             BaseAddress = new($"{scheme}://example.idunno.blue")
         });
-        using var response = await browser.GetAsync("/oauth-client-metadata.json", TestContext.Current.CancellationToken);
+        using HttpResponseMessage response = await browser.GetAsync("/oauth-client-metadata.json", TestContext.Current.CancellationToken);
         if (scheme == "http")
         {
             Assert.Equal(HttpStatusCode.TemporaryRedirect, response.StatusCode);
@@ -116,7 +116,7 @@ public partial class ProfileTests
     [InlineData("atproto", false)]
     public void RequestedPermissionsAreNotMistakenForExplicitGrants(string granted, bool canUpdate)
     {
-        var tokenCredentials = Credentials(granted);
+        DPoPAccessCredentials tokenCredentials = Credentials(granted);
         var credentials = new DPoPAccessCredentials(
             tokenCredentials.Service, tokenCredentials.AccessJwt, tokenCredentials.RefreshToken,
             tokenCredentials.DPoPProofKey, tokenCredentials.DPoPNonce)
@@ -133,7 +133,7 @@ public partial class ProfileTests
         var clock = new FakeTimeProvider();
         using var store = new ProfileEditStore(new EphemeralDataProtectionProvider(), clock);
         ProfileEditOwner owner = new(DidValue, "first-session");
-        string id = store.Add(owner, Edit);
+        string id = store.Add(owner, s_edit);
         Assert.Null(store.Get(new(OtherDid, owner.Session)));
         Assert.Null(store.Get(new(owner.Did, "second-session")));
         Assert.False(store.TakeConsent(new(OtherDid, owner.Session), id));
@@ -143,9 +143,9 @@ public partial class ProfileTests
         Assert.False(store.TakeConsent(owner, id));
         Assert.Null(store.TakeReady(owner, id));
         Assert.True(store.FinishConsent(owner, id, authorized: true));
-        Assert.Equal(Edit, store.TakeReady(owner, id));
+        Assert.Equal(s_edit, store.TakeReady(owner, id));
         Assert.Null(store.TakeReady(owner, id));
-        Assert.Equal(Edit, store.Get(owner)?.Edit);
+        Assert.Equal(s_edit, store.Get(owner)?.Edit);
         store.Remove(owner, id);
         Assert.Null(store.Get(owner));
     }
@@ -156,15 +156,15 @@ public partial class ProfileTests
     public async Task CallbackCannotRestoreSessionDuringRealLogoutOrLoginReplacement(bool replacementLogin)
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        using HttpClient browser = factory.CreateClient(new() { AllowAutoRedirect = false });
         await Login(browser);
         string editor = await browser.GetStringAsync("/Manage", TestContext.Current.CancellationToken);
-        using var pending = await PostEdit(browser);
+        using HttpResponseMessage pending = await PostEdit(browser);
         string callbackUrl = pending.Headers.Location!.ToString();
         string? replacementCallback = null;
         if (replacementLogin)
         {
-            using var prepared = await browser.GetAsync("/test/prepare?returnUrl=%2FManage", TestContext.Current.CancellationToken);
+            using HttpResponseMessage prepared = await browser.GetAsync("/test/prepare?returnUrl=%2FManage", TestContext.Current.CancellationToken);
             replacementCallback = prepared.Headers.Location!.ToString();
         }
         TaskCompletionSource entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -180,9 +180,9 @@ public partial class ProfileTests
         try
         {
             await entered.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
-            using var callback = await browser.GetAsync(callbackUrl, TestContext.Current.CancellationToken);
+            using HttpResponseMessage callback = await browser.GetAsync(callbackUrl, TestContext.Current.CancellationToken);
             Assert.Equal("/Manage", callback.Headers.Location?.ToString());
-            Assert.False(callback.Headers.TryGetValues("Set-Cookie", out var cookies) &&
+            Assert.False(callback.Headers.TryGetValues("Set-Cookie", out IEnumerable<string>? cookies) &&
                 cookies.Any(cookie => cookie.StartsWith(".AspNetCore.Bluesky.Progressive=", StringComparison.Ordinal)));
             Assert.Equal(replacementLogin ? 1 : 0, factory.Trace.Authorizations);
             Assert.Equal(0, factory.Pds.Writes);
@@ -190,7 +190,7 @@ public partial class ProfileTests
         finally
         {
             release.TrySetResult();
-            using var changed = await changingSession;
+            using HttpResponseMessage changed = await changingSession;
             Assert.Equal(HttpStatusCode.Redirect, changed.StatusCode);
         }
 
@@ -200,7 +200,7 @@ public partial class ProfileTests
         }
         else
         {
-            var store = factory.Services.GetRequiredService<IOptionsMonitor<BlueskyAuthenticationOptions>>()
+            IIdentityStore store = factory.Services.GetRequiredService<IOptionsMonitor<BlueskyAuthenticationOptions>>()
                 .Get(BlueskyAuthenticationDefaults.AuthenticationScheme).IdentityStore!;
             Assert.Null(await store.GetIdentity(new Did(DidValue), TestContext.Current.CancellationToken));
         }
@@ -211,7 +211,7 @@ public partial class ProfileTests
     {
         using var store = new ProfileEditStore(new EphemeralDataProtectionProvider(), new FakeTimeProvider());
         ProfileEditOwner owner = new(DidValue, "session");
-        string id = store.Add(owner, Edit);
+        string id = store.Add(owner, s_edit);
         Assert.True(store.TakeConsent(owner, id));
         TaskCompletionSource entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -240,7 +240,7 @@ public partial class ProfileTests
     {
         using var store = new ProfileEditStore(new EphemeralDataProtectionProvider(), new FakeTimeProvider());
         ProfileEditOwner owner = new(DidValue, "session");
-        string id = store.Add(owner, Edit);
+        string id = store.Add(owner, s_edit);
         Assert.True(store.TakeConsent(owner, id));
         await store.Invalidate(owner);
         bool signedIn = false;
@@ -262,7 +262,7 @@ public partial class ProfileTests
         var clock = new FakeTimeProvider();
         using var store = new ProfileEditStore(new EphemeralDataProtectionProvider(), clock);
         ProfileEditOwner owner = new(DidValue, "session");
-        string id = store.Add(owner, Edit);
+        string id = store.Add(owner, s_edit);
         clock.Advance(TimeSpan.FromMinutes(9));
         if (consentStarted)
         {
@@ -280,15 +280,15 @@ public partial class ProfileTests
     public async Task ReadOnlySaveChallengesAndConsentCompletesExactlyOneProtectedSave()
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false, BaseAddress = new("http://127.0.0.1:5251") });
+        using HttpClient browser = factory.CreateClient(new() { AllowAutoRedirect = false, BaseAddress = new("http://127.0.0.1:5251") });
         await Login(browser);
-        using var save = await PostEdit(browser);
+        using HttpResponseMessage save = await PostEdit(browser);
         Assert.Equal(HttpStatusCode.Redirect, save.StatusCode);
         Assert.Equal(0, factory.Pds.Writes);
         Assert.Equal(ProfilePermissions.MaximumScopes, factory.OAuth!.RequestedScopes);
         string callback = save.Headers.Location!.ToString();
 
-        using var consent = await browser.GetAsync(callback + "&returnUrl=https://evil.example/", TestContext.Current.CancellationToken);
+        using HttpResponseMessage consent = await browser.GetAsync(callback + "&returnUrl=https://evil.example/", TestContext.Current.CancellationToken);
         Assert.Equal("/Manage", consent.Headers.Location?.ToString());
         Assert.Equal(DidValue, factory.OAuth.ExpectedDid?.Value);
         Assert.Equal(0, factory.Pds.Writes);
@@ -296,10 +296,12 @@ public partial class ProfileTests
         Assert.Contains("complete-profile-save", html, StringComparison.Ordinal);
         string id = HiddenValue(html, "completionId");
         string token = HiddenValue(html, "__RequestVerificationToken");
-        using var completed = await Post(browser, "/Manage?handler=Complete", new()
+        using HttpResponseMessage completed = await Post(browser, "/Manage?handler=Complete", new()
         {
-            ["completionId"] = id, ["__RequestVerificationToken"] = token,
-            ["DisplayName"] = "Tampered", ["cid"] = "tampered"
+            ["completionId"] = id,
+            ["__RequestVerificationToken"] = token,
+            ["DisplayName"] = "Tampered",
+            ["cid"] = "tampered"
         });
         Assert.Equal(HttpStatusCode.Redirect, completed.StatusCode);
         Assert.Equal(1, factory.Pds.Writes);
@@ -307,16 +309,17 @@ public partial class ProfileTests
         Assert.Equal(ProfileCid, payload.RootElement.GetProperty("swapRecord").GetString());
         Assert.Equal("app.bsky.actor.profile", payload.RootElement.GetProperty("collection").GetString());
         Assert.Equal("self", payload.RootElement.GetProperty("rkey").GetString());
-        Assert.Equal(Edit.DisplayName, payload.RootElement.GetProperty("record").GetProperty("displayName").GetString());
-        Assert.Equal(Edit.Description, payload.RootElement.GetProperty("record").GetProperty("description").GetString());
-        Assert.Equal(Edit.Pronouns, payload.RootElement.GetProperty("record").GetProperty("pronouns").GetString());
+        Assert.Equal(s_edit.DisplayName, payload.RootElement.GetProperty("record").GetProperty("displayName").GetString());
+        Assert.Equal(s_edit.Description, payload.RootElement.GetProperty("record").GetProperty("description").GetString());
+        Assert.Equal(s_edit.Pronouns, payload.RootElement.GetProperty("record").GetProperty("pronouns").GetString());
 
-        using var replay = await Post(browser, "/Manage?handler=Complete", new()
+        using HttpResponseMessage replay = await Post(browser, "/Manage?handler=Complete", new()
         {
-            ["completionId"] = id, ["__RequestVerificationToken"] = token
+            ["completionId"] = id,
+            ["__RequestVerificationToken"] = token
         });
         Assert.Equal(HttpStatusCode.Redirect, replay.StatusCode);
-        using var callbackReplay = await browser.GetAsync(callback, TestContext.Current.CancellationToken);
+        using HttpResponseMessage callbackReplay = await browser.GetAsync(callback, TestContext.Current.CancellationToken);
         Assert.Equal(1, factory.Pds.Writes);
         Assert.Equal(1, factory.OAuth.Authorizations);
     }
@@ -325,9 +328,9 @@ public partial class ProfileTests
     public async Task ExistingUpdateGrantSavesWithoutAnotherConsentRequest()
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        using HttpClient browser = factory.CreateClient(new() { AllowAutoRedirect = false });
         await Login(browser, write: true);
-        using var save = await PostEdit(browser);
+        using HttpResponseMessage save = await PostEdit(browser);
         Assert.Equal(HttpStatusCode.Redirect, save.StatusCode);
         Assert.Equal(1, factory.Pds.Writes);
         Assert.Null(factory.OAuth);
@@ -339,15 +342,15 @@ public partial class ProfileTests
     public async Task UpdateOnlySessionRequestsCreatePermissionBeforePutRecord()
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
-        using var login = await browser.GetAsync($"/test/login?did={DidValue}&updateOnly=True", TestContext.Current.CancellationToken);
-        using var save = await PostEdit(browser);
+        using HttpClient browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        using HttpResponseMessage login = await browser.GetAsync($"/test/login?did={DidValue}&updateOnly=True", TestContext.Current.CancellationToken);
+        using HttpResponseMessage save = await PostEdit(browser);
         Assert.Equal(HttpStatusCode.Redirect, save.StatusCode);
         Assert.Equal(ProfilePermissions.MaximumScopes, factory.OAuth!.RequestedScopes);
         Assert.Equal(0, factory.Pds.Writes);
-        using var callback = await browser.GetAsync(save.Headers.Location, TestContext.Current.CancellationToken);
+        using HttpResponseMessage callback = await browser.GetAsync(save.Headers.Location, TestContext.Current.CancellationToken);
         string html = await browser.GetStringAsync("/Manage", TestContext.Current.CancellationToken);
-        using var complete = await Post(browser, "/Manage?handler=Complete", new()
+        using HttpResponseMessage complete = await Post(browser, "/Manage?handler=Complete", new()
         {
             ["completionId"] = HiddenValue(html, "completionId"),
             ["__RequestVerificationToken"] = HiddenValue(html, "__RequestVerificationToken")
@@ -366,13 +369,13 @@ public partial class ProfileTests
     public async Task FailedConsentPreservesEditsAndDoesNotReplaceCredentialsOrSave(string outcome)
     {
         await using var factory = new SampleFactory { Outcome = outcome };
-        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        using HttpClient browser = factory.CreateClient(new() { AllowAutoRedirect = false });
         await Login(browser);
-        using var save = await PostEdit(browser);
-        using var callback = await browser.GetAsync(save.Headers.Location, TestContext.Current.CancellationToken);
+        using HttpResponseMessage save = await PostEdit(browser);
+        using HttpResponseMessage callback = await browser.GetAsync(save.Headers.Location, TestContext.Current.CancellationToken);
         Assert.Equal("/Manage", callback.Headers.Location?.ToString());
         string html = await browser.GetStringAsync("/Manage", TestContext.Current.CancellationToken);
-        Assert.Contains(Edit.DisplayName, html, StringComparison.Ordinal);
+        Assert.Contains(s_edit.DisplayName, html, StringComparison.Ordinal);
         Assert.Contains("not been saved", html, StringComparison.Ordinal);
         Assert.DoesNotContain("complete-profile-save", html, StringComparison.Ordinal);
         Assert.Equal(0, factory.Pds.Writes);
@@ -385,11 +388,11 @@ public partial class ProfileTests
     public async Task AccountOrSessionSwitchInvalidatesPendingConsent(bool sameAccount)
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        using HttpClient browser = factory.CreateClient(new() { AllowAutoRedirect = false });
         await Login(browser);
-        using var save = await PostEdit(browser);
+        using HttpResponseMessage save = await PostEdit(browser);
         await Login(browser, sameAccount ? DidValue : OtherDid);
-        using var callback = await browser.GetAsync(save.Headers.Location, TestContext.Current.CancellationToken);
+        using HttpResponseMessage callback = await browser.GetAsync(save.Headers.Location, TestContext.Current.CancellationToken);
         Assert.Equal(0, factory.Pds.Writes);
         Assert.Equal(0, factory.OAuth!.Authorizations);
     }
@@ -398,16 +401,16 @@ public partial class ProfileTests
     public async Task BrowserCancellationKeepsDraftAndNewAttemptSupersedesOldCallback()
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        using HttpClient browser = factory.CreateClient(new() { AllowAutoRedirect = false });
         await Login(browser);
-        using var first = await PostEdit(browser);
+        using HttpResponseMessage first = await PostEdit(browser);
         string html = await browser.GetStringAsync("/Manage", TestContext.Current.CancellationToken);
-        Assert.Contains(Edit.DisplayName, html, StringComparison.Ordinal);
+        Assert.Contains(s_edit.DisplayName, html, StringComparison.Ordinal);
         Assert.Contains("not been saved", html, StringComparison.Ordinal);
-        using var second = await PostEdit(browser);
-        using var stale = await browser.GetAsync(first.Headers.Location, TestContext.Current.CancellationToken);
+        using HttpResponseMessage second = await PostEdit(browser);
+        using HttpResponseMessage stale = await browser.GetAsync(first.Headers.Location, TestContext.Current.CancellationToken);
         Assert.Equal(0, factory.OAuth!.Authorizations);
-        using var current = await browser.GetAsync(second.Headers.Location, TestContext.Current.CancellationToken);
+        using HttpResponseMessage current = await browser.GetAsync(second.Headers.Location, TestContext.Current.CancellationToken);
         Assert.Equal(1, factory.OAuth.Authorizations);
         Assert.Equal(0, factory.Pds.Writes);
     }
@@ -416,14 +419,14 @@ public partial class ProfileTests
     public async Task ExpiredConsentCannotSaveAndReportsLostDraft()
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        using HttpClient browser = factory.CreateClient(new() { AllowAutoRedirect = false });
         await Login(browser);
-        using var save = await PostEdit(browser);
+        using HttpResponseMessage save = await PostEdit(browser);
         factory.Clock.Advance(TimeSpan.FromMinutes(10));
-        using var callback = await browser.GetAsync(save.Headers.Location, TestContext.Current.CancellationToken);
+        using HttpResponseMessage callback = await browser.GetAsync(save.Headers.Location, TestContext.Current.CancellationToken);
         string html = await browser.GetStringAsync("/Manage", TestContext.Current.CancellationToken);
         Assert.Contains("expired", html, StringComparison.Ordinal);
-        Assert.DoesNotContain(Edit.DisplayName, html, StringComparison.Ordinal);
+        Assert.DoesNotContain(s_edit.DisplayName, html, StringComparison.Ordinal);
         Assert.Equal(0, factory.OAuth!.Authorizations);
         Assert.Equal(0, factory.Pds.Writes);
     }
@@ -432,21 +435,21 @@ public partial class ProfileTests
     public async Task SignOutInvalidatesConsentEvenIfTheOldAuthenticationCookieIsReplayed()
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
-        using var login = await browser.GetAsync($"/test/login?did={DidValue}&write=False", TestContext.Current.CancellationToken);
+        using HttpClient browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        using HttpResponseMessage login = await browser.GetAsync($"/test/login?did={DidValue}&write=False", TestContext.Current.CancellationToken);
         string oldCookie = string.Join("; ", login.Headers.GetValues("Set-Cookie").Select(cookie => cookie.Split(';')[0]));
-        using var save = await PostEdit(browser);
+        using HttpResponseMessage save = await PostEdit(browser);
         string correlationCookies = string.Join("; ", save.Headers.GetValues("Set-Cookie").Select(cookie => cookie.Split(';')[0]));
         string html = await browser.GetStringAsync("/Manage", TestContext.Current.CancellationToken);
-        using var logout = await Post(browser, "/Bluesky/Logout", new()
+        using HttpResponseMessage logout = await Post(browser, "/Bluesky/Logout", new()
         {
             ["__RequestVerificationToken"] = HiddenValue(html, "__RequestVerificationToken")
         });
         await Login(browser);
-        using var replayBrowser = factory.CreateClient(new() { AllowAutoRedirect = false, HandleCookies = false });
+        using HttpClient replayBrowser = factory.CreateClient(new() { AllowAutoRedirect = false, HandleCookies = false });
         using var request = new HttpRequestMessage(HttpMethod.Get, save.Headers.Location);
         request.Headers.Add("Cookie", oldCookie + "; " + correlationCookies);
-        using var callback = await replayBrowser.SendAsync(request, TestContext.Current.CancellationToken);
+        using HttpResponseMessage callback = await replayBrowser.SendAsync(request, TestContext.Current.CancellationToken);
         Assert.Equal(0, factory.OAuth!.Authorizations);
         Assert.Equal(0, factory.Pds.Writes);
     }
@@ -455,25 +458,27 @@ public partial class ProfileTests
     public async Task DiscardIsBoundToTheCurrentDraftAndReloadsTheLatestProfile()
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        using HttpClient browser = factory.CreateClient(new() { AllowAutoRedirect = false });
         await Login(browser);
-        using var save = await PostEdit(browser);
+        using HttpResponseMessage save = await PostEdit(browser);
         string html = await browser.GetStringAsync("/Manage", TestContext.Current.CancellationToken);
         string id = HiddenValue(html, "pendingId");
-        using var tampered = await Post(browser, "/Manage?handler=Discard", new()
+        using HttpResponseMessage tampered = await Post(browser, "/Manage?handler=Discard", new()
         {
-            ["pendingId"] = "tampered", ["__RequestVerificationToken"] = HiddenValue(html, "__RequestVerificationToken")
+            ["pendingId"] = "tampered",
+            ["__RequestVerificationToken"] = HiddenValue(html, "__RequestVerificationToken")
         });
         string unchanged = await browser.GetStringAsync("/Manage", TestContext.Current.CancellationToken);
-        Assert.Contains(Edit.DisplayName, unchanged, StringComparison.Ordinal);
-        using var discarded = await Post(browser, "/Manage?handler=Discard", new()
+        Assert.Contains(s_edit.DisplayName, unchanged, StringComparison.Ordinal);
+        using HttpResponseMessage discarded = await Post(browser, "/Manage?handler=Discard", new()
         {
-            ["pendingId"] = id, ["__RequestVerificationToken"] = HiddenValue(unchanged, "__RequestVerificationToken")
+            ["pendingId"] = id,
+            ["__RequestVerificationToken"] = HiddenValue(unchanged, "__RequestVerificationToken")
         });
         string reloaded = await browser.GetStringAsync("/Manage", TestContext.Current.CancellationToken);
         Assert.Contains("Original description", reloaded, StringComparison.Ordinal);
-        Assert.DoesNotContain(Edit.DisplayName, reloaded, StringComparison.Ordinal);
-        using var callback = await browser.GetAsync(save.Headers.Location, TestContext.Current.CancellationToken);
+        Assert.DoesNotContain(s_edit.DisplayName, reloaded, StringComparison.Ordinal);
+        using HttpResponseMessage callback = await browser.GetAsync(save.Headers.Location, TestContext.Current.CancellationToken);
         Assert.Equal(0, factory.OAuth!.Authorizations);
         Assert.Equal(0, factory.Pds.Writes);
     }
@@ -482,27 +487,30 @@ public partial class ProfileTests
     public async Task CompletionCannotUseAnotherBrowsersConsentOrATamperedIdentifier()
     {
         await using var factory = new SampleFactory();
-        using var first = factory.CreateClient(new() { AllowAutoRedirect = false });
-        using var second = factory.CreateClient(new() { AllowAutoRedirect = false });
+        using HttpClient first = factory.CreateClient(new() { AllowAutoRedirect = false });
+        using HttpClient second = factory.CreateClient(new() { AllowAutoRedirect = false });
         await Login(first);
         await Login(second);
-        using var save = await PostEdit(first);
-        using var consent = await first.GetAsync(save.Headers.Location, TestContext.Current.CancellationToken);
+        using HttpResponseMessage save = await PostEdit(first);
+        using HttpResponseMessage consent = await first.GetAsync(save.Headers.Location, TestContext.Current.CancellationToken);
         string authorized = await first.GetStringAsync("/Manage", TestContext.Current.CancellationToken);
         string id = HiddenValue(authorized, "completionId");
         string otherHtml = await second.GetStringAsync("/Manage", TestContext.Current.CancellationToken);
-        using var crossBrowser = await Post(second, "/Manage?handler=Complete", new()
+        using HttpResponseMessage crossBrowser = await Post(second, "/Manage?handler=Complete", new()
         {
-            ["completionId"] = id, ["__RequestVerificationToken"] = HiddenValue(otherHtml, "__RequestVerificationToken")
+            ["completionId"] = id,
+            ["__RequestVerificationToken"] = HiddenValue(otherHtml, "__RequestVerificationToken")
         });
-        using var tampered = await Post(first, "/Manage?handler=Complete", new()
+        using HttpResponseMessage tampered = await Post(first, "/Manage?handler=Complete", new()
         {
-            ["completionId"] = id + "0", ["__RequestVerificationToken"] = HiddenValue(authorized, "__RequestVerificationToken")
+            ["completionId"] = id + "0",
+            ["__RequestVerificationToken"] = HiddenValue(authorized, "__RequestVerificationToken")
         });
         Assert.Equal(0, factory.Pds.Writes);
-        using var legitimate = await Post(first, "/Manage?handler=Complete", new()
+        using HttpResponseMessage legitimate = await Post(first, "/Manage?handler=Complete", new()
         {
-            ["completionId"] = id, ["__RequestVerificationToken"] = HiddenValue(authorized, "__RequestVerificationToken")
+            ["completionId"] = id,
+            ["__RequestVerificationToken"] = HiddenValue(authorized, "__RequestVerificationToken")
         });
         Assert.Equal(1, factory.Pds.Writes);
     }
@@ -514,28 +522,29 @@ public partial class ProfileTests
     public async Task FailedAuthorizedSaveRetainsDraftButDoesNotRetryOrRepeatConsent(string failure)
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        using HttpClient browser = factory.CreateClient(new() { AllowAutoRedirect = false });
         await Login(browser);
-        using var save = await PostEdit(browser);
-        using var callback = await browser.GetAsync(save.Headers.Location, TestContext.Current.CancellationToken);
+        using HttpResponseMessage save = await PostEdit(browser);
+        using HttpResponseMessage callback = await browser.GetAsync(save.Headers.Location, TestContext.Current.CancellationToken);
         string html = await browser.GetStringAsync("/Manage", TestContext.Current.CancellationToken);
         string id = HiddenValue(html, "completionId");
         factory.Pds.Failure = failure;
         var fields = new Dictionary<string, string>
         {
-            ["completionId"] = id, ["__RequestVerificationToken"] = HiddenValue(html, "__RequestVerificationToken")
+            ["completionId"] = id,
+            ["__RequestVerificationToken"] = HiddenValue(html, "__RequestVerificationToken")
         };
-        using var failed = await Post(browser, "/Manage?handler=Complete", fields);
+        using HttpResponseMessage failed = await Post(browser, "/Manage?handler=Complete", fields);
         Assert.Equal(HttpStatusCode.OK, failed.StatusCode);
         string failedHtml = await failed.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        Assert.Contains(Edit.DisplayName, failedHtml, StringComparison.Ordinal);
+        Assert.Contains(s_edit.DisplayName, failedHtml, StringComparison.Ordinal);
         Assert.DoesNotContain("Your profile was saved.", failedHtml, StringComparison.Ordinal);
         Assert.Equal(1, factory.OAuth!.Authorizations);
         Assert.Equal(failure == "conflict" ? 0 : 1, factory.Pds.Writes);
-        using var replay = await Post(browser, "/Manage?handler=Complete", fields);
+        using HttpResponseMessage replay = await Post(browser, "/Manage?handler=Complete", fields);
         Assert.Equal(failure == "conflict" ? 0 : 1, factory.Pds.Writes);
         string recovered = await browser.GetStringAsync("/Manage", TestContext.Current.CancellationToken);
-        Assert.Contains(Edit.DisplayName, recovered, StringComparison.Ordinal);
+        Assert.Contains(s_edit.DisplayName, recovered, StringComparison.Ordinal);
         Assert.DoesNotContain("complete-profile-save", recovered, StringComparison.Ordinal);
     }
 
@@ -546,11 +555,13 @@ public partial class ProfileTests
     public async Task SaveAndConsentCompletionRequireAntiforgery(string query)
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        using HttpClient browser = factory.CreateClient(new() { AllowAutoRedirect = false });
         await Login(browser);
-        using var result = await Post(browser, "/Manage" + query, new()
+        using HttpResponseMessage result = await Post(browser, "/Manage" + query, new()
         {
-            ["DisplayName"] = Edit.DisplayName, ["Description"] = Edit.Description, ["Pronouns"] = Edit.Pronouns,
+            ["DisplayName"] = s_edit.DisplayName,
+            ["Description"] = s_edit.Description,
+            ["Pronouns"] = s_edit.Pronouns,
             ["completionId"] = "tampered"
         });
         Assert.Equal(HttpStatusCode.BadRequest, result.StatusCode);
@@ -566,10 +577,10 @@ public partial class ProfileTests
     public async Task WriteFailurePreservesDraftAndOnlyMissingScopeChallenges(string failure)
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        using HttpClient browser = factory.CreateClient(new() { AllowAutoRedirect = false });
         await Login(browser, write: true);
         factory.Pds.Failure = failure;
-        using var result = await PostEdit(browser);
+        using HttpResponseMessage result = await PostEdit(browser);
         if (failure == "scope")
         {
             Assert.Equal(HttpStatusCode.Redirect, result.StatusCode);
@@ -578,12 +589,12 @@ public partial class ProfileTests
         else
         {
             Assert.Equal(HttpStatusCode.OK, result.StatusCode);
-            Assert.Contains(Edit.DisplayName, await result.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
+            Assert.Contains(s_edit.DisplayName, await result.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
             Assert.Null(factory.OAuth);
         }
 
         string recovered = await browser.GetStringAsync("/Manage", TestContext.Current.CancellationToken);
-        Assert.Contains(Edit.DisplayName, recovered, StringComparison.Ordinal);
+        Assert.Contains(s_edit.DisplayName, recovered, StringComparison.Ordinal);
         Assert.DoesNotContain("Your profile was saved.", recovered, StringComparison.Ordinal);
     }
 
@@ -591,7 +602,7 @@ public partial class ProfileTests
     public async Task DelayedMissingScopeResponseDoesNotReplaceANewerDraft()
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        using HttpClient browser = factory.CreateClient(new() { AllowAutoRedirect = false });
         await Login(browser, write: true);
         factory.Pds.Failure = "scope";
         TaskCompletionSource entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -609,17 +620,17 @@ public partial class ProfileTests
         try
         {
             await entered.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
-            using var newerSave = await PostEdit(browser, displayName: "Newer edit");
+            using HttpResponseMessage newerSave = await PostEdit(browser, displayName: "Newer edit");
             Assert.Equal(HttpStatusCode.Redirect, newerSave.StatusCode);
             release.SetResult();
-            using var staleResponse = await staleSave;
+            using HttpResponseMessage staleResponse = await staleSave;
             Assert.Equal(HttpStatusCode.OK, staleResponse.StatusCode);
             Assert.Contains("superseded", await staleResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
             string recovered = await browser.GetStringAsync("/Manage", TestContext.Current.CancellationToken);
             Assert.Contains("Newer edit", recovered, StringComparison.Ordinal);
             Assert.DoesNotContain("Older edit", recovered, StringComparison.Ordinal);
 
-            using var callback = await browser.GetAsync(newerSave.Headers.Location, TestContext.Current.CancellationToken);
+            using HttpResponseMessage callback = await browser.GetAsync(newerSave.Headers.Location, TestContext.Current.CancellationToken);
             Assert.Equal("/Manage", callback.Headers.Location?.ToString());
             string ready = await browser.GetStringAsync("/Manage", TestContext.Current.CancellationToken);
             Assert.Contains("complete-profile-save", ready, StringComparison.Ordinal);
@@ -627,7 +638,7 @@ public partial class ProfileTests
         finally
         {
             release.TrySetResult();
-            using var completed = await staleSave;
+            using HttpResponseMessage completed = await staleSave;
         }
     }
 
@@ -635,9 +646,9 @@ public partial class ProfileTests
     public async Task InvalidEditKeepsCidAndDoesNotStartConsent()
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        using HttpClient browser = factory.CreateClient(new() { AllowAutoRedirect = false });
         await Login(browser);
-        using var result = await PostEdit(browser, displayName: new string('x', 65));
+        using HttpResponseMessage result = await PostEdit(browser, displayName: new string('x', 65));
         Assert.Equal(HttpStatusCode.OK, result.StatusCode);
         string html = await result.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.Contains(ProfileCid, html, StringComparison.Ordinal);
@@ -652,9 +663,9 @@ public partial class ProfileTests
     public async Task InitialCallbackUsesOnlyTrustedLocalReturnRoute(string storedRoute)
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
-        using var prepared = await browser.GetAsync("/test/prepare?returnUrl=" + Uri.EscapeDataString(storedRoute), TestContext.Current.CancellationToken);
-        using var callback = await browser.GetAsync(prepared.Headers.Location + "&returnUrl=https://evil.example/", TestContext.Current.CancellationToken);
+        using HttpClient browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        using HttpResponseMessage prepared = await browser.GetAsync("/test/prepare?returnUrl=" + Uri.EscapeDataString(storedRoute), TestContext.Current.CancellationToken);
+        using HttpResponseMessage callback = await browser.GetAsync(prepared.Headers.Location + "&returnUrl=https://evil.example/", TestContext.Current.CancellationToken);
         Assert.Equal(storedRoute == "/Manage" ? "/Manage" : "/", callback.Headers.Location?.ToString());
     }
 
@@ -664,20 +675,20 @@ public partial class ProfileTests
     public async Task CallbackFailureIsDisplayedOnlyOnItsDestinationPage(bool authenticated)
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        using HttpClient browser = factory.CreateClient(new() { AllowAutoRedirect = false });
         if (authenticated)
         {
             await Login(browser);
         }
 
-        using var callback = await browser.GetAsync("/Bluesky/Callback?state=missing", TestContext.Current.CancellationToken);
+        using HttpResponseMessage callback = await browser.GetAsync("/Bluesky/Callback?state=missing", TestContext.Current.CancellationToken);
         string destination = authenticated ? "/Manage" : "/Bluesky/Login";
         Assert.Equal(destination, callback.Headers.Location?.ToString());
         string html = await browser.GetStringAsync(destination, TestContext.Current.CancellationToken);
         Assert.Contains("The authorization response expired or was already used.", html, StringComparison.Ordinal);
         if (authenticated)
         {
-            using var signout = await browser.GetAsync("/test/signout", TestContext.Current.CancellationToken);
+            using HttpResponseMessage signout = await browser.GetAsync("/test/signout", TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.OK, signout.StatusCode);
         }
 
@@ -693,14 +704,16 @@ public partial class ProfileTests
     public async Task PronounsAreValidatedBeforeRetainingAnEdit(int length, bool combiningMarks, bool valid)
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        using HttpClient browser = factory.CreateClient(new() { AllowAutoRedirect = false });
         await Login(browser);
         string html = await browser.GetStringAsync("/Manage", TestContext.Current.CancellationToken);
         Assert.Contains("id=\"navbarSupportedContent\"", html, StringComparison.Ordinal);
         string pronouns = combiningMarks ? "ab" + new string('\u0301', length) : new string('x', length);
-        using var response = await Post(browser, "/Manage?cid=" + ProfileCid, new()
+        using HttpResponseMessage response = await Post(browser, "/Manage?cid=" + ProfileCid, new()
         {
-            ["DisplayName"] = Edit.DisplayName, ["Description"] = Edit.Description, ["Pronouns"] = pronouns,
+            ["DisplayName"] = s_edit.DisplayName,
+            ["Description"] = s_edit.Description,
+            ["Pronouns"] = pronouns,
             ["__RequestVerificationToken"] = HiddenValue(html, "__RequestVerificationToken")
         });
         Assert.Equal(valid ? HttpStatusCode.Redirect : HttpStatusCode.OK, response.StatusCode);
@@ -713,23 +726,23 @@ public partial class ProfileTests
         {
             Assert.Null(factory.OAuth);
             Assert.Contains("Pronouns must not exceed", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
-            var sessionDraft = await browser.GetStringAsync("/Manage", TestContext.Current.CancellationToken);
-            Assert.DoesNotContain(Edit.DisplayName, sessionDraft, StringComparison.Ordinal);
+            string sessionDraft = await browser.GetStringAsync("/Manage", TestContext.Current.CancellationToken);
+            Assert.DoesNotContain(s_edit.DisplayName, sessionDraft, StringComparison.Ordinal);
         }
     }
 
     private static async Task<DPoPAccessCredentials> StoredCredentials(SampleFactory factory)
     {
-        var store = factory.Services.GetRequiredService<IOptionsMonitor<BlueskyAuthenticationOptions>>()
+        IIdentityStore store = factory.Services.GetRequiredService<IOptionsMonitor<BlueskyAuthenticationOptions>>()
             .Get(BlueskyAuthenticationDefaults.AuthenticationScheme).IdentityStore!;
-        var identity = await store.GetIdentity(new Did(DidValue), TestContext.Current.CancellationToken);
+        ClaimsIdentity? identity = await store.GetIdentity(new Did(DidValue), TestContext.Current.CancellationToken);
         Assert.True(AtProtoCredential.TryCreate(identity!, out DPoPAccessCredentials? credentials));
         return Assert.IsType<DPoPAccessCredentials>(credentials);
     }
 
     private static async Task Login(HttpClient browser, string did = DidValue, bool write = false)
     {
-        using var response = await browser.GetAsync($"/test/login?did={did}&write={write}", TestContext.Current.CancellationToken);
+        using HttpResponseMessage response = await browser.GetAsync($"/test/login?did={did}&write={write}", TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
@@ -738,7 +751,9 @@ public partial class ProfileTests
         string html = await browser.GetStringAsync("/Manage", TestContext.Current.CancellationToken);
         return await Post(browser, "/Manage?cid=" + ProfileCid, new()
         {
-            ["DisplayName"] = displayName ?? Edit.DisplayName, ["Description"] = Edit.Description, ["Pronouns"] = Edit.Pronouns,
+            ["DisplayName"] = displayName ?? s_edit.DisplayName,
+            ["Description"] = s_edit.Description,
+            ["Pronouns"] = s_edit.Pronouns,
             ["__RequestVerificationToken"] = HiddenValue(html, "__RequestVerificationToken")
         });
     }
@@ -757,7 +772,8 @@ public partial class ProfileTests
         string payload = Convert.ToBase64String(Encoding.UTF8.GetBytes(
             $$"""{"sub":"{{did}}","exp":4102444800,"scope":"{{scope}}"}""")).TrimEnd('=').Replace('+', '-').Replace('/', '_');
         return new(new Uri("https://pds.example"), "eyJhbGciOiJub25lIn0." + payload + ".",
-            "refresh", JsonWebKeys.CreateRsaJson(), "nonce") { RequestedScope = scope };
+            "refresh", JsonWebKeys.CreateRsaJson(), "nonce")
+        { RequestedScope = scope };
     }
 
     private sealed class SampleFactory : WebApplicationFactory<Program>
@@ -833,8 +849,8 @@ public partial class ProfileTests
             {
                 if (context.Request.Path == "/test/signout")
                 {
-                    var session = await context.AuthenticateAsync(BlueskyAuthenticationDefaults.AuthenticationScheme);
-                    var store = context.RequestServices.GetRequiredService<ProfileEditStore>();
+                    AuthenticateResult session = await context.AuthenticateAsync(BlueskyAuthenticationDefaults.AuthenticationScheme);
+                    ProfileEditStore store = context.RequestServices.GetRequiredService<ProfileEditStore>();
                     await store.ChangeSession(
                         Areas.Bluesky.Pages.CallbackModel.GetOwner(session),
                         () => context.SignOutAsync(BlueskyAuthenticationDefaults.AuthenticationScheme),
@@ -850,13 +866,13 @@ public partial class ProfileTests
                     string[] scopes = context.Request.Query["updateOnly"] == "True"
                         ? [.. ProfilePermissions.ReadScopes, ProfilePermissions.WriteScope]
                         : write ? ProfilePermissions.MaximumScopes : ProfilePermissions.ReadScopes;
-                    var credentials = Credentials(string.Join(' ', scopes), did);
-                    var identity = IIdentityStore.BuildClaimsIdentity(credentials);
+                    DPoPAccessCredentials credentials = Credentials(string.Join(' ', scopes), did);
+                    ClaimsIdentity identity = IIdentityStore.BuildClaimsIdentity(credentials);
                     identity.AddClaim(new(idunno.Bluesky.ClaimTypes.Handle, "test.bsky.social"));
                     var properties = new AuthenticationProperties { IsPersistent = true, AllowRefresh = true };
                     properties.Items[ProfilePermissions.SessionKey] = Guid.NewGuid().ToString("N");
-                    var session = await context.AuthenticateAsync(BlueskyAuthenticationDefaults.AuthenticationScheme);
-                    var store = context.RequestServices.GetRequiredService<ProfileEditStore>();
+                    AuthenticateResult session = await context.AuthenticateAsync(BlueskyAuthenticationDefaults.AuthenticationScheme);
+                    ProfileEditStore store = context.RequestServices.GetRequiredService<ProfileEditStore>();
                     await store.ChangeSession(
                         Areas.Bluesky.Pages.CallbackModel.GetOwner(session),
                         () => context.SignInAsync(BlueskyAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity), properties),
@@ -867,8 +883,8 @@ public partial class ProfileTests
 
                 if (context.Request.Path == "/test/prepare")
                 {
-                    var manager = context.RequestServices.GetRequiredService<BlueskySignInManager>();
-                    var state = State(new() { [Constants.ReturnUrlKey] = context.Request.Query["returnUrl"].ToString() });
+                    BlueskySignInManager manager = context.RequestServices.GetRequiredService<BlueskySignInManager>();
+                    OAuthLoginState state = State(new() { [Constants.ReturnUrlKey] = context.Request.Query["returnUrl"].ToString() });
                     await manager.SaveStateAndCreateCorrelationCookie(state, markCookieAsSecure: false);
                     context.Response.Redirect("/Bluesky/Callback?state=" + state.State + "&code=test&iss=https://auth.example");
                     return;
@@ -905,7 +921,7 @@ public partial class ProfileTests
         internal override async Task<Uri> Challenge(Handle handle, DPoPAccessCredentials credentials, string editId, CancellationToken cancellationToken)
         {
             _factory.Trace.RequestedScopes = ProfilePermissions.ExpandedScopes(credentials);
-            var state = State(new() { [ProfilePermissions.PendingEditKey] = editId });
+            OAuthLoginState state = State(new() { [ProfilePermissions.PendingEditKey] = editId });
             await _manager.SaveStateAndCreateCorrelationCookie(state, markCookieAsSecure: false);
             return new Uri("/Bluesky/Callback?state=" + state.State + "&code=test&iss=https://auth.example", UriKind.Relative);
         }

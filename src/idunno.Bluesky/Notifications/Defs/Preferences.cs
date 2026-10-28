@@ -8,7 +8,9 @@ using System.Text.Json.Serialization;
 
 using idunno.Bluesky.Notifications.PreferenceTypes;
 
+#pragma warning disable IDE0130 // Preserve the established namespace independently of folder layout.
 namespace idunno.Bluesky.Notifications;
+#pragma warning restore IDE0130
 
 /// <summary>
 /// Encapsulates a user's notification settings.

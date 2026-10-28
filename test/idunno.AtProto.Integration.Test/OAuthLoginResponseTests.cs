@@ -792,7 +792,11 @@ public class OAuthLoginResponseTests
     private sealed class LoginTestServer
     {
         private readonly List<string> _tokenRequestProofKeyThumbprints = [];
+#if NET9_0_OR_GREATER
+        private readonly Lock _lock = new();
+#else
         private readonly object _lock = new();
+#endif
 
         internal LoginTestServer()
         {

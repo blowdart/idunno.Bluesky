@@ -15,8 +15,8 @@ public sealed class LabelerModerationOptions
     public int ReportsPerMinute { get; init; } = 120;
 
     /// <summary>Gets the maximum declaration-observation age.</summary>
-    /// <value>The shared persisted freshness, initially 60 seconds, from one millisecond to one day in whole milliseconds.</value>
-    public TimeSpan VerificationFreshness { get; init; } = TimeSpan.FromSeconds(60);
+    /// <value>The shared persisted freshness, initially 30 minutes, from one millisecond to one day in whole milliseconds.</value>
+    public TimeSpan VerificationFreshness { get; init; } = TimeSpan.FromMinutes(30);
 
     /// <summary>Gets the maximum accepted reporter service-token lifetime.</summary>
     /// <value>The positive lifetime, initially 15 minutes.</value>

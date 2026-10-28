@@ -24,7 +24,7 @@ namespace idunno.Bluesky.AspNet.Authentication.Test;
 [ExcludeFromCodeCoverage]
 public class ReferenceCookieTests
 {
-    public static TheoryData<string> RenewalTriggers => new() { "validate", "sliding" };
+    public static TheoryData<string> RenewalTriggers => ["validate", "sliding"];
 
     [Theory]
     [MemberData(nameof(RenewalTriggers))]

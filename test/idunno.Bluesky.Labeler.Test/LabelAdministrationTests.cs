@@ -369,7 +369,7 @@ public class LabelAdministrationTests
         using HttpClient http = new(new TargetResolutionHandler());
         BlockingPolicy policy = new();
         LabelIssuanceService service = new(
-            issuer: StoreFixture.Issuer, signingKey: key, store: fixture.Store,
+            issuer: StoreFixture.s_issuer, signingKey: key, store: fixture.Store,
             authorizer: new LabelTeamAuthorizer(store, member), policyProvider: policy, httpClient: http);
         Task<LabelServiceResult<LabelOperationReceipt>> pending = service.ExecuteAsync(LabelOperationRequest.Issue(
             operationId: "revoked-label", target: LabelTarget.Account(new Did(TargetResolutionHandler.SubjectDid)),
@@ -416,7 +416,7 @@ public class LabelAdministrationTests
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         using HttpClient identity = new(new ServiceIdentityHandler(key.ExportPublicKeyMultibase()));
         FakeTimeProvider clock = new(await DatabaseNowAsync(fixture));
-        AtProtoServiceReference audience = new(StoreFixture.Issuer, "labeler_admin");
+        AtProtoServiceReference audience = new(StoreFixture.s_issuer, "labeler_admin");
         const string method = "dev.idunno.labeler.admin.getTeam";
         ServiceAuthenticationResult first = await ServiceAuthentication.VerifyAsync(
             token: ServiceToken(key, clock.GetUtcNow(), audience), audience: audience, method: method,
@@ -508,7 +508,7 @@ public class LabelAdministrationTests
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         using HttpClient http = new(new TargetResolutionHandler());
         LabelIssuanceService service = new(
-            issuer: StoreFixture.Issuer,
+            issuer: StoreFixture.s_issuer,
             signingKey: key,
             store: fixture.Store,
             authorizer: new LabelTeamAuthorizer(store, member),
@@ -578,7 +578,7 @@ public class LabelAdministrationTests
         await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         SignedLabelSnapshot signed = new(key.CreateLabel(
-            source: StoreFixture.Issuer, uri: "did:plc:subject", value: "spam",
+            source: StoreFixture.s_issuer, uri: "did:plc:subject", value: "spam",
             creationTimestamp: new DateTimeOffset(2026, 1, 2, 3, 4, 5, TimeSpan.Zero)));
         await fixture.Store.AppendAsync("before-upgrade", [signed], cancellationToken: TestContext.Current.CancellationToken);
         await fixture.Store.PublishAsync(cancellationToken: TestContext.Current.CancellationToken);
@@ -591,7 +591,7 @@ public class LabelAdministrationTests
             UPDATE label_schema SET version=3;
             """);
         ILabelStore reopened = fixture.NewStore();
-        await reopened.InitializeAsync(StoreFixture.Issuer, TestContext.Current.CancellationToken);
+        await reopened.InitializeAsync(StoreFixture.s_issuer, TestContext.Current.CancellationToken);
         Assert.Equal(before, await reopened.GetStateAsync(TestContext.Current.CancellationToken));
         StoredLabel restored = Assert.Single((await reopened.ReplayAsync(
             streamId: before.StreamId, after: 0, through: before.IssuedThrough,
@@ -616,9 +616,9 @@ public class LabelAdministrationTests
             _ => "DROP INDEX label_admin_token_expiry"
         });
         ILabelStore reopened = fixture.NewStore();
-        await reopened.InitializeAsync(StoreFixture.Issuer, TestContext.Current.CancellationToken);
+        await reopened.InitializeAsync(StoreFixture.s_issuer, TestContext.Current.CancellationToken);
         await AssertTokenExpiryIndexAsync(fixture);
-        await reopened.InitializeAsync(StoreFixture.Issuer, TestContext.Current.CancellationToken);
+        await reopened.InitializeAsync(StoreFixture.s_issuer, TestContext.Current.CancellationToken);
         await AssertTokenExpiryIndexAsync(fixture);
     }
 

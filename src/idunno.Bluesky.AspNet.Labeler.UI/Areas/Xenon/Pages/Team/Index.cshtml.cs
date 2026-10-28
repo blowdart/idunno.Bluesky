@@ -7,6 +7,7 @@ using idunno.Bluesky.Labeler.Administration;
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Team;
 
@@ -19,24 +20,65 @@ public sealed class IndexModel : PageModel
     /// <summary>Gets counted membership navigation and canonical identity ordering.</summary>
     internal TableNavigation? Table { get; private set; }
 
+    /// <summary>Gets the canonical DID selected from the current team list.</summary>
+    internal string? SelectedMember { get; private set; }
+
+    /// <summary>Gets the selected member's current persisted role.</summary>
+    internal LabelTeamRole SelectedRole { get; private set; } = LabelTeamRole.Viewer;
+
     /// <summary>Loads active members and retained membership tombstones.</summary>
     public async Task OnGetAsync()
     {
         Table = TableNavigation.Read(Request, new(LabelTableKind.Team, Sort: LabelTableSort.Subject, Ascending: true));
+        if (Table is null)
+        {
+            ViewData["Error"] = "Choose valid team sorting and paging options.";
+            return;
+        }
+
+        string search = Request.Query["Search"].ToString().Trim();
+        if (search.Length > 256)
+        {
+            ViewData["Error"] = "Enter a DID or handle of at most 256 characters.";
+            return;
+        }
+
+        if (search.Length > 0)
+        {
+            AdministrationResponse resolved = await HttpContext.RequestServices.GetRequiredService<LabelerUiAdministration>()
+                .ResolveTableIdentityAsync(
+                    principal: User,
+                    actor: search,
+                    kind: LabelTableKind.Team,
+                    token: HttpContext.RequestAborted).ConfigureAwait(false);
+            if (!resolved.Succeeded)
+            {
+                ViewData["Error"] = resolved.Message ?? "The team member handle could not be resolved.";
+                return;
+            }
+
+            Table = new(Table.Query with { TeamMember = resolved.Target }, Request);
+        }
+
         Data = await UiPageHelpers.ReadTableAsync(this, Table).ConfigureAwait(false);
+        if (Data.ValueKind == JsonValueKind.Object &&
+            Data.TryGetProperty("members", out JsonElement members) &&
+            members.ValueKind == JsonValueKind.Array)
+        {
+            string selected = Request.Query["member"].ToString();
+            JsonElement member = members.EnumerateArray().FirstOrDefault(member => member.GetProperty("did").GetString() == selected);
+            if (member.ValueKind == JsonValueKind.Object)
+            {
+                SelectedMember = selected;
+                SelectedRole = (LabelTeamRole)member.GetProperty("role").GetInt32();
+            }
+        }
     }
 
     /// <summary>Enrolls an identity after the shared service verifies its DID document and handle, if supplied.</summary>
     /// <returns>An action result that displays the outcome of the enrollment.</returns>
     public async Task<IActionResult> OnPostEnrollAsync()
     {
-        if (!await UiPageHelpers.ConfirmedAsync(this).ConfigureAwait(false))
-        {
-            ViewData["Error"] = "Confirm the team enrollment before submitting.";
-            await OnGetAsync().ConfigureAwait(false);
-            return Page();
-        }
-
         string target = await UiPageHelpers.FormValueAsync(this, "target", 256).ConfigureAwait(false);
         string roleText = await UiPageHelpers.FormValueAsync(this, "role", 32).ConfigureAwait(false);
         string reason = await UiPageHelpers.FormValueAsync(this, "reason", 4096).ConfigureAwait(false);
@@ -66,17 +108,10 @@ public sealed class IndexModel : PageModel
         return Page();
     }
 
-    /// <summary>Applies a provider-backed membership change after explicit confirmation.</summary>
+    /// <summary>Applies an audited provider-backed membership change on submission.</summary>
     /// <returns>An action result that displays the outcome of the membership change.</returns>
     public async Task<IActionResult> OnPostChangeAsync()
     {
-        if (!await UiPageHelpers.ConfirmedAsync(this).ConfigureAwait(false))
-        {
-            ViewData["Error"] = "Confirm the membership change before submitting.";
-            await OnGetAsync().ConfigureAwait(false);
-            return Page();
-        }
-
         string target = await UiPageHelpers.FormValueAsync(this, "target", 256).ConfigureAwait(false);
         string actionText = await UiPageHelpers.FormValueAsync(this, "action", 32).ConfigureAwait(false);
         string roleText = await UiPageHelpers.FormValueAsync(this, "role", 32).ConfigureAwait(false);

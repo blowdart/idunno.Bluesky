@@ -82,4 +82,6 @@ app.Run();
 /// <summary>
 /// Exposes the sample entry point to the test host.
 /// </summary>
+#pragma warning disable ASP0027 // WebApplicationFactory tests require this public entry point.
 public partial class Program;
+#pragma warning restore ASP0027

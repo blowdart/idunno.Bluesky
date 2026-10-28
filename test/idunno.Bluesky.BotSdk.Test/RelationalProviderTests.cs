@@ -81,6 +81,7 @@ public sealed class PostgreSqlDataAttribute : DataAttribute
 public sealed class ProviderBudgetDataAttribute : DataAttribute
 {
     private readonly string _provider;
+    private static readonly string[] s_budgetNames = ["hour", "day", "requests", "sessions-day", "sessions-five-minutes"];
 
     /// <summary>Initializes cases for the named provider and skips them when its disposable connection is absent.</summary>
     /// <param name="provider">The provider whose rate budgets are tested.</param>
@@ -105,9 +106,7 @@ public sealed class ProviderBudgetDataAttribute : DataAttribute
         MethodInfo testMethod,
         DisposalTracker disposalTracker)
     {
-        ITheoryDataRow[] rows = new[] { "hour", "day", "requests", "sessions-day", "sessions-five-minutes" }
-            .Select(budget => (ITheoryDataRow)new TheoryDataRow<string, string>(_provider, budget) { Skip = Skip })
-            .ToArray();
+        ITheoryDataRow[] rows = [.. s_budgetNames.Select(budget => (ITheoryDataRow)new TheoryDataRow<string, string>(_provider, budget) { Skip = Skip })];
 
         return ValueTask.FromResult<IReadOnlyCollection<ITheoryDataRow>>(rows);
     }
@@ -182,7 +181,9 @@ public sealed partial class RelationalProviderTests
         BotAction work = TestRecords.Work();
         Assert.True(await store.Database.HandleAsync(11, [work], null, CancellationToken.None) > 0);
         Assert.Equal(0, await store.Database.HandleAsync(12, [work with { RecordKey = "different" }], null, CancellationToken.None));
-        BotAction durable = (await store.Database.NextWorkAsync(CancellationToken.None))!;
+        // Persistence, not elapsed database time, determines this test's outcome.
+        await store.SetRetryReadyAsync();
+        BotAction durable = Assert.IsType<BotAction>(await store.Database.NextWorkAsync(CancellationToken.None));
         Assert.Equal(work.RecordKey, durable.RecordKey);
         Assert.True(ReplyRecords.SameRecord(TestRecords.Post(work), TestRecords.Post(durable)));
         byte[] credentials = [0, 1, 255];

@@ -14,9 +14,9 @@ internal abstract partial class RelationalLabelStore
     /// <summary>Finds the sole live moderator or administrator without treating viewers or removed members as candidates.</summary>
     private static string? SoleModerator(AdministrationState team)
     {
-        string[] candidates = team.Members
+        string[] candidates = [.. team.Members
             .Where(entry => entry.Value.Active && !entry.Value.Removed && entry.Value.Role >= LabelTeamRole.Moderator)
-            .Select(entry => entry.Key).Take(2).ToArray();
+            .Select(entry => entry.Key).Take(2)];
         return candidates.Length == 1 ? candidates[0] : null;
     }
 

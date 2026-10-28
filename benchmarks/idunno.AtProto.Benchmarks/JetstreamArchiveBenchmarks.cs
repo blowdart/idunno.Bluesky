@@ -5,10 +5,11 @@ using System.Formats.Cbor;
 using System.Text;
 
 using BenchmarkDotNet.Attributes;
-using ZstdSharp;
 
 using idunno.AtProto.Jetstream;
 using idunno.AtProto.Jetstream.Archive;
+
+using ZstdSharp;
 
 namespace idunno.AtProto.Benchmarks;
 

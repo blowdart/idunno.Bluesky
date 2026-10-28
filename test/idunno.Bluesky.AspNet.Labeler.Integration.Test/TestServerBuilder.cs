@@ -37,12 +37,11 @@ namespace idunno.Bluesky.AspNet.Labeler.Integration.Test;
 internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposable
 {
     internal static readonly Did s_issuer = new("did:plc:label-issuer");
-    private readonly string _database = database ?? Path.Combine(Path.GetTempPath(), "label_host_" + Guid.NewGuid().ToString("N") + ".db");
     private readonly bool _ownsDatabase = database is null;
     private WebApplication _app = null!;
     internal ILabelStore Store => _app.Services.GetRequiredService<ILabelStore>();
     internal IServiceProvider Services => _app.Services;
-    internal string DatabasePath => _database;
+    internal string DatabasePath { get; } = database ?? Path.Combine(Path.GetTempPath(), "label_host_" + Guid.NewGuid().ToString("N") + ".db");
     internal string? OwnedSocketDirectory { get; set; }
     internal bool RemoteAdministrationEnabled { get; set; }
     internal LabelerHost Host => _app.Services.GetRequiredService<LabelerHost>();
@@ -84,7 +83,7 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
             builder.Services.AddSingleton(signingKeyRing);
         }
 
-        builder.Services.AddSqliteLabelStorage($"Data Source={fixture._database}");
+        builder.Services.AddSqliteLabelStorage($"Data Source={fixture.DatabasePath}");
         builder.Services.AddBlueskyLabeler(s_issuer, options);
         if (remoteAdministrationEnabled is null)
         {
@@ -96,8 +95,8 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
         {
             builder.Services.AddAuthentication("test")
                 .AddScheme<AuthenticationSchemeOptions, RejectingAuthenticationHandler>("test", _ => { });
-            builder.Services.AddAuthorization(options =>
-                options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
+            builder.Services.AddAuthorizationBuilder()
+                .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
         }
 
         configureAdministration?.Invoke(builder.Services);
@@ -188,6 +187,11 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
         {
             await initialize(fixture.Store);
         }
+        if (moderation)
+        {
+            fixture.Clock.SetUtcNow((await fixture.Services.GetRequiredService<ILabelPolicyStore>()
+                .ReadPolicyStateAsync(TestContext.Current.CancellationToken))!.DatabaseTime);
+        }
 
         await fixture._app.StartAsync();
         await fixture.Clock.WaitForTimerAsync(options?.PollInterval ?? TimeSpan.FromSeconds(1));
@@ -216,14 +220,14 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
     internal ServiceProvider OtherProvider()
     {
         ServiceCollection services = new();
-        services.AddSqliteLabelStorage($"Data Source={_database}");
+        services.AddSqliteLabelStorage($"Data Source={DatabasePath}");
         return services.BuildServiceProvider();
     }
 
     /// <summary>Simulates an incompatible external schema change without exposing connection details through health output.</summary>
     internal async Task CorruptSchemaAsync()
     {
-        await using SqliteConnection connection = new($"Data Source={_database};Pooling=False");
+        await using SqliteConnection connection = new($"Data Source={DatabasePath};Pooling=False");
         await connection.OpenAsync(TestContext.Current.CancellationToken);
         await using SqliteCommand command = connection.CreateCommand();
         command.CommandText = "UPDATE label_schema SET version=999";
@@ -233,7 +237,7 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
     /// <summary>Moves a test database's retained boundary atomically to exercise readers racing explicit retention.</summary>
     internal async Task PruneAsync(long through)
     {
-        await using SqliteConnection connection = new($"Data Source={_database};Pooling=False");
+        await using SqliteConnection connection = new($"Data Source={DatabasePath};Pooling=False");
         await connection.OpenAsync(TestContext.Current.CancellationToken);
         using SqliteTransaction transaction = connection.BeginTransaction();
         await using SqliteCommand command = connection.CreateCommand();
@@ -258,7 +262,7 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
         {
             foreach (string suffix in new[] { string.Empty, "-wal", "-shm" })
             {
-                File.Delete(_database + suffix);
+                File.Delete(DatabasePath + suffix);
             }
             if (OwnedSocketDirectory is { } directory)
             {
@@ -313,6 +317,10 @@ internal sealed class SignalClock : TimeProvider
         second: 5,
         offset: TimeSpan.Zero));
     internal Channel<TimeSpan> Registrations { get; } = Channel.CreateUnbounded<TimeSpan>();
+    /// <summary>Keeps withdrawal phase barriers independent of the host publisher's timer-registration consumer.</summary>
+    internal Channel<bool> WithdrawalRegistrations { get; } = Channel.CreateUnbounded<bool>();
+    /// <summary>Signals completion of a verification iteration when its next default refresh delay is registered.</summary>
+    internal Channel<bool> PolicyVerificationRegistrations { get; } = Channel.CreateUnbounded<bool>();
     public override DateTimeOffset GetUtcNow() => _clock.GetUtcNow();
     public override long GetTimestamp() => _clock.GetTimestamp();
     public override long TimestampFrequency => _clock.TimestampFrequency;
@@ -329,6 +337,14 @@ internal sealed class SignalClock : TimeProvider
             dueTime: dueTime,
             period: period);
         Registrations.Writer.TryWrite(dueTime);
+        if (dueTime == TimeSpan.FromSeconds(5))
+        {
+            WithdrawalRegistrations.Writer.TryWrite(true);
+        }
+        if (dueTime == TimeSpan.FromMinutes(5) && period == Timeout.InfiniteTimeSpan)
+        {
+            PolicyVerificationRegistrations.Writer.TryWrite(true);
+        }
         return timer;
     }
 

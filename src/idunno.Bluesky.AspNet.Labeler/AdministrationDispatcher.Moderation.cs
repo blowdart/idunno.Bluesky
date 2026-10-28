@@ -30,6 +30,21 @@ internal sealed partial class AdministrationDispatcher
         ModerationCommand input = command.Moderation ?? new();
         switch (command.Method)
         {
+            case "deletePolicyDraft":
+                {
+                    if (store is not ILabelTableStore tables)
+                    {
+                        return new(false, "UnsupportedPolicy", "This provider does not support draft deletion.");
+                    }
+
+                    LabelServiceResult<LabelPolicyDefinition> result = await tables.DeletePolicyDraftAsync(
+                        caller: caller,
+                        operationId: command.OperationId,
+                        version: input.PolicyVersion ?? throw new ArgumentException("A draft version is required."),
+                        reason: command.Reason,
+                        cancellationToken: token).ConfigureAwait(false);
+                    return result.Succeeded ? new(true, Moderation: new(Definition: DefinitionView(result.Result))) : Failure(result.Error);
+                }
             case "getManualLabelChoices":
                 return await ReadManualLabelChoicesAsync(caller, command, policies, token).ConfigureAwait(false);
             case "searchModeration":
@@ -129,7 +144,7 @@ internal sealed partial class AdministrationDispatcher
                             return Failure(account.Error);
                         }
 
-                        accountLabels = account.Result.Select(label => label.SignedLabel.Label.Value).Order(StringComparer.Ordinal).ToArray();
+                        accountLabels = [.. account.Result.Select(label => label.SignedLabel.Label.Value).Order(StringComparer.Ordinal)];
                     }
 
                     LabelTarget target = subject.Cid is null
@@ -141,7 +156,7 @@ internal sealed partial class AdministrationDispatcher
                         .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).Chunk(400))
                     {
                         IReadOnlyList<LabelServiceResult<LabelDecisionSnapshot>> snapshots = await store.ReadDecisionBatchAsync(
-                            values.Select(value => (target, value)).ToArray(), token).ConfigureAwait(false);
+                            [.. values.Select(value => (target, value))], token).ConfigureAwait(false);
                         for (int index = 0; index < values.Length; index++)
                         {
                             LabelServiceResult<LabelDecisionSnapshot> snapshot = snapshots[index];
@@ -285,11 +300,11 @@ internal sealed partial class AdministrationDispatcher
                             expectedRevision: input.ExpectedRevision,
                             policyVersion: input.PolicyVersion,
                             reason: command.Reason,
-                            actions: input.Actions.Select(action => new LabelCaseLabelAction(
+                            actions: [.. input.Actions.Select(action => new LabelCaseLabelAction(
                                 kind: action.Kind,
                                 value: action.Value,
                                 expiresAt: action.ExpiresAt,
-                                expectedLabelSequence: action.ExpectedLabelSequence)).ToArray(),
+                                expectedLabelSequence: action.ExpectedLabelSequence))],
                             appealIds: input.AppealIds,
                             appealOutcome: input.AppealOutcome,
                             reportId: input.ReportId == 0 ? null : input.ReportId,
@@ -403,6 +418,19 @@ internal sealed partial class AdministrationDispatcher
                         reason: command.Reason, cancellationToken: token).ConfigureAwait(false);
                     return result.Succeeded ? new(true, Moderation: new(Policy: PolicyView(result.Result))) : Failure(result.Error);
                 }
+            case "resumePolicyPublication":
+                {
+                    if (store is not ILabelPolicyWithdrawalStore withdrawals)
+                    {
+                        return new(false, "PolicyUnavailable", "The provider does not support resumable policy cleanup.");
+                    }
+                    LabelServiceResult<LabelPolicyState> result = await withdrawals.ResumePolicyWithdrawalAsync(
+                        caller: caller,
+                        operationId: command.OperationId,
+                        reason: command.Reason,
+                        cancellationToken: token).ConfigureAwait(false);
+                    return result.Succeeded ? new(true, Moderation: new(Policy: PolicyView(result.Result))) : Failure(result.Error);
+                }
             case "verifyPolicy":
                 {
                     LabelServiceResult<LabelAuthorizationGrant> admission = await administration.AuthorizeAsync(
@@ -455,7 +483,7 @@ internal sealed partial class AdministrationDispatcher
         Reason: value.Request.Reason,
         PolicyVersion: value.Request.PolicyVersion,
         Event: CaseEventView(value.CaseEvent),
-        Actions: value.Labels.Select(label =>
+        Actions: [.. value.Labels.Select(label =>
         {
             JsonElement? signed = null;
             if (label.Label is { } outcome)
@@ -467,7 +495,7 @@ internal sealed partial class AdministrationDispatcher
             return new ModerationLabelOutcomeView(
                 label.Request.OperationId, label.Request.Kind.ToString(), label.Request.Value,
                 label.Changed, label.Label?.Sequence, signed);
-        }).ToArray(),
+        })],
         State: PublicationView(value.StateAtCommit),
         AppealIds: [.. value.Request.AppealIds],
         AppealOutcome: value.Request.AppealOutcome?.ToString(),
@@ -480,11 +508,11 @@ internal sealed partial class AdministrationDispatcher
         CaseId: value.CaseId,
         Initiator: value.Initiator.Value,
         Subject: ModerationWire.SubjectView(value.Subject),
-        Challenges: value.Challenges.Select(challenge =>
+        Challenges: [.. value.Challenges.Select(challenge =>
         {
             using JsonDocument document = JsonDocument.Parse(challenge.SignedLabel.GetJsonBytes());
             return new ModerationChallengeView(challenge.Sequence, document.RootElement.Clone());
-        }).ToArray(),
+        })],
         Status: value.Status.ToString(),
         CreatedAt: value.CreatedAt,
         UpdatedAt: value.UpdatedAt,
@@ -512,7 +540,7 @@ internal sealed partial class AdministrationDispatcher
         value.Revision, value.Phase.ToString(), value.Policy is null ? null : DefinitionView(value.Policy),
         value.PreviousCid?.ToString(), value.VerifiedCid?.ToString(), value.VerifiedUntil,
         checked((long)value.VerificationFreshness.TotalMilliseconds), value.DatabaseTime,
-        value.Issuer.Value, value.PublicationOperationId);
+        value.Issuer.Value, value.PublicationOperationId, value.Withdrawal);
 
     /// <summary>Projects historical policy intent and observations without claiming that old freshness grants current permission.</summary>
     private static ModerationPolicyHistoryView PolicyHistoryView(LabelPolicyHistoryEntry value)
@@ -662,4 +690,4 @@ internal sealed record ModerationReportView(long CaseId, ReportOutput Report, st
 /// <summary>Contains a complete selected policy definition for explicit publication or inspection.</summary>
 internal sealed record ModerationPolicyDefinitionView(string Version, JsonElement Declaration, bool AllowAccounts, bool AllowRecords, string[]? AllowedRecordCollections, string Rules);
 /// <summary>Contains the shared durable gate, observation deadline and conditional-update CID.</summary>
-internal sealed record ModerationPolicyView(long Revision, string Phase, ModerationPolicyDefinitionView? Definition, string? PreviousCid, string? VerifiedCid, DateTimeOffset? VerifiedUntil, long VerificationFreshnessMilliseconds, DateTimeOffset DatabaseTime, string Issuer, string? PublicationOperationId);
+internal sealed record ModerationPolicyView(long Revision, string Phase, ModerationPolicyDefinitionView? Definition, string? PreviousCid, string? VerifiedCid, DateTimeOffset? VerifiedUntil, long VerificationFreshnessMilliseconds, DateTimeOffset DatabaseTime, string Issuer, string? PublicationOperationId, LabelPolicyWithdrawalProgress? Withdrawal = null);

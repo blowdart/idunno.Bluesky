@@ -6,6 +6,9 @@
 
 #### idunno.Bluesky.AspNet.Labeler
 
+* Checks the active public policy in the background every five minutes with a default 30-minute verification lifetime; moderation health reads stored freshness without remote requests. Failed lookups do not extend validity, and confirmed differences require administrator recovery.
+
+* Resumes bounded policy-label withdrawal batches in the background independently of browser lifetime and remote administration enablement, signing with the host's active key and waiting for durable stream publication.
 * Added explicitly optional Xenon report intake, bounded service authentication/admission and independent declaration verification, plus shared local/HTTPS case, appeal, workflow-queue and policy-recovery administration. Public label distribution and remote CLI enablement remain independent.
 * Separates optional moderation policy health at `/health/labeler/moderation` from distribution readiness so policy failures do not remove recovery routes from traffic; malformed Unicode reports and policy inputs return classified input errors.
 * Rejects fractional-millisecond moderation verification freshness during registration so configured and persisted health-check intervals cannot disagree.
@@ -29,6 +32,19 @@
 
 #### idunno.Bluesky.AspNet.Labeler.UI
 
+* Avoids a circular authentication-options dependency that blocked Xenon requests when the separate policy-publication scheme was registered.
+* Shows durable database-clock worker-activity and progress timestamps during policy-label withdrawal, distinguishing recorded pauses and waiting for label publication without claiming that a recent attempt proves a worker is still running.
+
+* Moves declaration verification to its own final policy tab, explains its effect and uses button submission alone with an automatic audit reason.
+* Selects publication Policy IDs from all available unpublished drafts instead of free text, excluding deleted and previously selected policies.
+* Adds explicit irreversible-cleanup confirmation to policy publication, displays removed label values and durable scan progress, and lets authorized administrators resume paused cleanup.
+* Splits policy administration into Current State, Labels, Moderation Policy, Advanced and a final Publication tab, with editable label definitions/translations, report subject and collection controls, and synchronized declaration JSON that preserves extension fields.
+* Loads the current policy into the editor and supports clearing only unsaved editor values. Current-state metadata uses a two-column table, declarations are pretty-printed and failed saves retain entered values.
+* Lists all unpublished policy drafts in Current State with per-draft loading and server-confirmed deletion, describes editable internal identifiers as Policy IDs and uses submission alone to confirm draft saving. Policy phase names are displayed as separate words.
+* Searches the full team by DID or verified handle with counted, filtered paging; spaces team glyphs and hides the role selector for membership actions other than Change role when scripting is enabled.
+* Uses a compact team search with aligned actions and adds placeholder hints to team and audit identity filters.
+* Selects team members by their displayed identity to prefill the update form with their DID and current role, and uses form submission alone to confirm enrollment and membership updates.
+* Shows eye, gavel and user-gear glyphs beside team roles and visually subdues removed members while retaining their identity links. A single Status column distinguishes Active, Suspended and Removed members with circle-check, circle-pause and circle-xmark glyphs alongside the state names.
 * Displays database UTC timestamps on administrative audit events with the shared UTC/local-time controls; legacy events show "Time unavailable", and retries preserve original event times.
 * Filters administrative audit events by actor DID or verified handle, outcome and inclusive UTC or local date/time range, retaining filters during sorting and paging. The audit table uses sortable timestamps in place of its sequence column.
 * Downloads matching audit events as streamed JSON with negotiated Brotli/gzip compression, fixed sequence cutoffs and repeated live authorization. Each download start is audited.
@@ -90,6 +106,7 @@
 
 #### idunno.Bluesky.Labeler.Host
 
+* Adds repeatable test-host policy drafts and fictional team/identity examples across roles, suspension, removal and a local CLI viewer binding; fresh databases also include an earlier verified policy publication, while existing operator edits and selected policies are retained.
 * Added independently opt-in Xenon UI and Bluesky sign-in pages to the canonical host; the UI requires the optional moderation backend and remains disabled by default.
 * Serves website OAuth metadata from the same configured options as Xenon sign-in, with a web callback and identity plus read-only profile scopes, alongside the separate native CLI metadata; the shared claims transformer supplies handle and avatar claims.
 * Routes Xenon authentication challenges and access denials to the installed Bluesky sign-in and error pages instead of nonexistent default account pages.
@@ -105,6 +122,7 @@
 
 #### idunno.Bluesky.Labeler.Cli
 
+* Waits for removed-label cleanup before policy publication/recovery writes, renews paused authority through live administration, and adds confirmed `policy resume` for the selected operation.
 * Added explicit policy inspection, save/begin/verify/abandon and conditional publication/recovery commands. Publication separates administrator and labeler-account OAuth authority, preserves raw declaration fields/default omissions, and rejects abandoned, superseded or conflicting intent.
 
 * Requests `identity:*` for PLC publication and recovery; the standalone host's native metadata advertises that permission.
@@ -118,6 +136,8 @@
 
 #### idunno.Bluesky.Labeler
 
+* Withdraws existing applications of removed policy label values in durable batches of at most 250 history entries before replacement publication, retaining exact URI/CID scopes, commit-time authorization, audit and restart recovery. Abandonment stops pending batches without undoing completed negations.
+* Adds audited, retry-safe deletion of unpublished policy drafts while retaining their definitions and operation history. Deleted versions cannot be loaded, published or reused, and selected or previously published versions cannot be deleted.
 * Added exact-subject reports/cases, fixed filtered workflow views with caller/issuer/filter-bound cursors, immutable policy versions and publication history, and explicit appeal capture/internal review and outcomes. Case decisions atomically reuse shared manual label issuance, commit-time authorization and original-signature recovery; report intake never automatically labels content.
 * Automatically assigns new and existing unresolved cases when exactly one active moderator/administrator remains, preserving resolved cases and original receipts with revision-fenced, audited assignment history shared by web and CLI administration.
 * Atomically records report handling with case decisions, preserving original evidence, exact-CID isolation and durable same-intent recovery; unhandled reports keep the case in review.

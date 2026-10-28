@@ -20,9 +20,7 @@ public partial class AtProtoJetstream
         new UriBuilder(service.Scheme, service.IdnHost, service.Port).Uri.GetLeftPart(UriPartial.Authority);
 
     // The archive metric tag for _uri, which never changes, so it is only built once.
-    private string ArchiveTag => _archiveServerTag ??= ArchiveServerTag(_uri);
-
-    private string? _archiveServerTag;
+    private string ArchiveTag { get => field ??= ArchiveServerTag(_uri); }
 
     /// <summary>
     /// Reads a bounded, decoded snapshot of the sealed Jetstream archive.
@@ -105,8 +103,7 @@ public partial class AtProtoJetstream
             ? request.Collections.Where(collection => !collection.IsWildcard)
                 .Select(collection => collection.ToString()).ToHashSet(StringComparer.Ordinal) : null;
         string[] wildcardPrefixes = request.Collections is { Count: > 0 }
-            ? request.Collections.Where(collection => collection.IsWildcard)
-                .Select(collection => collection.ToString()[..^1]).ToArray() : [];
+            ? [.. request.Collections.Where(collection => collection.IsWildcard).Select(collection => collection.ToString()[..^1])] : [];
 
         if (pinned is long sealedTip && after >= sealedTip && !seeking)
         {
@@ -225,9 +222,11 @@ public partial class AtProtoJetstream
                             _metrics.ArchiveBlocks.Add(1, new KeyValuePair<string, object?>("server", ArchiveTag));
                             position = new SnapshotCheckpoint
                             {
-                                SealedTipSeq = pinned.Value, PlanAfterSeq = after,
+                                SealedTipSeq = pinned.Value,
+                                PlanAfterSeq = after,
                                 RequestFingerprint = fingerprint,
-                                SegmentName = segment.Name, SegmentChecksum = segment.Checksum,
+                                SegmentName = segment.Name,
+                                SegmentChecksum = segment.Checksum,
                                 NextBlockIndex = checked(block + 1)
                             };
                             onCheckpoint?.Invoke(position);
@@ -286,10 +285,13 @@ public partial class AtProtoJetstream
                             _metrics.ArchiveBlocks.Add(1, new KeyValuePair<string, object?>("server", ArchiveTag));
                             position = new SnapshotCheckpoint
                             {
-                                SealedTipSeq = pinned.Value, PlanAfterSeq = after,
+                                SealedTipSeq = pinned.Value,
+                                PlanAfterSeq = after,
                                 RequestFingerprint = fingerprint,
-                                SegmentName = segment.Name, SegmentChecksum = segment.Checksum,
-                                NextBlockIndex = block + 1, NextByteOffset = download.Position
+                                SegmentName = segment.Name,
+                                SegmentChecksum = segment.Checksum,
+                                NextBlockIndex = block + 1,
+                                NextByteOffset = download.Position
                             };
                             onCheckpoint?.Invoke(position);
                         }
@@ -338,10 +340,13 @@ public partial class AtProtoJetstream
                             _metrics.ArchiveBlocks.Add(1, new KeyValuePair<string, object?>("server", ArchiveTag));
                             position = new SnapshotCheckpoint
                             {
-                                SealedTipSeq = pinned.Value, PlanAfterSeq = after,
+                                SealedTipSeq = pinned.Value,
+                                PlanAfterSeq = after,
                                 RequestFingerprint = fingerprint,
-                                SegmentName = segment.Name, SegmentChecksum = segment.Checksum,
-                                NextBlockIndex = block + 1, NextByteOffset = download.Position
+                                SegmentName = segment.Name,
+                                SegmentChecksum = segment.Checksum,
+                                NextBlockIndex = block + 1,
+                                NextByteOffset = download.Position
                             };
                             onCheckpoint?.Invoke(position);
                         }

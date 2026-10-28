@@ -5,14 +5,13 @@ using System.Text;
 
 using idunno.AtProto;
 using idunno.AtProto.Labels;
+using idunno.Bluesky.Labeler.Host;
 using idunno.Bluesky.Labeler.Maintenance;
 using idunno.Bluesky.Labeler.Signing;
 using idunno.Bluesky.Labeler.Storage;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-
-using idunno.Bluesky.Labeler.Host;
 
 using HostProgram = idunno.Bluesky.Labeler.Host.Program;
 

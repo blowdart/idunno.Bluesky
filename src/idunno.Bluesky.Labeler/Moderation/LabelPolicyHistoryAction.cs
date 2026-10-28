@@ -13,5 +13,7 @@ public enum LabelPolicyHistoryAction
     /// <summary>Abandons publication without assuming that a remote write was cancelled.</summary>
     Abandonment,
     /// <summary>Records independent verification, conflict or a mismatched pending publication.</summary>
-    Observation
+    Observation,
+    /// <summary>Deletes an unpublished draft from use while preserving its historical definition.</summary>
+    DraftDeletion
 }

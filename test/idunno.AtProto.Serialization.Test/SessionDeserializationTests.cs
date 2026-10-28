@@ -40,11 +40,11 @@ public class SessionDeserializationTests
 
         Assert.NotNull(sessionResponse.DidDoc);
         Assert.NotNull(sessionResponse.DidDoc.AlsoKnownAs);
-        Assert.Single(sessionResponse.DidDoc.AlsoKnownAs);
-        Assert.Equal("at://handle.example.org", sessionResponse.DidDoc.AlsoKnownAs[0]);
+        string item = Assert.Single(sessionResponse.DidDoc.AlsoKnownAs);
+        Assert.Equal("at://handle.example.org", item);
         Assert.NotNull(sessionResponse.DidDoc.Services);
-        Assert.Single(sessionResponse.DidDoc.Services);
-        Assert.Equal("#atproto_pds", sessionResponse.DidDoc.Services[0].Id);
+        DidDocService item_2 = Assert.Single(sessionResponse.DidDoc.Services);
+        Assert.Equal("#atproto_pds", item_2.Id);
         Assert.Equal("AtprotoPersonalDataServer", sessionResponse.DidDoc.Services[0].Type);
         Assert.Equal(new Uri("https://chaga.us-west.host.bsky.network"), sessionResponse.DidDoc.Services[0].ServiceEndpoint);
     }
@@ -72,11 +72,11 @@ public class SessionDeserializationTests
 
         Assert.NotNull(sessionResponse.DidDoc);
         Assert.NotNull(sessionResponse.DidDoc.AlsoKnownAs);
-        Assert.Single(sessionResponse.DidDoc.AlsoKnownAs);
-        Assert.Equal("at://handle.example.org", sessionResponse.DidDoc.AlsoKnownAs[0]);
+        string item = Assert.Single(sessionResponse.DidDoc.AlsoKnownAs);
+        Assert.Equal("at://handle.example.org", item);
         Assert.NotNull(sessionResponse.DidDoc.Services);
-        Assert.Single(sessionResponse.DidDoc.Services);
-        Assert.Equal("#atproto_pds", sessionResponse.DidDoc.Services[0].Id);
+        DidDocService item_2 = Assert.Single(sessionResponse.DidDoc.Services);
+        Assert.Equal("#atproto_pds", item_2.Id);
         Assert.Equal("AtprotoPersonalDataServer", sessionResponse.DidDoc.Services[0].Type);
         Assert.Equal(new Uri("https://chaga.us-west.host.bsky.network"), sessionResponse.DidDoc.Services[0].ServiceEndpoint);
     }
@@ -102,11 +102,11 @@ public class SessionDeserializationTests
 
         Assert.NotNull(sessionResponse.DidDoc);
         Assert.NotNull(sessionResponse.DidDoc.AlsoKnownAs);
-        Assert.Single(sessionResponse.DidDoc.AlsoKnownAs);
-        Assert.Equal("at://handle.example.org", sessionResponse.DidDoc.AlsoKnownAs[0]);
+        string item = Assert.Single(sessionResponse.DidDoc.AlsoKnownAs);
+        Assert.Equal("at://handle.example.org", item);
         Assert.NotNull(sessionResponse.DidDoc.Services);
-        Assert.Single(sessionResponse.DidDoc.Services);
-        Assert.Equal("#atproto_pds", sessionResponse.DidDoc.Services[0].Id);
+        DidDocService item_2 = Assert.Single(sessionResponse.DidDoc.Services);
+        Assert.Equal("#atproto_pds", item_2.Id);
         Assert.Equal("AtprotoPersonalDataServer", sessionResponse.DidDoc.Services[0].Type);
         Assert.Equal(new Uri("https://chaga.us-west.host.bsky.network"), sessionResponse.DidDoc.Services[0].ServiceEndpoint);
     }

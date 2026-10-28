@@ -1,4 +1,5 @@
 #nullable enable
+idunno.Bluesky.Labeler.Moderation.LabelPolicyPhase.Withdrawing = 4 -> idunno.Bluesky.Labeler.Moderation.LabelPolicyPhase
 idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.CreatedAt.get -> System.DateTimeOffset?
 idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.CreatedAt.init -> void
 idunno.Bluesky.Labeler.Moderation.LabelModerationReport.ResolutionReason.get -> string?
@@ -12,6 +13,7 @@ idunno.Bluesky.Labeler.Moderation.LabelPolicyHistoryAction.Draft = 0 -> idunno.B
 idunno.Bluesky.Labeler.Moderation.LabelPolicyHistoryAction.Publication = 1 -> idunno.Bluesky.Labeler.Moderation.LabelPolicyHistoryAction
 idunno.Bluesky.Labeler.Moderation.LabelPolicyHistoryAction.Abandonment = 2 -> idunno.Bluesky.Labeler.Moderation.LabelPolicyHistoryAction
 idunno.Bluesky.Labeler.Moderation.LabelPolicyHistoryAction.Observation = 3 -> idunno.Bluesky.Labeler.Moderation.LabelPolicyHistoryAction
+idunno.Bluesky.Labeler.Moderation.LabelPolicyHistoryAction.DraftDeletion = 4 -> idunno.Bluesky.Labeler.Moderation.LabelPolicyHistoryAction
 idunno.Bluesky.Labeler.Moderation.LabelPolicyHistoryEntry
 idunno.Bluesky.Labeler.Moderation.LabelPolicyHistoryEntry.Sequence.get -> long
 idunno.Bluesky.Labeler.Moderation.LabelPolicyHistoryEntry.OperationId.get -> string?

@@ -62,7 +62,7 @@ internal sealed record LabelQuery(string[] Patterns, Did[] Sources, int Limit, s
 
         return new LabelQuery(
             Patterns: patterns,
-            Sources: sources.ToArray(),
+            Sources: [.. sources],
             Limit: limit,
             Cursor: cursor);
     }
@@ -76,7 +76,7 @@ internal sealed record LabelQuery(string[] Patterns, Did[] Sources, int Limit, s
             throw new ArgumentException("The filter exceeds the hosting input limits or contains an empty value.");
         }
 
-        return values.Select(value => value!).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray();
+        return [.. values.Select(value => value!).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)];
     }
 
     /// <summary>Requires scalar query arguments to occur exactly once when supplied.</summary>

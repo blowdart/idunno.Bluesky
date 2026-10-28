@@ -109,6 +109,10 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 textarea { min-height: 9rem; width: 100%; }
 button { background: var(--button); color: white; border: 0; border-radius: .25rem; cursor: pointer; }
 .form-actions { display: flex; justify-content: flex-end; margin-top: 1rem; }
+.team-search { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .75rem 1rem; }
+.team-search .field { flex: 0 1 28rem; min-width: 0; max-width: 100%; margin: 0; }
+.team-search input { box-sizing: border-box; width: 100%; min-width: 0; }
+.team-search-actions { display: flex; align-items: center; gap: 1rem; }
 .authentication-content .row { display: flex; flex-wrap: wrap; gap: 1rem; }
 .authentication-content .align-items-baseline { align-items: baseline; }
 .authentication-content .col-sm-4, .authentication-content .col-sm-8 { width: 100%; min-width: 0; }
@@ -179,6 +183,9 @@ button { background: var(--button); color: white; border: 0; border-radius: .25r
 .notice-status { background: var(--status-background); border: 1px solid var(--status-border); }
 table { width: 100%; border-collapse: collapse; }
 th, td { text-align: left; vertical-align: top; padding: .65rem; border-bottom: 1px solid var(--separator); }
+.policy-state { table-layout: fixed; }
+.policy-state th { width: 35%; }
+.policy-state th, .policy-state td { overflow-wrap: anywhere; }
 .numeric { text-align: right; font-variant-numeric: tabular-nums; }
 .table-pagination { justify-content: flex-end; align-items: center; gap: .65rem; margin-top: 1rem; width: 100%; }
 .table-pagination [aria-disabled="true"] { color: var(--muted); }
@@ -238,6 +245,28 @@ th a { white-space: nowrap; }
 .media-reveal[hidden] { display: none; }
 .profile-preview-avatar .media-reveal { right: 50%; bottom: 50%; transform: translate(50%, 50%); }
 .fa-eye { --fa-icon: url("../vendor/fontawesome/eye.svg"); }
+.fa-gavel { --fa-icon: url("../vendor/fontawesome/gavel.svg"); }
+.fa-user-gear { --fa-icon: url("../vendor/fontawesome/user-gear.svg"); }
+.fa-circle-pause { --fa-icon: url("../vendor/fontawesome/circle-pause.svg"); }
+.fa-circle-xmark { --fa-icon: url("../vendor/fontawesome/circle-xmark.svg"); }
+.team-member-removed, .team-member-removed a { color: var(--muted); }
+.team-members .fa-icon { margin-inline-end: .4rem; }
+[data-team-role][hidden] { display: none; }
+.policy-tabs > nav { display: flex; flex-wrap: wrap; gap: .25rem; border-bottom: 1px solid var(--border); }
+.policy-tabs [role="tab"] { padding: .7rem 1rem; text-decoration: none; border-bottom: 3px solid transparent; }
+.policy-tabs [role="tab"][aria-selected="true"] { border-color: var(--link); background: var(--surface); }
+[data-policy-panel][hidden], [data-policy-save][hidden], .policy-editor-toolbar[hidden], .policy-label [hidden] { display: none; }
+.policy-editor-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1.25rem; }
+.policy-editor-toolbar p { flex-basis: 100%; margin: 0; }
+.policy-editor-toolbar > a { display: inline-flex; padding: .55rem; background: var(--button); color: white; border-radius: .25rem; text-decoration: none; }
+.policy-draft-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
+.policy-draft-actions form { margin: 0; }
+.policy-label { margin: 1rem 0; padding: 1rem; min-width: 0; }
+.policy-label button { margin: .5rem .75rem .5rem 0; }
+.policy-label input:not([type="checkbox"]), .policy-label select { max-width: 100%; min-width: 0; }
+[data-policy-editor] textarea[name="declaration"] { min-height: 28rem; font-family: monospace; }
+#policy-json-error:not(:empty) { color: var(--error-text); }
+#policy-current pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 .fa-eye-slash { --fa-icon: url("../vendor/fontawesome/eye-slash.svg"); }
 .preview-images figcaption { font-size: .85rem; color: var(--muted); margin-top: .35rem; white-space: pre-wrap; overflow-wrap: anywhere; max-width: 20rem; }
 .media-warning-caption { font-size: .85rem; color: var(--muted); margin-top: .5rem; }

@@ -88,15 +88,15 @@ public sealed record ConversationView : ConversationViewBase
     [JsonRequired]
     public IReadOnlyCollection<Actor.ProfileViewBasic> Members
     {
-        get => _members;
+        get;
 
         init
         {
             ArgumentNullException.ThrowIfNull(value);
 
-            _members = ChatCollection.Copy(value);
+            field = ChatCollection.Copy(value);
         }
-    }
+    } = null!;
 
     /// <summary>
     /// Gets a <see cref="MessageViewBase">view</see> over the last message in the conversation, if any.
@@ -134,6 +134,4 @@ public sealed record ConversationView : ConversationViewBase
     /// Gets the kind of conversation, if any.
     /// </summary>
     public ConversationKind? Kind { get; init; }
-
-    private readonly IReadOnlyCollection<Actor.ProfileViewBasic> _members = null!;
 }

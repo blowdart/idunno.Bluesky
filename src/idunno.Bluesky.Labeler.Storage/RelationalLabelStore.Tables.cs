@@ -259,19 +259,25 @@ internal abstract partial class RelationalLabelStore
                 if (query.Kind == LabelTableKind.Team)
                 {
                     IEnumerable<KeyValuePair<string, AdministrationMember>> members = team.Members;
+                    if (query.TeamMember is not null)
+                    {
+                        members = members.Where(entry => entry.Key == query.TeamMember);
+                    }
+
+                    int memberCount = query.TeamMember is null ? team.Members.Count : members.Count();
                     IOrderedEnumerable<KeyValuePair<string, AdministrationMember>> sorted = query.Sort switch
                     {
                         LabelTableSort.Role => query.Ascending ? members.OrderBy(entry => entry.Value.Role) : members.OrderByDescending(entry => entry.Value.Role),
                         LabelTableSort.Status => query.Ascending ? members.OrderBy(entry => entry.Value.Active) : members.OrderByDescending(entry => entry.Value.Active),
                         _ => query.Ascending ? members.OrderBy(entry => entry.Key, StringComparer.Ordinal) : members.OrderByDescending(entry => entry.Key, StringComparer.Ordinal)
                     };
-                    long page = ClampTablePage(query.Page, team.Members.Count);
+                    long page = ClampTablePage(query.Page, memberCount);
                     return LabelServiceResult<LabelTablePage>.Success(new(
-                        Total: team.Members.Count,
+                        Total: memberCount,
                         Page: page,
-                        Team: sorted.ThenBy(entry => entry.Key, StringComparer.Ordinal)
+                        Team: [.. sorted.ThenBy(entry => entry.Key, StringComparer.Ordinal)
                             .Skip(checked((int)((page - 1) * LabelTableQuery.PageSize))).Take(LabelTableQuery.PageSize)
-                            .Select(entry => new LabelTeamMember(new(entry.Key), entry.Value.Role, entry.Value.Active, entry.Value.Removed)).ToArray()));
+                            .Select(entry => new LabelTeamMember(new(entry.Key), entry.Value.Role, entry.Value.Active, entry.Value.Removed))]));
                 }
 
                 string table = query.Kind switch

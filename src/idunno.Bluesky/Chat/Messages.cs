@@ -8,26 +8,21 @@ namespace idunno.Bluesky.Chat;
 /// <summary>
 /// Implements a paged collection of messages from a direct message conversation.
 /// </summary>
-public class Messages : PagedViewReadOnlyCollection<MessageViewBase>
+/// <param name="list">The list of <see cref="MessageViewBase"/> to create this instance of <see cref="Messages"/> from.</param>
+/// <param name="cursor">An optional cursor for pagination.</param>
+/// <param name="relatedProfiles">An optional collection of the profiles of every member who authored or reacted to the messages in <paramref name="list"/>, including those referred to by system messages.</param>
+/// <exception cref="ArgumentException"><paramref name="relatedProfiles"/> contains a <see langword="null"/> entry.</exception>
+[method: SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload shape, extended with an optional parameter to avoid a breaking change.")]
+public class Messages(
+    IList<MessageViewBase> list,
+    string? cursor = null,
+    IReadOnlyCollection<Actor.ProfileViewBasic>? relatedProfiles = null) : PagedViewReadOnlyCollection<MessageViewBase>(list, cursor)
 {
     /// <summary>
     /// Creates a new instance of <see cref="Messages"/> with an empty list and no cursor.
     /// </summary>
     public Messages() : this([], null, null)
     {
-    }
-
-    /// <summary>
-    /// Creates a new instance of <see cref="Messages"/>.
-    /// </summary>
-    /// <param name="list">The list of <see cref="MessageViewBase"/> to create this instance of <see cref="Messages"/> from.</param>
-    /// <param name="cursor">An optional cursor for pagination.</param>
-    /// <param name="relatedProfiles">An optional collection of the profiles of every member who authored or reacted to the messages in <paramref name="list"/>, including those referred to by system messages.</param>
-    /// <exception cref="ArgumentException"><paramref name="relatedProfiles"/> contains a <see langword="null"/> entry.</exception>
-    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload shape, extended with an optional parameter to avoid a breaking change.")]
-    public Messages(IList<MessageViewBase> list, string? cursor = null, IReadOnlyCollection<Actor.ProfileViewBasic>? relatedProfiles = null) : base(list, cursor)
-    {
-        RelatedProfiles = relatedProfiles is null ? [] : ChatCollection.Copy(relatedProfiles);
     }
 
     /// <summary>
@@ -55,5 +50,5 @@ public class Messages : PagedViewReadOnlyCollection<MessageViewBase>
     /// The value supplied is copied, so later changes to the collection assigned are not reflected here.
     /// </para>
     /// </remarks>
-    public IReadOnlyCollection<Actor.ProfileViewBasic> RelatedProfiles { get; }
+    public IReadOnlyCollection<Actor.ProfileViewBasic> RelatedProfiles { get; } = relatedProfiles is null ? [] : ChatCollection.Copy(relatedProfiles);
 }

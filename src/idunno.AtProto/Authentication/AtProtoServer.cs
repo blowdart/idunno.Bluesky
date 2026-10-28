@@ -14,7 +14,7 @@ namespace idunno.AtProto;
 
 public static partial class AtProtoServer
 {
-    internal static readonly TimeSpan DefaultServiceAuthExpiry = TimeSpan.FromMinutes(15) - TimeSpan.FromSeconds(5);
+    internal static readonly TimeSpan s_defaultServiceAuthExpiry = TimeSpan.FromMinutes(15) - TimeSpan.FromSeconds(5);
 
     // https://docs.bsky.app/docs/api/com-atproto-server-create-session
     private const string CreateSessionEndpoint = "/xrpc/com.atproto.server.createSession";
@@ -399,7 +399,7 @@ public static partial class AtProtoServer
 
         StringBuilder endpointBuilder = new($"{GetServiceAuthEndpoint}?");
         endpointBuilder.Append(CultureInfo.InvariantCulture, $"aud={Uri.EscapeDataString(audience)}");
-        DateTimeOffset expiresOn = timeProvider.GetUtcNow() + (expiry ?? DefaultServiceAuthExpiry);
+        DateTimeOffset expiresOn = timeProvider.GetUtcNow() + (expiry ?? s_defaultServiceAuthExpiry);
         endpointBuilder.Append(CultureInfo.InvariantCulture, $"&exp={expiresOn.ToUnixTimeSeconds()}");
         endpointBuilder.Append(CultureInfo.InvariantCulture, $"&lxm={lxm}");
         string endpoint = endpointBuilder.ToString();

@@ -113,7 +113,7 @@ public class ParsingReviewRegressionTests
         using JsonDocument document = JsonDocument.Parse(json);
         foreach (bool validate in new[] { true, false })
         {
-            AtProtoRecord value = Assert.IsAssignableFrom<AtProtoRecord>(Parse(kind, document, validate));
+            AtProtoRecord value = Assert.IsType<AtProtoRecord>(Parse(kind, document, validate), exactMatch: false);
             Assert.Equal("client", value.ExtensionData["$via"].GetProperty("source").GetString());
             Assert.DoesNotContain("$type", value.ExtensionData.Keys);
         }

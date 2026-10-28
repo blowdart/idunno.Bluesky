@@ -185,7 +185,7 @@ public class CallbackServerHardeningTests
     [InlineData("call\\back")]
     public void ConstructorRejectsPathsWhichWouldNotMeanTheSameThingInARouteAndAUri(string path)
     {
-        Assert.Throws<ArgumentException>("path", () => new CallbackServer(12345, path));
+        Assert.Throws<ArgumentException>(nameof(path), () => new CallbackServer(12345, path));
     }
 
     [Theory]

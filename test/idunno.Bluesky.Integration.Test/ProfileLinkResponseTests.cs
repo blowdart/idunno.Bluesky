@@ -3,6 +3,8 @@
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
+using idunno.AtProto.Repo;
+using idunno.Bluesky.Actor;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
@@ -41,7 +43,7 @@ public class ProfileLinkResponseTests
 
         if (multiple)
         {
-            var result = useAgent
+            AtProtoHttpResult<IReadOnlyCollection<ProfileViewDetailed>> result = useAgent
                 ? await agent.GetProfiles([new Did("did:plc:test")], cancellationToken: token)
                 : await BlueskyServer.GetProfiles([new Did("did:plc:test")], agent.Service, agent.Credentials, client, cancellationToken: token);
             Assert.False(result.Succeeded);
@@ -50,7 +52,7 @@ public class ProfileLinkResponseTests
         }
         else
         {
-            var result = useAgent
+            AtProtoHttpResult<ProfileViewDetailed> result = useAgent
                 ? await agent.GetProfile(new Did("did:plc:test"), cancellationToken: token)
                 : await BlueskyServer.GetProfile(new Did("did:plc:test"), agent.Service, agent.Credentials, client, cancellationToken: token);
             Assert.False(result.Succeeded);
@@ -84,7 +86,7 @@ public class ProfileLinkResponseTests
         });
         using BlueskyAgent agent = CreateAgent(server);
 
-        var result = await agent.GetProfileRecord(TestContext.Current.CancellationToken);
+        AtProtoHttpResult<AtProtoRepositoryRecord<Profile>> result = await agent.GetProfileRecord(TestContext.Current.CancellationToken);
 
         Assert.False(result.Succeeded);
         Assert.Null(result.Result);

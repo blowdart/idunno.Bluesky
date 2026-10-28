@@ -200,11 +200,12 @@ internal sealed class AuthenticationTestHost : IAsyncDisposable
 
         IHost host = await hostBuilder.StartAsync();
 
-        var testHost = new AuthenticationTestHost(host, pendingSignIn);
-
-        testHost.Options = host.Services
-            .GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<BlueskyAuthenticationOptions>>()
-            .Get(Scheme);
+        var testHost = new AuthenticationTestHost(host, pendingSignIn)
+        {
+            Options = host.Services
+                .GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<BlueskyAuthenticationOptions>>()
+                .Get(Scheme)
+        };
 
         pendingSignIn.TimeProvider = testHost.Options.TimeProvider ?? TimeProvider.System;
         testHost.IdentityStore = testHost.Options.IdentityStore!;

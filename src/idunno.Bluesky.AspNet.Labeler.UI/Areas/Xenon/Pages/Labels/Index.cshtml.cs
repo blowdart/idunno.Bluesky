@@ -39,7 +39,7 @@ public sealed class IndexModel : PageModel
     {
         await ReadTargetAsync().ConfigureAwait(false);
         await LoadLabelsAsync().ConfigureAwait(false);
-        return Request.Headers["X-Requested-With"] == "XMLHttpRequest"
+        return Request.Headers.XRequestedWith == "XMLHttpRequest"
             ? Partial("_ManualLabelChoices", Labels with { Error = ViewData["Error"] as string })
             : Page();
     }
@@ -69,7 +69,7 @@ public sealed class IndexModel : PageModel
         }
 
         Microsoft.AspNetCore.Http.IFormCollection form = await Request.ReadFormAsync(HttpContext.RequestAborted).ConfigureAwait(false);
-        string[] selected = snapshot.Selected ?? form["selectedLabels"].Select(value => value ?? string.Empty).Distinct(StringComparer.Ordinal).ToArray();
+        string[] selected = snapshot.Selected ?? [.. form["selectedLabels"].Select(value => value ?? string.Empty).Distinct(StringComparer.Ordinal)];
         Reason = snapshot.Reason ?? await UiPageHelpers.FormValueAsync(this, "reason", 4096).ConfigureAwait(false);
         Labels = new(
             Choices: snapshot.Choices,
@@ -84,8 +84,7 @@ public sealed class IndexModel : PageModel
             return Page();
         }
 
-        ModerationLabelChoiceView[] changes = snapshot.Choices
-            .Where(choice => !choice.OtherVersion && choice.Applied != selected.Contains(choice.Value, StringComparer.Ordinal)).ToArray();
+        ModerationLabelChoiceView[] changes = [.. snapshot.Choices.Where(choice => !choice.OtherVersion && choice.Applied != selected.Contains(choice.Value, StringComparer.Ordinal))];
         if (changes.Length == 0)
         {
             ViewData["Error"] = "No label changes have been selected.";

@@ -44,7 +44,7 @@ public sealed class LabelCaseDecision
         {
             throw new ArgumentOutOfRangeException(nameof(reportId));
         }
-        LabelCaseLabelAction[] copy = actions.ToArray();
+        LabelCaseLabelAction[] copy = [.. actions];
         if (copy.Any(action => action is null) || copy.Select(action => action.Value).Distinct(StringComparer.Ordinal).Count() != copy.Length)
         {
             throw new ArgumentException("Actions must be non-null and identify distinct label values.", nameof(actions));

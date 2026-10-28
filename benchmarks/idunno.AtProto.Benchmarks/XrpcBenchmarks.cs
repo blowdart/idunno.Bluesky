@@ -12,6 +12,8 @@ using BenchmarkDotNet.Configs;
 
 using idunno.AtProto.Authentication;
 using idunno.Bluesky;
+using idunno.Bluesky.Actor;
+using idunno.Bluesky.Feed;
 using idunno.Bluesky.Feed.Model;
 
 namespace idunno.AtProto.Benchmarks;
@@ -76,7 +78,7 @@ public class XrpcBenchmarks
     [BenchmarkCategory("EndToEnd")]
     public async Task<int> GetAuthorFeed()
     {
-        var result =
+        AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>> result =
             await BlueskyServer.GetAuthorFeed(s_actor, 50, null, null, null, s_service, null, _authorFeedClient).ConfigureAwait(false);
         return result.Result!.Count;
     }
@@ -85,7 +87,7 @@ public class XrpcBenchmarks
     [BenchmarkCategory("EndToEnd")]
     public async Task<int> GetProfiles()
     {
-        var result =
+        AtProtoHttpResult<IReadOnlyCollection<ProfileViewDetailed>> result =
             await BlueskyServer.GetProfiles(s_profiles, s_service, null, _profilesClient).ConfigureAwait(false);
         return result.Result!.Count;
     }
@@ -94,7 +96,7 @@ public class XrpcBenchmarks
     [BenchmarkCategory("EndToEnd")]
     public async Task<int> GetTimeline()
     {
-        var result =
+        AtProtoHttpResult<Timeline> result =
             await BlueskyServer.GetTimeline(null, 50, null, s_service, _credentials, _timelineClient).ConfigureAwait(false);
         return result.Result!.Count;
     }
@@ -124,7 +126,9 @@ public class XrpcBenchmarks
     // The endpoint name used to tag metrics.
     [Benchmark]
     [BenchmarkCategory("MetricsEndpointName")]
+#pragma warning disable CA1822 // Keep the benchmark instance invocation shape consistent with the other benchmarks.
     public string MetricsEndpointName() => AtProtoHttpClient<object>.GetXrpcEndpointName(AuthorFeedEndpoint);
+#pragma warning restore CA1822
 
     private static string UnsignedJwt(string subject)
     {

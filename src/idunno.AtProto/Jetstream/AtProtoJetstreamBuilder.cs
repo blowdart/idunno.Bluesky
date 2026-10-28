@@ -14,7 +14,6 @@ namespace idunno.AtProto.Jetstream;
 /// </summary>
 public sealed class AtProtoJetstreamBuilder
 {
-    private Uri? _service;
     private TimeProvider _timeProvider = System.TimeProvider.System;
 
     /// <summary>
@@ -38,13 +37,13 @@ public sealed class AtProtoJetstreamBuilder
     /// </remarks>
     public Uri Service
     {
-        get => _service ?? (ProtocolVersion == JetstreamProtocolVersion.V1 ? AtProtoJetstream.s_defaultV1Uri : AtProtoJetstream.s_defaultV2Uri);
+        get => field ?? (ProtocolVersion == JetstreamProtocolVersion.V1 ? AtProtoJetstream.s_defaultV1Uri : AtProtoJetstream.s_defaultV2Uri);
 
         set
         {
             ArgumentNullException.ThrowIfNull(value);
 
-            _service = value;
+            field = value;
         }
     }
 

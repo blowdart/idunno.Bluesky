@@ -16,18 +16,38 @@ internal sealed class LabelerUiAdministration(
     ILabelAdministrationStore administration,
     idunno.Bluesky.AspNet.Labeler.AdministrationDispatcher dispatcher)
 {
-    /// <summary>Resolves an audit filter handle only after checking current inspection authority.</summary>
-    internal async Task<AdministrationResponse> ResolveAuditActorAsync(
+    /// <summary>Checks live administrator publication authority without treating policy inspection as permission to write.</summary>
+    internal async Task<AdministrationResponse> AuthorizePolicyPublicationAsync(
+        ClaimsPrincipal principal,
+        string reason,
+        CancellationToken token)
+    {
+        LabelServiceResult<LabelAdministrationCaller> caller = await AuthenticateAsync(principal, token).ConfigureAwait(false);
+        if (!caller.Succeeded)
+        {
+            return new(false, caller.Error.Code.ToString(), caller.Error.Message);
+        }
+        LabelServiceResult<idunno.Bluesky.Labeler.Issuance.LabelAuthorizationGrant> grant = await administration.AuthorizeAsync(
+            caller: caller.Result,
+            permission: LabelAdministrationPermission.ManagePolicy,
+            reason: reason,
+            cancellationToken: token).ConfigureAwait(false);
+        return grant.Succeeded ? new(true) : new(false, grant.Error.Code.ToString(), grant.Error.Message);
+    }
+
+    /// <summary>Resolves a table filter identity only after checking current inspection authority.</summary>
+    internal async Task<AdministrationResponse> ResolveTableIdentityAsync(
         ClaimsPrincipal principal,
         string actor,
+        LabelTableKind kind,
         CancellationToken token)
     {
         AdministrationResponse authority = await ReadTableAsync(
             principal: principal,
-            query: new(LabelTableKind.Audit, Sort: LabelTableSort.Number),
+            query: new(kind, Sort: kind == LabelTableKind.Team ? LabelTableSort.Subject : LabelTableSort.Number),
             cancellationToken: token).ConfigureAwait(false);
         return authority.Succeeded
-            ? await dispatcher.ResolveAuditActorAsync(actor, token).ConfigureAwait(false)
+            ? await dispatcher.ResolveTableIdentityAsync(actor, token).ConfigureAwait(false)
             : authority;
     }
 

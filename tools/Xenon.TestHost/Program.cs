@@ -34,7 +34,7 @@ internal static class Program
             return 2;
         }
 #endif
-        WebApplicationBuilder builder = WebApplication.CreateBuilder(args.Where(argument => argument != "--seed").ToArray());
+        WebApplicationBuilder builder = WebApplication.CreateBuilder([.. args.Where(argument => argument != "--seed")]);
         builder.WebHost.UseStaticWebAssets();
         Uri origin = ReadPublicOrigin(builder.Configuration["TestHost:PublicOrigin"]);
         string directory = Path.GetFullPath(builder.Configuration["TestHost:DataDirectory"] ??
@@ -59,9 +59,9 @@ internal static class Program
         AddHostFiltering(builder.Services, origin);
         AddPersistentAuthentication(builder.Services, database);
         builder.Services.AddSqliteLabelStorage(new SqliteConnectionStringBuilder { DataSource = database }.ToString());
-        builder.Services.AddLabelerModeration(FixtureHandler.Issuer, fixtures);
+        builder.Services.AddLabelerModeration(FixtureHandler.s_issuer, fixtures);
         builder.Services.AddLabelerAdministration(
-            audience: new(FixtureHandler.Issuer, "labeler_admin"),
+            audience: new(FixtureHandler.s_issuer, "labeler_admin"),
             signingKey: key,
             httpClient: fixtures);
         builder.Services.AddLabelerLocalAdministration(endpoint);
@@ -84,7 +84,7 @@ internal static class Program
         app.Services.GetRequiredService<SqliteXmlRepository>().Initialize(
             directory,
             app.Services.GetRequiredService<ILoggerFactory>());
-        await app.Services.GetRequiredService<ILabelStore>().InitializeAsync(FixtureHandler.Issuer, token);
+        await app.Services.GetRequiredService<ILabelStore>().InitializeAsync(FixtureHandler.s_issuer, token);
         await app.Services.GetRequiredService<idunno.Bluesky.Labeler.Moderation.ILabelPolicyStore>().InitializePolicyAsync(
             verificationFreshness: TimeSpan.FromMinutes(1),
             cancellationToken: token);
@@ -175,7 +175,7 @@ internal static class Program
         HostProgram.ConfigureForwardedHeaders(app);
         app.UseHostFiltering();
         app.UseBlueskyOAuthClientMetadata(
-            HostProgram.CreateNativeOAuthOptions(origin, new(FixtureHandler.Issuer, "labeler_admin")),
+            HostProgram.CreateNativeOAuthOptions(origin, new(FixtureHandler.s_issuer, "labeler_admin")),
             new idunno.Bluesky.AspNet.Authentication.BlueskyOAuthClientMetadataOptions
             {
                 ApplicationType = idunno.Bluesky.AspNet.Authentication.BlueskyOAuthClientApplicationType.Native

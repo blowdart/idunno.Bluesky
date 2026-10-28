@@ -18,6 +18,21 @@ namespace idunno.Bluesky.Labeler.Test;
 /// <summary>Checks label key custody helpers and public DID-document publication data.</summary>
 public class LabelerIdentityDocumentTests
 {
+    private static readonly JsonSerializerOptions s_verificationOptions = CreateVerificationOptions();
+
+    /// <summary>
+    /// Creates shared read-only options that leave null validation to the publication verifier.
+    /// </summary>
+    private static JsonSerializerOptions CreateVerificationOptions()
+    {
+        JsonSerializerOptions options = new(AtProtoJsonSerializerOptions.Default);
+#if NET9_0_OR_GREATER
+        options.RespectNullableAnnotations = false;
+#endif
+        options.MakeReadOnly();
+        return options;
+    }
+
     [Theory]
     [InlineData("z0")]
     [InlineData("z!")]
@@ -76,12 +91,7 @@ public class LabelerIdentityDocumentTests
         JsonObject document = JsonNode.Parse(LabelerIdentityDocument.CreateDidWebSnippet(did, signingKey, endpoint))!.AsObject();
         document["id"] = did.Value;
         document[collection]!.AsArray().Add(JsonNode.Parse(malformedEntry));
-        JsonSerializerOptions options = new(AtProtoJsonSerializerOptions.Default);
-#if NET9_0_OR_GREATER
-        // Exercise the public verifier with malformed objects independently of serializer nullability enforcement.
-        options.RespectNullableAnnotations = false;
-#endif
-        DidDocument resolved = JsonSerializer.Deserialize<DidDocument>(document.ToJsonString(), options)!;
+        DidDocument resolved = JsonSerializer.Deserialize<DidDocument>(document.ToJsonString(), s_verificationOptions)!;
 
         Assert.Throws<InvalidDataException>(() => LabelerIdentityDocument.VerifyPublication(
             didDocument: resolved,
@@ -259,12 +269,7 @@ public class LabelerIdentityDocumentTests
             service["serviceEndpoint"] = null;
         }
 
-        JsonSerializerOptions options = new(AtProtoJsonSerializerOptions.Default);
-#if NET9_0_OR_GREATER
-        // Exercise verifier validation independently of serializer nullability enforcement.
-        options.RespectNullableAnnotations = false;
-#endif
-        DidDocument resolved = JsonSerializer.Deserialize<DidDocument>(document.ToJsonString(), options)!;
+        DidDocument resolved = JsonSerializer.Deserialize<DidDocument>(document.ToJsonString(), s_verificationOptions)!;
 
         Assert.Throws<InvalidDataException>(() => LabelerIdentityDocument.VerifyPublication(
             didDocument: resolved,

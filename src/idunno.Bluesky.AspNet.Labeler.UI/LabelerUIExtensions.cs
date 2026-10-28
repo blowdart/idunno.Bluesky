@@ -2,15 +2,19 @@
 // Licensed under the MIT License.
 
 using idunno.AtProto;
+using idunno.Bluesky;
+using idunno.Bluesky.AspNet.Authentication;
+using idunno.Security;
 
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
-using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Options;
 
-using idunno.Security;
-
+#pragma warning disable IDE0130 // Preserve the established namespace independently of folder layout.
 namespace Microsoft.Extensions.DependencyInjection;
+#pragma warning restore IDE0130
 
 /// <summary>Registers the optional Xenon Razor Pages administration UI.</summary>
 public static class LabelerUIExtensions
@@ -41,12 +45,13 @@ public static class LabelerUIExtensions
             options.Conventions.AuthorizeAreaFolder("Xenon", "/");
             options.Conventions.AllowAnonymousToAreaPage("Xenon", "/Terms");
             options.Conventions.AllowAnonymousToAreaPage("Xenon", "/Privacy");
+            options.Conventions.AllowAnonymousToAreaPage("Xenon", "/Policy/ClientMetadata");
             options.Conventions.AddAreaFolderApplicationModelConvention(
                 "Xenon",
                 "/",
                 model =>
                 {
-                    if (model.ViewEnginePath is not ("/Terms" or "/Privacy"))
+                    if (model.ViewEnginePath is not ("/Terms" or "/Privacy" or "/Policy/ClientMetadata"))
                     {
                         model.Filters.Add(new ServiceFilterAttribute(typeof(idunno.Bluesky.AspNet.Labeler.UI.LabelerUiPageFilter)));
                     }
@@ -66,6 +71,20 @@ public static class LabelerUIExtensions
             ResolutionTimeout = TimeSpan.FromSeconds(5)
         }));
         services.TryAddSingleton(TimeProvider.System);
+        services.AddOptions<BlueskyAgentOptions>();
+        services.AddOptions<BlueskyAuthenticationOptions>(idunno.Bluesky.AspNet.Labeler.UI.PolicyPublicationService.Scheme)
+            .Configure<IServiceProvider>((publication, provider) =>
+            {
+                // Resolve only when these named options are created, not while constructing their monitor.
+                BlueskyAuthenticationOptions website = provider.GetRequiredService<IOptionsMonitor<BlueskyAuthenticationOptions>>()
+                    .Get(BlueskyAuthenticationDefaults.AuthenticationScheme);
+                publication.DataProtectionProvider = website.DataProtectionProvider;
+                publication.TimeProvider = website.TimeProvider;
+                publication.CorrelationStateCache = website.CorrelationStateCache;
+                publication.CorrelationStateCacheEvents = website.CorrelationStateCacheEvents;
+                publication.CorrelationCookie.Path = "/Xenon/Policy";
+            });
+        services.TryAddScoped<idunno.Bluesky.AspNet.Labeler.UI.PolicyPublicationService>();
         services.AddHostedService(serviceProvider => new idunno.Bluesky.AspNet.Labeler.UI.HandleSearchIndexer(
             store: serviceProvider.GetRequiredService<idunno.Bluesky.Labeler.Storage.ILabelStore>(),
             resolver: serviceProvider.GetRequiredService<IDidHandleResolver>(),

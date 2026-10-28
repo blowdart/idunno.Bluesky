@@ -15,15 +15,16 @@ namespace Xenon.TestHost;
 /// <summary>Resolves only reserved fictional identities locally; real identities use the hardened network client.</summary>
 internal sealed class FixtureHandler(string publicKey, HttpClient network, TimeProvider? clock = null) : HttpMessageHandler
 {
-    internal static readonly Did Issuer = new("did:web:labeler.xenon.invalid");
-    internal static readonly Did Reporter = new("did:web:reporter.xenon.invalid");
+    private static readonly string[] s_teamNames = ["administrator", "moderator", "viewer", "suspended", "removed", "local"];
+    internal static readonly Did s_issuer = new("did:web:labeler.xenon.invalid");
+    internal static readonly Did s_reporter = new("did:web:reporter.xenon.invalid");
     internal const int SubjectCount = 40;
     internal const string Cid = "bafyreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku";
     internal const string LegacyDeclaration = """
         {"$type":"app.bsky.labeler.service","createdAt":"2026-01-01T00:00:00Z",
          "policies":{"labelValues":["spam","scam"],"labelValueDefinitions":[]},"subjectTypes":["account","record"]}
         """;
-    internal static readonly string Declaration = LegacyDeclaration.TrimEnd()[..^1] + """
+    internal static readonly string s_declaration = LegacyDeclaration.TrimEnd()[..^1] + """
         ,"reasonTypes":["tools.ozone.report.defs#reasonMisleadingSpam","tools.ozone.report.defs#reasonOther",
         "tools.ozone.report.defs#reasonAppeal","com.atproto.moderation.defs#reasonSpam",
         "com.atproto.moderation.defs#reasonOther","com.atproto.moderation.defs#reasonAppeal"]}
@@ -31,6 +32,9 @@ internal sealed class FixtureHandler(string publicKey, HttpClient network, TimeP
 
     /// <summary>Creates one of the bounded fixture account identities.</summary>
     internal static Did Subject(int index) => new($"did:web:subject-{index:D2}.xenon.invalid");
+
+    /// <summary>Creates a fictional team identity separate from moderation subjects.</summary>
+    internal static Did TeamMember(string name) => new($"did:web:team-{name}.xenon.invalid");
 
     /// <summary>Exercises verified, invalid, unknown and absent verification state for both profile and post previews.</summary>
     private static string VerificationJson(string handle) => handle switch
@@ -138,7 +142,7 @@ internal sealed class FixtureHandler(string publicKey, HttpClient network, TimeP
             string repo = query["repo"].ToString();
             string collection = query["collection"].ToString();
             string rkey = query["rkey"].ToString();
-            bool declaration = repo == Issuer.Value && collection == "app.bsky.labeler.service" && rkey == "self";
+            bool declaration = repo == s_issuer.Value && collection == "app.bsky.labeler.service" && rkey == "self";
             bool post = Enumerable.Range(1, SubjectCount).Any(index => repo == Subject(index).Value) &&
                 collection == "app.bsky.feed.post" && rkey == "example";
             bool profile = Enumerable.Range(1, SubjectCount).Any(index => repo == Subject(index).Value) &&
@@ -150,7 +154,7 @@ internal sealed class FixtureHandler(string publicKey, HttpClient network, TimeP
                 return Json(HttpStatusCode.NotFound, """{"error":"RecordNotFound"}""");
             }
 
-            string record = Declaration;
+            string record = s_declaration;
             if (profile)
             {
                 record = $$$"""
@@ -192,7 +196,8 @@ internal sealed class FixtureHandler(string publicKey, HttpClient network, TimeP
                 """);
         }
 
-        Did? did = new[] { Issuer, Reporter }.Concat(Enumerable.Range(1, SubjectCount).Select(Subject))
+        Did? did = new[] { s_issuer, s_reporter }.Concat(Enumerable.Range(1, SubjectCount).Select(Subject))
+            .Concat(s_teamNames.Select(TeamMember))
             .FirstOrDefault(candidate => candidate.Value == "did:web:" + host);
         if (did is not null && uri.AbsolutePath == "/.well-known/atproto-did")
         {
@@ -276,7 +281,7 @@ internal sealed class FixtureHandler(string publicKey, HttpClient network, TimeP
             };
             if (did == Subject(26).Value)
             {
-                label["src"] = Issuer.Value;
+                label["src"] = s_issuer.Value;
             }
             if (did == Subject(27).Value)
             {

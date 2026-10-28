@@ -15,7 +15,9 @@ using idunno.AtProto.Jetstream.Archive;
 
 using MySqlConnector;
 
+#pragma warning disable IDE0130 // Preserve the established namespace independently of folder layout.
 namespace idunno.Bluesky.BotSdk.DataProviders;
+#pragma warning restore IDE0130
 
 /// <summary>Persists durable bot state in MySQL 8.4 or later using InnoDB transactions.</summary>
 /// <param name="connectionString">The MySQL connection string; use verified TLS outside local development.</param>

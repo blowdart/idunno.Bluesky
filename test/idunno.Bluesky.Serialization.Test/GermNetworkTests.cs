@@ -15,7 +15,7 @@ public class GermNetworkTests
     [Fact]
     public void GermNetworkDeclarationDeserializesCorrectly()
     {
-        var json = """
+        string json = """
             {
                 "uri": "at://did:plc:hfgp6pj3akhqxntgqwramlbg/com.germnetwork.declaration/self",
                 "cid": "bafyreifovknw2emzxmjn2m7oeajmwul55gqk2h5y4wqj5kapfoasnowjji",
@@ -54,7 +54,7 @@ public class GermNetworkTests
     [Fact]
     public void GermNetworkDeclarationDeserializesCorrectlyWithSerializerOptions()
     {
-        var json = """
+        string json = """
             {
                 "uri": "at://did:plc:hfgp6pj3akhqxntgqwramlbg/com.germnetwork.declaration/self",
                 "cid": "bafyreifovknw2emzxmjn2m7oeajmwul55gqk2h5y4wqj5kapfoasnowjji",

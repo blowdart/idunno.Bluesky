@@ -6,6 +6,21 @@ manual account and record labels, audit, policy, team administration, and labele
 lifecycle operations. It uses the shared label administration dispatcher: it does not
 create a separate authorization, issuance, or audit path.
 
+On Team, select a member's handle (or DID when no handle is available) to fill the
+Change member form with their canonical DID and current role. Select an action,
+provide a reason, and choose **Update**. Enrollment and membership updates use the
+submit button without an additional confirmation checkbox.
+Role names have eye (Viewer), gavel (Moderator) and user-gear (Administrator)
+glyphs. Removed members use muted text while retaining their identity links and
+explicit Removed status. A single Status column distinguishes Active, Suspended
+and Removed members instead of separate boolean columns, with circle-check,
+circle-pause and circle-xmark glyphs beside the respective state names.
+Search accepts a complete DID or verified handle (with or without `@`) and includes
+removed members. Filtering applies before counting and paging and is retained
+when sorting. With JavaScript enabled, the role label and selector are hidden
+unless the selected membership action is Change role; without scripting, the
+role remains available and is used only for Change role.
+
 ## Enabling the UI in the standalone host
 
 The canonical labeler host keeps the UI disabled by default. Enable optional
@@ -406,11 +421,83 @@ cancellation or lost authority abort the response rather than completing a
 misleading partial JSON file. Successful audit-feed reads do not append events,
 but the UI's separate team/navigation authorization checks retain their existing audit behavior.
 
-The administrator Policy page provides grouped report-reason checkboxes with
+The administrator Policy page has six keyboard-accessible tabs: **Current State**
+shows the selected policy and pretty-printed declaration;
+**Labels** edits declared values, optional custom definitions and their
+translations; **Moderation Policy** edits report intake and independent issuance
+permissions; **Advanced** edits the complete declaration JSON;
+**Publication** contains publication actions; the final **Verification** tab
+checks the declaration published on the labeler's PDS against the selected policy.
+Verification does not write the remote declaration, but a successful match can
+activate the policy and reopen reporting and issuance. Clicking **Verify declaration**
+requires no reason field or confirmation checkbox; the shared service retains an
+automatic audit reason and enforces live administrator authorization.
+Its Policy ID dropdown lists all available unpublished drafts, excluding deleted
+and previously selected policies. If no drafts exist, publication is disabled
+until a draft is saved.
+
+Starting publication explicitly confirms irreversible withdrawal of existing
+applications of label values removed by the selected draft. The host scans and
+negates them in restart-resumable batches of at most 250 history entries; it
+preserves account/record URI and optional CID scope and leaves retained values
+unchanged. Saving or deleting a draft alone never negates labels.
+Current State and Publication display database-clock timestamps for the last
+worker activity and last committed progress, retained across restarts. Activity
+means a worker attempted a batch, not proof that it is still running. Progress
+means a scan checkpoint advanced, more labels were observed published or
+withdrawal completed; an idle
+retry does not reset that timestamp. Older operations with no timestamps show
+that activity or progress has not been recorded, rather than inventing times.
+The Publication tab also displays removed values, history-scan checkpoints and
+any authorization or maintenance pause. **Resume cleanup** requires a new explicit confirmation and
+reason from a currently authorized administrator. Closing the browser does not
+stop the worker, and remote CLI enablement is independent.
+
+While cleanup is pending, new issuance and declaration verification remain
+closed. All required negations must be durably published before the CLI may
+write the replacement declaration. The UI only prepares publication and asks
+for independent verification; it does not hold labeler PDS credentials or
+perform that write. If publication fails or is abandoned, committed negations
+are not automatically undone, and reintroducing a value does not reapply it.
+
+The editor starts from the current selected policy. **Current State** lists all
+saved, undeleted versions that have never been selected for publication, with
+**Load draft** and **Delete draft** actions on each row. Previously published
+versions are not presented as drafts. **Load current policy** restores the selected definition; **Clear all**
+starts an empty editor without deleting any retained version or changing the
+publication gate. Enter a unique **Policy ID** for the new saved snapshot.
+This internal identifier is not published in the declaration. Loading or clearing
+leaves the editable ID blank; failed saves retain the entered ID for retries. Saving requires an audit
+reason and submission, without a confirmation checkbox.
+
+**Delete draft** opens an **Are you sure?** confirmation with an audit reason and a
+Cancel action, including without JavaScript. Confirmed deletion prevents future
+loading or publication and hides the draft from available-version lists. Its
+definition, original operation receipts, deletion receipt and audit history remain
+retained for accountability, and the deleted version identifier cannot be reused.
+Deletion and publication are fenced in the same provider transaction; selected
+and previously published definitions cannot be deleted.
+
+Valid Advanced edits immediately update the corresponding label and report-intake
+controls. Structured edits update the JSON while retaining unknown extension
+fields, including label and translation extensions. Invalid JSON remains visible
+with an error and blocks saving and structured declaration edits until corrected;
+the last valid control values are retained. Issuance permissions and operator
+guidance are separate versioned settings, not public declaration fields.
+Operator guidance is human-readable instructions for moderators, not executable
+rules or automatic decisions. Without JavaScript, sections remain visible and
+labels can be edited in Advanced; report-intake controls take precedence over their
+JSON fields on save.
+Report intake and issuance have separate all-collections checkboxes and NSID lists.
+An unchecked all-collections option with an empty list permits no collections,
+preserving the distinction between an omitted restriction and an empty array.
+
+The Moderation Policy tab provides grouped report-reason checkboxes with
 readable names, an all-reasons option and a custom-identifier field. Choosing only
 selected reasons with none checked accepts no reasons. Ozone and legacy AT Protocol
-identifiers remain distinct. The controls replace only `reasonTypes` in the draft
-declaration, preserving other fields; restrictions become active only after
+identifiers remain distinct. Report controls replace `reasonTypes`, `subjectTypes`
+and `subjectCollections` in the draft declaration, preserving other fields;
+restrictions become active only after
 publication and independent verification. Authenticated reports outside the
 selected reasons are retained as handled with reason `Not Applicable`, without
 changing labels or existing case workflow. Automatic audit entries show the
@@ -540,6 +627,24 @@ canonical host's hardened HTTPS client. Use these fictional targets for manual
 labeling and decisions. Fixture identities also resolve to matching handles, such
 as `subject-01.xenon.invalid`, so the test host exercises verified handle displays
 without sending those identity reads to real services.
+
+Explicit seeding also adds six fictional team members, with handles
+`team-administrator.xenon.invalid`, `team-moderator.xenon.invalid`,
+`team-viewer.xenon.invalid`, `team-suspended.xenon.invalid`,
+`team-removed.xenon.invalid` and `team-local.xenon.invalid`.
+The suspended member is a moderator; the removed member retains a viewer tombstone.
+The local example is a viewer bound to the fictional Unix identity `uid:4294967294`,
+not your OS account. These identities resolve locally and do not provide fake
+browser sign-in or replace your administrator's real CLI binding.
+Repeated seeding retains subsequent role, suspension, removal and binding changes.
+
+Two unpublished policies, `xenon-draft-accounts` and `xenon-draft-records`, demonstrate
+account/record and records-only issuance rules. They can be inspected through the
+shared policy administration commands and selected by version in the Policy form;
+seeding does not select them. A fresh database also records an earlier independently
+verified `xenon-history-v1` publication before selecting `test-v2`. Existing databases
+retain their actual publication history rather than receiving fabricated past events.
+These fixtures never publish to a PDS or replace a custom selected policy.
 
 The `--seed` option is available only in Debug builds. Other builds reject it
 before host initialization or any test-data changes.

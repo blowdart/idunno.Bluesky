@@ -1,16 +1,16 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Text.Json;
 using System.Security.Cryptography;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using idunno.AtProto;
 using idunno.Bluesky.Labeler.Issuance;
 using idunno.Bluesky.Labeler.Moderation;
 
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -92,13 +92,13 @@ public sealed class DetailModel : PageModel
             source: moderators,
             parallelOptions: new ParallelOptions { MaxDegreeOfParallelism = 8, CancellationToken = HttpContext.RequestAborted },
             body: async (moderator, token) => await handles.ResolveHandleAsync(new Did(moderator.Did), token).ConfigureAwait(false)).ConfigureAwait(false);
-        Assignees = moderators.Select(moderator =>
+        Assignees = [.. moderators.Select(moderator =>
         {
             string label = handles.TryGetCachedHandle(new Did(moderator.Did), out Handle? handle) && handle != Handle.Invalid
                 ? "@" + handle.Value
                 : $"Handle unavailable ({moderator.Did})";
             return new AssigneeOption(moderator.Did, label);
-        }).OrderBy(option => option.Label, StringComparer.OrdinalIgnoreCase).ToArray();
+        }).OrderBy(option => option.Label, StringComparer.OrdinalIgnoreCase)];
 
         AdministrationResponse response = await UiPageHelpers.DispatchAsync(
             this,
@@ -289,12 +289,12 @@ public sealed class DetailModel : PageModel
             return await OnGetAsync().ConfigureAwait(false);
         }
 
-        ModerationLabelActionInput[] actions = snapshot.Choices
+        ModerationLabelActionInput[] actions = [.. snapshot.Choices
             .Where(choice => !choice.OtherVersion && choice.Applied != selectedLabels.Contains(choice.Value))
             .Select(choice => new ModerationLabelActionInput(
                 Kind: selectedLabels.Contains(choice.Value) ? LabelOperationKind.Issue : LabelOperationKind.Negate,
                 Value: choice.Value,
-                ExpectedLabelSequence: choice.Sequence)).ToArray();
+                ExpectedLabelSequence: choice.Sequence))];
         if (actions.Length > 16)
         {
             ViewData["Error"] = "Change at most sixteen labels in one submission.";
@@ -346,8 +346,7 @@ public sealed class DetailModel : PageModel
         if (response.Error == "OutcomeUnknown")
         {
             DecisionState = protectedState;
-            RetryFields = form.Where(field => field.Key is "reason" or "selectedLabels" or "handleOtherReports" or "appealId" or "appealOutcome")
-                .SelectMany(field => field.Value.Select(value => new KeyValuePair<string, string>(field.Key, value ?? string.Empty))).ToArray();
+            RetryFields = [.. form.Where(field => field.Key is "reason" or "selectedLabels" or "handleOtherReports" or "appealId" or "appealOutcome").SelectMany(field => field.Value.Select(value => new KeyValuePair<string, string>(field.Key, value ?? string.Empty)))];
             ViewData["Error"] = "The decision outcome could not be confirmed. Retry the unchanged decision to recover its original result; do not start a new decision.";
         }
 

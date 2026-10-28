@@ -32,7 +32,9 @@ public class PostBuilderTests
         }
 
         string[] expectedErrors = [.. builder.ValidationErrors()];
+#pragma warning disable CA1859 // Exercise validation through the DataAnnotations interface, not just the concrete builder.
         IValidatableObject validatable = builder;
+#pragma warning restore CA1859
         ValidationResult[] results = [.. validatable.Validate(new ValidationContext(builder))];
         List<ValidationResult> annotationResults = [];
 
@@ -114,9 +116,11 @@ public class PostBuilderTests
     [Fact]
     public void ToPostShouldCaptureGateRulesAtomicallyWithThePost()
     {
-        PostBuilder postBuilder = new PostBuilder("Test post");
-        postBuilder.ThreadGateRules = [new FollowerRule()];
-        postBuilder.PostGateRules = [new DisableEmbeddingRule()];
+        PostBuilder postBuilder = new("Test post")
+        {
+            ThreadGateRules = [new FollowerRule()],
+            PostGateRules = [new DisableEmbeddingRule()]
+        };
 
         Post post = postBuilder.ToPost(out List<ThreadGateRule>? threadGateRules, out List<PostGateRule>? postGateRules);
 
@@ -133,9 +137,11 @@ public class PostBuilderTests
     [Fact]
     public void ToPostShouldReturnCopiesOfTheGateRulesRatherThanTheBuildersOwnLists()
     {
-        PostBuilder postBuilder = new PostBuilder("Test post");
-        postBuilder.ThreadGateRules = [new FollowerRule()];
-        postBuilder.PostGateRules = [new DisableEmbeddingRule()];
+        PostBuilder postBuilder = new("Test post")
+        {
+            ThreadGateRules = [new FollowerRule()],
+            PostGateRules = [new DisableEmbeddingRule()]
+        };
 
         _ = postBuilder.ToPost(out List<ThreadGateRule>? threadGateRules, out List<PostGateRule>? postGateRules);
 
@@ -154,7 +160,7 @@ public class PostBuilderTests
     [Fact]
     public void ToPostShouldReturnNullGateRulesWhenNoneAreConfigured()
     {
-        PostBuilder postBuilder = new PostBuilder("Test post");
+        PostBuilder postBuilder = new("Test post");
 
         _ = postBuilder.ToPost(out List<ThreadGateRule>? threadGateRules, out List<PostGateRule>? postGateRules);
 
@@ -165,7 +171,7 @@ public class PostBuilderTests
     [Fact]
     public async Task ExtractFacetsShouldNotApplyFacetsWhenTheTextChangesDuringExtraction()
     {
-        PostBuilder postBuilder = new PostBuilder("Hello #world");
+        PostBuilder postBuilder = new("Hello #world");
 
         // Facet indexes are byte offsets into the text they were extracted from, so facets
         // extracted from text that has since been replaced must be discarded.
@@ -180,7 +186,7 @@ public class PostBuilderTests
     [Fact]
     public async Task ExtractFacetsShouldApplyFacetsWhenTheTextIsUnchanged()
     {
-        PostBuilder postBuilder = new PostBuilder("Hello #world");
+        PostBuilder postBuilder = new("Hello #world");
 
         MutatingFacetExtractor extractor = new(postBuilder, null);
 
@@ -235,8 +241,8 @@ public class PostBuilderTests
         Post postRecord = builder.ToPost();
 
         Assert.NotNull(postRecord.Langs);
-        Assert.Single(postRecord.Langs);
-        Assert.Equal(expected, postRecord.Langs.ElementAt(0));
+        string item = Assert.Single(postRecord.Langs);
+        Assert.Equal(expected, item);
     }
 
     [Fact]
@@ -247,8 +253,8 @@ public class PostBuilderTests
         var builder = new PostBuilder("hello", lang: expected);
 
         Assert.NotNull(builder.Langs);
-        Assert.Single(builder.Langs);
-        Assert.Equal(expected, builder.Langs.ElementAt(0));
+        string item = Assert.Single(builder.Langs);
+        Assert.Equal(expected, item);
     }
 
     [Fact]
@@ -500,8 +506,8 @@ public class PostBuilderTests
         var post = postBuilder.ToPost();
 
         Assert.NotNull(post.EmbeddedRecord);
-        Assert.IsType<EmbeddedRecord>(post.EmbeddedRecord);
-        var embeddedRecord = post.EmbeddedRecord as EmbeddedRecord;
+        EmbeddedRecord typed = Assert.IsType<EmbeddedRecord>(post.EmbeddedRecord);
+        EmbeddedRecord embeddedRecord = typed;
         Assert.NotNull(embeddedRecord);
         Assert.Equal(quotedPost.Uri, embeddedRecord.Record.Uri);
         Assert.Equal(quotedPost.Cid, embeddedRecord.Record.Cid);
@@ -510,8 +516,8 @@ public class PostBuilderTests
 
         post = postBuilder.ToPost();
         Assert.NotNull(post.EmbeddedRecord);
-        Assert.IsType<EmbeddedRecord>(post.EmbeddedRecord);
-        embeddedRecord = post.EmbeddedRecord as EmbeddedRecord;
+        EmbeddedRecord typed_2 = Assert.IsType<EmbeddedRecord>(post.EmbeddedRecord);
+        embeddedRecord = typed_2;
         Assert.NotNull(embeddedRecord);
         Assert.Equal(quotedPost.Uri, embeddedRecord.Record.Uri);
         Assert.Equal(quotedPost.Cid, embeddedRecord.Record.Cid);
@@ -533,8 +539,8 @@ public class PostBuilderTests
 
         var post = postBuilder.ToPost();
         Assert.NotNull(post.EmbeddedRecord);
-        Assert.IsType<EmbeddedRecord>(post.EmbeddedRecord);
-        var embeddedRecord = post.EmbeddedRecord as EmbeddedRecord;
+        EmbeddedRecord typed = Assert.IsType<EmbeddedRecord>(post.EmbeddedRecord);
+        EmbeddedRecord embeddedRecord = typed;
         Assert.NotNull(embeddedRecord);
         Assert.Equal(quotedPost.Uri, embeddedRecord.Record.Uri);
         Assert.Equal(quotedPost.Cid, embeddedRecord.Record.Cid);
@@ -548,8 +554,8 @@ public class PostBuilderTests
         post = postBuilder.ToPost();
 
         Assert.NotNull(post.EmbeddedRecord);
-        Assert.IsType<EmbeddedRecord>(post.EmbeddedRecord);
-        embeddedRecord = post.EmbeddedRecord as EmbeddedRecord;
+        EmbeddedRecord typed_2 = Assert.IsType<EmbeddedRecord>(post.EmbeddedRecord);
+        embeddedRecord = typed_2;
         Assert.NotNull(embeddedRecord);
         Assert.Equal(quotedPost.Uri, embeddedRecord.Record.Uri);
         Assert.Equal(quotedPost.Cid, embeddedRecord.Record.Cid);
@@ -563,8 +569,8 @@ public class PostBuilderTests
         post = postBuilder.ToPost();
 
         Assert.NotNull(post.EmbeddedRecord);
-        Assert.IsType<EmbeddedRecord>(post.EmbeddedRecord);
-        embeddedRecord = post.EmbeddedRecord as EmbeddedRecord;
+        EmbeddedRecord typed_3 = Assert.IsType<EmbeddedRecord>(post.EmbeddedRecord);
+        embeddedRecord = typed_3;
         Assert.NotNull(embeddedRecord);
         Assert.Equal(quotedPost.Uri, embeddedRecord.Record.Uri);
         Assert.Equal(quotedPost.Cid, embeddedRecord.Record.Cid);
@@ -579,8 +585,8 @@ public class PostBuilderTests
         post = postBuilder.ToPost();
 
         Assert.NotNull(post.EmbeddedRecord);
-        Assert.IsType<EmbeddedRecord>(post.EmbeddedRecord);
-        embeddedRecord = post.EmbeddedRecord as EmbeddedRecord;
+        EmbeddedRecord typed_4 = Assert.IsType<EmbeddedRecord>(post.EmbeddedRecord);
+        embeddedRecord = typed_4;
         Assert.NotNull(embeddedRecord);
         Assert.Equal(quotedPost.Uri, embeddedRecord.Record.Uri);
         Assert.Equal(quotedPost.Cid, embeddedRecord.Record.Cid);
@@ -595,8 +601,8 @@ public class PostBuilderTests
         post = postBuilder.ToPost();
 
         Assert.NotNull(post.EmbeddedRecord);
-        Assert.IsType<EmbeddedRecord>(post.EmbeddedRecord);
-        embeddedRecord = post.EmbeddedRecord as EmbeddedRecord;
+        EmbeddedRecord typed_5 = Assert.IsType<EmbeddedRecord>(post.EmbeddedRecord);
+        embeddedRecord = typed_5;
         Assert.NotNull(embeddedRecord);
         Assert.Equal(quotedPost.Uri, embeddedRecord.Record.Uri);
         Assert.Equal(quotedPost.Cid, embeddedRecord.Record.Cid);

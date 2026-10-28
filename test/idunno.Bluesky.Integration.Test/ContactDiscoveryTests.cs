@@ -26,10 +26,9 @@ public class ContactDiscoveryTests
         {"did":"did:plc:test","handle":"test.invalid","associated":{"chat":{"allowIncoming":"all","allowGroupInvites":"future-policy"}}}
         """;
 
-    public static TheoryData<string, bool> Endpoints => new(
-        from endpoint in new[] { "startPhoneVerification", "verifyPhone", "importContacts", "dismissMatch", "removeData", "getMatches", "getSyncStatus" }
-        from useAgent in new[] { false, true }
-        select (endpoint, useAgent));
+    public static TheoryData<string, bool> Endpoints => [.. from endpoint in s_endpointNames
+        from useAgent in s_agentChoices
+        select (endpoint, useAgent)];
 
     public static TheoryData<string, bool, string> Errors
     {
@@ -56,6 +55,11 @@ public class ContactDiscoveryTests
             return data;
         }
     }
+
+    private static readonly string[] s_endpointNames = ["startPhoneVerification", "verifyPhone", "importContacts", "dismissMatch", "removeData", "getMatches", "getSyncStatus"];
+
+    private static readonly string[] s_expectedContacts = ["+12125550124", "", "+12125550124"];
+    private static readonly bool[] s_agentChoices = [false, true];
 
     [Theory]
     [MemberData(nameof(Endpoints))]
@@ -104,7 +108,7 @@ public class ContactDiscoveryTests
                         break;
                     case "importContacts":
                         Assert.Equal("single-use-test-token", root.GetProperty("token").GetString());
-                        Assert.Equal(new[] { "+12125550124", "", "+12125550124" }, root.GetProperty("contacts").EnumerateArray().Select(item => item.GetString()).ToArray());
+                        Assert.Equal(s_expectedContacts, root.GetProperty("contacts").EnumerateArray().Select(item => item.GetString()).ToArray());
                         Assert.Equal(2, root.EnumerateObject().Count());
                         break;
                     case "dismissMatch":
@@ -138,7 +142,7 @@ public class ContactDiscoveryTests
                 Assert.Equal("future-policy", match.Match.Associated?.Chat?.AllowGroupInvites);
                 break;
             case "getMatches":
-                var matches = Assert.IsType<PagedViewReadOnlyCollection<ProfileView>>(result.Value);
+                PagedViewReadOnlyCollection<ProfileView> matches = Assert.IsType<PagedViewReadOnlyCollection<ProfileView>>(result.Value);
                 Assert.Equal("next&cursor", matches.Cursor);
                 Assert.Equal("future-policy", Assert.Single(matches).Associated?.Chat?.AllowGroupInvites);
                 break;
@@ -218,7 +222,7 @@ public class ContactDiscoveryTests
         });
         using BlueskyAgent agent = CreateAgent(server);
 
-        var result = await agent.GetContactMatches(cursor: cursor, cancellationToken: TestContext.Current.CancellationToken);
+        AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>> result = await agent.GetContactMatches(cursor: cursor, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);
         Assert.Empty(result.Result);
@@ -233,7 +237,7 @@ public class ContactDiscoveryTests
         using TestServer server = Respond(body);
         using BlueskyAgent agent = CreateAgent(server);
 
-        var result = await agent.GetContactSyncStatus(cancellationToken: TestContext.Current.CancellationToken);
+        AtProtoHttpResult<ContactSyncStatusResult> result = await agent.GetContactSyncStatus(cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);
         Assert.Null(result.Result.SyncStatus);
@@ -293,7 +297,7 @@ public class ContactDiscoveryTests
         using TestServer server = Respond("{}");
         using HttpClient client = server.CreateClient();
         using BlueskyAgent agent = CreateAgent(server);
-        string[] contacts = Enumerable.Repeat("+12125550124", count).ToArray();
+        string[] contacts = [.. Enumerable.Repeat("+12125550124", count)];
         CancellationToken token = TestContext.Current.CancellationToken;
 
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => useAgent
@@ -315,7 +319,7 @@ public class ContactDiscoveryTests
             ? agent.ImportContacts("token", [null!], token)
             : BlueskyServer.ImportContacts("token", [null!], agent.Service, agent.Credentials!, client, cancellationToken: token));
 
-        var result = useAgent
+        AtProtoHttpResult<ReadOnlyCollection<ContactMatch>> result = useAgent
             ? await agent.ImportContacts("", [""], token)
             : await BlueskyServer.ImportContacts("", [""], agent.Service, agent.Credentials!, client, cancellationToken: token);
         Assert.True(result.Succeeded);
@@ -340,10 +344,10 @@ public class ContactDiscoveryTests
         });
         using HttpClient client = server.CreateClient();
         using BlueskyAgent agent = CreateAgent(server);
-        string[] contacts = Enumerable.Repeat("+12125550124", count).ToArray();
+        string[] contacts = [.. Enumerable.Repeat("+12125550124", count)];
         CancellationToken token = TestContext.Current.CancellationToken;
 
-        var result = useAgent
+        AtProtoHttpResult<ReadOnlyCollection<ContactMatch>> result = useAgent
             ? await agent.ImportContacts("token", contacts, token)
             : await BlueskyServer.ImportContacts("token", contacts, agent.Service, agent.Credentials!, client, cancellationToken: token);
 
@@ -368,7 +372,7 @@ public class ContactDiscoveryTests
         using BlueskyAgent agent = CreateAgent(server);
         CancellationToken token = TestContext.Current.CancellationToken;
 
-        var result = useAgent
+        AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>> result = useAgent
             ? await agent.GetContactMatches(limit, cancellationToken: token)
             : await BlueskyServer.GetContactMatches(limit, null, agent.Service, agent.Credentials!, client, cancellationToken: token);
 
@@ -427,10 +431,10 @@ public class ContactDiscoveryTests
         using BlueskyAgent agent = CreateAgent(server);
         CancellationToken token = TestContext.Current.CancellationToken;
 
-        var start = useAgent
+        AtProtoHttpResult<EmptyResponse> start = useAgent
             ? await agent.StartPhoneVerification("", token)
             : await BlueskyServer.StartPhoneVerification("", agent.Service, agent.Credentials!, client, cancellationToken: token);
-        var verify = useAgent
+        AtProtoHttpResult<PhoneVerificationResult> verify = useAgent
             ? await agent.VerifyPhone("", "", token)
             : await BlueskyServer.VerifyPhone("", "", agent.Service, agent.Credentials!, client, cancellationToken: token);
 

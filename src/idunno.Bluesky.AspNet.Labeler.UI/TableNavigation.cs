@@ -173,6 +173,10 @@ internal sealed class TableNavigation(LabelTableQuery query, HttpRequest request
             values["TimeBasis"] = request.Query["TimeBasis"].ToString();
             values["TimeZone"] = request.Query["TimeZone"].ToString();
         }
+        else if (Query.Kind == LabelTableKind.Team)
+        {
+            values["Search"] = request.Query["Search"].ToString();
+        }
 
         return QueryHelpers.AddQueryString(request.PathBase + request.Path, values);
     }

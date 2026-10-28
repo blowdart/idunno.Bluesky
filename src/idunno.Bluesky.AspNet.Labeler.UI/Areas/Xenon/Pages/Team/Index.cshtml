@@ -10,25 +10,54 @@
 }
 <h1>Team and membership</h1>
 <p>Team authority is persisted by DID. Suspension, removal and role changes take effect on the next server-side authorization check.</p>
+<form method="get" class="panel team-search">
+    <label class="field" for="team-search">Team member DID or handle
+        <input id="team-search" name="Search" value="@Request.Query["Search"]" maxlength="256" placeholder="DID or handle" />
+    </label>
+    <div class="team-search-actions"><button type="submit">Search</button><a asp-page="./Index">Clear</a></div>
+</form>
 @if (members is { ValueKind: JsonValueKind.Array } list)
 {
     <section class="panel">
-        <table>
+        <table class="team-members">
             <caption>@Model.Table!.Total members, including retained tombstones</caption>
             <thead><tr>
                 @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Subject, "Member"))
                 @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Role, "Role"))
-                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Status, "Active"))
-                <th scope="col">Removed</th>
+                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Status, "Status"))
             </tr></thead>
             <tbody>
                 @foreach (JsonElement member in list.EnumerateArray())
                 {
-                    <tr>
-                        <td>@await Html.PartialAsync("_Identity", new IdentityDisplayModel(member.GetProperty("did").GetString()))</td>
-                        <td>@((LabelTeamRole)member.GetProperty("role").GetInt32())</td>
-                        <td>@member.GetProperty("active").GetBoolean()</td>
-                        <td>@member.GetProperty("removed").GetBoolean()</td>
+                    LabelTeamRole role = (LabelTeamRole)member.GetProperty("role").GetInt32();
+                    bool removed = member.GetProperty("removed").GetBoolean();
+                    (string status, string statusIcon) = (removed, member.GetProperty("active").GetBoolean()) switch
+                    {
+                        (true, _) => ("Removed", "circle-xmark"),
+                        (false, true) => ("Active", "circle-check"),
+                        (false, false) => ("Suspended", "circle-pause")
+                    };
+                    string? roleIcon = role switch
+                    {
+                        LabelTeamRole.Viewer => "eye",
+                        LabelTeamRole.Moderator => "gavel",
+                        LabelTeamRole.Administrator => "user-gear",
+                        _ => null
+                    };
+                    <tr class="@(removed ? "team-member-removed" : null)">
+                        <td><a asp-page="./Index"
+                               asp-route-member="@member.GetProperty("did").GetString()"
+                               asp-route-Sort="@Model.Table!.Query.Sort"
+                               asp-route-Ascending="@Model.Table.Query.Ascending"
+                               asp-route-PageNumber="@Model.Table.Page"
+                               asp-route-Search="@Request.Query["Search"]"
+                               asp-fragment="change-member">@await Html.PartialAsync("_Identity", new IdentityDisplayModel(member.GetProperty("did").GetString()))</a></td>
+                        <td>@if (roleIcon is not null)
+                            {
+                                <span class="fa-icon fa-@roleIcon" aria-hidden="true"></span>
+                            }
+                            @role</td>
+                        <td><span class="fa-icon fa-@statusIcon" aria-hidden="true"></span> @status</td>
                     </tr>
                 }
             </tbody>
@@ -46,24 +75,27 @@
                 <select name="role"><option value="Viewer">Viewer</option><option value="Moderator">Moderator</option><option value="Administrator">Administrator</option></select>
             </label>
             <label class="field">Reason<input name="reason" required maxlength="4096" /></label>
-            <label><input type="checkbox" name="confirmed" value="true" required /> Confirm member enrollment</label>
             <p class="form-actions"><button type="submit">Enroll</button></p>
         </form>
     </section>
-    <section class="panel">
+    <section class="panel" id="change-member">
         <h2>Change member</h2>
-        <form method="post" asp-page-handler="Change">
+        <form method="post" asp-page-handler="Change" data-team-change>
             <input type="hidden" name="operationId" value="@(ViewData["OperationId"] ?? Guid.NewGuid().ToString("N"))" />
-            <label class="field">Member DID<input name="target" required maxlength="256" /></label>
+            <label class="field">Member DID<input name="target" value="@Model.SelectedMember" required maxlength="256" /></label>
             <label class="field">Action
                 <select name="action"><option value="SetRole">Change role</option><option value="Suspend">Suspend</option><option value="Reinstate">Reinstate</option><option value="Remove">Remove</option></select>
             </label>
-            <label class="field">Role (used for Change role)
-                <select name="role"><option value="Viewer">Viewer</option><option value="Moderator">Moderator</option><option value="Administrator">Administrator</option></select>
+            <label class="field" data-team-role>Role (used for Change role)
+                <select name="role">
+                    @foreach (LabelTeamRole role in Enum.GetValues<LabelTeamRole>())
+                    {
+                        <option value="@role" selected="@(role == Model.SelectedRole)">@role</option>
+                    }
+                </select>
             </label>
             <label class="field">Reason<input name="reason" required maxlength="4096" /></label>
-            <label><input type="checkbox" name="confirmed" value="true" required /> Confirm this membership change</label>
-            <p class="form-actions"><button type="submit">Apply membership change</button></p>
+            <p class="form-actions"><button type="submit">Update</button></p>
         </form>
     </section>
 </div>

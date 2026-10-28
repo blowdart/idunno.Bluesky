@@ -32,7 +32,7 @@ public class LabelDeletedPostTests
         LabelPolicyState policy = await LabelPolicyStoreTests.ActivateAsync((ILabelPolicyStore)fixture.Store, caller, token);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         SignedLabelSnapshot original = new(key.CreateLabel(
-            source: StoreFixture.Issuer, uri: s_uri.ToString(), value: "spam",
+            source: StoreFixture.s_issuer, uri: s_uri.ToString(), value: "spam",
             creationTimestamp: policy.DatabaseTime.AddHours(-1), cid: s_post.Cid));
         await fixture.Store.AppendAsync(operationId: "manual", labels: [original], cancellationToken: token);
         List<LabelModerationReport> accepted = [];
@@ -87,7 +87,7 @@ public class LabelDeletedPostTests
                 await HistoryAsync(cases, caller, candidate.CaseId, token),
                 item => item.Reason == "Post deleted");
             Assert.Equal("system:deleted-post", closure.LocalIdentity);
-            Assert.Equal(StoreFixture.Issuer, closure.Actor);
+            Assert.Equal(StoreFixture.s_issuer, closure.Actor);
             Assert.True(Success(await ((ILabelDeletedPostStore)restarted).CompleteDeletedPostCheckAsync(
                 candidate, batch.ObservedAt, true, token)).Closed);
         }

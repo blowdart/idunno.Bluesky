@@ -24,7 +24,11 @@ namespace idunno.AtProto.Labels;
 public sealed class LabelSigningKey : IDisposable
 {
     private readonly ECDsa _key;
+#if NET9_0_OR_GREATER
+    private readonly Lock _sync = new();
+#else
     private readonly object _sync = new();
+#endif
     private bool _disposed;
 
     private LabelSigningKey(ECDsa key, LabelSigningCurve curve)

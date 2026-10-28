@@ -27,6 +27,8 @@ public class AtmosphereExploreTests
         Assert.False(JsonSerializer.IsReflectionEnabledByDefault);
     }
 
+    private static readonly string[] s_expectedLanguages = ["en", "fr&x=y"];
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -44,7 +46,7 @@ public class AtmosphereExploreTests
             Assert.Equal("/xrpc/app.bsky.unspecced.getAtmosphereExploreTab", context.Request.Path);
             Assert.Equal(authenticated ? "pds.example.com" : TestServerBuilder.DefaultUri.Host, context.Request.Host.Host);
             Assert.Equal(authenticated, context.Request.Headers.ContainsKey("Authorization"));
-            Assert.Equal(new[] { "en", "fr&x=y" }, context.Request.Query["langs"].ToArray());
+            Assert.Equal(s_expectedLanguages, context.Request.Query["langs"].ToArray());
             Assert.Equal("US&x=y", context.Request.Query["countryCode"]);
             Assert.Equal("CA/West", context.Request.Query["regionCode"]);
             context.Response.ContentType = "application/json";

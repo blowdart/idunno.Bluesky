@@ -23,7 +23,7 @@ public class SigningKeySelectionTests
         await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
         await fixture.ExecuteAsync("DROP TABLE label_signing_selection; UPDATE label_schema SET version=7 WHERE id=1");
         ILabelStore restarted = fixture.NewStore();
-        await restarted.InitializeAsync(StoreFixture.Issuer, token);
+        await restarted.InitializeAsync(StoreFixture.s_issuer, token);
         ILabelSigningKeySelectionStore selections = (ILabelSigningKeySelectionStore)restarted;
         Assert.Null(await selections.GetSigningKeySelectionAsync(token));
         Assert.Same(fixture.Store, fixture.Services.GetRequiredService<ILabelSigningKeySelectionStore>());
@@ -34,7 +34,7 @@ public class SigningKeySelectionTests
             ((ILabelSigningKeySelectionStore)fixture.Store).InitializeSigningKeySelectionAsync("second", second.ExportPublicKeyMultibase(), token));
         Assert.Equal(results[0].KeyId, results[1].KeyId);
         Assert.Equal(results[0].PublicKey, results[1].PublicKey);
-        Assert.Equal(StoreFixture.Issuer.ToString(), results[0].Issuer);
+        Assert.Equal(StoreFixture.s_issuer.ToString(), results[0].Issuer);
         Assert.Equal((await fixture.Store.GetStateAsync(token)).StreamId, results[0].StreamId);
         LabelSigningKeySelection seeded = await selections.InitializeSigningKeySelectionAsync("stale", second.ExportPublicKeyMultibase(), token);
         Assert.Equal(results[0].KeyId, seeded.KeyId);
@@ -62,7 +62,7 @@ public class SigningKeySelectionTests
         await fixture.Store.AppendAsync(
             "retained",
             [new SignedLabelSnapshot(original.CreateLabel(
-                StoreFixture.Issuer,
+                StoreFixture.s_issuer,
                 "did:plc:subject",
                 "spam",
                 new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero)))],

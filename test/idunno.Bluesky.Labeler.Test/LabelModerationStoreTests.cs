@@ -1,14 +1,14 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using Microsoft.Data.Sqlite;
-using Microsoft.Extensions.DependencyInjection;
-
 using idunno.AtProto;
 using idunno.AtProto.Labels;
 using idunno.Bluesky.Labeler.Administration;
 using idunno.Bluesky.Labeler.Moderation;
 using idunno.Bluesky.Labeler.Storage;
+
+using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace idunno.Bluesky.Labeler.Test;
 
@@ -68,7 +68,7 @@ public class LabelModerationStoreTests
         start.SetResult();
         LabelCaseReceipt[] results = await Task.WhenAll(one, two);
         Assert.Equal(results[0].Case.Id, results[1].Case.Id);
-        Assert.Equal([1L, 2L], results.Select(result => result.Case.Revision).Order().ToArray());
+        Assert.Equal([1L, 2L], [.. results.Select(result => result.Case.Revision).Order()]);
         Assert.Single(Success(await first.GetCasesAsync(administrator, cancellationToken: token)));
         Assert.Equal(2, Success(await first.GetCaseHistoryAsync(administrator, results[0].Case.Id, cancellationToken: token)).Count);
     }
@@ -379,7 +379,7 @@ public class LabelModerationStoreTests
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         SignedLabelSnapshot original = new(key.CreateLabel(
-            source: StoreFixture.Issuer,
+            source: StoreFixture.s_issuer,
             uri: s_subject.Subject,
             value: "spam",
             creationTimestamp: new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero)));
@@ -404,7 +404,7 @@ public class LabelModerationStoreTests
             UPDATE label_schema SET version=8 WHERE id=1
             """);
         ILabelStore restarted = fixture.NewStore();
-        await restarted.InitializeAsync(StoreFixture.Issuer, token);
+        await restarted.InitializeAsync(StoreFixture.s_issuer, token);
         Assert.Equal(before, await restarted.GetStateAsync(token));
         ILabelModerationStore store = (ILabelModerationStore)restarted;
         LabelCaseReceipt created = Success(await store.ChangeCaseAsync(administrator, Open("after-upgrade"), token));

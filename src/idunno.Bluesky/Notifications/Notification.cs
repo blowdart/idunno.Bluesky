@@ -136,6 +136,8 @@ public sealed record Notification : AtProtoRepositoryObject
     public IReadOnlyCollection<Label> Labels
     {
         get;
+#pragma warning disable IDE0301 // Preserve the read-only collection type for null input.
         init => field = value is null ? ReadOnlyCollection<Label>.Empty : new List<Label>(value).AsReadOnly();
+#pragma warning restore IDE0301
     }
 }

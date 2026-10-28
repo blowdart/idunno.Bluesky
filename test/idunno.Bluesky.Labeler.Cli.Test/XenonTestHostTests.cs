@@ -12,6 +12,7 @@ using System.Text.RegularExpressions;
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Labels;
+using idunno.Bluesky.AspNet.Authentication;
 using idunno.Bluesky.AspNet.Labeler;
 using idunno.Bluesky.Labeler;
 using idunno.Bluesky.Labeler.Administration;
@@ -26,6 +27,7 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 
 using HostProgram = idunno.Bluesky.Labeler.Host.Program;
@@ -34,8 +36,39 @@ using TestProgram = Xenon.TestHost.Program;
 namespace idunno.Bluesky.Labeler.Cli.Test;
 
 /// <summary>Exercises the isolated host's persistent fixtures and actual request-boundary middleware.</summary>
-public class XenonTestHostTests
+public partial class XenonTestHostTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PublicationAuthenticationOptionsResolveIndependentlyOfSchemeOrder(bool publicationFirst)
+    {
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new NoNetworkHandler());
+        IServiceCollection services = WebApplication.CreateBuilder().Services;
+        string database = Path.Combine(Path.GetTempPath(), "xenon_options_" + Guid.NewGuid().ToString("N") + ".db");
+        services.AddSqliteLabelStorage($"Data Source={database};Pooling=False");
+        services.AddLabelerModeration(Xenon.TestHost.FixtureHandler.s_issuer, identity);
+        services.AddLabelerAdministration(new(Xenon.TestHost.FixtureHandler.s_issuer, "labeler_admin"), key, identity);
+        HostProgram.AddWebsiteAuthentication(services, new Uri("https://xenon-test.example"));
+        services.AddLabelerUI();
+        await using ServiceProvider provider = services.BuildServiceProvider();
+        const string publicationScheme = "Xenon.PolicyPublication";
+        (BlueskyAuthenticationOptions website, BlueskyAuthenticationOptions publication) = await Task.Run(() =>
+        {
+            IOptionsMonitor<BlueskyAuthenticationOptions> monitor = provider.GetRequiredService<IOptionsMonitor<BlueskyAuthenticationOptions>>();
+            monitor.Get(publicationFirst ? publicationScheme : BlueskyAuthenticationDefaults.AuthenticationScheme);
+            return (monitor.Get(BlueskyAuthenticationDefaults.AuthenticationScheme), monitor.Get(publicationScheme));
+        }, TestContext.Current.CancellationToken).WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        Assert.Same(website.DataProtectionProvider, publication.DataProtectionProvider);
+        Assert.Same(website.TimeProvider, publication.TimeProvider);
+        Assert.Same(website.CorrelationStateCache, publication.CorrelationStateCache);
+        Assert.Same(website.CorrelationStateCacheEvents, publication.CorrelationStateCacheEvents);
+        Assert.NotEqual(website.Cookie.Name, publication.Cookie.Name);
+        Assert.NotEqual(website.CorrelationCookie.Name, publication.CorrelationCookie.Name);
+        Assert.Equal("/Xenon/Policy", publication.CorrelationCookie.Path);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("http://test.example")]
@@ -86,8 +119,8 @@ public class XenonTestHostTests
             Uri origin = TestProgram.ReadPublicOrigin("https://xenon-test.example");
             TestProgram.AddHostFiltering(builder.Services, origin);
             builder.Services.AddSqliteLabelStorage($"Data Source={database};Pooling=False");
-            builder.Services.AddLabelerModeration(Xenon.TestHost.FixtureHandler.Issuer, identity);
-            builder.Services.AddLabelerAdministration(new(Xenon.TestHost.FixtureHandler.Issuer, "labeler_admin"), key, identity);
+            builder.Services.AddLabelerModeration(Xenon.TestHost.FixtureHandler.s_issuer, identity);
+            builder.Services.AddLabelerAdministration(new(Xenon.TestHost.FixtureHandler.s_issuer, "labeler_admin"), key, identity);
             HostProgram.AddWebsiteAuthentication(builder.Services, origin);
             builder.Services.AddSingleton<IDidHandleResolver>(serviceProvider => new DidHandleCache(new DidHandleCacheOptions
             {
@@ -104,12 +137,12 @@ public class XenonTestHostTests
                     network: network,
                     clock: previewClock));
             await using WebApplication app = builder.Build();
-            await app.Services.GetRequiredService<ILabelStore>().InitializeAsync(Xenon.TestHost.FixtureHandler.Issuer, token);
+            await app.Services.GetRequiredService<ILabelStore>().InitializeAsync(Xenon.TestHost.FixtureHandler.s_issuer, token);
             await app.Services.GetRequiredService<ILabelPolicyStore>().InitializePolicyAsync(cancellationToken: token);
             if (legacyPolicy)
             {
                 LabelAdministrationReceipt setup = Xenon.TestHost.SeedData.Require(await app.Services.BootstrapLocalAdministratorAsync(
-                    Xenon.TestHost.FixtureHandler.Reporter, "xenon-test-bootstrap", token));
+                    Xenon.TestHost.FixtureHandler.s_reporter, "xenon-test-bootstrap", token));
                 ILabelAdministrationStore legacyTeam = app.Services.GetRequiredService<ILabelAdministrationStore>();
                 LabelAdministrationCaller legacyCaller = Xenon.TestHost.SeedData.Require(
                     await legacyTeam.AuthenticateLocalAsync(setup.LocalIdentity!, token));
@@ -146,7 +179,7 @@ public class XenonTestHostTests
             {
                 await Xenon.TestHost.SeedData.InitializeAsync(
                     services: app.Services,
-                    administrator: Xenon.TestHost.FixtureHandler.Reporter,
+                    administrator: Xenon.TestHost.FixtureHandler.s_reporter,
                     identity: identity,
                     key: key,
                     cancellationToken: token);
@@ -154,7 +187,8 @@ public class XenonTestHostTests
 
             ILabelAdministrationStore team = app.Services.GetRequiredService<ILabelAdministrationStore>();
             LabelAdministrationCaller caller = Xenon.TestHost.SeedData.Require(await team.AuthenticateBrowserAsync(
-                Xenon.TestHost.FixtureHandler.Reporter, token));
+                Xenon.TestHost.FixtureHandler.s_reporter, token));
+            await VerifyAdministrationFixturesAsync(app.Services, caller, legacyPolicy, token);
             IReadOnlyList<LabelModerationReport> seededReports = Xenon.TestHost.SeedData.Require(
                 await app.Services.GetRequiredService<ILabelReportStore>().GetReportsAsync(caller, cancellationToken: token));
             Assert.Equal(47, seededReports.Count);
@@ -163,7 +197,7 @@ public class XenonTestHostTests
             LabelAdministrationReceipt automaticAudit = Assert.Single(Xenon.TestHost.SeedData.Require(
                 await team.GetAdministrationAuditAsync(caller, cancellationToken: token)),
                 entry => entry.Action == "report-not-applicable");
-            Assert.Equal(Xenon.TestHost.FixtureHandler.Issuer, automaticAudit.Actor);
+            Assert.Equal(Xenon.TestHost.FixtureHandler.s_issuer, automaticAudit.Actor);
             Assert.Equal("system:report-reason", automaticAudit.LocalIdentity);
             Assert.Equal("Not Applicable", automaticAudit.Reason);
             Assert.Equal(40, seededReports.Select(report => report.CaseId).Distinct().Count());
@@ -179,7 +213,7 @@ public class XenonTestHostTests
                 {
                     context.User = new ClaimsPrincipal(new ClaimsIdentity(
                         [
-                            new Claim(AtProtoClaims.Did, Xenon.TestHost.FixtureHandler.Reporter.Value),
+                            new Claim(AtProtoClaims.Did, Xenon.TestHost.FixtureHandler.s_reporter.Value),
                             new Claim(idunno.Bluesky.ClaimTypes.Handle, "reporter.xenon.invalid"),
                             new Claim(idunno.Bluesky.ClaimTypes.Avatar, "https://cdn.bsky.app/img/avatar/plain/did:web:reporter.xenon.invalid/example.png")
                         ],
@@ -269,7 +303,7 @@ public class XenonTestHostTests
                 invalid.Headers.Add("X-Test-Authenticated", "true");
                 using HttpResponseMessage response = await client.SendAsync(invalid, token);
                 string html = await response.Content.ReadAsStringAsync(token);
-                Assert.Contains("Enter an actor DID or handle.", html, StringComparison.Ordinal);
+                Assert.Contains("Enter a valid DID or handle.", html, StringComparison.Ordinal);
                 Assert.DoesNotContain("<caption>", html, StringComparison.Ordinal);
             }
             await VerifyAuditDownloadsAsync(client, team, caller, token);
@@ -299,7 +333,7 @@ public class XenonTestHostTests
             Assert.Contains("class=\"authentication-content\"", loginHtml, StringComparison.Ordinal);
             Assert.Contains("class=\"input-group\"", loginHtml, StringComparison.Ordinal);
             Assert.Contains("class=\"form-check\"", loginHtml, StringComparison.Ordinal);
-            Assert.Single(Regex.Matches(loginHtml, "<!DOCTYPE html>", RegexOptions.IgnoreCase));
+            Assert.Single(HtmlDocumentRegex().Matches(loginHtml));
             Assert.True(loginHtml.IndexOf("/Xenon/js/theme", StringComparison.Ordinal) <
                 loginHtml.IndexOf("<link rel=\"stylesheet\"", StringComparison.Ordinal), loginHtml);
             foreach ((string filter, int total) in new[] { ("", 46), ("Unresolved", 46), ("Handled", 1), ("All", 47) })
@@ -362,7 +396,7 @@ public class XenonTestHostTests
                 Assert.Contains("<option value=\"system\">System</option>", html, StringComparison.Ordinal);
                 Assert.Contains("<option value=\"light\">Light</option>", html, StringComparison.Ordinal);
                 Assert.Contains("<option value=\"dark\">Dark</option>", html, StringComparison.Ordinal);
-                Match themeScript = Regex.Match(html, """<script src="[^"]*/Xenon/js/theme[^"]*"></script>""");
+                Match themeScript = ThemeScriptRegex().Match(html);
                 Assert.True(themeScript.Success, html);
                 Assert.True(themeScript.Index < html.IndexOf("<link rel=\"stylesheet\"", StringComparison.Ordinal), html);
                 Assert.Contains("&copy; 2026 Barry Dorrans", html, StringComparison.Ordinal);
@@ -415,14 +449,14 @@ public class XenonTestHostTests
                     Assert.DoesNotContain("distinct record URIs", html, StringComparison.Ordinal);
                     Assert.DoesNotContain("1 records / 1 reports", html, StringComparison.Ordinal);
                     Assert.Contains("<title>Cases awaiting moderation", html, StringComparison.Ordinal);
-                    MatchCollection firstCases = Regex.Matches(html, """/Xenon/Cases/Detail/(\d+)""");
+                    MatchCollection firstCases = CaseLinkRegex().Matches(html);
                     Assert.Equal(16, firstCases.Count);
                     Assert.Equal("40", firstCases[0].Groups[1].Value);
                     Assert.Equal("25", firstCases[^1].Groups[1].Value);
                     Assert.DoesNotContain(firstCases.Cast<Match>(), match => match.Groups[1].Value == "3");
                     Assert.Contains("1 of 3 pages", html, StringComparison.Ordinal);
                     Assert.Contains("aria-sort=\"descending\"", html, StringComparison.Ordinal);
-                    Match next = Regex.Match(html, """href="([^"]+)"[^>]*rel="next"[^>]*>Next &gt;</a>""");
+                    Match next = NextPageRegex().Match(html);
                     Assert.True(next.Success, html);
                     string continuation = WebUtility.HtmlDecode(next.Groups[1].Value);
                     Assert.Contains("Queue=Unresolved", continuation, StringComparison.Ordinal);
@@ -433,22 +467,22 @@ public class XenonTestHostTests
                     using HttpResponseMessage nextResponse = await client.SendAsync(nextPage, token);
                     Assert.Equal(HttpStatusCode.OK, nextResponse.StatusCode);
                     string nextHtml = await nextResponse.Content.ReadAsStringAsync(token);
-                    MatchCollection remainingCases = Regex.Matches(nextHtml, """/Xenon/Cases/Detail/(\d+)""");
+                    MatchCollection remainingCases = CaseLinkRegex().Matches(nextHtml);
                     Assert.Equal(16, remainingCases.Count);
                     Assert.Equal("24", remainingCases[0].Groups[1].Value);
                     Assert.Equal("9", remainingCases[^1].Groups[1].Value);
                     Assert.Contains("2 of 3 pages", nextHtml, StringComparison.Ordinal);
-                    Match previous = Regex.Match(nextHtml, """href="([^"]+)"[^>]*rel="prev"[^>]*>&lt; Previous</a>""");
+                    Match previous = PreviousPageRegex().Match(nextHtml);
                     Assert.True(previous.Success, nextHtml);
                     Assert.Contains("PageNumber=1", WebUtility.HtmlDecode(previous.Groups[1].Value), StringComparison.Ordinal);
-                    Match finalLink = Regex.Match(nextHtml, """href="([^"]+)"[^>]*rel="next"[^>]*>Next &gt;</a>""");
+                    Match finalLink = NextPageRegex().Match(nextHtml);
                     Assert.True(finalLink.Success, nextHtml);
                     using HttpRequestMessage finalPage = new(HttpMethod.Get, WebUtility.HtmlDecode(finalLink.Groups[1].Value));
                     finalPage.Headers.Add("X-Test-Authenticated", "true");
                     using HttpResponseMessage finalResponse = await client.SendAsync(finalPage, token);
                     Assert.Equal(HttpStatusCode.OK, finalResponse.StatusCode);
                     string finalHtml = await finalResponse.Content.ReadAsStringAsync(token);
-                    MatchCollection finalCases = Regex.Matches(finalHtml, """/Xenon/Cases/Detail/(\d+)""");
+                    MatchCollection finalCases = CaseLinkRegex().Matches(finalHtml);
                     Assert.Equal(7, finalCases.Count);
                     Assert.Equal("8", finalCases[0].Groups[1].Value);
                     Assert.Equal("1", finalCases[^1].Groups[1].Value);
@@ -464,6 +498,7 @@ public class XenonTestHostTests
             }
 
             await VerifySortingAsync(client, token);
+            await VerifyTeamFormAsync(client, token);
             await VerifyFilterFormsAsync(client, token);
 
             using (HttpRequestMessage search = new(HttpMethod.Get, "/Xenon/Search?Q=fictional"))
@@ -477,7 +512,7 @@ public class XenonTestHostTests
                 Assert.Contains("class=\"fa-icon fa-magnifying-glass\"", html, StringComparison.Ordinal);
                 Assert.Contains("46 results for <strong>fictional</strong>", html, StringComparison.Ordinal);
                 Assert.Contains("1 of 3 pages", html, StringComparison.Ordinal);
-                Assert.Equal(16, Regex.Matches(html, "<h2><a href=\"/Xenon/Reports/Detail/").Count);
+                Assert.Equal(16, ReportHeadingRegex().Count(html));
             }
 
             using (HttpRequestMessage detail = new(HttpMethod.Get, "/Xenon/Cases/Detail/1"))
@@ -488,7 +523,12 @@ public class XenonTestHostTests
                 string html = await rendered.Content.ReadAsStringAsync(token);
                 Assert.Contains("<span>@reporter.xenon.invalid</span>", html, StringComparison.Ordinal);
                 Assert.Matches("""class="identity-tooltip" role="tooltip" id="identity-[^"]+"><code>did:web:reporter.xenon.invalid</code></span>""", html);
-                Assert.DoesNotContain("name=\"assignee\"", html, StringComparison.Ordinal);
+                Assert.Contains("name=\"assignee\"", html, StringComparison.Ordinal);
+                Assert.Contains(">@team-moderator.xenon.invalid</option>", html, StringComparison.Ordinal);
+                Assert.Contains(">@team-administrator.xenon.invalid</option>", html, StringComparison.Ordinal);
+                Assert.DoesNotContain(">@team-viewer.xenon.invalid</option>", html, StringComparison.Ordinal);
+                Assert.DoesNotContain(">@team-suspended.xenon.invalid</option>", html, StringComparison.Ordinal);
+                Assert.DoesNotContain(">@team-removed.xenon.invalid</option>", html, StringComparison.Ordinal);
                 Assert.Contains("class=\"moderation-history\"", html, StringComparison.Ordinal);
                 Assert.Contains("Moderation history", html, StringComparison.Ordinal);
                 Assert.Matches("""<p>Assignee:\s*<span class="identity" tabindex="0" aria-describedby="identity-""", html);
@@ -501,7 +541,7 @@ public class XenonTestHostTests
                 Assert.Contains("aria-pressed=\"false\"", html, StringComparison.Ordinal);
                 Assert.Contains("aria-describedby=\"time-zone-help\"", html, StringComparison.Ordinal);
                 Assert.Contains("aria-controls=\"page-content\"", html, StringComparison.Ordinal);
-                Assert.Single(Regex.Matches(html, "data-time-zone-toggle"));
+                Assert.Single(TimeZoneToggleRegex().Matches(html));
                 Assert.Contains("class=\"form-actions\"><button type=\"submit\">Submit", html, StringComparison.Ordinal);
                 Assert.Contains("name=\"handleOtherReports\" value=\"true\" checked", html, StringComparison.Ordinal);
                 Assert.Contains("name=\"selectedLabels\" value=\"spam\" checked", html, StringComparison.Ordinal);
@@ -605,7 +645,7 @@ public class XenonTestHostTests
                 using HttpResponseMessage response = await client.SendAsync(sorted, token);
                 string html = await response.Content.ReadAsStringAsync(token);
                 Assert.True(response.StatusCode == HttpStatusCode.OK, html);
-                MatchCollection rows = Regex.Matches(html, """/Xenon/Cases/Detail/(\d+)""");
+                MatchCollection rows = CaseLinkRegex().Matches(html);
                 Assert.Equal(first.ToString(System.Globalization.CultureInfo.InvariantCulture), rows[0].Groups[1].Value);
                 Assert.Equal(last.ToString(System.Globalization.CultureInfo.InvariantCulture), rows[^1].Groups[1].Value);
                 Assert.Contains(ascending ? "aria-sort=\"ascending\"" : "aria-sort=\"descending\"", html, StringComparison.Ordinal);
@@ -654,7 +694,7 @@ public class XenonTestHostTests
             }
 
             IDidHandleResolver cache = app.Services.GetRequiredService<IDidHandleResolver>();
-            Assert.True(cache.TryGetCachedHandle(Xenon.TestHost.FixtureHandler.Reporter, out Handle? cached));
+            Assert.True(cache.TryGetCachedHandle(Xenon.TestHost.FixtureHandler.s_reporter, out Handle? cached));
             Assert.Equal(new Handle("reporter.xenon.invalid"), cached);
             foreach (string path in new[] { "/oauth-client-metadata.json", "/native-client-metadata.json" })
             {
@@ -716,23 +756,38 @@ public class XenonTestHostTests
             await VerifySensitivePreviewsAsync(client, seededReports, token);
             await VerifyManualLabelsAsync(client, app.Services, token);
             await VerifyPolicyReasonEditorAsync(client, app.Services, caller, token);
+            await VerifyPolicyDraftDeletionAsync(client, app.Services, caller, token);
+            Xenon.TestHost.SeedData.Require(await team.ChangeTeamAsync(
+                caller: caller,
+                change: new(
+                    operationId: "test-customize-fixture-role",
+                    action: LabelTeamAction.SetRole,
+                    target: Xenon.TestHost.FixtureHandler.TeamMember("viewer"),
+                    reason: "Keep operator edits when fixtures are resumed.",
+                    role: LabelTeamRole.Moderator),
+                cancellationToken: token));
             await app.StopAsync(token);
             ServiceCollection restored = new();
             restored.AddLogging();
             restored.AddSqliteLabelStorage($"Data Source={database};Pooling=False");
-            restored.AddLabelerModeration(Xenon.TestHost.FixtureHandler.Issuer, identity);
-            restored.AddLabelerAdministration(new(Xenon.TestHost.FixtureHandler.Issuer, "labeler_admin"), key, identity);
+            restored.AddLabelerModeration(Xenon.TestHost.FixtureHandler.s_issuer, identity);
+            restored.AddLabelerAdministration(new(Xenon.TestHost.FixtureHandler.s_issuer, "labeler_admin"), key, identity);
             await using ServiceProvider reopened = restored.BuildServiceProvider();
-            await reopened.GetRequiredService<ILabelStore>().InitializeAsync(Xenon.TestHost.FixtureHandler.Issuer, token);
+            await reopened.GetRequiredService<ILabelStore>().InitializeAsync(Xenon.TestHost.FixtureHandler.s_issuer, token);
             await reopened.GetRequiredService<ILabelPolicyStore>().InitializePolicyAsync(cancellationToken: token);
             await Xenon.TestHost.SeedData.InitializeAsync(
                 services: reopened,
-                administrator: Xenon.TestHost.FixtureHandler.Reporter,
+                administrator: Xenon.TestHost.FixtureHandler.s_reporter,
                 identity: identity,
                 key: key,
                 cancellationToken: token);
             LabelAdministrationCaller restoredCaller = Xenon.TestHost.SeedData.Require(await reopened.GetRequiredService<ILabelAdministrationStore>()
-                .AuthenticateBrowserAsync(Xenon.TestHost.FixtureHandler.Reporter, token));
+                .AuthenticateBrowserAsync(Xenon.TestHost.FixtureHandler.s_reporter, token));
+            IReadOnlyList<LabelTeamMember> restoredTeam = Xenon.TestHost.SeedData.Require(
+                await reopened.GetRequiredService<ILabelAdministrationStore>().GetTeamAsync(restoredCaller, token));
+            Assert.Equal(LabelTeamRole.Moderator, Assert.Single(restoredTeam,
+                member => member.Did == Xenon.TestHost.FixtureHandler.TeamMember("viewer")).Role);
+            Assert.Equal(8, restoredTeam.Count);
             Assert.Equal(47, Xenon.TestHost.SeedData.Require(await reopened.GetRequiredService<ILabelReportStore>()
                 .GetReportsAsync(restoredCaller, cancellationToken: token)).Count);
             using HttpClient botSeeds = new(new BotSeedHandler(identity));
@@ -740,7 +795,7 @@ public class XenonTestHostTests
             {
                 await Xenon.TestHost.SeedData.InitializeRealPostsAsync(
                     services: reopened,
-                    administrator: Xenon.TestHost.FixtureHandler.Reporter,
+                    administrator: Xenon.TestHost.FixtureHandler.s_reporter,
                     identity: botSeeds,
                     key: key,
                     cancellationToken: token);
@@ -762,6 +817,58 @@ public class XenonTestHostTests
         }
     }
 
+    /// <summary>Checks repeatable role, revocation, local identity and policy examples without granting fictional identities browser access.</summary>
+    private static async Task VerifyAdministrationFixturesAsync(
+        IServiceProvider services,
+        LabelAdministrationCaller caller,
+        bool legacyPolicy,
+        CancellationToken cancellationToken)
+    {
+        ILabelAdministrationStore team = services.GetRequiredService<ILabelAdministrationStore>();
+        IReadOnlyList<LabelTeamMember> members = Xenon.TestHost.SeedData.Require(await team.GetTeamAsync(caller, cancellationToken));
+        Assert.Equal(7, members.Count);
+        foreach ((string name, LabelTeamRole role, bool active, bool removed) in new[]
+        {
+            ("administrator", LabelTeamRole.Administrator, true, false),
+            ("moderator", LabelTeamRole.Moderator, true, false),
+            ("viewer", LabelTeamRole.Viewer, true, false),
+            ("suspended", LabelTeamRole.Moderator, false, false),
+            ("removed", LabelTeamRole.Viewer, false, true),
+            ("local", LabelTeamRole.Viewer, true, false)
+        })
+        {
+            LabelTeamMember member = Assert.Single(members, member => member.Did == Xenon.TestHost.FixtureHandler.TeamMember(name));
+            Assert.Equal(role, member.Role);
+            Assert.Equal(active, member.Active);
+            Assert.Equal(removed, member.Removed);
+            Assert.Equal(active, (await team.AuthenticateBrowserAsync(member.Did, cancellationToken)).Succeeded);
+        }
+
+        LabelAdministrationCaller local = Xenon.TestHost.SeedData.Require(await team.AuthenticateLocalAsync("uid:4294967294", cancellationToken));
+        Assert.Equal(Xenon.TestHost.FixtureHandler.TeamMember("local"), local.Actor);
+        Assert.False((await team.AuthorizeAsync(
+            caller: local,
+            permission: LabelAdministrationPermission.ManageTeam,
+            reason: "The fictional local CLI viewer cannot administer the team.",
+            cancellationToken: cancellationToken)).Succeeded);
+        ILabelPolicyStore policies = services.GetRequiredService<ILabelPolicyStore>();
+        LabelPolicyState state = Xenon.TestHost.SeedData.Require(await policies.GetPolicyStateAsync(caller, cancellationToken));
+        Assert.Equal("test-v2", state.Policy!.Issuance.Version);
+        foreach (string version in new[] { "xenon-draft-accounts", "xenon-draft-records" })
+        {
+            LabelPolicyDefinition draft = Xenon.TestHost.SeedData.Require(await policies.GetPolicyVersionAsync(caller, version, cancellationToken));
+            Assert.Equal(version == "xenon-draft-accounts", draft.Issuance.AllowAccounts);
+            Assert.Contains("Fictional", draft.Rules, StringComparison.Ordinal);
+        }
+        IReadOnlyList<LabelPolicyHistoryEntry> history = Xenon.TestHost.SeedData.Require(
+            await policies.GetPolicyHistoryAsync(caller, cancellationToken: cancellationToken));
+        Assert.Single(history, entry => entry.OperationId == "xenon-draft-accounts");
+        Assert.Single(history, entry => entry.OperationId == "xenon-draft-records");
+        Assert.Equal(!legacyPolicy, history.Any(entry =>
+            entry.State?.Policy?.Issuance.Version == "xenon-history-v1" &&
+            entry.State.Phase == LabelPolicyPhase.VerifiedActive));
+    }
+
     /// <summary>Saves all, selected, empty and custom reason restrictions without changing the active policy or declaration extensions.</summary>
     private static async Task VerifyPolicyReasonEditorAsync(
         HttpClient client,
@@ -781,6 +888,23 @@ public class XenonTestHostTests
             Assert.Contains("Accepted report reasons", html, StringComparison.Ordinal);
             Assert.Contains("Only the selected reasons below", html, StringComparison.Ordinal);
             Assert.Contains("automatically handled as Not Applicable", html, StringComparison.Ordinal);
+            Assert.Contains(">Current State</a>", html, StringComparison.Ordinal);
+            Assert.Contains(">Labels</a>", html, StringComparison.Ordinal);
+            Assert.Contains(">Moderation Policy</a>", html, StringComparison.Ordinal);
+            Assert.Contains(">Advanced</a>", html, StringComparison.Ordinal);
+            Assert.Contains(">Publication</a>", html, StringComparison.Ordinal);
+            Assert.True(html.IndexOf(">Publication</a>", StringComparison.Ordinal) > html.IndexOf(">Advanced</a>", StringComparison.Ordinal));
+            Assert.True(html.IndexOf("id=\"policy-publication\"", StringComparison.Ordinal) < html.IndexOf("<h2>Begin policy publication</h2>", StringComparison.Ordinal));
+            Assert.Contains("Current policy: test-v2", html, StringComparison.Ordinal);
+            Assert.Contains("<h2>Saved drafts</h2>", html, StringComparison.Ordinal);
+            Assert.Contains("<table class=\"policy-state\" aria-label=\"Current policy state\">", html, StringComparison.Ordinal);
+            Assert.Matches("""<th scope="row">Phase</th><td>.*?<strong>Verified Active</strong>""", html);
+            Assert.Contains("<th scope=\"row\">Verification freshness</th>", html, StringComparison.Ordinal);
+            Assert.Contains("<th scope=\"row\">Verification valid until</th>", html, StringComparison.Ordinal);
+            Assert.Contains("data-policy-load=\"draft\"", html, StringComparison.Ordinal);
+            Assert.Contains("data-policy-clear", html, StringComparison.Ordinal);
+            Assert.Contains("Accepted report subjects", html, StringComparison.Ordinal);
+            Assert.Contains("not executable and not part of the public declaration", html, StringComparison.Ordinal);
             Assert.Matches("""value="tools.ozone.report.defs#reasonOther"[^>]*checked""", html);
             Dictionary<string, string> form = new()
             {
@@ -789,10 +913,9 @@ public class XenonTestHostTests
                 ["version"] = "reason-editor-" + mode,
                 ["reason"] = "Exercise friendly reason selection.",
                 ["rules"] = "Test draft only.",
-                ["confirmed"] = "true",
                 ["allowAccounts"] = "true",
                 ["allowRecords"] = "true",
-                ["declaration"] = Xenon.TestHost.FixtureHandler.Declaration.TrimEnd()[..^1] + ""","customExtension":{"retained":true}}""",
+                ["declaration"] = Xenon.TestHost.FixtureHandler.s_declaration.TrimEnd()[..^1] + ""","customExtension":{"retained":true}}""",
                 ["reasonMode"] = mode == "all" ? "all" : "selected"
             };
             if (mode == "selected")
@@ -820,6 +943,186 @@ public class XenonTestHostTests
             Assert.True(declaration.RootElement.GetProperty("customExtension").GetProperty("retained").GetBoolean());
             Assert.Equal(before.Revision, (await policies.ReadPolicyStateAsync(token))!.Revision);
         }
+
+        foreach (string source in new[] { "current", "draft", "draft&draft=reason-editor-selected", "clear" })
+        {
+            using HttpRequestMessage get = new(HttpMethod.Get, "/Xenon/Policy?editor=" + source);
+            get.Headers.Add("X-Test-Authenticated", "true");
+            using HttpResponseMessage page = await client.SendAsync(get, token);
+            string html = await page.Content.ReadAsStringAsync(token);
+            Assert.Contains(source switch
+            {
+                "draft" => "Saved draft: reason-editor-none",
+                "draft&draft=reason-editor-selected" => "Saved draft: reason-editor-selected",
+                "current" => "Current policy: test-v2",
+                _ => "New policy"
+            }, html, StringComparison.Ordinal);
+            Assert.Contains("Policy ID", html, StringComparison.Ordinal);
+            Assert.Contains("name=\"version\" required maxlength=\"256\" value=\"\" aria-describedby=\"policy-id-help\"", html, StringComparison.Ordinal);
+            Assert.DoesNotContain("readonly", html, StringComparison.Ordinal);
+            Assert.Contains("The Policy ID is internal to this app and is not published as part of the policy.", html, StringComparison.Ordinal);
+            Assert.Contains("aria-describedby=\"publication-policy-id-help\"", html, StringComparison.Ordinal);
+            int publicationStart = html.IndexOf("<div id=\"policy-publication\"", StringComparison.Ordinal);
+            string publicationHtml = html[publicationStart..];
+            Assert.Contains("<select name=\"version\" required aria-describedby=\"publication-policy-id-help\"", publicationHtml, StringComparison.Ordinal);
+            Assert.DoesNotContain("<input name=\"version\"", publicationHtml, StringComparison.Ordinal);
+            foreach (string draftId in new[] { "reason-editor-all", "reason-editor-selected", "reason-editor-none" })
+            {
+                Assert.Contains($"<option value=\"{draftId}\">{draftId}</option>", publicationHtml, StringComparison.Ordinal);
+            }
+            Assert.DoesNotContain("<option value=\"test-v2\">", publicationHtml, StringComparison.Ordinal);
+            Assert.DoesNotContain("Confirm this immutable policy version", html, StringComparison.Ordinal);
+        }
+
+        using HttpRequestMessage initial = new(HttpMethod.Get, "/Xenon/Policy");
+        initial.Headers.Add("X-Test-Authenticated", "true");
+        using HttpResponseMessage initialPage = await client.SendAsync(initial, token);
+        string initialHtml = await initialPage.Content.ReadAsStringAsync(token);
+        Dictionary<string, string> scopedForm = new()
+        {
+            ["__RequestVerificationToken"] = ReadField(initialHtml, "__RequestVerificationToken"),
+            ["operationId"] = "policy-structured-scope",
+            ["version"] = "structured-scope",
+            ["reason"] = "Test independent report and issuance scopes.",
+            ["rules"] = "Preserved guidance.",
+            ["allowAccounts"] = "true",
+            ["collections"] = "app.bsky.graph.list",
+            ["declaration"] = Xenon.TestHost.FixtureHandler.s_declaration,
+            ["reasonMode"] = "all",
+            ["structuredScope"] = "true",
+            ["structuredIssuance"] = "true",
+            ["reportSubjects"] = "record",
+            ["reportCollections"] = "app.bsky.feed.post"
+        };
+        using HttpRequestMessage scopedPost = new(HttpMethod.Post, "/Xenon/Policy?handler=Save");
+        scopedPost.Headers.Add("X-Test-Authenticated", "true");
+        scopedPost.Content = new FormUrlEncodedContent(scopedForm);
+        using HttpResponseMessage scopedSaved = await client.SendAsync(scopedPost, token);
+        Assert.True(scopedSaved.StatusCode == HttpStatusCode.Redirect, await scopedSaved.Content.ReadAsStringAsync(token));
+        LabelPolicyDefinition scopedPolicy = Xenon.TestHost.SeedData.Require(await policies.GetPolicyVersionAsync(caller, "structured-scope", token));
+        Assert.Equal(["record"], scopedPolicy.ReportScope.SubjectTypes);
+        Assert.Equal("app.bsky.feed.post", Assert.Single(scopedPolicy.ReportScope.SubjectCollections!).ToString());
+        Assert.True(scopedPolicy.Issuance.AllowAccounts);
+        Assert.False(scopedPolicy.Issuance.AllowRecords);
+        Assert.Equal("app.bsky.graph.list", Assert.Single(scopedPolicy.Issuance.AllowedRecordCollections!).ToString());
+
+        foreach (bool all in new[] { false, true })
+        {
+            scopedForm["operationId"] = "policy-collection-mode-" + all;
+            scopedForm["version"] = "collection-mode-" + all;
+            scopedForm["reportCollections"] = string.Empty;
+            scopedForm["collections"] = string.Empty;
+            scopedForm["reportAllCollections"] = all ? "true" : "false";
+            scopedForm["issueAllCollections"] = all ? "true" : "false";
+            using HttpRequestMessage modePost = new(HttpMethod.Post, "/Xenon/Policy?handler=Save");
+            modePost.Headers.Add("X-Test-Authenticated", "true");
+            modePost.Content = new FormUrlEncodedContent(scopedForm);
+            using HttpResponseMessage modeSaved = await client.SendAsync(modePost, token);
+            Assert.True(modeSaved.StatusCode == HttpStatusCode.Redirect, await modeSaved.Content.ReadAsStringAsync(token));
+            LabelPolicyDefinition modePolicy = Xenon.TestHost.SeedData.Require(await policies.GetPolicyVersionAsync(caller, scopedForm["version"], token));
+            if (all)
+            {
+                Assert.Null(modePolicy.ReportScope.SubjectCollections);
+                Assert.Null(modePolicy.Issuance.AllowedRecordCollections);
+            }
+            else
+            {
+                Assert.Empty(modePolicy.ReportScope.SubjectCollections!);
+                Assert.Empty(modePolicy.Issuance.AllowedRecordCollections!);
+            }
+        }
+
+        scopedForm["operationId"] = "policy-missing-id";
+        scopedForm.Remove("version");
+        using (HttpRequestMessage missingIdPost = new(HttpMethod.Post, "/Xenon/Policy?handler=Save"))
+        {
+            missingIdPost.Headers.Add("X-Test-Authenticated", "true");
+            missingIdPost.Content = new FormUrlEncodedContent(scopedForm);
+            using HttpResponseMessage missingId = await client.SendAsync(missingIdPost, token);
+            Assert.Contains("Enter a Policy ID before saving.", await missingId.Content.ReadAsStringAsync(token), StringComparison.Ordinal);
+        }
+        Assert.False((await policies.GetPolicyOperationAsync(caller, scopedForm["operationId"], token)).Succeeded);
+
+        scopedForm["operationId"] = "policy-invalid-editor";
+        scopedForm["version"] = "retained-invalid-version";
+        scopedForm["declaration"] = "{ invalid JSON";
+        using HttpRequestMessage invalidPost = new(HttpMethod.Post, "/Xenon/Policy?handler=Save");
+        invalidPost.Headers.Add("X-Test-Authenticated", "true");
+        invalidPost.Content = new FormUrlEncodedContent(scopedForm);
+        using HttpResponseMessage invalid = await client.SendAsync(invalidPost, token);
+        string invalidHtml = await invalid.Content.ReadAsStringAsync(token);
+        Assert.Contains("The policy declaration must be valid JSON.", invalidHtml, StringComparison.Ordinal);
+        Assert.Contains("{ invalid JSON</textarea>", invalidHtml, StringComparison.Ordinal);
+        Assert.Contains("value=\"retained-invalid-version\"", invalidHtml, StringComparison.Ordinal);
+        Assert.Contains("Preserved guidance.</textarea>", invalidHtml, StringComparison.Ordinal);
+        Assert.Equal(before.Revision, (await policies.ReadPolicyStateAsync(token))!.Revision);
+    }
+
+    /// <summary>Checks two-step draft deletion, retry recovery and protection of the selected policy.</summary>
+    private static async Task VerifyPolicyDraftDeletionAsync(
+        HttpClient client,
+        IServiceProvider services,
+        LabelAdministrationCaller caller,
+        CancellationToken token)
+    {
+        ILabelPolicyStore policies = services.GetRequiredService<ILabelPolicyStore>();
+        LabelPolicyState before = (await policies.ReadPolicyStateAsync(token))!;
+        using HttpRequestMessage initial = new(HttpMethod.Get, "/Xenon/Policy");
+        initial.Headers.Add("X-Test-Authenticated", "true");
+        using HttpResponseMessage page = await client.SendAsync(initial, token);
+        string html = await page.Content.ReadAsStringAsync(token);
+        Assert.Contains("data-policy-version=\"reason-editor-none\"", html, StringComparison.Ordinal);
+        Assert.Contains("data-policy-version=\"reason-editor-selected\"", html, StringComparison.Ordinal);
+        Dictionary<string, string> form = new()
+        {
+            ["__RequestVerificationToken"] = ReadField(html, "__RequestVerificationToken"),
+            ["version"] = "reason-editor-none",
+            ["operationId"] = "editor-delete-draft",
+            ["reason"] = "Discard unused editor test draft."
+        };
+        using HttpRequestMessage unconfirmed = new(HttpMethod.Post, "/Xenon/Policy?handler=Delete");
+        unconfirmed.Headers.Add("X-Test-Authenticated", "true");
+        unconfirmed.Content = new FormUrlEncodedContent(form);
+        using HttpResponseMessage rejected = await client.SendAsync(unconfirmed, token);
+        Assert.Contains("Confirm draft deletion before submitting.", await rejected.Content.ReadAsStringAsync(token), StringComparison.Ordinal);
+        Assert.True((await policies.GetPolicyVersionAsync(caller, form["version"], token)).Succeeded);
+
+        using HttpRequestMessage request = new(HttpMethod.Post, "/Xenon/Policy?handler=DeleteRequest");
+        request.Headers.Add("X-Test-Authenticated", "true");
+        request.Content = new FormUrlEncodedContent(form);
+        using HttpResponseMessage confirmation = await client.SendAsync(request, token);
+        string confirmationHtml = await confirmation.Content.ReadAsStringAsync(token);
+        Assert.Contains(">Are you sure?</h2>", confirmationHtml, StringComparison.Ordinal);
+        Assert.True((await policies.GetPolicyVersionAsync(caller, form["version"], token)).Succeeded);
+        form["confirmed"] = "true";
+        for (int attempt = 0; attempt < 2; attempt++)
+        {
+            using HttpRequestMessage delete = new(HttpMethod.Post, "/Xenon/Policy?handler=Delete");
+            delete.Headers.Add("X-Test-Authenticated", "true");
+            delete.Content = new FormUrlEncodedContent(form);
+            using HttpResponseMessage deleted = await client.SendAsync(delete, token);
+            Assert.True(deleted.StatusCode == HttpStatusCode.Redirect, await deleted.Content.ReadAsStringAsync(token));
+        }
+        Assert.False((await policies.GetPolicyVersionAsync(caller, form["version"], token)).Succeeded);
+        IReadOnlyList<LabelPolicyHistoryEntry> history = Xenon.TestHost.SeedData.Require(
+            await policies.GetPolicyHistoryAsync(caller, cancellationToken: token));
+        Assert.Single(history, entry => entry.Action == LabelPolicyHistoryAction.DraftDeletion && entry.Policy?.Issuance.Version == form["version"]);
+        using HttpRequestMessage after = new(HttpMethod.Get, "/Xenon/Policy");
+        after.Headers.Add("X-Test-Authenticated", "true");
+        using HttpResponseMessage afterPage = await client.SendAsync(after, token);
+        string afterHtml = await afterPage.Content.ReadAsStringAsync(token);
+        Assert.DoesNotContain("data-policy-version=\"reason-editor-none\"", afterHtml, StringComparison.Ordinal);
+        Assert.DoesNotContain("<option value=\"reason-editor-none\">", afterHtml, StringComparison.Ordinal);
+        Assert.Contains("data-policy-version=\"reason-editor-selected\"", afterHtml, StringComparison.Ordinal);
+
+        form["version"] = before.Policy!.Issuance.Version;
+        form["operationId"] = "editor-delete-current-denied";
+        using HttpRequestMessage active = new(HttpMethod.Post, "/Xenon/Policy?handler=Delete");
+        active.Headers.Add("X-Test-Authenticated", "true");
+        active.Content = new FormUrlEncodedContent(form);
+        using HttpResponseMessage activeRejected = await client.SendAsync(active, token);
+        Assert.Contains("Selected or previously published policies cannot be deleted.", await activeRejected.Content.ReadAsStringAsync(token), StringComparison.Ordinal);
+        Assert.Equal(before.Revision, (await policies.ReadPolicyStateAsync(token))!.Revision);
     }
 
     /// <summary>Renders blocked AppView identities directly from their repositories and protects deferred video streaming.</summary>
@@ -867,7 +1170,7 @@ public class XenonTestHostTests
         Assert.Contains("<video controls preload=\"none\" playsinline", videoHtml, StringComparison.Ordinal);
         Assert.DoesNotContain("autoplay", videoHtml, StringComparison.Ordinal);
         Assert.DoesNotMatch("<video[^>]+src=", videoHtml);
-        Match reference = Regex.Match(videoHtml, "data-video-url=\"([^\"]+)\"");
+        Match reference = VideoUrlRegex().Match(videoHtml);
         Assert.True(reference.Success, videoHtml);
         string videoUrl = WebUtility.HtmlDecode(reference.Groups[1].Value);
         Assert.StartsWith("/Xenon/Media?token=", videoUrl, StringComparison.Ordinal);
@@ -898,7 +1201,7 @@ public class XenonTestHostTests
         Assert.Contains("<figcaption>Fictional gallery image two</figcaption>", galleryHtml, StringComparison.Ordinal);
         Assert.Contains("class=\"preview-images preview-gallery\" tabindex=\"0\" role=\"region\"", galleryHtml, StringComparison.Ordinal);
         Assert.Contains("https://bsky.app/profile/did:web:subject-14.xenon.invalid/post/example", galleryHtml, StringComparison.Ordinal);
-        Assert.Equal(2, Regex.Matches(galleryHtml, "src=\"data:image/png;base64,").Count);
+        Assert.Equal(2, GalleryImageRegex().Count(galleryHtml));
     }
 
     /// <summary>Protects media using exact current targets and trusted warnings without hiding ordinary content or treating failed lookups as clean results.</summary>
@@ -936,6 +1239,98 @@ public class XenonTestHostTests
                 }
             }
         }
+    }
+
+    /// <summary>Checks identity selection and audited membership submission without redundant confirmation.</summary>
+    private static async Task VerifyTeamFormAsync(HttpClient client, CancellationToken token)
+    {
+        string did = Xenon.TestHost.FixtureHandler.TeamMember("viewer").Value;
+        using HttpRequestMessage request = new(HttpMethod.Get, "/Xenon/Team?member=" + Uri.EscapeDataString(did));
+        request.Headers.Add("X-Test-Authenticated", "true");
+        using HttpResponseMessage response = await client.SendAsync(request, token);
+        string html = await response.Content.ReadAsStringAsync(token);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("#change-member", html, StringComparison.Ordinal);
+        Assert.Contains("@team-viewer.xenon.invalid", html, StringComparison.Ordinal);
+        Assert.Contains($"name=\"target\" value=\"{did}\"", html, StringComparison.Ordinal);
+        Assert.Contains("value=\"Viewer\" selected=\"selected\"", html, StringComparison.Ordinal);
+        Assert.Contains(">Update</button>", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("name=\"confirmed\"", html, StringComparison.Ordinal);
+
+        foreach (string icon in new[] { "eye", "gavel", "user-gear", "circle-check", "circle-pause", "circle-xmark" })
+        {
+            Assert.Contains($"class=\"fa-icon fa-{icon}\" aria-hidden=\"true\"", html, StringComparison.Ordinal);
+            using HttpResponseMessage asset = await client.GetAsync($"/Xenon/vendor/fontawesome/{icon}.svg", token);
+            Assert.Equal(HttpStatusCode.OK, asset.StatusCode);
+            Assert.Contains("<svg", await asset.Content.ReadAsStringAsync(token), StringComparison.Ordinal);
+        }
+
+        string removedDid = Xenon.TestHost.FixtureHandler.TeamMember("removed").Value;
+        int removedRow = html.IndexOf("<tr class=\"team-member-removed\">", StringComparison.Ordinal);
+        Assert.True(removedRow >= 0);
+        int removedRowEnd = html.IndexOf("</tr>", removedRow, StringComparison.Ordinal);
+        Assert.Contains(Uri.EscapeDataString(removedDid), html[removedRow..removedRowEnd], StringComparison.Ordinal);
+        Assert.Contains("class=\"fa-icon fa-circle-xmark\" aria-hidden=\"true\"></span> Removed</td>", html[removedRow..removedRowEnd], StringComparison.Ordinal);
+        Assert.Contains("class=\"fa-icon fa-circle-check\" aria-hidden=\"true\"></span> Active</td>", html, StringComparison.Ordinal);
+        Assert.Contains("class=\"fa-icon fa-circle-pause\" aria-hidden=\"true\"></span> Suspended</td>", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("<th scope=\"col\">Removed</th>", html, StringComparison.Ordinal);
+        Assert.Contains("data-team-change", html, StringComparison.Ordinal);
+        Assert.Contains("data-team-role", html, StringComparison.Ordinal);
+        Assert.Contains("class=\"panel team-search\"", html, StringComparison.Ordinal);
+        Assert.Contains("class=\"team-search-actions\"", html, StringComparison.Ordinal);
+        Assert.Contains("placeholder=\"DID or handle\"", html, StringComparison.Ordinal);
+
+        foreach (string search in new[] { did, "team-viewer.xenon.invalid", "@team-viewer.xenon.invalid" })
+        {
+            using HttpRequestMessage filtered = new(HttpMethod.Get, "/Xenon/Team?Search=" + Uri.EscapeDataString(search) + "&PageNumber=999&Sort=Role");
+            filtered.Headers.Add("X-Test-Authenticated", "true");
+            using HttpResponseMessage filteredResponse = await client.SendAsync(filtered, token);
+            string filteredHtml = await filteredResponse.Content.ReadAsStringAsync(token);
+            Assert.Equal(HttpStatusCode.OK, filteredResponse.StatusCode);
+            Assert.Contains("<caption>1 members", filteredHtml, StringComparison.Ordinal);
+            Assert.Contains("@team-viewer.xenon.invalid", filteredHtml, StringComparison.Ordinal);
+            Assert.DoesNotContain("@team-removed.xenon.invalid", filteredHtml, StringComparison.Ordinal);
+            Assert.Contains("Search=", filteredHtml, StringComparison.Ordinal);
+        }
+
+        foreach ((string search, string expected) in new[]
+        {
+            ("did:plc:aaaaaaaaaaaaaaaaaaaaaaaa", "<caption>0 members"),
+            ("invalid identity", "Enter a valid DID or handle.")
+        })
+        {
+            using HttpRequestMessage filtered = new(HttpMethod.Get, "/Xenon/Team?Search=" + Uri.EscapeDataString(search));
+            filtered.Headers.Add("X-Test-Authenticated", "true");
+            using HttpResponseMessage filteredResponse = await client.SendAsync(filtered, token);
+            Assert.Contains(expected, await filteredResponse.Content.ReadAsStringAsync(token), StringComparison.Ordinal);
+        }
+
+        using HttpRequestMessage update = new(HttpMethod.Post, "/Xenon/Team?handler=Change");
+        update.Headers.Add("X-Test-Authenticated", "true");
+        update.Content = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = ReadField(html, "__RequestVerificationToken"),
+            ["operationId"] = Guid.NewGuid().ToString("N"),
+            ["target"] = did,
+            ["action"] = "SetRole",
+            ["role"] = "Viewer",
+            ["reason"] = "Keep the fixture viewer role."
+        });
+        using HttpResponseMessage updated = await client.SendAsync(update, token);
+        Assert.Equal(HttpStatusCode.Redirect, updated.StatusCode);
+
+        using HttpRequestMessage enroll = new(HttpMethod.Post, "/Xenon/Team?handler=Enroll");
+        enroll.Headers.Add("X-Test-Authenticated", "true");
+        enroll.Content = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = ReadField(html, "__RequestVerificationToken"),
+            ["operationId"] = Guid.NewGuid().ToString("N"),
+            ["target"] = did,
+            ["role"] = "Invalid",
+            ["reason"] = "Reject invalid roles."
+        });
+        using HttpResponseMessage rejected = await client.SendAsync(enroll, token);
+        Assert.Contains("Choose a valid team role.", await rejected.Content.ReadAsStringAsync(token), StringComparison.Ordinal);
     }
 
     /// <summary>Exercises background and no-script manual labels, immutable retries and stale or forged browser state.</summary>
@@ -1129,7 +1524,7 @@ public class XenonTestHostTests
             Assert.Equal(valid, fields["labelState"].Length > 0);
             if (valid)
             {
-                Match canonical = Regex.Match(html, "name=\"labelState\"[^>]*data-target=\"([^\"]+)\"");
+                Match canonical = LabelStateRegex().Match(html);
                 Assert.True(canonical.Success, html);
                 fields["target"] = WebUtility.HtmlDecode(canonical.Groups[1].Value);
             }
@@ -1406,7 +1801,7 @@ public class XenonTestHostTests
             {
                 "" => prefix,
                 "&Actor=did%3Aweb%3Ano-matching-actor.invalid" => [],
-                _ => prefix.Where(entry => entry.Actor == Xenon.TestHost.FixtureHandler.Issuer && entry.Succeeded)
+                _ => prefix.Where(entry => entry.Actor == Xenon.TestHost.FixtureHandler.s_issuer && entry.Succeeded)
             };
             Assert.Equal(expected.Select(entry => entry.Sequence),
                 document.RootElement.EnumerateArray().Select(entry => entry.GetProperty("sequence").GetInt64()));
@@ -1619,7 +2014,7 @@ public class XenonTestHostTests
             using HttpResponseMessage response = await client.SendAsync(request, token);
             string html = await response.Content.ReadAsStringAsync(token);
             Assert.True(response.StatusCode == HttpStatusCode.OK, html);
-            MatchCollection rows = Regex.Matches(html, """/Xenon/Cases/Detail/(\d+)""");
+            MatchCollection rows = CaseLinkRegex().Matches(html);
             Assert.Equal(16, rows.Count);
             Assert.Equal(first.ToString(System.Globalization.CultureInfo.InvariantCulture), rows[0].Groups[1].Value);
             Assert.Contains(ascending ? "aria-sort=\"ascending\"" : "aria-sort=\"descending\"", html, StringComparison.Ordinal);
@@ -1711,4 +2106,34 @@ public class XenonTestHostTests
             return await fixtures.SendAsync(forwarded, cancellationToken);
         }
     }
+
+    [GeneratedRegex("<!DOCTYPE html>", RegexOptions.IgnoreCase, "en-US")]
+    private static partial Regex HtmlDocumentRegex();
+
+    [GeneratedRegex("""<script src="[^"]*/Xenon/js/theme[^"]*"></script>""")]
+    private static partial Regex ThemeScriptRegex();
+
+    [GeneratedRegex("""/Xenon/Cases/Detail/(\d+)""")]
+    private static partial Regex CaseLinkRegex();
+
+    [GeneratedRegex("""href="([^"]+)"[^>]*rel="next"[^>]*>Next &gt;</a>""")]
+    private static partial Regex NextPageRegex();
+
+    [GeneratedRegex("""href="([^"]+)"[^>]*rel="prev"[^>]*>&lt; Previous</a>""")]
+    private static partial Regex PreviousPageRegex();
+
+    [GeneratedRegex("<h2><a href=\"/Xenon/Reports/Detail/")]
+    private static partial Regex ReportHeadingRegex();
+
+    [GeneratedRegex("data-time-zone-toggle")]
+    private static partial Regex TimeZoneToggleRegex();
+
+    [GeneratedRegex("data-video-url=\"([^\"]+)\"")]
+    private static partial Regex VideoUrlRegex();
+
+    [GeneratedRegex("src=\"data:image/png;base64,")]
+    private static partial Regex GalleryImageRegex();
+
+    [GeneratedRegex("name=\"labelState\"[^>]*data-target=\"([^\"]+)\"")]
+    private static partial Regex LabelStateRegex();
 }

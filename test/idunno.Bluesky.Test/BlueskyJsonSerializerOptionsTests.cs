@@ -51,7 +51,7 @@ public partial class BlueskyJsonSerializerOptionsTests
     [InlineData(true)]
     public void BuilderFinalizesResolversInsertedOrReplacedInTheCallback(bool replace)
     {
-        var builder = BlueskyAgent.CreateBuilder();
+        BlueskyAgentBuilder builder = BlueskyAgent.CreateBuilder();
         builder.ConfigureHttpJsonOptions(options => ConfigureResolver(options.JsonSerializerOptions, replace));
         using BlueskyAgent agent = builder.Build();
         AssertCustomRecord(agent.JsonOptions.JsonSerializerOptions);
@@ -65,7 +65,7 @@ public partial class BlueskyJsonSerializerOptionsTests
     public void AgentFinalizesOptionsCustomizedAfterOptionsConstructionOrBuilderCallback(bool builder, bool replace)
     {
         BlueskyAgentOptions agentOptions = new();
-        var agentBuilder = BlueskyAgent.CreateBuilder();
+        BlueskyAgentBuilder agentBuilder = BlueskyAgent.CreateBuilder();
         agentBuilder.ConfigureHttpJsonOptions(options => options.JsonSerializerOptions.WriteIndented = true);
         JsonOptions supplied = builder ? Assert.IsType<JsonOptions>(agentBuilder.JsonOptions) : Assert.IsType<JsonOptions>(agentOptions.HttpJsonOptions);
         ConfigureResolver(supplied.JsonSerializerOptions, replace);

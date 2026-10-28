@@ -19,7 +19,7 @@ internal sealed record RemoveMembersRequest
         }
 
         ConversationId = conversationId;
-        Members = new List<Did>(members);
+        Members = [.. members];
     }
 
     [JsonInclude]

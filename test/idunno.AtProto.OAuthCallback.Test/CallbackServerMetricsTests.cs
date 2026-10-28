@@ -147,7 +147,7 @@ public class CallbackServerMetricsTests
         CallbackServer? faultedServer = null;
         Task<string>? faultedCallback = null;
         InvalidOperationException listenerFailure = new("Deliberate listener startup failure.");
-        using var loggerFactory = LoggerFactory.Create(builder => builder.SetMinimumLevel(LogLevel.Trace).AddProvider(new ListenerFailureLoggerProvider(() =>
+        using ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.SetMinimumLevel(LogLevel.Trace).AddProvider(new ListenerFailureLoggerProvider(() =>
         {
             Assert.NotNull(faultedServer);
             faultedCallback = faultedServer.WaitForCallbackAsync(timeoutInSeconds: 300, cancellationToken);

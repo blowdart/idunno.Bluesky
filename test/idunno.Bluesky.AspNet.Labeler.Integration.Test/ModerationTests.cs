@@ -35,6 +35,267 @@ public class ModerationTests
         """;
 
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task HostedWithdrawalPublishesNegationsBeforeAllowingTheNewDeclaration(bool remoteEnabled)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        DeclarationHandler handler = new(key.ExportPublicKeyMultibase());
+        using HttpClient identity = new(handler);
+        await using TestServerBuilder fixture = await CreateAsync(
+            key: key,
+            identity: identity,
+            remoteEnabled: remoteEnabled,
+            xenonUi: true);
+        await fixture.Clock.WithdrawalRegistrations.Reader.ReadAsync(token);
+        await fixture.Clock.PolicyVerificationRegistrations.Reader.ReadAsync(token);
+        LabelPolicyService verifier = fixture.Services.GetRequiredService<LabelPolicyService>();
+        LabelServiceResult<LabelPolicyState> active = await verifier.GetVerifiedStateAsync(cancellationToken: token);
+        Assert.True(active.Succeeded, active.Error?.Message);
+        LabelPolicyState activeState = active.Result!;
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        LabelAdministrationCaller administrator = (await team.AuthenticateLocalAsync("uid:0", token)).Result!;
+        await fixture.Store.AppendAsync("initial-label", [new(key.CreateLabel(
+            source: TestServerBuilder.s_issuer,
+            uri: "did:plc:subject",
+            value: "spam",
+            creationTimestamp: activeState.DatabaseTime))], cancellationToken: token);
+        using JsonDocument declaration = JsonDocument.Parse(Declaration.Replace("[\"spam\"]", "[]", StringComparison.Ordinal));
+        AdministrationDispatcher dispatcher = fixture.Services.GetRequiredService<AdministrationDispatcher>();
+        AdministrationResponse saved = await dispatcher.DispatchAsync(
+            caller: administrator,
+            command: new(
+                Method: "savePolicy",
+                OperationId: "draft-reduced",
+                Reason: "Withdraw spam.",
+                Moderation: new(
+                    PolicyVersion: "v2",
+                    Declaration: declaration.RootElement,
+                    AllowAccounts: true,
+                    AllowRecords: true,
+                    Rules: "Retire spam.")),
+            token: token);
+        Assert.True(saved.Succeeded, saved.Message);
+        using HttpRequestMessage confirmationPage = new(HttpMethod.Get, "/Xenon/Policy");
+        confirmationPage.Headers.Add("X-Test-Did", s_administrator.Value);
+        using HttpResponseMessage confirmation = await fixture.Client.SendAsync(confirmationPage, token);
+        Assert.Equal(HttpStatusCode.OK, confirmation.StatusCode);
+        string form = await confirmation.Content.ReadAsStringAsync(token);
+        const string prefix = "name=\"__RequestVerificationToken\" type=\"hidden\" value=\"";
+        int start = form.IndexOf(prefix, StringComparison.Ordinal);
+        Assert.NotEqual(-1, start);
+        string antiforgery = form[(start + prefix.Length)..].Split('"')[0];
+        using HttpRequestMessage unconfirmed = new(HttpMethod.Post, "/Xenon/Policy?handler=Publish")
+        {
+            Content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = WebUtility.HtmlDecode(antiforgery),
+                ["version"] = "v2",
+                ["revision"] = activeState.Revision.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                ["operationId"] = "unconfirmed-publication",
+                ["reason"] = "Must not withdraw without confirmation."
+            })
+        };
+        unconfirmed.Headers.Add("X-Test-Did", s_administrator.Value);
+        unconfirmed.Headers.Add("Cookie", string.Join("; ", confirmation.Headers.GetValues("Set-Cookie")
+            .Select(cookie => cookie.Split(';')[0])));
+        using HttpResponseMessage rejected = await fixture.Client.SendAsync(unconfirmed, token);
+        Assert.Equal(HttpStatusCode.OK, rejected.StatusCode);
+        Assert.Contains("Confirm policy publication before submitting.", await rejected.Content.ReadAsStringAsync(token), StringComparison.Ordinal);
+        Assert.Equal(LabelPolicyPhase.VerifiedActive, (await fixture.Services.GetRequiredService<ILabelPolicyStore>()
+            .ReadPolicyStateAsync(token))!.Phase);
+        AdministrationResponse started = await dispatcher.DispatchAsync(
+            caller: administrator,
+            command: new(
+                Method: "beginPolicyPublication",
+                OperationId: "publish-reduced",
+                Reason: "Confirm permanent withdrawal.",
+                Moderation: new(PolicyVersion: "v2", ExpectedRevision: activeState.Revision, PreviousCid: Cid)),
+            token: token);
+        Assert.True(started.Succeeded, started.Message);
+        Assert.Equal("Withdrawing", started.Moderation!.Policy!.Phase);
+        using HttpRequestMessage get = new(HttpMethod.Get, "/Xenon/Policy");
+        get.Headers.Add("X-Test-Did", s_administrator.Value);
+        using HttpResponseMessage page = await fixture.Client.SendAsync(get, token);
+        string html = await page.Content.ReadAsStringAsync(token);
+        Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+        Assert.Contains("Label withdrawal in progress", html, StringComparison.Ordinal);
+        Assert.Contains("Removing: spam", html, StringComparison.Ordinal);
+        Assert.Contains("completed negations are not automatically undone", html, StringComparison.Ordinal);
+        Assert.Contains("Resume cleanup", html, StringComparison.Ordinal);
+        Assert.Contains("Last worker activity:", html, StringComparison.Ordinal);
+        Assert.Contains("Last progress:", html, StringComparison.Ordinal);
+        Assert.Contains("Waiting for worker activity", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Cleanup may be running or paused.", html, StringComparison.Ordinal);
+        int reads = handler.DeclarationReads;
+        handler.Declaration = declaration.RootElement.GetRawText();
+        Assert.False((await verifier.GetVerifiedStateAsync(forceVerification: true, cancellationToken: token)).Succeeded);
+        Assert.Equal(reads, handler.DeclarationReads);
+        ILabelPolicyStore policies = fixture.Services.GetRequiredService<ILabelPolicyStore>();
+        for (int batch = 0; batch < 3; batch++)
+        {
+            fixture.Clock.Advance(TimeSpan.FromSeconds(5));
+            await fixture.Clock.WithdrawalRegistrations.Reader.ReadAsync(token);
+            LabelPolicyState state = (await policies.ReadPolicyStateAsync(token))!;
+            Assert.Equal(batch == 2 ? LabelPolicyPhase.Publishing : LabelPolicyPhase.Withdrawing, state.Phase);
+            if (batch == 0)
+            {
+                AdministrationResponse status = await dispatcher.DispatchAsync(
+                    caller: administrator, command: new(Method: "getPolicy"), token: token);
+                JsonElement statusJson = JsonSerializer.SerializeToElement(status, AdministrationJsonContext.Default.AdministrationResponse);
+                JsonElement progress = statusJson.GetProperty("moderation").GetProperty("policy").GetProperty("withdrawal");
+                DateTimeOffset activityAt = progress.GetProperty("lastActivityAt").GetDateTimeOffset();
+                DateTimeOffset progressAt = progress.GetProperty("lastProgressAt").GetDateTimeOffset();
+                using HttpRequestMessage progressRequest = new(HttpMethod.Get, "/Xenon/Policy");
+                progressRequest.Headers.Add("X-Test-Did", s_administrator.Value);
+                using HttpResponseMessage progressPage = await fixture.Client.SendAsync(progressRequest, token);
+                Assert.Equal(HttpStatusCode.OK, progressPage.StatusCode);
+                string progressHtml = WebUtility.HtmlDecode(await progressPage.Content.ReadAsStringAsync(token));
+                Assert.Contains(activityAt.ToString("O"), progressHtml, StringComparison.Ordinal);
+                Assert.Contains(progressAt.ToString("O"), progressHtml, StringComparison.Ordinal);
+            }
+        }
+        LabelStoreState stream = await fixture.Store.GetStateAsync(token);
+        Assert.Equal(2, stream.IssuedThrough);
+        Assert.Equal(stream.IssuedThrough, stream.PublishedThrough);
+        LabelDistributionPage labels = await fixture.Store.ReadDistributionAsync(
+            streamId: stream.StreamId,
+            after: 0,
+            through: stream.PublishedThrough,
+            uriPatterns: [],
+            sources: [],
+            cancellationToken: token);
+        Assert.True(Assert.Single(labels.Labels).SignedLabel.Label.IsNegationLabel);
+        Assert.True((await verifier.GetVerifiedStateAsync(forceVerification: true, cancellationToken: token)).Succeeded);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task VerificationTabUsesSubmissionAloneAndRetainsItsTabAfterFailure(bool unavailable)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        DeclarationHandler handler = new(key.ExportPublicKeyMultibase());
+        using HttpClient identity = new(handler);
+        await using TestServerBuilder fixture = await CreateAsync(
+            key: key,
+            identity: identity,
+            xenonUi: true);
+        using HttpRequestMessage get = new(HttpMethod.Get, "/Xenon/Policy");
+        get.Headers.Add("X-Test-Did", s_administrator.Value);
+        using HttpResponseMessage page = await fixture.Client.SendAsync(get, token);
+        string html = await page.Content.ReadAsStringAsync(token);
+        Assert.True(html.IndexOf(">Verification</a>", StringComparison.Ordinal) > html.IndexOf(">Publication</a>", StringComparison.Ordinal));
+        string verification = html[html.IndexOf("<div id=\"policy-verification\"", StringComparison.Ordinal)..];
+        Assert.Contains("can activate the policy", verification, StringComparison.Ordinal);
+        Assert.DoesNotContain("name=\"reason\"", verification, StringComparison.Ordinal);
+        Assert.DoesNotContain("name=\"confirmed\"", verification, StringComparison.Ordinal);
+        const string prefix = "name=\"__RequestVerificationToken\" type=\"hidden\" value=\"";
+        int start = verification.IndexOf(prefix, StringComparison.Ordinal);
+        Assert.NotEqual(-1, start);
+        string antiforgery = verification[(start + prefix.Length)..].Split('"')[0];
+        if (unavailable)
+        {
+            handler.Declaration = Declaration.Replace("[\"spam\"]", "[]", StringComparison.Ordinal);
+        }
+        using HttpRequestMessage post = new(HttpMethod.Post, "/Xenon/Policy?handler=Verify")
+        {
+            Content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = WebUtility.HtmlDecode(antiforgery)
+            })
+        };
+        post.Headers.Add("X-Test-Did", s_administrator.Value);
+        post.Headers.Add("Cookie", string.Join("; ", page.Headers.GetValues("Set-Cookie")
+            .Select(cookie => cookie.Split(';')[0])));
+        using HttpResponseMessage response = await fixture.Client.SendAsync(post, token);
+        Assert.Equal(unavailable ? HttpStatusCode.OK : HttpStatusCode.Redirect, response.StatusCode);
+        if (unavailable)
+        {
+            string failed = await response.Content.ReadAsStringAsync(token);
+            Assert.Contains("data-policy-verification-submitted=\"true\"", failed, StringComparison.Ordinal);
+            Assert.DoesNotContain("Confirm policy verification before submitting.", failed, StringComparison.Ordinal);
+        }
+        else
+        {
+            Assert.EndsWith("#policy-verification", response.Headers.Location!.ToString(), StringComparison.Ordinal);
+            Assert.Equal(LabelPolicyPhase.VerifiedActive, (await fixture.Services.GetRequiredService<ILabelPolicyStore>()
+                .ReadPolicyStateAsync(token))!.Phase);
+        }
+    }
+
+    [Fact]
+    public async Task HostedWithdrawalResumesFromDurableCheckpointOnRestartWithoutRemoteAdministration()
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder original = await CreateAsync(key, identity);
+        await original.Clock.WithdrawalRegistrations.Reader.ReadAsync(token);
+        LabelPolicyState active = (await original.Services.GetRequiredService<LabelPolicyService>()
+            .GetVerifiedStateAsync(cancellationToken: token)).Result!;
+        LabelAdministrationCaller administrator = (await original.Services.GetRequiredService<ILabelAdministrationStore>()
+            .AuthenticateLocalAsync("uid:0", token)).Result!;
+        await original.Store.AppendAsync("initial-label", [new(key.CreateLabel(
+            source: TestServerBuilder.s_issuer,
+            uri: "did:plc:subject",
+            value: "spam",
+            creationTimestamp: active.DatabaseTime))], cancellationToken: token);
+        using JsonDocument declaration = JsonDocument.Parse(Declaration.Replace("[\"spam\"]", "[]", StringComparison.Ordinal));
+        ILabelPolicyStore policies = original.Services.GetRequiredService<ILabelPolicyStore>();
+        Assert.True((await policies.SavePolicyAsync(
+            caller: administrator,
+            operationId: "draft-reduced",
+            policy: new(
+                version: "v2",
+                declaration: declaration.RootElement,
+                allowAccounts: true,
+                allowRecords: true,
+                rules: "Retire spam."),
+            reason: "Withdraw spam.",
+            cancellationToken: token)).Succeeded);
+        Assert.True((await policies.BeginPolicyPublicationAsync(
+            caller: administrator,
+            operationId: "publish-reduced",
+            version: "v2",
+            expectedRevision: active.Revision,
+            previousCid: new(Cid),
+            reason: "Confirm permanent withdrawal.",
+            cancellationToken: token)).Succeeded);
+        original.Clock.Advance(TimeSpan.FromSeconds(5));
+        await original.Clock.WithdrawalRegistrations.Reader.ReadAsync(token);
+        LabelPolicyState checkpoint = (await policies.ReadPolicyStateAsync(token))!;
+        Assert.Equal(LabelPolicyPhase.Withdrawing, checkpoint.Phase);
+        Assert.Equal(1, (await original.Store.GetStateAsync(token)).IssuedThrough);
+        await original.StopAsync();
+
+        await using TestServerBuilder restarted = await TestServerBuilder.CreateAsync(
+            database: original.DatabasePath,
+            configureAdministration: services =>
+            {
+                services.AddLabelerModeration(issuer: TestServerBuilder.s_issuer, httpClient: identity);
+                services.AddLabelerAdministration(new(TestServerBuilder.s_issuer, "labeler_admin"), key, identity);
+            },
+            remoteAdministrationEnabled: false,
+            moderation: true);
+        await restarted.Clock.WithdrawalRegistrations.Reader.ReadAsync(token);
+        ILabelPolicyStore recoveredPolicies = restarted.Services.GetRequiredService<ILabelPolicyStore>();
+        LabelPolicyState recovered = (await recoveredPolicies.ReadPolicyStateAsync(token))!;
+        Assert.Equal("publish-reduced", recovered.PublicationOperationId);
+        Assert.Equal(checkpoint.Revision + 1, recovered.Revision);
+        Assert.Equal(LabelPolicyPhase.Withdrawing, recovered.Phase);
+        Assert.Equal(2, (await restarted.Store.GetStateAsync(token)).IssuedThrough);
+        restarted.Clock.Advance(TimeSpan.FromSeconds(5));
+        await restarted.Clock.WithdrawalRegistrations.Reader.ReadAsync(token);
+        Assert.Equal(LabelPolicyPhase.Publishing, (await recoveredPolicies.ReadPolicyStateAsync(token))!.Phase);
+        LabelStoreState stream = await restarted.Store.GetStateAsync(token);
+        Assert.Equal(2, stream.IssuedThrough);
+        Assert.Equal(stream.IssuedThrough, stream.PublishedThrough);
+    }
+
+    [Theory]
     [InlineData(10001)]
     [InlineData(15005000)]
     [InlineData(863999999999)]
@@ -79,9 +340,117 @@ public class ModerationTests
         LabelPolicyState state = (await fixture.Services.GetRequiredService<ILabelPolicyStore>()
             .ReadPolicyStateAsync(TestContext.Current.CancellationToken))!;
         Assert.Equal(freshness, state.VerificationFreshness);
+        Assert.True((await fixture.Services.GetRequiredService<LabelPolicyService>()
+            .GetVerifiedStateAsync(cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
         using HttpResponseMessage health = await fixture.Client.GetAsync(
             "/health/labeler/moderation", TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, health.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ScheduledVerificationRefreshesActivePolicyOrRecordsDriftWithoutTraffic(bool drift)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        DeclarationHandler handler = new(key.ExportPublicKeyMultibase());
+        using HttpClient identity = new(handler);
+        await using TestServerBuilder fixture = await CreateAsync(key, identity);
+        await fixture.Clock.PolicyVerificationRegistrations.Reader.ReadAsync(token);
+        LabelPolicyService verifier = fixture.Services.GetRequiredService<LabelPolicyService>();
+        Assert.True((await verifier.GetVerifiedStateAsync(cancellationToken: token)).Succeeded);
+        ILabelPolicyStore store = fixture.Services.GetRequiredService<ILabelPolicyStore>();
+        LabelPolicyState before = (await store.ReadPolicyStateAsync(token))!;
+        if (drift)
+        {
+            handler.Declaration = Declaration.Replace("\"spam\"", "\"scam\"", StringComparison.Ordinal);
+        }
+        fixture.Clock.Advance(TimeSpan.FromMinutes(5));
+        await fixture.Clock.PolicyVerificationRegistrations.Reader.ReadAsync(token);
+        LabelPolicyState after = (await store.ReadPolicyStateAsync(token))!;
+        Assert.Equal(2, handler.DeclarationReads);
+        Assert.Equal(drift ? LabelPolicyPhase.Conflict : LabelPolicyPhase.VerifiedActive, after.Phase);
+        if (drift)
+        {
+            Assert.Null(after.VerifiedUntil);
+        }
+        else
+        {
+            Assert.True(after.VerifiedUntil >= before.VerifiedUntil);
+            Assert.True(after.Revision > before.Revision);
+            Assert.Equal(TimeSpan.FromMinutes(30), after.VerificationFreshness);
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ScheduledVerificationDoesNotActivatePendingOrAbandonedPublication(bool abandon)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        DeclarationHandler handler = new(key.ExportPublicKeyMultibase());
+        using HttpClient identity = new(handler);
+        await using TestServerBuilder fixture = await CreateAsync(key, identity);
+        await fixture.Clock.PolicyVerificationRegistrations.Reader.ReadAsync(token);
+        ILabelPolicyStore store = fixture.Services.GetRequiredService<ILabelPolicyStore>();
+        if (abandon)
+        {
+            LabelAdministrationCaller administrator = (await fixture.Services.GetRequiredService<ILabelAdministrationStore>()
+                .AuthenticateLocalAsync("uid:0", token)).Result!;
+            LabelPolicyState pending = (await store.ReadPolicyStateAsync(token))!;
+            Assert.True((await store.AbandonPolicyPublicationAsync(
+                caller: administrator,
+                operationId: "abandon-for-verifier",
+                expectedRevision: pending.Revision,
+                reason: "Stop publication.",
+                cancellationToken: token)).Succeeded);
+        }
+        fixture.Clock.Advance(TimeSpan.FromMinutes(5));
+        await fixture.Clock.PolicyVerificationRegistrations.Reader.ReadAsync(token);
+        Assert.Equal(0, handler.DeclarationReads);
+        Assert.Equal(abandon ? LabelPolicyPhase.Conflict : LabelPolicyPhase.Publishing,
+            (await store.ReadPolicyStateAsync(token))!.Phase);
+    }
+
+    [Fact]
+    public async Task HealthReadsStoredFreshnessWithoutStartingRemoteVerification()
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        DeclarationHandler handler = new(key.ExportPublicKeyMultibase());
+        using HttpClient identity = new(handler);
+        await using TestServerBuilder fixture = await CreateAsync(key, identity);
+        await fixture.Clock.PolicyVerificationRegistrations.Reader.ReadAsync(token);
+        using HttpResponseMessage pending = await fixture.Client.GetAsync("/health/labeler/moderation", token);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, pending.StatusCode);
+        Assert.Equal(0, handler.DeclarationReads);
+        Assert.True((await fixture.Services.GetRequiredService<LabelPolicyService>()
+            .GetVerifiedStateAsync(cancellationToken: token)).Succeeded);
+        handler.BlockDeclarationReads = true;
+        using HttpResponseMessage fresh = await fixture.Client.GetAsync("/health/labeler/moderation", token);
+        Assert.Equal(HttpStatusCode.OK, fresh.StatusCode);
+        Assert.Equal(1, handler.DeclarationReads);
+        fixture.Clock.Advance(TimeSpan.FromMinutes(5));
+        await handler.DeclarationRequested.Task.WaitAsync(token);
+        fixture.Clock.Advance(TimeSpan.FromMinutes(26));
+        await fixture.Clock.PolicyVerificationRegistrations.Reader.ReadAsync(token);
+        await using Microsoft.Data.Sqlite.SqliteConnection connection = new($"Data Source={fixture.DatabasePath};Pooling=False");
+        await connection.OpenAsync(token);
+        await using Microsoft.Data.Sqlite.SqliteCommand expire = connection.CreateCommand();
+        expire.CommandText = """
+            UPDATE label_policy_gate
+            SET payload=CAST(json_set(CAST(payload AS TEXT),'$.VerifiedUntil',
+                CAST((julianday('now')-2440587.5)*86400000 AS INTEGER)-1) AS BLOB)
+            WHERE id=1
+            """;
+        Assert.Equal(1, await expire.ExecuteNonQueryAsync(token));
+        LabelPolicyState expired = (await fixture.Services.GetRequiredService<ILabelPolicyStore>().ReadPolicyStateAsync(token))!;
+        Assert.True(expired.VerifiedUntil <= expired.DatabaseTime);
+        using HttpResponseMessage unhealthy = await fixture.Client.GetAsync("/health/labeler/moderation", token);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, unhealthy.StatusCode);
+        Assert.Equal(2, handler.DeclarationReads);
     }
 
     [Theory]
@@ -255,6 +624,13 @@ public class ModerationTests
             ? new(HttpMethod.Get, "/health/labeler/moderation")
             : ReportRequest(key, fixture.Clock.GetUtcNow());
         Task<HttpResponseMessage> pending = fixture.Client.SendAsync(request, TestContext.Current.CancellationToken);
+        if (health)
+        {
+            using HttpResponseMessage storedHealth = await pending;
+            Assert.Equal(HttpStatusCode.ServiceUnavailable, storedHealth.StatusCode);
+            Assert.Equal(0, handler.DeclarationReads);
+            return;
+        }
         await handler.DeclarationRequested.Task.WaitAsync(TestContext.Current.CancellationToken);
         if (!health)
         {
@@ -639,7 +1015,8 @@ public class ModerationTests
         HttpClient identity,
         LabelerModerationOptions? options = null,
         bool remoteEnabled = false,
-        string declarationJson = Declaration)
+        string declarationJson = Declaration,
+        bool xenonUi = false)
     {
         TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
             configureAdministration: services =>
@@ -664,10 +1041,8 @@ public class ModerationTests
                     previousCid: null, reason: "Publish declaration.", cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
             },
             remoteAdministrationEnabled: remoteEnabled,
-            moderation: true);
-        LabelPolicyState gate = (await fixture.Services.GetRequiredService<ILabelPolicyStore>()
-            .ReadPolicyStateAsync(TestContext.Current.CancellationToken))!;
-        fixture.Clock.SetUtcNow(gate.DatabaseTime);
+            moderation: true,
+            xenonUi: xenonUi);
         return fixture;
     }
 

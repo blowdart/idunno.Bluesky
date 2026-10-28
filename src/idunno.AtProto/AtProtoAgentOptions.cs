@@ -12,9 +12,6 @@ namespace idunno.AtProto;
 /// </summary>
 public class AtProtoAgentOptions
 {
-    private int _maximumWellKnownResponseSize = AtProtoServer.DefaultMaximumWellKnownResponseSize;
-
-    private int _maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize;
 
     /// <summary>
     /// Default configuration key.
@@ -92,15 +89,13 @@ public class AtProtoAgentOptions
     /// <exception cref="ArgumentNullException">The value is <see langword="null"/>.</exception>
     public TimeProvider TimeProvider
     {
-        get => _timeProvider;
+        get;
         set
         {
             ArgumentNullException.ThrowIfNull(value);
-            _timeProvider = value;
+            field = value;
         }
-    }
-
-    private TimeProvider _timeProvider = TimeProvider.System;
+    } = TimeProvider.System;
 
     /// <summary>
     /// Specifies the server to use when resolving plc DIDs.
@@ -144,14 +139,14 @@ public class AtProtoAgentOptions
     /// </remarks>
     public int MaximumWellKnownResponseSize
     {
-        get => _maximumWellKnownResponseSize;
+        get;
 
         set
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
-            _maximumWellKnownResponseSize = value;
+            field = value;
         }
-    }
+    } = AtProtoServer.DefaultMaximumWellKnownResponseSize;
 
     /// <summary>
     /// Gets or sets the maximum number of bytes buffered from an XRPC response body. Defaults to <see cref="AtProtoHttpClient.DefaultMaximumResponseSize"/>.
@@ -175,12 +170,12 @@ public class AtProtoAgentOptions
     /// </remarks>
     public int MaximumResponseSize
     {
-        get => _maximumResponseSize;
+        get;
 
         set
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
-            _maximumResponseSize = value;
+            field = value;
         }
-    }
+    } = AtProtoHttpClient.DefaultMaximumResponseSize;
 }

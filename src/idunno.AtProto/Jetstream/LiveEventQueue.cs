@@ -7,7 +7,11 @@ namespace idunno.AtProto.Jetstream;
 
 internal sealed class LiveEventQueue : IDisposable
 {
+#if NET9_0_OR_GREATER
+    private readonly Lock _gate = new();
+#else
     private readonly object _gate = new();
+#endif
     private readonly Channel<JetstreamEvent> _channel;
     private readonly CancellationTokenSource _cancellation;
     private readonly JetstreamMetrics _metrics;

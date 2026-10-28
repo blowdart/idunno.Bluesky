@@ -118,7 +118,8 @@ internal sealed record ModerationPolicyGate(
     string? VerifiedCid,
     long? VerifiedUntil,
     long FreshnessMilliseconds,
-    string? PublicationOperationId = null)
+    string? PublicationOperationId = null,
+    ModerationPolicyWithdrawal? Withdrawal = null)
 {
     /// <summary>Projects a gate using the current database clock rather than an application clock.</summary>
     internal LabelPolicyState ToState(long now) => new(
@@ -131,8 +132,37 @@ internal sealed record ModerationPolicyGate(
         verifiedUntil: VerifiedUntil is { } deadline ? DateTimeOffset.FromUnixTimeMilliseconds(deadline) : null,
         verificationFreshness: TimeSpan.FromMilliseconds(FreshnessMilliseconds),
         databaseTime: DateTimeOffset.FromUnixTimeMilliseconds(now),
-        publicationOperationId: PublicationOperationId);
+        publicationOperationId: PublicationOperationId,
+        withdrawal: Withdrawal is null ? null : new(
+            Values: Withdrawal.Values,
+            UpperBound: Withdrawal.UpperBound,
+            ScannedThrough: Withdrawal.ScannedThrough,
+            NegatedThrough: Withdrawal.NegatedThrough,
+            NegationSequence: Withdrawal.NegationSequence,
+            PauseReason: Withdrawal.PauseReason,
+            LastActivityAt: Withdrawal.LastActivityAt,
+            LastProgressAt: Withdrawal.LastProgressAt,
+            PublishedThrough: Withdrawal.PublishedThrough));
 }
+
+/// <summary>Retains a publication's frozen scan, superseding timestamp and revocable caller evidence across host restarts.</summary>
+internal sealed record ModerationPolicyWithdrawal(
+    string[] Values,
+    long UpperBound,
+    long ScannedThrough,
+    long NegatedThrough,
+    long NegationSequence,
+    DateTimeOffset CreatedAt,
+    string Actor,
+    long Generation,
+    string Credential,
+    string? LocalIdentity,
+    DateTimeOffset ExpiresAt,
+    string Reason,
+    string? PauseReason = null,
+    DateTimeOffset? LastActivityAt = null,
+    DateTimeOffset? LastProgressAt = null,
+    long? PublishedThrough = null);
 
 /// <summary>Retains immutable publication intent and the historical result for uncertain-commit recovery.</summary>
 internal sealed record ModerationPolicyOperation(
@@ -209,11 +239,11 @@ internal sealed record ModerationDecisionIntent(
         expectedRevision: ExpectedRevision,
         policyVersion: PolicyVersion,
         reason: Reason,
-        actions: Actions.Select(action => new LabelCaseLabelAction(
+        actions: [.. Actions.Select(action => new LabelCaseLabelAction(
             kind: action.Kind,
             value: action.Value,
             expiresAt: action.ExpiresAt,
-            expectedLabelSequence: action.ExpectedLabelSequence)).ToArray(),
+            expectedLabelSequence: action.ExpectedLabelSequence))],
         appealIds: AppealIds,
         appealOutcome: AppealOutcome,
         reportId: ReportId,
@@ -233,7 +263,7 @@ internal sealed record ModerationDecisionData(
         request: Intent.ToDecision(OperationId),
         actor: new(Intent.Actor),
         caseEvent: CaseEvent.ToReceipt(),
-        labels: LabelReceipts.Select(DecisionReceiptEncoding.Decode).ToArray(),
+        labels: [.. LabelReceipts.Select(DecisionReceiptEncoding.Decode)],
         stateAtCommit: StateAtCommit);
 }
 
@@ -260,7 +290,7 @@ internal sealed record ModerationAppealData(
         caseId: CaseId,
         initiator: new(Initiator),
         subject: Cid is null ? LabelReportSubject.Account(new(Subject)) : LabelReportSubject.Record(new(Subject), new(Cid)),
-        challenges: Challenges.Select(challenge => new StoredLabel(challenge.Sequence, new(challenge.SignedJson))).ToArray(),
+        challenges: [.. Challenges.Select(challenge => new StoredLabel(challenge.Sequence, new(challenge.SignedJson)))],
         status: Status,
         createdAt: CreatedAt,
         updatedAt: UpdatedAt,
@@ -322,6 +352,7 @@ internal sealed record ModerationReportData(
 [JsonSerializable(typeof(ModerationCaseEvent))]
 [JsonSerializable(typeof(ModerationPolicyData))]
 [JsonSerializable(typeof(ModerationPolicyGate))]
+[JsonSerializable(typeof(ModerationPolicyWithdrawal))]
 [JsonSerializable(typeof(ModerationPolicyOperation))]
 [JsonSerializable(typeof(ModerationPolicyHistory))]
 [JsonSerializable(typeof(ModerationReportData))]

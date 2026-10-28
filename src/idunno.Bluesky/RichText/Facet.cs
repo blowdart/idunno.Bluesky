@@ -44,7 +44,7 @@ public record Facet : IValidatableObject, IRecordValidatable
     [JsonRequired]
     public IList<FacetFeature> Features
     {
-        get => _features;
+        get;
         init
         {
             ArgumentNullException.ThrowIfNull(value);
@@ -54,11 +54,9 @@ public record Facet : IValidatableObject, IRecordValidatable
                 throw new ArgumentException("Facet features cannot contain null entries.", nameof(value));
             }
 
-            _features = features.AsReadOnly();
+            field = features.AsReadOnly();
         }
-    }
-
-    private readonly IList<FacetFeature> _features = null!;
+    } = null!;
 
     /// <summary>
     /// The byte slice the facet refers to.

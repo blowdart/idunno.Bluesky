@@ -16,15 +16,12 @@ namespace idunno.AtProto;
 /// <para>When reference handling is enabled and async-enumerable values are serialized, use <see cref="CreateReadOptions"/>
 /// for deserialization and <see cref="CreateWriteOptions"/> for serialization so each direction can use its own cached contracts.</para>
 /// </remarks>
-// The trimming and AOT suppressions must be applied to the type rather than to s_options. The initializer for a
-// static field is emitted into the generated static constructor, and suppression lookup walks from the member the
-// IL is attributed to out to its declaring type, so a suppression on the field itself is never consulted by ILLink.
+// The trimming and AOT suppressions must be applied to the type rather than to Default. Its backing field
+// initializer is emitted into the static constructor, so ILLink does not consult suppressions on the property.
 [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "All the AtProto Types are captured in source gen")]
 [UnconditionalSuppressMessage("AOT", "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.", Justification = "All the AtProto Types are captured in source gen")]
 public static class AtProtoJsonSerializerOptions
 {
-    private static readonly JsonSerializerOptions s_options = Json.TolerantPolymorphicConverter.FinalizeOptions(CreateMutableOptions());
-
     internal static JsonSerializerOptions CreateMutableOptions() => new(JsonSerializerOptions.Web)
     {
         AllowOutOfOrderMetadataProperties = true,
@@ -122,10 +119,10 @@ public static class AtProtoJsonSerializerOptions
     /// <para>The instance caches the type metadata it resolves, so it is cheaper than <see cref="Options"/> when serializing
     /// or deserializing repeatedly. It cannot be changed; use <see cref="Options"/> to get a copy which can.</para>
     /// </remarks>
-    public static JsonSerializerOptions Default => s_options;
+    public static JsonSerializerOptions Default { get; } = Json.TolerantPolymorphicConverter.FinalizeOptions(CreateMutableOptions());
 
     /// <summary>
     /// Gets the default <see cref="IJsonTypeInfoResolver"/> for AtProto types.
     /// </summary>
-    public static IJsonTypeInfoResolver TypeInfoResolver => s_options.TypeInfoResolver!;
+    public static IJsonTypeInfoResolver TypeInfoResolver => Default.TypeInfoResolver!;
 }

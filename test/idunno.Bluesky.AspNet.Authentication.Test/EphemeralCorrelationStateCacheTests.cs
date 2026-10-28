@@ -115,7 +115,7 @@ public class EphemeralCorrelationStateCacheTests : CorrelationStateCacheTests
     [Fact]
     public async Task StateExpiresAfterItsTimeToLive()
     {
-        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        _ = TestContext.Current.CancellationToken;
         FakeTimeProvider timeProvider = new();
 
         EphemeralCorrelationStateCache cache = new(

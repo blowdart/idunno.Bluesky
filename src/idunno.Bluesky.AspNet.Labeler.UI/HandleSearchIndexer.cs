@@ -32,7 +32,7 @@ internal sealed partial class HandleSearchIndexer(
             LabelServiceResult<LabelHandleIndexBatch> pending = await index.ReadHandleIndexBatchAsync(stoppingToken).ConfigureAwait(false);
             if (pending.Succeeded)
             {
-                LabelHandleIndexEntry[] entries = pending.Result.Entries.ToArray();
+                LabelHandleIndexEntry[] entries = [.. pending.Result.Entries];
                 await Parallel.ForEachAsync(
                     source: Enumerable.Range(0, entries.Length),
                     parallelOptions: new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = stoppingToken },

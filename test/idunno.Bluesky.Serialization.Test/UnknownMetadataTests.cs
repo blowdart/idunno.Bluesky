@@ -152,8 +152,7 @@ public class UnknownMetadataTests
         };
         for (int i = 0; i < 64; i++)
         {
-            string suffix = new(Enumerable.Range(0, random.Next(1, 40))
-                .Select(_ => alphabet[random.Next(alphabet.Length)]).ToArray());
+            string suffix = new([.. Enumerable.Range(0, random.Next(1, 40)).Select(_ => alphabet[random.Next(alphabet.Length)])]);
             expected.Add($"${i}_{suffix}", $"value-{i}");
         }
 

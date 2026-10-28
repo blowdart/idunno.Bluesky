@@ -15,7 +15,11 @@ namespace idunno.AtProto.Integration.Test;
 internal sealed class RecordingLoggerProvider : ILoggerProvider
 {
     private readonly ConcurrentQueue<RecordedLogEntry> _entries = new();
+#if NET9_0_OR_GREATER
+    private readonly Lock _waitLock = new();
+#else
     private readonly object _waitLock = new();
+#endif
     private TaskCompletionSource _entryAdded = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     /// <summary>

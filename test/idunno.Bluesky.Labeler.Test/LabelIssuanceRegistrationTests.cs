@@ -64,7 +64,7 @@ public class LabelIssuanceRegistrationTests
             }
         }
 
-        services.AddLabelIssuance(StoreFixture.Issuer, key, client);
+        services.AddLabelIssuance(StoreFixture.s_issuer, key, client);
         using ServiceProvider provider = services.BuildServiceProvider();
         using IServiceScope scope = provider.CreateScope();
         Assert.Throws<InvalidOperationException>(() => scope.ServiceProvider.GetRequiredService<LabelIssuanceService>());
@@ -96,8 +96,8 @@ public class LabelIssuanceRegistrationTests
                     allowAccounts: true,
                     allowRecords: true)));
         services.AddSingleton<TimeProvider>(clock);
-        services.AddLabelIssuance(StoreFixture.Issuer, key, client);
-        Assert.Throws<InvalidOperationException>(() => services.AddLabelIssuance(StoreFixture.Issuer, key, client));
+        services.AddLabelIssuance(StoreFixture.s_issuer, key, client);
+        Assert.Throws<InvalidOperationException>(() => services.AddLabelIssuance(StoreFixture.s_issuer, key, client));
         await using ServiceProvider provider = services.BuildServiceProvider();
         using (IServiceScope scope = provider.CreateScope())
         {
@@ -108,7 +108,7 @@ public class LabelIssuanceRegistrationTests
                     operationId: "registered",
                     target: LabelTarget.Account(TargetResolutionHandler.SubjectDid),
                     value: "spam",
-                    context: new(StoreFixture.Issuer, "Registration test")),
+                    context: new(StoreFixture.s_issuer, "Registration test")),
                 TestContext.Current.CancellationToken);
             Assert.True(issued.Succeeded);
             Assert.Equal(clock.GetUtcNow(), issued.Result.Label!.SignedLabel.Label.CreationTimestamp);

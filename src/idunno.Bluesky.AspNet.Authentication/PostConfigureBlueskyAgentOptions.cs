@@ -29,10 +29,7 @@ public class PostConfigureBlueskyAgentOptions(ILoggerFactory loggerFactory) : IP
 
         // Applied here, once, rather than being written to the shared options instance by BlueskyAgentFactory, which
         // would mutate an object the options system owns and hand every agent the same mutated instance.
-        if (options is not null)
-        {
-            options.LoggerFactory ??= loggerFactory;
-        }
+        options?.LoggerFactory ??= loggerFactory;
 
         // Bluesky OAuth special cases a client identifier of http://localhost, requiring the return URI to be http://127.0.0.1.
         // The default is applied here, once, rather than being written to the shared options instance from a request thread.

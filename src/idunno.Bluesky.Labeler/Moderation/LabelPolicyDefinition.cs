@@ -214,6 +214,6 @@ public sealed class LabelPolicyDefinition
             values.Add(item.GetString()!);
         }
 
-        return values.ToArray();
+        return [.. values];
     }
 }

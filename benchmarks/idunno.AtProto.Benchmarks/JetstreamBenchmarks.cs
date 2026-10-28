@@ -7,9 +7,10 @@ using System.Text;
 using System.Text.Json;
 
 using BenchmarkDotNet.Attributes;
-using ZstdSharp;
 
 using idunno.AtProto.Jetstream;
+
+using ZstdSharp;
 
 namespace idunno.AtProto.Benchmarks;
 

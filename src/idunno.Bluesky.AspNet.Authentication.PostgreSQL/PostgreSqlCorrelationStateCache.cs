@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 using Npgsql;
+
 using NpgsqlTypes;
 
 namespace idunno.Bluesky.AspNet.Authentication.PostgreSQL;

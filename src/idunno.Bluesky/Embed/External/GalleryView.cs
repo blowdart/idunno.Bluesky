@@ -100,7 +100,7 @@ public record GalleryView : Bluesky.View
     {
         get;
         init => field = ExternalViewCollection.CopyUnion(value, nameof(Items));
-    } = Array.Empty<JsonElement>();
+    } = [];
 
     /// <summary>
     /// Gets the number of likes, if available.

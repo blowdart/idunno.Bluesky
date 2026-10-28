@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 
+using idunno.Bluesky.Actor;
 using idunno.Bluesky.Notifications;
 using idunno.Bluesky.Notifications.Model;
 
@@ -53,8 +54,8 @@ public class ActivitySubscriptionsTests
 
         Assert.NotNull(activitySubscriptionsResponse);
         Assert.Equal("3ltmosfi4b22o", activitySubscriptionsResponse.Cursor);
-        Assert.Single(activitySubscriptionsResponse.Subscriptions);
-        Assert.Equal("did:plc:hfgp6pj3akhqxntgqwramlbg", activitySubscriptionsResponse.Subscriptions[0].Did);
+        ProfileView item = Assert.Single(activitySubscriptionsResponse.Subscriptions);
+        Assert.Equal("did:plc:hfgp6pj3akhqxntgqwramlbg", item.Did);
         Assert.NotNull(activitySubscriptionsResponse.Subscriptions[0].Viewer);
 
         ActivitySubscription? activitySubscription = activitySubscriptionsResponse.Subscriptions[0].Viewer!.ActivitySubscription;

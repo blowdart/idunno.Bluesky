@@ -38,7 +38,11 @@ internal sealed partial class LabelerHost(
 {
     internal const long MaximumSequence = 9_007_199_254_740_991;
     private readonly Guid _instanceId = Guid.NewGuid();
+#if NET9_0_OR_GREATER
+    private readonly Lock _admissionLock = new();
+#else
     private readonly object _admissionLock = new();
+#endif
     private readonly SemaphoreSlim _maintenanceRefreshGate = new(1, 1);
     private CancellationTokenSource _maintenanceLifetime = new();
     private TaskCompletionSource? _drained;

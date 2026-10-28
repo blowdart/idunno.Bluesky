@@ -34,7 +34,7 @@ internal sealed class ProfileRenderer(IServiceProvider services, ILoggerFactory 
     {
         ulong FindClick(int componentId)
         {
-            foreach (var frame in ComponentFrames(componentId))
+            foreach (RenderTreeFrame frame in ComponentFrames(componentId))
             {
                 if (frame.FrameType == RenderTreeFrameType.Attribute && frame.AttributeName == "onclick")
                 {
@@ -101,10 +101,10 @@ internal sealed class ProfileRenderer(IServiceProvider services, ILoggerFactory 
     private string ReadText(int componentId)
     {
         StringBuilder text = new();
-        var frames = GetCurrentRenderTreeFrames(componentId);
+        ArrayRange<RenderTreeFrame> frames = GetCurrentRenderTreeFrames(componentId);
         for (int index = 0; index < frames.Count; index++)
         {
-            var frame = frames.Array[index];
+            RenderTreeFrame frame = frames.Array[index];
             switch (frame.FrameType)
             {
                 case RenderTreeFrameType.Text:

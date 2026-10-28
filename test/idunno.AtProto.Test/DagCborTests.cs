@@ -268,7 +268,7 @@ public class DagCborTests
     [Fact]
     public void ToJsonElementReturnsAnElementWhichOutlivesItsDocument()
     {
-        JsonElement result = DagCbor.ToJsonElement(new byte[] { 0x63, 0x61, 0x62, 0x63 });
+        JsonElement result = DagCbor.ToJsonElement("cabc"u8.ToArray());
 
         GC.Collect();
         GC.WaitForPendingFinalizers();
@@ -279,7 +279,7 @@ public class DagCborTests
     [Fact]
     public void ToJsonDocumentReturnsADisposableDocument()
     {
-        using JsonDocument document = DagCbor.ToJsonDocument(new byte[] { 0x63, 0x61, 0x62, 0x63 });
+        using JsonDocument document = DagCbor.ToJsonDocument("cabc"u8.ToArray());
 
         Assert.Equal("abc", document.RootElement.GetString());
     }

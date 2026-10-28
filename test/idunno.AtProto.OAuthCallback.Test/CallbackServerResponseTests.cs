@@ -228,7 +228,11 @@ public class CallbackServerResponseTests
     private sealed class RecordingLoggerProvider : ILoggerProvider
     {
         private readonly List<string> _messages = [];
+#if NET9_0_OR_GREATER
+        private readonly Lock _lock = new();
+#else
         private readonly object _lock = new();
+#endif
 
         internal IReadOnlyList<string> Messages
         {

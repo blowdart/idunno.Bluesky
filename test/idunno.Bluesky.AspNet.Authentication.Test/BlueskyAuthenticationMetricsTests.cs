@@ -224,16 +224,13 @@ public class BlueskyAuthenticationMetricsTests
     {
         // The tag is what an operator groups by to see why sessions are failing, so two different failures sharing a
         // value, or a failure falling through to the catch all, would hide one of them.
-        FieldInfo[] fields = typeof(AuthenticateResults)
+        FieldInfo[] fields = [.. typeof(AuthenticateResults)
             .GetFields(BindingFlags.NonPublic | BindingFlags.Static)
-            .Where(field => field.FieldType == typeof(AuthenticateResult))
-            .ToArray();
+            .Where(field => field.FieldType == typeof(AuthenticateResult))];
 
         Assert.NotEmpty(fields);
 
-        string[] reasons = fields
-            .Select(field => AuthenticateResults.ReasonFor((AuthenticateResult)field.GetValue(null)!))
-            .ToArray();
+        string[] reasons = [.. fields.Select(field => AuthenticateResults.ReasonFor((AuthenticateResult)field.GetValue(null)!))];
 
         Assert.Equal(fields.Length, reasons.Distinct(StringComparer.Ordinal).Count());
         Assert.DoesNotContain("failure", reasons);

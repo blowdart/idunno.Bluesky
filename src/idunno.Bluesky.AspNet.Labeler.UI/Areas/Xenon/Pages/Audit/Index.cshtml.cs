@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
+
 using idunno.Bluesky.Labeler.Administration;
 
 using Microsoft.AspNetCore.Mvc;
@@ -36,7 +37,11 @@ public sealed class IndexModel : PageModel
         if (Table.Query.AuditActor is { } actor)
         {
             AdministrationResponse resolved = await HttpContext.RequestServices.GetRequiredService<LabelerUiAdministration>()
-                .ResolveAuditActorAsync(User, actor, HttpContext.RequestAborted).ConfigureAwait(false);
+                .ResolveTableIdentityAsync(
+                    principal: User,
+                    actor: actor,
+                    kind: LabelTableKind.Audit,
+                    token: HttpContext.RequestAborted).ConfigureAwait(false);
             if (!resolved.Succeeded)
             {
                 ViewData["Error"] = resolved.Message ?? "The actor handle could not be resolved.";

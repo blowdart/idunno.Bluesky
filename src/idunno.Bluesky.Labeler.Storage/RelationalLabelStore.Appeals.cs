@@ -182,7 +182,7 @@ internal abstract partial class RelationalLabelStore
             connection: connection,
             transaction: transaction,
             state: state,
-            queries: values.Select(value => (target, value)).ToArray(),
+            queries: [.. values.Select(value => (target, value))],
             token: token).ConfigureAwait(false);
         List<StoredLabel> challenges = [];
         foreach (LabelServiceResult<LabelDecisionSnapshot> snapshot in snapshots)
@@ -364,14 +364,14 @@ internal abstract partial class RelationalLabelStore
             bool changed = false;
             if (appeal.Challenges.Length > 0)
             {
-                StoredLabel[] captured = appeal.ToAppeal().Challenges.ToArray();
+                StoredLabel[] captured = [.. appeal.ToAppeal().Challenges];
                 IReadOnlyList<LabelServiceResult<LabelDecisionSnapshot>> current = await DecisionSnapshotsAsync(
                     connection: connection,
                     transaction: transaction,
                     state: state,
-                    queries: captured.Select(challenge =>
+                    queries: [.. captured.Select(challenge =>
                         (appeal.Cid is null ? LabelTarget.Account(new Did(appeal.Subject)) :
-                            LabelTarget.Record(new(appeal.Subject), new(appeal.Cid)), challenge.SignedLabel.Label.Value)).ToArray(),
+                            LabelTarget.Record(new(appeal.Subject), new(appeal.Cid)), challenge.SignedLabel.Label.Value))],
                     token: token).ConfigureAwait(false);
                 for (int index = 0; index < captured.Length; index++)
                 {
@@ -429,7 +429,7 @@ internal abstract partial class RelationalLabelStore
             throw new InvalidDataException("Current appeal outcomes could not be inspected: " + observed.Error.Message);
         }
 
-        HashSet<long> current = observed.Result.Select(label => label.Sequence).ToHashSet();
+        HashSet<long> current = [.. observed.Result.Select(label => label.Sequence)];
         List<ModerationAppealData> superseded = [];
         long after = 0;
         while (true)

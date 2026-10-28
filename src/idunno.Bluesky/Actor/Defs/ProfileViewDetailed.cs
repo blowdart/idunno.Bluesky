@@ -9,7 +9,9 @@ using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
 using idunno.Bluesky.Graph;
 
+#pragma warning disable IDE0130 // Preserve the established namespace independently of folder layout.
 namespace idunno.Bluesky.Actor;
+#pragma warning restore IDE0130
 
 /// <summary>
 /// A detailed view of an actor profile

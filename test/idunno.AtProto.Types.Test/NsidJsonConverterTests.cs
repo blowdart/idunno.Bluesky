@@ -52,10 +52,8 @@ public class NsidJsonConverterTests
         Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<NsidExample>(json, options: _jsonSerializerOptions));
     }
 
-    class NsidExample
+    class NsidExample(Nsid nsid)
     {
-        public NsidExample(Nsid nsid) => Nsid = nsid;
-
-        public Nsid Nsid { get; }
+        public Nsid Nsid { get; } = nsid;
     }
 }

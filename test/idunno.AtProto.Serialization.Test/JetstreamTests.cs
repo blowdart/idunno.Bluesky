@@ -56,9 +56,9 @@ public class JetstreamTests
         AtJetstreamEvent? derived = jetStream.DeriveEvent(actual);
 
         Assert.NotNull(derived);
-        Assert.IsType<AtJetstreamCommitEvent>(derived);
+        AtJetstreamCommitEvent typed = Assert.IsType<AtJetstreamCommitEvent>(derived);
 
-        AtJetstreamCommitEvent? derivedCast = derived as AtJetstreamCommitEvent;
+        AtJetstreamCommitEvent? derivedCast = typed;
         Assert.NotNull(derivedCast);
 
         Assert.Equal("3l3qo2vutsw2b", derivedCast.Commit.Rev);
@@ -97,9 +97,9 @@ public class JetstreamTests
         AtJetstreamEvent? derived = jetStream.DeriveEvent(actual);
 
         Assert.NotNull(derived);
-        Assert.IsType<AtJetstreamCommitEvent>(derived);
+        AtJetstreamCommitEvent typed = Assert.IsType<AtJetstreamCommitEvent>(derived);
 
-        AtJetstreamCommitEvent? derivedCast = derived as AtJetstreamCommitEvent;
+        AtJetstreamCommitEvent? derivedCast = typed;
         Assert.NotNull(derivedCast);
 
         Assert.Equal(JetstreamCommitOperation.Delete, derivedCast.Commit.Operation);
@@ -159,9 +159,9 @@ public class JetstreamTests
         AtJetstreamEvent? derived = jetStream.DeriveEvent(actual);
 
         Assert.NotNull(derived);
-        Assert.IsType<AtJetstreamCommitEvent>(derived);
+        AtJetstreamCommitEvent typed = Assert.IsType<AtJetstreamCommitEvent>(derived);
 
-        AtJetstreamCommitEvent? derivedCast = derived as AtJetstreamCommitEvent;
+        AtJetstreamCommitEvent? derivedCast = typed;
         Assert.NotNull(derivedCast);
 
         Assert.Equal(JetstreamCommitOperation.Update, derivedCast.Commit.Operation);
@@ -195,9 +195,9 @@ public class JetstreamTests
         AtJetstreamEvent? derived = jetStream.DeriveEvent(actual);
 
         Assert.NotNull(derived);
-        Assert.IsType<AtJetstreamAccountEvent>(derived);
+        AtJetstreamAccountEvent typed = Assert.IsType<AtJetstreamAccountEvent>(derived);
 
-        AtJetstreamAccountEvent? derivedCast = derived as AtJetstreamAccountEvent;
+        AtJetstreamAccountEvent? derivedCast = typed;
         Assert.NotNull(derivedCast);
 
         Assert.False(derivedCast.Account.Active);
@@ -232,9 +232,9 @@ public class JetstreamTests
         AtJetstreamEvent? derived = jetStream.DeriveEvent(actual);
 
         Assert.NotNull(derived);
-        Assert.IsType<AtJetstreamAccountEvent>(derived);
+        AtJetstreamAccountEvent typed = Assert.IsType<AtJetstreamAccountEvent>(derived);
 
-        AtJetstreamAccountEvent? derivedCast = derived as AtJetstreamAccountEvent;
+        AtJetstreamAccountEvent? derivedCast = typed;
         Assert.NotNull(derivedCast);
 
         Assert.True(derivedCast.Account.Active);
@@ -269,9 +269,9 @@ public class JetstreamTests
         AtJetstreamEvent? derived = jetStream.DeriveEvent(actual);
 
         Assert.NotNull(derived);
-        Assert.IsType<AtJetstreamIdentityEvent>(derived);
+        AtJetstreamIdentityEvent typed = Assert.IsType<AtJetstreamIdentityEvent>(derived);
 
-        AtJetstreamIdentityEvent? derivedCast = derived as AtJetstreamIdentityEvent;
+        AtJetstreamIdentityEvent? derivedCast = typed;
         Assert.NotNull(derivedCast);
 
         Assert.Equal("did:plc:g6ylltenitt4tp27bpwalh7b", derivedCast.Identity.Did);

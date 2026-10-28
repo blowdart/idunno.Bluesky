@@ -12,13 +12,13 @@ using System.Net.WebSockets;
 using System.Reflection;
 using System.Text;
 
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Diagnostics.Metrics.Testing;
-using Microsoft.Extensions.Logging;
-
 using idunno.AtProto.Jetstream;
 using idunno.AtProto.Jetstream.Archive;
 using idunno.AtProto.Jetstream.Events;
+
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.Metrics.Testing;
+using Microsoft.Extensions.Logging;
 
 using ZstdSharp;
 
@@ -83,7 +83,7 @@ public class AtProtoJetstreamV2Tests
         });
         using var jetstream = new AtProtoJetstream(
             httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri, options: new JetstreamOptions { UseCompression = false });
-        EventHandler<RecordReceivedEventArgs> handler = (_, _) => { };
+        static void handler(object? sender, RecordReceivedEventArgs args) { }
         jetstream.RecordReceived += handler;
         await using (IAsyncEnumerator<JetstreamEvent> refused = jetstream.StreamAsync(cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken))
         {
@@ -122,10 +122,11 @@ public class AtProtoJetstreamV2Tests
             httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri,
             options: new JetstreamOptions
             {
-                UseCompression = false, MaximumConcurrentMessageParsers = 1,
+                UseCompression = false,
+                MaximumConcurrentMessageParsers = 1,
                 TaskFactory = new TaskFactory(scheduler)
             });
-        EventHandler<RecordReceivedEventArgs> handler = (_, _) => { };
+        static void handler(object? sender, RecordReceivedEventArgs args) { }
         jetstream.RecordReceived += handler;
         await jetstream.ConnectAsync(cancellationToken);
         await scheduler.Scheduled.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
@@ -336,7 +337,7 @@ public class AtProtoJetstreamV2Tests
         Assert.Equal(0, capacities.GetMeasurementSnapshot().Sum(m => m.Value));
         Assert.Equal(0, queued.GetMeasurementSnapshot().Sum(m => m.Value));
         Assert.Equal(waits.GetMeasurementSnapshot().Sum(m => m.Value), durations.GetMeasurementSnapshot().Count);
-        Assert.Equal(2, durations.GetMeasurementSnapshot().First().Value);
+        Assert.Equal(2, durations.GetMeasurementSnapshot()[0].Value);
     }
 
     [Theory]
@@ -350,7 +351,7 @@ public class AtProtoJetstreamV2Tests
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
         using var logs = new RecordingLoggerProvider();
-        using var loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs));
+        using ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs));
         using CancellationTokenSource cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         TaskCompletionSource burst = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource waiting = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -433,7 +434,7 @@ public class AtProtoJetstreamV2Tests
         TaskCompletionSource burst = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource waiting = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var logs = new RecordingLoggerProvider();
-        using var loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs));
+        using ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs));
         using var server = new TestJetstreamServer();
         await server.Start(async (socket, _, serverToken) =>
         {
@@ -452,7 +453,9 @@ public class AtProtoJetstreamV2Tests
             maximumReconnectAttempts: 0, cancellationToken: token).GetAsyncEnumerator(token);
         Assert.True(await stream.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), token));
         Assert.Equal(41, stream.Current.Sequence);
+#pragma warning disable IDE0305 // Retain ConcurrentQueue's atomic snapshot operation.
         Assert.Equal([41L], jetstream.Records.ToArray());
+#pragma warning restore IDE0305
         burst.SetResult();
         await waiting.Task.WaitAsync(TimeSpan.FromSeconds(30), token);
         for (long sequence = 42; sequence <= 45; sequence++)
@@ -467,7 +470,9 @@ public class AtProtoJetstreamV2Tests
         }
 
         await stream.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), token);
+#pragma warning disable IDE0305 // Retain ConcurrentQueue's atomic snapshot operation.
         Assert.Equal([41L, 42L, 43L, 44L, 45L], jetstream.Records.ToArray());
+#pragma warning restore IDE0305
         if (throwFromCallback)
         {
             RecordedLogEntry handler = Assert.Single(logs.Entries, entry => entry.EventId == 28);
@@ -495,15 +500,17 @@ public class AtProtoJetstreamV2Tests
         TimerTrackingTimeProvider timeProvider = new(closeTimeout);
         timeProvider.SetUtcNow(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
         using var logs = new RecordingLoggerProvider();
-        using var loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs));
+        using ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs));
         using var server = new TestJetstreamServer { HoldCloseResponse = holdCloseResponse };
         await server.Start((socket, _, serverToken) => SendText(socket, IdentityEvent(41), serverToken));
         await using var jetstream = new AtProtoJetstream(
             httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri,
             options: new JetstreamOptions
             {
-                UseCompression = false, LoggerFactory = loggerFactory,
-                CloseTimeout = closeTimeout, TimeProvider = timeProvider
+                UseCompression = false,
+                LoggerFactory = loggerFactory,
+                CloseTimeout = closeTimeout,
+                TimeProvider = timeProvider
             });
         jetstream.ReceiveWaiting = receive =>
         {
@@ -749,7 +756,7 @@ public class AtProtoJetstreamV2Tests
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
         int plans = 0;
         using var logs = new RecordingLoggerProvider();
-        using var loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs).SetMinimumLevel(LogLevel.Debug));
+        using ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs).SetMinimumLevel(LogLevel.Debug));
         using var server = new TestJetstreamServer
         {
             RefuseWith = (_, attempt) => duringUpgrade && attempt == 1
@@ -896,7 +903,9 @@ public class AtProtoJetstreamV2Tests
             new SnapshotRequest { AfterSeq = 0 },
             new SnapshotCheckpoint
             {
-                PlanAfterSeq = 0, SealedTipSeq = 40, LiveAfterSeq = 41,
+                PlanAfterSeq = 0,
+                SealedTipSeq = 40,
+                LiveAfterSeq = 41,
                 RequestFingerprint = new SnapshotRequest { AfterSeq = 0 }.Fingerprint(server.Uri)
             },
             cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken);
@@ -917,7 +926,7 @@ public class AtProtoJetstreamV2Tests
         long lastEvent = lastBuffered + 1;
         TaskCompletionSource burst = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var logs = new RecordingLoggerProvider();
-        using var loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs).SetMinimumLevel(LogLevel.Debug));
+        using ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs).SetMinimumLevel(LogLevel.Debug));
         using var server = new TestJetstreamServer
         {
             ArchiveRequest = context => TestJetstreamServer.Respond(context, HttpStatusCode.OK, "application/json",
@@ -997,7 +1006,7 @@ public class AtProtoJetstreamV2Tests
         PausedTaskScheduler scheduler = new();
         TaskCompletionSource burst = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var logs = new RecordingLoggerProvider();
-        using var loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs).SetMinimumLevel(LogLevel.Debug));
+        using ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs).SetMinimumLevel(LogLevel.Debug));
         using var server = new TestJetstreamServer
         {
             ArchiveRequest = context => TestJetstreamServer.Respond(context, HttpStatusCode.OK, "application/json",
@@ -1096,7 +1105,7 @@ public class AtProtoJetstreamV2Tests
         PausedTaskScheduler scheduler = new();
         TaskCompletionSource disconnected = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var logs = new RecordingLoggerProvider();
-        using var loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs).SetMinimumLevel(LogLevel.Debug));
+        using ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs).SetMinimumLevel(LogLevel.Debug));
         using var server = new TestJetstreamServer
         {
             ArchiveRequest = context => TestJetstreamServer.Respond(context, HttpStatusCode.OK, "application/json",
@@ -1129,7 +1138,9 @@ public class AtProtoJetstreamV2Tests
             httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri,
             options: new JetstreamOptions
             {
-                ApiKey = "test-key", UseCompression = false, LoggerFactory = loggerFactory,
+                ApiKey = "test-key",
+                UseCompression = false,
+                LoggerFactory = loggerFactory,
                 TaskFactory = new TaskFactory(scheduler)
             });
         IAsyncEnumerator<JetstreamEvent> replay = jetstream.ReplayAsync(
@@ -1187,7 +1198,7 @@ public class AtProtoJetstreamV2Tests
         CancellationToken token = cancellation.Token;
         PausedTaskScheduler scheduler = new();
         using var logs = new RecordingLoggerProvider();
-        using var loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs).SetMinimumLevel(LogLevel.Debug));
+        using ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs).SetMinimumLevel(LogLevel.Debug));
         using var server = new TestJetstreamServer
         {
             ArchiveRequest = context => TestJetstreamServer.Respond(context, HttpStatusCode.OK, "application/json",
@@ -1217,7 +1228,9 @@ public class AtProtoJetstreamV2Tests
         await using var jetstream = new AtProtoJetstream(httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri,
             options: new JetstreamOptions
             {
-                ApiKey = "test-key", UseCompression = false, LoggerFactory = loggerFactory,
+                ApiKey = "test-key",
+                UseCompression = false,
+                LoggerFactory = loggerFactory,
                 TaskFactory = new TaskFactory(scheduler)
             });
         IAsyncEnumerator<JetstreamEvent> replay = jetstream.ReplayAsync(new SnapshotRequest(),
@@ -1265,7 +1278,7 @@ public class AtProtoJetstreamV2Tests
         using CancellationTokenSource connectionCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         TaskCompletionSource close = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var logs = new RecordingLoggerProvider();
-        using var loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs).SetMinimumLevel(LogLevel.Debug));
+        using ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs).SetMinimumLevel(LogLevel.Debug));
         using var server = new TestJetstreamServer();
         await server.Start(async (socket, _, token) =>
         {
@@ -1321,7 +1334,7 @@ public class AtProtoJetstreamV2Tests
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
         using CancellationTokenSource replayCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         using var logs = new RecordingLoggerProvider();
-        using var loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs).SetMinimumLevel(LogLevel.Debug));
+        using ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs).SetMinimumLevel(LogLevel.Debug));
         using var server = new TestJetstreamServer
         {
             HoldCloseResponse = true,
@@ -1334,7 +1347,9 @@ public class AtProtoJetstreamV2Tests
             httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri,
             options: new JetstreamOptions
             {
-                ApiKey = "test-key", UseCompression = false, LoggerFactory = loggerFactory,
+                ApiKey = "test-key",
+                UseCompression = false,
+                LoggerFactory = loggerFactory,
                 CloseTimeout = TimeSpan.FromSeconds(1)
             });
         SnapshotCheckpoint? checkpoint = null;
@@ -1359,13 +1374,15 @@ public class AtProtoJetstreamV2Tests
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
         using var logs = new RecordingLoggerProvider();
-        using var loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs).SetMinimumLevel(LogLevel.Debug));
+        using ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs).SetMinimumLevel(LogLevel.Debug));
         using var server = new TestJetstreamServer { HoldCloseResponse = true };
         await server.Start((_, _, _) => Task.CompletedTask);
         await using var jetstream = new AtProtoJetstream(uri: server.Uri,
             options: new JetstreamOptions
             {
-                UseCompression = false, CloseTimeout = TimeSpan.FromSeconds(1), LoggerFactory = loggerFactory
+                UseCompression = false,
+                CloseTimeout = TimeSpan.FromSeconds(1),
+                LoggerFactory = loggerFactory
             });
         using var httpClient = new HttpClient();
         await jetstream.ConnectAsync(httpClient: httpClient, cancellationToken: cancellationToken);
@@ -1406,7 +1423,9 @@ public class AtProtoJetstreamV2Tests
         SnapshotRequest original = new() { AfterSeq = 0, BeforeSeq = 40 };
         SnapshotCheckpoint checkpoint = new()
         {
-            PlanAfterSeq = 25, SealedTipSeq = 50, ReplayAfterSeq = 25,
+            PlanAfterSeq = 25,
+            SealedTipSeq = 50,
+            ReplayAfterSeq = 25,
             RequestFingerprint = original.Fingerprint(server.Uri)
         };
         SnapshotCheckpoint? saved = null;
@@ -2040,7 +2059,7 @@ public class AtProtoJetstreamV2Tests
     }
 
     private static T GetField<T>(AtProtoJetstream jetstream, string name) where T : class =>
-        Assert.IsAssignableFrom<T>(typeof(AtProtoJetstream).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(jetstream));
+        Assert.IsType<T>(typeof(AtProtoJetstream).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(jetstream), exactMatch: false);
 
     [Fact]
     public async Task DisposalBeforePostConnectHandoffDoesNotInstallAnotherReceiveTask()
@@ -2102,7 +2121,7 @@ public class AtProtoJetstreamV2Tests
         TaskCompletionSource close = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource record = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var logs = new RecordingLoggerProvider();
-        using var loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs));
+        using ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs));
         using var server = new TestJetstreamServer();
         await server.Start(async (socket, _, serverToken) =>
         {
@@ -2115,7 +2134,9 @@ public class AtProtoJetstreamV2Tests
         });
         await using var jetstream = new AtProtoJetstream(uri: server.Uri, options: new JetstreamOptions
         {
-            UseCompression = false, TaskFactory = new TaskFactory(scheduler), LoggerFactory = loggerFactory
+            UseCompression = false,
+            TaskFactory = new TaskFactory(scheduler),
+            LoggerFactory = loggerFactory
         });
         using var httpClient = new HttpClient();
         jetstream.RecordReceived += (_, _) => record.TrySetResult();
@@ -2237,7 +2258,9 @@ public class AtProtoJetstreamV2Tests
         }
 
         await originalReceiver.WaitAsync(TimeSpan.FromSeconds(30), token);
+#pragma warning disable IDE0305 // Retain ConcurrentQueue's atomic snapshot operation.
         WebSocketState[] notifications = states.ToArray();
+#pragma warning restore IDE0305
         Assert.Equal(WebSocketState.Open, notifications[^1]);
         Assert.DoesNotContain(WebSocketState.Closed, notifications);
         await jetstream.DisposeAsync();
@@ -2250,7 +2273,8 @@ public class AtProtoJetstreamV2Tests
         using CancellationTokenSource cancellation = CancellationTokenSource.CreateLinkedTokenSource(token);
         using var jetstream = new AtProtoJetstream(options: new JetstreamOptions
         {
-            UseCompression = false, MaximumConcurrentMessageParsers = 2
+            UseCompression = false,
+            MaximumConcurrentMessageParsers = 2
         });
         SemaphoreSlim parsers = GetField<SemaphoreSlim>(jetstream, "_parseSemaphore");
         await parsers.WaitAsync(token);
@@ -2325,7 +2349,8 @@ public class AtProtoJetstreamV2Tests
         using CancellationTokenSource cancellation = CancellationTokenSource.CreateLinkedTokenSource(token);
         using var jetstream = new AtProtoJetstream(options: new JetstreamOptions
         {
-            UseCompression = false, MaximumConcurrentMessageParsers = 2
+            UseCompression = false,
+            MaximumConcurrentMessageParsers = 2
         });
         SemaphoreSlim parsers = GetField<SemaphoreSlim>(jetstream, "_parseSemaphore");
         await parsers.WaitAsync(token);
@@ -2483,7 +2508,7 @@ public class AtProtoJetstreamV2Tests
     {
         CancellationToken token = TestContext.Current.CancellationToken;
         using var logs = new RecordingLoggerProvider();
-        using var loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs));
+        using ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs));
         using var server = new TestJetstreamServer
         {
             ArchiveRequest = context => TestJetstreamServer.Respond(context, HttpStatusCode.OK, "application/json",
@@ -2555,7 +2580,9 @@ public class AtProtoJetstreamV2Tests
 
         internal Task Scheduled => _scheduled.Task;
 
+#pragma warning disable IDE0305 // Debugger enumeration must use ConcurrentQueue's atomic snapshot operation.
         protected override IEnumerable<Task> GetScheduledTasks() => _pending.ToArray();
+#pragma warning restore IDE0305
 
         protected override void QueueTask(Task task)
         {

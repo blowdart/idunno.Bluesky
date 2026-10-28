@@ -19,6 +19,8 @@ public class PostTests
         public override DateTimeOffset GetUtcNow() => new(2024, 1, 2, 3, 4, 5, TimeSpan.Zero);
     }
 
+    private static readonly string[] s_languages = ["en"];
+
     [Theory]
     [InlineData(" ")]
     [InlineData("   ")]
@@ -33,7 +35,7 @@ public class PostTests
         Assert.Equal(text, new Post(text).Text);
         Assert.Equal(text, new Post(text, createdAt).Text);
         Assert.Equal(text, new Post(text, "en").Text);
-        Assert.Equal(text, new Post(text, new[] { "en" }).Text);
+        Assert.Equal(text, new Post(text, s_languages).Text);
         Assert.Equal(text, new Post(text, embeddedRecord: embed).Text);
         Assert.Equal(text, new Post(text, createdAt, embeddedRecord: embed).Text);
     }
@@ -97,7 +99,7 @@ public class PostTests
     {
         Post post = new("Valid post")
         {
-            Tags = Enumerable.Range(0, Maximum.ExternalTagsInPost + 1).Select(index => index.ToString()).ToList()
+            Tags = [.. Enumerable.Range(0, Maximum.ExternalTagsInPost + 1).Select(index => index.ToString())]
         };
 
         List<ValidationResult> validationResults = [.. post.Validate(new ValidationContext(post))];
@@ -439,9 +441,9 @@ public class PostTests
         var post = new Post("text", image);
 
         Assert.Equal("text", post.Text);
-        Assert.IsType<EmbeddedImages>(post.EmbeddedRecord);
+        EmbeddedImages typed = Assert.IsType<EmbeddedImages>(post.EmbeddedRecord);
 
-        EmbeddedImages postImages = (EmbeddedImages)post.EmbeddedRecord;
+        EmbeddedImages postImages = typed;
 
         Assert.Single(postImages.Images);
     }
@@ -464,9 +466,9 @@ public class PostTests
         var post = new Post("text", DateTimeOffset.UtcNow, image);
 
         Assert.Equal("text", post.Text);
-        Assert.IsType<EmbeddedImages>(post.EmbeddedRecord);
+        EmbeddedImages typed = Assert.IsType<EmbeddedImages>(post.EmbeddedRecord);
 
-        EmbeddedImages postImages = (EmbeddedImages)post.EmbeddedRecord;
+        EmbeddedImages postImages = typed;
 
         Assert.Single(postImages.Images);
     }
@@ -539,9 +541,9 @@ public class PostTests
         var post = new Post("text", images);
 
         Assert.Equal("text", post.Text);
-        Assert.IsType<EmbeddedImages>(post.EmbeddedRecord);
+        EmbeddedImages typed = Assert.IsType<EmbeddedImages>(post.EmbeddedRecord);
 
-        EmbeddedImages postImages = (EmbeddedImages)post.EmbeddedRecord;
+        EmbeddedImages postImages = typed;
 
         Assert.Equal(Maximum.ImagesInPost, postImages.Images.Count);
     }
@@ -574,9 +576,9 @@ public class PostTests
         var post = new Post("text", DateTimeOffset.UtcNow, images);
 
         Assert.Equal("text", post.Text);
-        Assert.IsType<EmbeddedImages>(post.EmbeddedRecord);
+        EmbeddedImages typed = Assert.IsType<EmbeddedImages>(post.EmbeddedRecord);
 
-        EmbeddedImages postImages = (EmbeddedImages)post.EmbeddedRecord;
+        EmbeddedImages postImages = typed;
 
         Assert.Equal(Maximum.ImagesInPost, postImages.Images.Count);
     }

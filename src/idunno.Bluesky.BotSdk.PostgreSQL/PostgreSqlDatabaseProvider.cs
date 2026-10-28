@@ -13,7 +13,9 @@ using Npgsql;
 
 using NpgsqlTypes;
 
+#pragma warning disable IDE0130 // Preserve the established namespace independently of folder layout.
 namespace idunno.Bluesky.BotSdk.DataProviders;
+#pragma warning restore IDE0130
 
 /// <summary>Persists bot progress, actions, authentication, and rate accounting in PostgreSQL.</summary>
 /// <param name="source">The host-owned connection pool for a dedicated bot database.</param>

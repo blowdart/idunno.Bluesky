@@ -226,7 +226,7 @@ public class StandaloneHostTests
         await using WebApplication app = builder.Build();
         TaskCompletionSource entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        app.MapGet("/health/labeler/ready", async (HttpContext context) =>
+        app.MapGet("/health/labeler/ready", async context =>
         {
             entered.TrySetResult();
             if (cancel)

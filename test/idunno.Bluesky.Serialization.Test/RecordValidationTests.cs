@@ -11,9 +11,9 @@ using idunno.Bluesky.Feed;
 using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.Graph;
 
-using GraphList = idunno.Bluesky.Graph.List;
 using ActorLink = idunno.Bluesky.Actor.Link;
 using ActorStatus = idunno.Bluesky.Actor.Status;
+using GraphList = idunno.Bluesky.Graph.List;
 
 namespace idunno.Bluesky.Serialization.Test;
 
@@ -107,7 +107,7 @@ public class RecordValidationTests
         AtProtoRecord record;
         using (JsonDocument document = JsonDocument.Parse(CreateJson(kind, invalid: true).Insert(1, "\"custom\":{\"value\":42},")))
         {
-            record = Assert.IsAssignableFrom<AtProtoRecord>(ParseDocument(kind, document, validate: false));
+            record = Assert.IsType<AtProtoRecord>(ParseDocument(kind, document, validate: false), exactMatch: false);
         }
 
         Assert.Equal(42, record.ExtensionData["custom"].GetProperty("value").GetInt32());

@@ -49,7 +49,9 @@ The idunno.Bluesky.AspNet.Labeler.UI package bundles unmodified Font Awesome
 Free SVG icons by Fonticons, Inc. (https://fontawesome.com), licensed under
 Creative Commons Attribution 4.0 International (CC BY 4.0):
 https://creativecommons.org/licenses/by/4.0/
-The icons, including the eye, eye-slash, circle-play, filter and download controls, are served locally,
+The icons, including the eye, gavel and user-gear team roles and the
+circle-check, circle-pause and circle-xmark membership states and the
+eye-slash, circle-play, filter and download controls, are served locally,
 not from a CDN. Their original attribution
 comments are preserved, and the upstream license notice is distributed at
 wwwroot/vendor/fontawesome/LICENSE.txt within the UI package.

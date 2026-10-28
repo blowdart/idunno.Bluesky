@@ -1,23 +1,24 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using idunno.Bluesky.Labeler.Administration;
-using idunno.Bluesky.Labeler;
 using idunno.AtProto;
+using idunno.Bluesky.Labeler;
+using idunno.Bluesky.Labeler.Administration;
 using idunno.Bluesky.Labeler.Issuance;
+
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace idunno.Bluesky.AspNet.Labeler;
 
 internal sealed partial class AdministrationDispatcher
 {
-    /// <summary>Resolves an audit actor using the same bidirectionally verified account resolution as manual labeling.</summary>
-    internal async Task<AdministrationResponse> ResolveAuditActorAsync(string value, CancellationToken token)
+    /// <summary>Resolves a table identity using the same bidirectionally verified account resolution as manual labeling.</summary>
+    internal async Task<AdministrationResponse> ResolveTableIdentityAsync(string value, CancellationToken token)
     {
         string input = value.StartsWith('@') ? value[1..] : value;
         if (!AtIdentifier.TryParse(input, out AtIdentifier? identifier))
         {
-            return new(false, "InvalidRequest", "Enter an actor DID or handle.");
+            return new(false, "InvalidRequest", "Enter a valid DID or handle.");
         }
 
         if (identifier is Did did)
@@ -59,7 +60,7 @@ internal sealed partial class AdministrationDispatcher
         }
 
         LabelServiceResult<IReadOnlyList<LabelAdministrationReceipt>> result = await tables.ReadAuditExportPageAsync(caller, query, token).ConfigureAwait(false);
-        return result.Succeeded ? new(Succeeded: true, Audit: result.Result.Select(AuditView).ToArray()) : Failure(result.Error);
+        return result.Succeeded ? new(Succeeded: true, Audit: [.. result.Result.Select(AuditView)]) : Failure(result.Error);
     }
 
     /// <summary>Projects a counted provider page without adding a remote administrative method or weakening live authority checks.</summary>

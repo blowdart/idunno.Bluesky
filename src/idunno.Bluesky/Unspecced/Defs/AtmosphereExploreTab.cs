@@ -6,7 +6,9 @@ using System.Text.Json.Serialization;
 
 using idunno.Bluesky.Embed.External;
 
+#pragma warning disable IDE0130 // Preserve the established namespace independently of folder layout.
 namespace idunno.Bluesky.Unspecced;
+#pragma warning restore IDE0130
 
 /// <summary>
 /// Represents curated Atmosphere Explore content.

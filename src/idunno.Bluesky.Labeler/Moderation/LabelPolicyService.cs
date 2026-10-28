@@ -49,19 +49,34 @@ public sealed class LabelPolicyService(
     /// <remarks><para>This is a trusted application service, not a publication-authorization shortcut.
     /// A matching declaration may complete an already-authorized publication intent; detected conflict
     /// requires a new administrator intent even if the external record is subsequently restored.</para></remarks>
-    public async Task<LabelServiceResult<LabelPolicyState>> GetVerifiedStateAsync(
+    public Task<LabelServiceResult<LabelPolicyState>> GetVerifiedStateAsync(
         bool forceVerification = false,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        VerifyAsync(forceVerification, false, cancellationToken);
+
+    /// <summary>Refreshes only an active policy; the store revision fences publication changes during remote lookup.</summary>
+    internal Task<LabelServiceResult<LabelPolicyState>> VerifyActivePolicyAsync(CancellationToken cancellationToken) =>
+        VerifyAsync(true, true, cancellationToken);
+
+    /// <summary>Checks an independent declaration while optionally excluding pending publication from automatic verification.</summary>
+    private async Task<LabelServiceResult<LabelPolicyState>> VerifyAsync(
+        bool forceVerification,
+        bool activeOnly,
+        CancellationToken cancellationToken)
     {
         try
         {
             LabelPolicyState? state = await _store.ReadPolicyStateAsync(cancellationToken).ConfigureAwait(false);
+            if (activeOnly && state?.Phase != LabelPolicyPhase.VerifiedActive)
+            {
+                return Reject(LabelServiceErrorCode.PolicyUnavailable, "Scheduled verification requires an active policy.");
+            }
             if (state is not null && state.Issuer != _issuer)
             {
                 return Reject(LabelServiceErrorCode.PolicyUnavailable, "The policy store is bound to another issuer.");
             }
 
-            if (state?.Policy is null || state.Phase == LabelPolicyPhase.Conflict)
+            if (state?.Policy is null || state.Phase is LabelPolicyPhase.Conflict or LabelPolicyPhase.Withdrawing)
             {
                 return Reject(LabelServiceErrorCode.PolicyUnavailable, "An explicit verified policy publication is required.");
             }

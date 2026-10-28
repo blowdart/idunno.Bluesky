@@ -98,7 +98,7 @@ internal static class SeedData
             LabelPolicyState state = Require(await verifier.GetVerifiedStateAsync(cancellationToken: cancellationToken));
             ModerationReportAuthenticationResult authentication = await ServiceAuthentication.VerifyModerationReportAsync(
                 token: CreateReportToken(key),
-                labeler: FixtureHandler.Issuer,
+                labeler: FixtureHandler.s_issuer,
                 httpClient: identity,
                 cancellationToken: cancellationToken);
             Require(await reports.SubmitReportAsync(
@@ -123,6 +123,32 @@ internal static class SeedData
         LabelAdministrationCaller caller = Require(await team.AuthenticateLocalAsync(setup.LocalIdentity!, cancellationToken));
         ILabelPolicyStore policies = services.GetRequiredService<ILabelPolicyStore>();
         LabelPolicyState state = (await policies.ReadPolicyStateAsync(cancellationToken))!;
+        LabelPolicyService verifier = (LabelPolicyService)services.GetRequiredService<ILabelIssuancePolicyProvider>();
+        if (state.Policy is null)
+        {
+            using JsonDocument previousDeclaration = JsonDocument.Parse(FixtureHandler.s_declaration);
+            Require(await policies.SavePolicyAsync(
+                caller: caller,
+                operationId: "xenon-test-policy-history-draft",
+                policy: new(
+                    version: "xenon-history-v1",
+                    declaration: previousDeclaration.RootElement,
+                    allowAccounts: true,
+                    allowRecords: true,
+                    rules: "Earlier fictional test policy. No label is distributed publicly."),
+                reason: "Seed an earlier independently verified fixture publication.",
+                cancellationToken: cancellationToken));
+            Require(await policies.BeginPolicyPublicationAsync(
+                caller: caller,
+                operationId: "xenon-test-policy-history-select",
+                version: "xenon-history-v1",
+                expectedRevision: state.Revision,
+                previousCid: state.VerifiedCid,
+                reason: "Select the earlier local fixture without writing to a PDS.",
+                cancellationToken: cancellationToken));
+            state = Require(await verifier.GetVerifiedStateAsync(forceVerification: true, cancellationToken: cancellationToken));
+        }
+
         using JsonDocument legacyDeclaration = JsonDocument.Parse(FixtureHandler.LegacyDeclaration);
         LabelPolicyDefinition legacy = new(
             version: "test-v1",
@@ -132,9 +158,11 @@ internal static class SeedData
             rules: "Fictional local test data. No label is distributed publicly.");
         bool upgradeFixture = state.Policy?.Issuance.Version == "test-v1" &&
             state.Policy.DeclarationJson == legacy.DeclarationJson;
+        upgradeFixture |= state.Policy?.Issuance.Version == "xenon-history-v1" &&
+            state.Policy.Rules == "Earlier fictional test policy. No label is distributed publicly.";
         if (state.Policy is null || upgradeFixture)
         {
-            using JsonDocument declaration = JsonDocument.Parse(FixtureHandler.Declaration);
+            using JsonDocument declaration = JsonDocument.Parse(FixtureHandler.s_declaration);
             Require(await policies.SavePolicyAsync(
                 caller: caller,
                 operationId: "xenon-test-policy-draft-v2",
@@ -156,7 +184,6 @@ internal static class SeedData
                 cancellationToken: cancellationToken));
         }
 
-        LabelPolicyService verifier = (LabelPolicyService)services.GetRequiredService<ILabelIssuancePolicyProvider>();
         state = Require(await verifier.GetVerifiedStateAsync(forceVerification: true, cancellationToken: cancellationToken));
         ILabelReportStore reports = services.GetRequiredService<ILabelReportStore>();
         ILabelModerationStore cases = services.GetRequiredService<ILabelModerationStore>();
@@ -194,7 +221,7 @@ internal static class SeedData
                 state = Require(await verifier.GetVerifiedStateAsync(cancellationToken: cancellationToken));
                 ModerationReportAuthenticationResult authentication = await ServiceAuthentication.VerifyModerationReportAsync(
                     token: CreateReportToken(key),
-                    labeler: FixtureHandler.Issuer,
+                    labeler: FixtureHandler.s_issuer,
                     httpClient: identity,
                     cancellationToken: cancellationToken);
                 Require(await reports.SubmitReportAsync(
@@ -229,7 +256,7 @@ internal static class SeedData
         }
 
         LabelIssuanceService issuance = new(
-            issuer: FixtureHandler.Issuer,
+            issuer: FixtureHandler.s_issuer,
             signingKey: key,
             store: services.GetRequiredService<ILabelStore>(),
             authorizer: new LabelTeamAuthorizer(team, caller),
@@ -276,7 +303,7 @@ internal static class SeedData
             state = Require(await verifier.GetVerifiedStateAsync(cancellationToken: cancellationToken));
             ModerationReportAuthenticationResult authentication = await ServiceAuthentication.VerifyModerationReportAsync(
                 token: CreateReportToken(key),
-                labeler: FixtureHandler.Issuer,
+                labeler: FixtureHandler.s_issuer,
                 httpClient: identity,
                 cancellationToken: cancellationToken);
             LabelModerationReport automatic = Require(await reports.SubmitReportAsync(
@@ -288,6 +315,87 @@ internal static class SeedData
             {
                 throw new InvalidOperationException("The automatic-decision fixture was not handled as Not Applicable.");
             }
+        }
+
+        await InitializeAdministrationFixturesAsync(
+            team: team,
+            policies: policies,
+            caller: caller,
+            identity: identity,
+            administrator: administrator,
+            cancellationToken: cancellationToken);
+    }
+
+    /// <summary>Adds replay-safe fictional team states and unpublished policies without replacing operator changes.</summary>
+    private static async Task InitializeAdministrationFixturesAsync(
+        ILabelAdministrationStore team,
+        ILabelPolicyStore policies,
+        LabelAdministrationCaller caller,
+        HttpClient identity,
+        Did administrator,
+        CancellationToken cancellationToken)
+    {
+        LabelTeamService enrollment = new(team, identity);
+        foreach ((string name, LabelTeamRole role) in new[]
+        {
+            ("administrator", LabelTeamRole.Administrator),
+            ("moderator", LabelTeamRole.Moderator),
+            ("viewer", LabelTeamRole.Viewer),
+            ("suspended", LabelTeamRole.Moderator),
+            ("removed", LabelTeamRole.Viewer),
+            ("local", LabelTeamRole.Viewer)
+        })
+        {
+            Did member = FixtureHandler.TeamMember(name);
+            if (member == administrator)
+            {
+                continue;
+            }
+
+            Require(await enrollment.EnrollAsync(
+                caller: caller,
+                member: member,
+                role: role,
+                operationId: $"xenon-test-team-enroll-{name}",
+                reason: "Enroll a fictional local test member.",
+                cancellationToken: cancellationToken));
+            if (name is "suspended" or "removed" or "local")
+            {
+                Require(await team.ChangeTeamAsync(
+                    caller: caller,
+                    change: new(
+                        operationId: $"xenon-test-team-state-{name}",
+                        action: name switch
+                        {
+                            "suspended" => LabelTeamAction.Suspend,
+                            "removed" => LabelTeamAction.Remove,
+                            _ => LabelTeamAction.BindLocal
+                        },
+                        target: member,
+                        reason: "Seed a fictional suspended, removed or local CLI identity example.",
+                        credential: name == "local" ? "uid:4294967294" : null),
+                    cancellationToken: cancellationToken));
+            }
+        }
+
+        using JsonDocument declaration = JsonDocument.Parse(FixtureHandler.s_declaration);
+        foreach ((string version, bool allowAccounts, string rules) in new[]
+        {
+            ("xenon-draft-accounts", true, "Fictional draft for account and record moderation. Review evidence before applying labels."),
+            ("xenon-draft-records", false, "Fictional records-only draft. Account labels are disabled; review the exact record and optional CID.")
+        })
+        {
+            Require(await policies.SavePolicyAsync(
+                caller: caller,
+                operationId: version,
+                policy: new(
+                    version: version,
+                    declaration: declaration.RootElement,
+                    allowAccounts: allowAccounts,
+                    allowRecords: true,
+                    rules: rules),
+                reason: "Seed an unpublished fictional policy without changing the selected declaration.",
+                cancellationToken: cancellationToken));
         }
     }
 
@@ -301,7 +409,7 @@ internal static class SeedData
         long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         string header = Encode("""{"typ":"JWT","alg":"ES256"}"""u8.ToArray());
         string body = Encode(Encoding.UTF8.GetBytes($$"""
-            {"iss":"{{FixtureHandler.Reporter}}","aud":"{{FixtureHandler.Issuer}}#atproto_labeler",
+            {"iss":"{{FixtureHandler.s_reporter}}","aud":"{{FixtureHandler.s_issuer}}#atproto_labeler",
              "lxm":"com.atproto.moderation.createReport","iat":{{now}},"exp":{{now + 60}},"jti":"{{Guid.NewGuid():N}}"}
             """));
         string input = header + "." + body;

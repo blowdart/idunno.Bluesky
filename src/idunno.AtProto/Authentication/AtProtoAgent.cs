@@ -230,17 +230,13 @@ public partial class AtProtoAgent
     /// Marks the extent of a credential update notification, so that work which flowed out of it can tell whether it
     /// is still running.
     /// </summary>
-    private sealed class CredentialNotificationScope
+    private sealed class CredentialNotificationScope(long turnNumber)
     {
-        public CredentialNotificationScope(long turnNumber)
-        {
-            TurnNumber = turnNumber;
-        }
 
         /// <summary>
         /// Gets or sets a value indicating whether the notification this scope was created for is still running.
         /// </summary>
-        /// <remarks>Guarded by <see cref="_credentialLock"/>.</remarks>
+        /// <remarks><para>Guarded by <see cref="_credentialLock"/>.</para></remarks>
         public bool Active { get; set; } = true;
 
         /// <summary>
@@ -253,7 +249,7 @@ public partial class AtProtoAgent
         ///   waiting in between. See <see cref="EarliestGenuinelyWaitingNotificationTurn"/>.
         /// </para>
         /// </remarks>
-        public long TurnNumber { get; }
+        public long TurnNumber { get; } = turnNumber;
     }
 
     /// <summary>
@@ -306,7 +302,7 @@ public partial class AtProtoAgent
     /// <summary>
     /// The source of the values handed out by <see cref="NextDeferredNotificationSequence"/>.
     /// </summary>
-    /// <remarks>Guarded by <see cref="_credentialLock"/>.</remarks>
+    /// <remarks><para>Guarded by <see cref="_credentialLock"/>.</para></remarks>
     private long _nextDeferredNotificationSequence;
 
     /// <summary>
@@ -442,14 +438,12 @@ public partial class AtProtoAgent
     private readonly TimeSpan _immediateRefreshInterval = new(0, 0, 1);
 
     private ITimer? _credentialRefreshTimer;
-    private double _credentialRefreshTimerInterval;
     private long _credentialRefreshTimerScheduledAt;
     private TimeSpan _credentialRefreshTimerDueTime;
-    private bool _credentialRefreshTimerEnabled;
 
-    internal double CredentialRefreshTimerInterval => _credentialRefreshTimerInterval;
+    internal double CredentialRefreshTimerInterval { get; private set; }
 
-    internal bool CredentialRefreshTimerEnabled => _credentialRefreshTimerEnabled;
+    internal bool CredentialRefreshTimerEnabled { get; private set; }
 
     /// <summary>
     /// Gets the current credentials for the agent, if any.
@@ -2329,7 +2323,7 @@ public partial class AtProtoAgent
 
         using (_logger.BeginScope($"GetServiceAuth()"))
         {
-            TimeSpan requestedExpiry = expiry ?? AtProtoServer.DefaultServiceAuthExpiry;
+            TimeSpan requestedExpiry = expiry ?? AtProtoServer.s_defaultServiceAuthExpiry;
             Logger.RequestingServiceAuthToken(_logger, Service, audience, requestedExpiry.ToString("c"), lxm);
 
             if (!IsAuthenticated)
@@ -4010,7 +4004,7 @@ public partial class AtProtoAgent
     {
         lock (_timerLock)
         {
-            if (!_credentialRefreshTimerEnabled)
+            if (!CredentialRefreshTimerEnabled)
             {
                 return;
             }
@@ -4022,7 +4016,7 @@ public partial class AtProtoAgent
                 return;
             }
 
-            _credentialRefreshTimerEnabled = false;
+            CredentialRefreshTimerEnabled = false;
         }
 
         Logger.BackgroundTokenRefreshFired(_logger);
@@ -4077,7 +4071,7 @@ public partial class AtProtoAgent
     {
         lock (_timerLock)
         {
-            if (!_enableTokenRefresh || _atProtoAgentDisposed || Credentials is not AccessCredentials)
+            if (!_enableTokenRefresh || _atProtoAgentDisposed || Credentials is null)
             {
                 return;
             }
@@ -4086,7 +4080,7 @@ public partial class AtProtoAgent
 
             ChangeRefreshTimer(retryIn);
 
-            Logger.BackgroundTokenRefreshFailed(_logger, _credentialRefreshTimerInterval, exception);
+            Logger.BackgroundTokenRefreshFailed(_logger, CredentialRefreshTimerInterval, exception);
         }
     }
 
@@ -4104,23 +4098,20 @@ public partial class AtProtoAgent
     [MemberNotNull(nameof(_credentialRefreshTimer))]
     private void EnsureTokenRefreshTimer()
     {
-        if (_credentialRefreshTimer is null)
-        {
-            _credentialRefreshTimer = Clock.CreateTimer(
+        _credentialRefreshTimer ??= Clock.CreateTimer(
                 RefreshTimerElapsed,
                 state: null,
                 dueTime: Timeout.InfiniteTimeSpan,
                 period: Timeout.InfiniteTimeSpan);
-        }
     }
 
     private void ChangeRefreshTimer(TimeSpan dueTime)
     {
         EnsureTokenRefreshTimer();
-        _credentialRefreshTimerInterval = Math.Min(dueTime.TotalMilliseconds, int.MaxValue);
-        _credentialRefreshTimerDueTime = TimeSpan.FromMilliseconds(_credentialRefreshTimerInterval);
+        CredentialRefreshTimerInterval = Math.Min(dueTime.TotalMilliseconds, int.MaxValue);
+        _credentialRefreshTimerDueTime = TimeSpan.FromMilliseconds(CredentialRefreshTimerInterval);
         _credentialRefreshTimerScheduledAt = Clock.GetTimestamp();
-        _credentialRefreshTimerEnabled = true;
+        CredentialRefreshTimerEnabled = true;
         _credentialRefreshTimer.Change(_credentialRefreshTimerDueTime, Timeout.InfiniteTimeSpan);
     }
 
@@ -4153,7 +4144,7 @@ public partial class AtProtoAgent
 
                 ChangeRefreshTimer(refreshIn);
 
-                Logger.TokenRefreshTimerStarted(_logger, _credentialRefreshTimerInterval);
+                Logger.TokenRefreshTimerStarted(_logger, CredentialRefreshTimerInterval);
             }
         }
     }
@@ -4202,7 +4193,7 @@ public partial class AtProtoAgent
 
             ChangeRefreshTimer(_immediateRefreshInterval);
 
-            Logger.TokenRefreshTimerStarted(_logger, _credentialRefreshTimerInterval);
+            Logger.TokenRefreshTimerStarted(_logger, CredentialRefreshTimerInterval);
         }
     }
 
@@ -4225,7 +4216,7 @@ public partial class AtProtoAgent
             if (_credentialRefreshTimer is not null)
             {
                 _credentialRefreshTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
-                _credentialRefreshTimerEnabled = false;
+                CredentialRefreshTimerEnabled = false;
                 Logger.TokenRefreshTimerStopped(_logger);
 
                 if (dispose)

@@ -791,9 +791,9 @@ public class UnspeccedTests
 
         Assert.Equal(new AtUri("at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.feed.post/3ms2foehqt22h"), actual.Thread.ElementAt(0).Uri);
         Assert.Equal(0, actual.Thread.ElementAt(0).Depth);
-        Assert.IsType<ThreadItemPost>(actual.Thread.ElementAt(0).Value);
+        ThreadItemPost typed = Assert.IsType<ThreadItemPost>(actual.Thread.ElementAt(0).Value);
 
-        ThreadItemPost post0 = (ThreadItemPost)actual.Thread.ElementAt(0).Value;
+        ThreadItemPost post0 = typed;
         Assert.False(post0.MoreParents);
         Assert.Equal(0, post0.MoreReplies);
         Assert.True(post0.OpThread);

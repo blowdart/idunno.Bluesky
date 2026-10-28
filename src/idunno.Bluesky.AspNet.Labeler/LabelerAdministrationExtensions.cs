@@ -119,6 +119,10 @@ public static class LabelerAdministrationExtensions
                 clock: provider.GetRequiredService<TimeProvider>(),
                 host: provider.GetService<LabelerHost>());
         });
+        services.AddHostedService(provider => new PolicyWithdrawalWorker(
+            dispatcher: provider.GetRequiredService<AdministrationDispatcher>(),
+            clock: provider.GetRequiredService<TimeProvider>(),
+            logger: provider.GetRequiredService<ILogger<PolicyWithdrawalWorker>>()));
         return services;
     }
 
@@ -185,7 +189,7 @@ public static class LabelerAdministrationExtensions
         ILogger logger = endpoints.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("LabelerAdministration");
         foreach (string method in AdministrationDispatcher.s_getMethods)
         {
-            RequestDelegate handler = context => HandleRequestAsync(
+            Task handler(HttpContext context) => HandleRequestAsync(
                 context: context, method: method, isPost: false, dispatcher: dispatcher, configuration: configuration,
                 remoteOptions: remoteOptions, fixedRemoteEnabled: remoteEnabled,
                 store: store, clock: clock, logger: logger);
@@ -194,7 +198,7 @@ public static class LabelerAdministrationExtensions
 
         foreach (string method in AdministrationDispatcher.s_postMethods)
         {
-            RequestDelegate handler = context => HandleRequestAsync(
+            Task handler(HttpContext context) => HandleRequestAsync(
                 context: context, method: method, isPost: true, dispatcher: dispatcher, configuration: configuration,
                 remoteOptions: remoteOptions, fixedRemoteEnabled: remoteEnabled,
                 store: store, clock: clock, logger: logger);

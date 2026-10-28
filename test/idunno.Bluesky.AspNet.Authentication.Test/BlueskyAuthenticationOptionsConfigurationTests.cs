@@ -95,8 +95,8 @@ public class BlueskyAuthenticationOptionsConfigurationTests
         IdentityStoreEvents identityStoreEvents = new();
         CorrelationStateCacheEvents correlationStateCacheEvents = new();
 
-        IIdentityStore identityStore = new EphemeralIdentityStore(NullLoggerFactory.Instance);
-        ICorrelationStateCache correlationCache = new DistributedCacheCorrelationStateCache(TestData.DistributedCache());
+        EphemeralIdentityStore identityStore = new(NullLoggerFactory.Instance);
+        DistributedCacheCorrelationStateCache correlationCache = new(TestData.DistributedCache());
 
         IOptionsMonitor<BlueskyAuthenticationOptions> monitor = BuildOptions("CustomScheme", options =>
         {

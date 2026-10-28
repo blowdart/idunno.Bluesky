@@ -11,7 +11,11 @@ namespace idunno.Bluesky.BotSdk;
 /// <summary>Signals local permission to work and cancels operations when the database lease is lost.</summary>
 internal sealed class Ownership : IDisposable
 {
+#if NET9_0_OR_GREATER
+    private readonly Lock _gate = new();
+#else
     private readonly object _gate = new();
+#endif
     private readonly List<CancellationTokenSource> _retiredLost = [];
     private CancellationTokenSource _lost = new();
     private bool _active;

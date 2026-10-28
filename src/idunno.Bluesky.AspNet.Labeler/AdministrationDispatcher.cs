@@ -34,7 +34,7 @@ internal sealed partial class AdministrationDispatcher(
         "getCase", "getCaseLabels", "getManualLabelChoices", "getModerationOverview", "getCaseActivity", "searchModeration", "getCases", "getCaseHistory", "getCaseOperation", "changeCase", "decideCase", "getCaseDecision",
         "getAppeal", "getAppeals", "getAppealReports", "getCaseQueue",
         "getPolicyVersion", "getPolicyVersions", "getPolicyHistory", "getPolicyOperation",
-        "getReport", "getReports", "getPolicy", "savePolicy", "beginPolicyPublication", "abandonPolicyPublication", "verifyPolicy"
+        "getReport", "getReports", "getPolicy", "savePolicy", "deletePolicyDraft", "beginPolicyPublication", "resumePolicyPublication", "abandonPolicyPublication", "verifyPolicy"
     ];
     internal static readonly string[] s_methods =
     [
@@ -412,12 +412,7 @@ internal sealed partial class AdministrationDispatcher(
         DidDocument? document = await IdentityResolution.ResolveDidDocumentAsync(
             did: caller.Issuer,
             httpClient: httpClient,
-            cancellationToken: token).ConfigureAwait(false);
-        if (document is null)
-        {
-            throw new InvalidDataException("The labeler's public DID document could not be resolved.");
-        }
-
+            cancellationToken: token).ConfigureAwait(false) ?? throw new InvalidDataException("The labeler's public DID document could not be resolved.");
         LabelerIdentityDocument.VerifyPublication(
             didDocument: document,
             did: caller.Issuer,
