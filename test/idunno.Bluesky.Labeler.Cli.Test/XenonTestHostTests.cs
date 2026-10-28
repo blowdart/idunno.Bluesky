@@ -351,7 +351,7 @@ public partial class XenonTestHostTests
                 Assert.Contains("Status=" + expectedFilter, filteredHtml, StringComparison.Ordinal);
                 Assert.Contains("aria-label=\"Filter reports\"", filteredHtml, StringComparison.Ordinal);
                 Assert.Contains("class=\"fa-icon fa-filter\" aria-hidden=\"true\"", filteredHtml, StringComparison.Ordinal);
-                Assert.Equal(filter is "Handled" or "All", filteredHtml.Contains("Not Applicable", StringComparison.Ordinal));
+                Assert.Equal(filter is "Handled" or "All", filteredHtml.Contains("<p>Not Applicable</p>", StringComparison.Ordinal));
             }
             foreach (string path in new[] { "/Xenon/Cases", "/Xenon/Appeals", "/Xenon/Audit", "/Xenon/Team", "/Xenon/Reports" })
             {
@@ -740,7 +740,7 @@ public partial class XenonTestHostTests
                 Assert.Equal("image/svg+xml", iconResponse.Content.Headers.ContentType!.MediaType);
                 Assert.Contains("Font Awesome Free", await iconResponse.Content.ReadAsStringAsync(token), StringComparison.Ordinal);
             }
-            Assert.Contains("text-align: right; color: var(--muted)", css, StringComparison.Ordinal);
+            Assert.Contains(".site-footer-content { width: 100%; margin: 0 auto; padding: 0 1rem; text-align: right; }", css, StringComparison.Ordinal);
             Assert.DoesNotContain("\nnav a, .sign-out", css, StringComparison.Ordinal);
             using HttpResponseMessage logo = await client.GetAsync("/Xenon/images/xenon.svg", token);
             Assert.Equal(HttpStatusCode.OK, logo.StatusCode);

@@ -148,7 +148,8 @@ internal abstract partial class RelationalLabelStore
                     sql: "SELECT COUNT(*) FROM label_cases WHERE status<>2", token: cancellationToken).ConfigureAwait(false));
                 long reports = Integer(await ScalarAsync(
                     connection: connection, transaction: transaction,
-                    sql: $"SELECT COUNT(*) FROM label_reports t WHERE {UnhandledReportFilter()}",
+                    sql: $"SELECT (SELECT COUNT(*) FROM label_reports t WHERE {UnhandledReportFilter()}) + " +
+                        "(SELECT COUNT(*) FROM label_pending_reports WHERE pending=TRUE)",
                     token: cancellationToken).ConfigureAwait(false));
                 long appeals = Integer(await ScalarAsync(
                     connection: connection, transaction: transaction,
@@ -258,6 +259,8 @@ internal abstract partial class RelationalLabelStore
             {
                 if (query.Kind == LabelTableKind.Team)
                 {
+                    bool canManageTeam = team.Members.TryGetValue(caller.Actor.Value, out AdministrationMember? viewer) &&
+                        viewer is { Active: true, Removed: false, Role: LabelTeamRole.Administrator };
                     IEnumerable<KeyValuePair<string, AdministrationMember>> members = team.Members;
                     if (query.TeamMember is not null)
                     {
@@ -277,13 +280,17 @@ internal abstract partial class RelationalLabelStore
                         Page: page,
                         Team: [.. sorted.ThenBy(entry => entry.Key, StringComparer.Ordinal)
                             .Skip(checked((int)((page - 1) * LabelTableQuery.PageSize))).Take(LabelTableQuery.PageSize)
-                            .Select(entry => new LabelTeamMember(new(entry.Key), entry.Value.Role, entry.Value.Active, entry.Value.Removed))]));
+                            .Select(entry => new LabelTeamMember(new(entry.Key), entry.Value.Role, entry.Value.Active, entry.Value.Removed)
+                            {
+                                NotificationEmail = canManageTeam ? entry.Value.NotificationEmail : null
+                            })]));
                 }
 
                 string table = query.Kind switch
                 {
                     LabelTableKind.Cases => "label_cases",
                     LabelTableKind.Reports => "label_reports",
+                    LabelTableKind.PendingReports => "label_pending_reports",
                     LabelTableKind.Appeals => "label_appeals",
                     _ => "label_admin_audit"
                 };
@@ -291,6 +298,7 @@ internal abstract partial class RelationalLabelStore
                 {
                     LabelTableKind.Cases => "case_id",
                     LabelTableKind.Reports => "report_id",
+                    LabelTableKind.PendingReports => "report_id",
                     LabelTableKind.Appeals => "appeal_id",
                     _ => "seq"
                 };
@@ -324,6 +332,7 @@ internal abstract partial class RelationalLabelStore
                     {
                         LabelTableKind.Cases => "CASE WHEN EXISTS(SELECT 1 FROM label_appeals a WHERE a.case_id=t.case_id AND a.status=0) THEN 3 ELSE t.status END",
                         LabelTableKind.Reports => $"CASE WHEN {UnhandledReportFilter()} THEN 0 ELSE 1 END",
+                        LabelTableKind.PendingReports => "t.pending",
                         _ => "t.status"
                     },
                     _ => TableJsonField("CreatedAt")
@@ -351,6 +360,7 @@ internal abstract partial class RelationalLabelStore
                     ("@offset", (current - 1) * LabelTableQuery.PageSize));
                 List<LabelModerationCase> cases = [];
                 List<LabelModerationReport> reports = [];
+                List<LabelPendingModerationReport> pendingReports = [];
                 List<LabelAppeal> appeals = [];
                 List<LabelAdministrationReceipt> audit = [];
                 List<long> appealedCases = [];
@@ -375,6 +385,9 @@ internal abstract partial class RelationalLabelStore
                                 case LabelTableKind.Reports:
                                     reports.Add(DecodeReport(bytes).ToReport());
                                     break;
+                                case LabelTableKind.PendingReports:
+                                    pendingReports.Add(DecodePendingReport(bytes).ToPendingReport());
+                                    break;
                                 case LabelTableKind.Appeals:
                                     appeals.Add(DecodeAppeal(bytes).ToAppeal());
                                     break;
@@ -395,6 +408,7 @@ internal abstract partial class RelationalLabelStore
                     Page: current,
                     Cases: cases,
                     Reports: reports,
+                    PendingReports: pendingReports,
                     Appeals: appeals,
                     Audit: audit,
                     AuthorSummaries: summaries,
@@ -518,6 +532,11 @@ internal abstract partial class RelationalLabelStore
                 true => $"NOT ({UnhandledReportFilter()})",
                 null => "1=1"
             };
+        }
+
+        if (query.Kind == LabelTableKind.PendingReports)
+        {
+            return "1=1";
         }
 
         if (query.Kind == LabelTableKind.Appeals)

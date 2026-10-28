@@ -462,6 +462,7 @@ public class ModerationTests
         DeclarationHandler handler = new(key.ExportPublicKeyMultibase());
         using HttpClient identity = new(handler);
         await using TestServerBuilder fixture = await CreateAsync(key, identity);
+        await VerifyPolicyAsync(fixture);
         using MetricCollector<long> metrics = new(
             fixture.Services.GetRequiredService<IMeterFactory>(), LabelerModerationHost.MeterName,
             "idunno.bluesky.labeler.moderation.reports");
@@ -498,6 +499,7 @@ public class ModerationTests
         string declaration = Declaration.TrimEnd()[..^1] + ""","reasonTypes":["tools.ozone.report.defs#reasonOther"]}""";
         using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()) { Declaration = declaration });
         await using TestServerBuilder fixture = await CreateAsync(key: key, identity: identity, declarationJson: declaration);
+        await VerifyPolicyAsync(fixture);
         using HttpRequestMessage request = ReportRequest(key, fixture.Clock.GetUtcNow());
         using HttpResponseMessage response = await fixture.Client.SendAsync(request, token);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -568,7 +570,7 @@ public class ModerationTests
     }
 
     [Fact]
-    public async Task PolicyDriftClosesReportsButLeavesDistributionRoutingReady()
+    public async Task PolicyDriftQueuesReportsButLeavesDistributionRoutingReady()
     {
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         DeclarationHandler handler = new(key.ExportPublicKeyMultibase());
@@ -582,7 +584,13 @@ public class ModerationTests
         Assert.False((await verifier.GetVerifiedStateAsync(forceVerification: true, cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
         using HttpRequestMessage request = ReportRequest(key, fixture.Clock.GetUtcNow());
         using HttpResponseMessage response = await fixture.Client.SendAsync(request, TestContext.Current.CancellationToken);
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument queued = JsonDocument.Parse(await response.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken));
+        long pendingId = queued.RootElement.GetProperty("id").GetInt64();
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        LabelAdministrationCaller administrator = (await team.AuthenticateLocalAsync("uid:0", TestContext.Current.CancellationToken)).Result!;
+        ILabelReportStore reports = fixture.Services.GetRequiredService<ILabelReportStore>();
+        Assert.Empty((await reports.GetReportsAsync(administrator, cancellationToken: TestContext.Current.CancellationToken)).Result!);
         using HttpResponseMessage distribution = await fixture.Client.GetAsync(
             "/xrpc/com.atproto.label.queryLabels?uriPatterns=*", TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, distribution.StatusCode);
@@ -607,13 +615,20 @@ public class ModerationTests
                 Moderation: new(PolicyVersion: "v1", ExpectedRevision: conflict.Revision, PreviousCid: Cid)));
         using HttpResponseMessage reconciled = await fixture.Client.SendAsync(reconcile, TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, reconciled.StatusCode);
-        Assert.True((await verifier.GetVerifiedStateAsync(forceVerification: true, cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
+        LabelPolicyState recovered = (await verifier.GetVerifiedStateAsync(
+            forceVerification: true, cancellationToken: TestContext.Current.CancellationToken)).Result!;
+        LabelPendingReportBatchResult promoted = (await fixture.Services.GetRequiredService<ILabelReportStore>()
+            .ProcessPendingReportsAsync(recovered.Revision, 100, TestContext.Current.CancellationToken)).Result!;
+        Assert.Equal(1, promoted.Processed);
+        LabelModerationReport report = Assert.Single((await reports.GetReportsAsync(
+            administrator, cancellationToken: TestContext.Current.CancellationToken)).Result!);
+        Assert.Equal(pendingId, report.Id);
     }
 
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task ReportAndReadinessDeadlinesBoundDeclarationLookupsUsingTheHostClock(bool health)
+    public async Task ReportIntakeQueuesWithoutWaitingForRemotePolicyVerification(bool health)
     {
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         DeclarationHandler handler = new(key.ExportPublicKeyMultibase()) { BlockDeclarationReads = true };
@@ -623,32 +638,22 @@ public class ModerationTests
         using HttpRequestMessage request = health
             ? new(HttpMethod.Get, "/health/labeler/moderation")
             : ReportRequest(key, fixture.Clock.GetUtcNow());
-        Task<HttpResponseMessage> pending = fixture.Client.SendAsync(request, TestContext.Current.CancellationToken);
         if (health)
         {
-            using HttpResponseMessage storedHealth = await pending;
+            using HttpResponseMessage storedHealth = await fixture.Client.SendAsync(request, TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.ServiceUnavailable, storedHealth.StatusCode);
             Assert.Equal(0, handler.DeclarationReads);
             return;
         }
-        await handler.DeclarationRequested.Task.WaitAsync(TestContext.Current.CancellationToken);
-        if (!health)
-        {
-            using HttpRequestMessage concurrent = ReportRequest(key, fixture.Clock.GetUtcNow());
-            using HttpResponseMessage throttled = await fixture.Client.SendAsync(concurrent, TestContext.Current.CancellationToken);
-            Assert.Equal(HttpStatusCode.TooManyRequests, throttled.StatusCode);
-        }
-
-        await fixture.Clock.WaitForTimerAsync(TimeSpan.FromSeconds(30));
-        fixture.Clock.Advance(TimeSpan.FromSeconds(30));
-        using HttpResponseMessage response = await pending;
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        using HttpResponseMessage response = await fixture.Client.SendAsync(request, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(0, handler.DeclarationReads);
         Assert.Equal(LabelPolicyPhase.Publishing, (await fixture.Services.GetRequiredService<ILabelPolicyStore>()
             .ReadPolicyStateAsync(TestContext.Current.CancellationToken))!.Phase);
-        handler.BlockDeclarationReads = false;
-        using HttpRequestMessage retry = ReportRequest(key, fixture.Clock.GetUtcNow());
-        using HttpResponseMessage recovered = await fixture.Client.SendAsync(retry, TestContext.Current.CancellationToken);
-        Assert.Equal(HttpStatusCode.OK, recovered.StatusCode);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        LabelAdministrationCaller administrator = (await team.AuthenticateLocalAsync("uid:0", TestContext.Current.CancellationToken)).Result!;
+        Assert.Empty((await fixture.Services.GetRequiredService<ILabelReportStore>()
+            .GetReportsAsync(administrator, cancellationToken: TestContext.Current.CancellationToken)).Result!);
     }
 
     [Theory]
@@ -802,6 +807,7 @@ public class ModerationTests
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()));
         await using TestServerBuilder fixture = await CreateAsync(key: key, identity: identity, remoteEnabled: true);
+        await VerifyPolicyAsync(fixture);
         LabelAdministrationCaller administrator = (await fixture.Services.GetRequiredService<ILabelAdministrationStore>()
             .AuthenticateLocalAsync("uid:0", token)).Result!;
         AdministrationDispatcher dispatcher = fixture.Services.GetRequiredService<AdministrationDispatcher>();
@@ -1044,6 +1050,14 @@ public class ModerationTests
             moderation: true,
             xenonUi: xenonUi);
         return fixture;
+    }
+
+    /// <summary>Completes the retained publication intent before exercising an actionable report path.</summary>
+    private static async Task VerifyPolicyAsync(TestServerBuilder fixture)
+    {
+        LabelServiceResult<LabelPolicyState> result = await fixture.Services.GetRequiredService<LabelPolicyService>()
+            .GetVerifiedStateAsync(cancellationToken: TestContext.Current.CancellationToken);
+        Assert.True(result.Succeeded, result.Error?.Message);
     }
 
     /// <summary>Creates an exact-method reporter assertion over the test account's repository key.</summary>

@@ -83,11 +83,13 @@ internal sealed partial class AdministrationDispatcher
         LabelTablePage page = result.Result;
         return new(
             Succeeded: true,
-            Members: page.Team?.Select(member => new AdministrationMemberView(member.Did.Value, member.Role, member.Active, member.Removed)).ToArray(),
+            Members: page.Team?.Select(member => new AdministrationMemberView(
+                member.Did.Value, member.Role, member.Active, member.Removed, member.NotificationEmail)).ToArray(),
             Audit: page.Audit?.Select(AuditView).ToArray(),
             Moderation: new(
                 Cases: page.Cases?.Select(CaseView).ToArray(),
                 Reports: page.Reports?.Select(ReportView).ToArray(),
+                PendingReports: page.PendingReports?.Select(PendingReportView).ToArray(),
                 Appeals: page.Appeals?.Select(AppealView).ToArray(),
                 PendingAppealCaseIds: page.PendingAppealCaseIds?.ToArray()),
             TotalCount: page.Total,

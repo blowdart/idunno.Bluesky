@@ -7,6 +7,9 @@
     JsonElement? reports = Model.Data.ValueKind == JsonValueKind.Object &&
         Model.Data.TryGetProperty("moderation", out JsonElement moderation) &&
         moderation.TryGetProperty("reports", out JsonElement values) ? values : null;
+    JsonElement? pendingReports = Model.PendingData.ValueKind == JsonValueKind.Object &&
+        Model.PendingData.TryGetProperty("moderation", out JsonElement pendingModeration) &&
+        pendingModeration.TryGetProperty("pendingReports", out JsonElement pendingValues) ? pendingValues : null;
 }
 <h1>Reports</h1>
 <form method="get" class="panel">
@@ -66,3 +69,45 @@ else if (ViewData["Error"] is null)
 {
     <p class="panel">No reports match this filter.</p>
 }
+<section class="panel" aria-labelledby="pending-reports-heading">
+    <h2 id="pending-reports-heading">Pending policy verification</h2>
+    <p>These authenticated reports are retained but are not cases and cannot be acted on or cause labels to be issued until an active policy is independently verified. Reports that pass its subject-scope check automatically enter ordinary case review. Subject-scope violations remain here as Not Applicable without a case.</p>
+    @if (pendingReports is { ValueKind: JsonValueKind.Array } pendingList && pendingList.GetArrayLength() > 0)
+    {
+        <table>
+            <caption>@Model.PendingTable!.Total retained reports</caption>
+            <thead><tr>
+                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.PendingTable!, LabelTableSort.Number, "Report", Numeric: true))
+                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.PendingTable!, LabelTableSort.Subject, "Subject"))
+                <th scope="col">Reason</th>
+                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.PendingTable!, LabelTableSort.Status, "Status"))
+                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.PendingTable!, LabelTableSort.Received, "Received"))
+            </tr></thead>
+            <tbody>
+                @foreach (JsonElement item in pendingList.EnumerateArray())
+                {
+                    JsonElement submitted = item.GetProperty("report");
+                    JsonElement subject = submitted.GetProperty("subject");
+                    string target = subject.TryGetProperty("uri", out JsonElement uri) ? uri.GetString()! : subject.GetProperty("did").GetString()!;
+                    <tr>
+                        <td class="numeric">#@submitted.GetProperty("id").GetInt64()</td>
+                        <td>@await Html.PartialAsync("_Identity", new IdentityDisplayModel(target, Subject: true))</td>
+                        <td>@submitted.GetProperty("reasonType").GetString()<br />@submitted.GetProperty("reason").GetString()</td>
+                        <td>@(item.GetProperty("status").GetString() == "PendingVerification" ? "Awaiting verification" : "Not Applicable")
+                            @if (item.TryGetProperty("resolutionReason", out JsonElement resolution))
+                            {
+                                <p>@resolution.GetString()</p>
+                            }
+                        </td>
+                        <td><time data-relative-time datetime="@submitted.GetProperty("createdAt").GetDateTimeOffset().ToString("O")">@submitted.GetProperty("createdAt").GetDateTimeOffset().ToString("u")</time></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @await Html.PartialAsync("_Pagination", Model.PendingTable)
+    }
+    else if (ViewData["Error"] is null)
+    {
+        <p>No reports are awaiting policy verification or retained as out of scope.</p>
+    }
+</section>

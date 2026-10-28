@@ -7,6 +7,7 @@ idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.PublishCallbackModel.P
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.PublishCallbackModel.OnGetAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.IndexModel.OnPostSignInAndPublishAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Audit.IndexModel.OnPostDownloadAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Team.IndexModel.OnPostNotificationEmailAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.MediaModel
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.MediaModel.MediaModel() -> void
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.MediaModel.OnGetAsync(string? token) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!

@@ -70,5 +70,8 @@ public enum LabelServiceErrorCode
     CaseConflict,
 
     /// <summary>A moderation continuation is malformed or belongs to different filters, caller or issuer.</summary>
-    InvalidCursor
+    InvalidCursor,
+
+    /// <summary>The durable pending report queue has reached its configured capacity.</summary>
+    PendingReportQueueFull
 }

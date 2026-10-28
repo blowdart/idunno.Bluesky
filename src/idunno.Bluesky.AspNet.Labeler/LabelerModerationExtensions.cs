@@ -74,13 +74,21 @@ public static class LabelerModerationExtensions
             return new LabelPolicyService(
                 issuer: issuer, store: policies, httpClient: httpClient, loggerFactory: provider.GetRequiredService<ILoggerFactory>());
         });
+        services.AddSingleton(provider => new LabelerPolicyEmailService(
+            issuer: issuer,
+            alerts: settings.PolicyEmail.Enabled
+                ? provider.GetRequiredService<ILabelStore>() as ILabelPolicyAlertStore ??
+                    throw new InvalidOperationException("SMTP alerts require storage with durable policy-alert support.")
+                : null,
+            settings: settings.PolicyEmail,
+            clock: provider.GetRequiredService<TimeProvider>(),
+            logger: provider.GetRequiredService<ILogger<LabelerPolicyEmailService>>()));
         services.AddSingleton<ILabelIssuancePolicyProvider>(provider => provider.GetRequiredService<LabelPolicyService>());
         services.AddHostedService<PolicyVerificationWorker>();
         services.AddSingleton(provider => new LabelerModerationHost(
             issuer: issuer,
             httpClient: httpClient,
             reports: provider.GetRequiredService<ILabelReportStore>(),
-            policies: provider.GetRequiredService<LabelPolicyService>(),
             policyStore: provider.GetRequiredService<ILabelPolicyStore>(),
             settings: settings,
             clock: provider.GetRequiredService<TimeProvider>(),

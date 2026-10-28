@@ -14,13 +14,28 @@ internal sealed class AdministrationState
     public long Sequence { get; set; }
     public Dictionary<string, AdministrationMember> Members { get; set; } = new(StringComparer.Ordinal);
     public Dictionary<string, AdministrationBinding> Bindings { get; set; } = new(StringComparer.Ordinal);
+    public bool PolicyVerificationFailureActive { get; set; }
+    public PolicyFailureAlert? PendingPolicyAlert { get; set; }
 }
 
 /// <summary>Retains generation tombstones so re-enrollment cannot revive old credentials.</summary>
-internal sealed record AdministrationMember(LabelTeamRole Role, bool Active, bool Removed, long Generation);
+internal sealed record AdministrationMember(
+    LabelTeamRole Role,
+    bool Active,
+    bool Removed,
+    long Generation,
+    string? NotificationEmail = null);
 
 /// <summary>Identifies an explicit OS delegation and its unique binding generation.</summary>
 internal sealed record AdministrationBinding(string Did, string Credential);
+
+/// <summary>Retains one coalesced policy-verification alert and its recoverable SMTP lease.</summary>
+internal sealed record PolicyFailureAlert(
+    string Id,
+    string Category,
+    DateTimeOffset OccurredAt,
+    string? LeaseId = null,
+    DateTimeOffset? LeaseUntil = null);
 
 /// <summary>Stores audit metadata without serializing authentication secrets or public DID internals.</summary>
 internal sealed record AdministrationAudit(
@@ -52,5 +67,6 @@ internal sealed record AdministrationAudit(
 /// <summary>Supplies trimming-safe metadata for the provider's administration formats.</summary>
 [JsonSerializable(typeof(AdministrationState))]
 [JsonSerializable(typeof(AdministrationAudit))]
+[JsonSerializable(typeof(PolicyFailureAlert))]
 [JsonSerializable(typeof(string[]))]
 internal sealed partial class AdministrationJsonContext : JsonSerializerContext;

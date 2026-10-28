@@ -61,6 +61,7 @@ internal enum LabelTableKind
 {
     Cases,
     Reports,
+    PendingReports,
     Appeals,
     Audit,
     Team
@@ -105,6 +106,7 @@ internal sealed record LabelTableQuery(
     {
         LabelTableKind.Cases => [LabelTableSort.Number, LabelTableSort.Subject, LabelTableSort.Received, LabelTableSort.Status, LabelTableSort.Assignee],
         LabelTableKind.Reports => [LabelTableSort.Number, LabelTableSort.Case, LabelTableSort.Subject, LabelTableSort.Received, LabelTableSort.Status],
+        LabelTableKind.PendingReports => [LabelTableSort.Number, LabelTableSort.Subject, LabelTableSort.Received, LabelTableSort.Status],
         LabelTableKind.Appeals => [LabelTableSort.Number, LabelTableSort.Case, LabelTableSort.Subject, LabelTableSort.Actor, LabelTableSort.Received, LabelTableSort.Status],
         LabelTableKind.Audit => [LabelTableSort.Number, LabelTableSort.Received, LabelTableSort.Actor, LabelTableSort.Action, LabelTableSort.Outcome],
         LabelTableKind.Team => [LabelTableSort.Subject, LabelTableSort.Role, LabelTableSort.Status],
@@ -136,7 +138,19 @@ internal sealed record LabelTablePage(
     IReadOnlyList<LabelAdministrationReceipt>? Audit = null,
     IReadOnlyList<LabelTeamMember>? Team = null,
     IReadOnlyList<LabelAuthorReportSummary>? AuthorSummaries = null,
-    IReadOnlyList<long>? PendingAppealCaseIds = null);
+    IReadOnlyList<long>? PendingAppealCaseIds = null,
+    IReadOnlyList<LabelPendingModerationReport>? PendingReports = null);
+
+/// <summary>Contains a confidential report awaiting policy verification or closed after a subject-scope check.</summary>
+internal sealed record LabelPendingModerationReport(
+    long Id,
+    LabelReportSubmission Submission,
+    idunno.AtProto.Did ReportedBy,
+    DateTimeOffset CreatedAt,
+    bool PendingVerification,
+    string? PolicyVersion,
+    DateTimeOffset? ProcessedAt,
+    string? ResolutionReason);
 
 /// <summary>Contains live unresolved-case, unhandled-report and pending-appeal totals.</summary>
 internal sealed record LabelNavigationCounts(long Cases, long Reports, long Appeals);

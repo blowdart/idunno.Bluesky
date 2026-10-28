@@ -11,10 +11,13 @@ using Microsoft.AspNetCore.WebUtilities;
 namespace idunno.Bluesky.AspNet.Labeler.UI;
 
 /// <summary>Preserves the current table filter and sort while generating deterministic numbered navigation.</summary>
-internal sealed class TableNavigation(LabelTableQuery query, HttpRequest request)
+internal sealed class TableNavigation(LabelTableQuery query, HttpRequest request, string parameterPrefix = "")
 {
     /// <summary>Gets the validated table query.</summary>
     internal LabelTableQuery Query { get; } = query;
+
+    /// <summary>Gets the request parameter prefix used to keep independent tables' paging state separate.</summary>
+    private string ParameterPrefix { get; } = parameterPrefix;
 
     /// <summary>Gets or sets the provider's clamped current page number.</summary>
     internal long Page { get; set; } = 1;
@@ -26,15 +29,18 @@ internal sealed class TableNavigation(LabelTableQuery query, HttpRequest request
     internal long Pages => Math.Max(1, Total / LabelTableQuery.PageSize + (Total % LabelTableQuery.PageSize == 0 ? 0 : 1));
 
     /// <summary>Gets a validated page and sort from the request while keeping workflow filters typed.</summary>
-    internal static TableNavigation? Read(HttpRequest request, LabelTableQuery defaults)
+    internal static TableNavigation? Read(HttpRequest request, LabelTableQuery defaults, string parameterPrefix = "")
     {
         long page = 1;
         LabelTableSort sort = defaults.Sort;
         bool ascending = defaults.Ascending;
         IQueryCollection values = request.Query;
-        if (values.ContainsKey("PageNumber") && !long.TryParse(values["PageNumber"], NumberStyles.None, CultureInfo.InvariantCulture, out page) ||
-            values.ContainsKey("Sort") && !Enum.TryParse(values["Sort"], out sort) ||
-            values.ContainsKey("Ascending") && !bool.TryParse(values["Ascending"], out ascending))
+        string pageName = parameterPrefix + "PageNumber";
+        string sortName = parameterPrefix + "Sort";
+        string ascendingName = parameterPrefix + "Ascending";
+        if (values.ContainsKey(pageName) && !long.TryParse(values[pageName], NumberStyles.None, CultureInfo.InvariantCulture, out page) ||
+            values.ContainsKey(sortName) && !Enum.TryParse(values[sortName], out sort) ||
+            values.ContainsKey(ascendingName) && !bool.TryParse(values[ascendingName], out ascending))
         {
             return null;
         }
@@ -84,7 +90,7 @@ internal sealed class TableNavigation(LabelTableQuery query, HttpRequest request
             return null;
         }
 
-        return new(query, request);
+        return new(query, request, parameterPrefix);
     }
 
     /// <summary>Interprets wall-clock bounds in the selected zone, rejecting daylight-saving gaps and ambiguous times.</summary>
@@ -148,10 +154,24 @@ internal sealed class TableNavigation(LabelTableQuery query, HttpRequest request
     {
         Dictionary<string, string?> values = new()
         {
-            ["PageNumber"] = page.ToString(CultureInfo.InvariantCulture),
-            ["Sort"] = sort.ToString(),
-            ["Ascending"] = ascending.ToString(CultureInfo.InvariantCulture)
+            [ParameterPrefix + "PageNumber"] = page.ToString(CultureInfo.InvariantCulture),
+            [ParameterPrefix + "Sort"] = sort.ToString(),
+            [ParameterPrefix + "Ascending"] = ascending.ToString(CultureInfo.InvariantCulture)
         };
+        string[] retainedParameters = Query.Kind switch
+        {
+            LabelTableKind.PendingReports => ["PageNumber", "Sort", "Ascending", "Status", "PendingPageNumber", "PendingSort", "PendingAscending"],
+            LabelTableKind.Reports => ["PendingPageNumber", "PendingSort", "PendingAscending"],
+            _ => []
+        };
+        foreach (string name in retainedParameters)
+        {
+            if (request.Query.TryGetValue(name, out Microsoft.Extensions.Primitives.StringValues value))
+            {
+                values[name] = value.ToString();
+            }
+        }
+
         if (Query.Kind == LabelTableKind.Cases)
         {
             values["Queue"] = Query.Queue.ToString();

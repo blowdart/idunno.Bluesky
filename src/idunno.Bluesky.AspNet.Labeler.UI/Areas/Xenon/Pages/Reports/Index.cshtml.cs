@@ -27,6 +27,12 @@ public sealed class IndexModel : PageModel
     /// <summary>Gets the counted report navigation and global ordering.</summary>
     internal TableNavigation? Table { get; private set; }
 
+    /// <summary>Gets the independently paged pending-validation table navigation.</summary>
+    internal TableNavigation? PendingTable { get; private set; }
+
+    /// <summary>Gets the confidential pending-validation report response.</summary>
+    internal JsonElement PendingData { get; private set; }
+
     /// <summary>Loads a bounded page of accepted reports.</summary>
     public async Task OnGetAsync()
     {
@@ -45,5 +51,10 @@ public sealed class IndexModel : PageModel
             Kind: LabelTableKind.Reports,
             ReportHandled: Status switch { "Unresolved" => false, "Handled" => true, _ => null }));
         Data = await UiPageHelpers.ReadTableAsync(this, Table).ConfigureAwait(false);
+        PendingTable = TableNavigation.Read(
+            Request,
+            new(Kind: LabelTableKind.PendingReports, Sort: LabelTableSort.Received, Ascending: true),
+            parameterPrefix: "Pending");
+        PendingData = await UiPageHelpers.ReadTableAsync(this, PendingTable).ConfigureAwait(false);
     }
 }

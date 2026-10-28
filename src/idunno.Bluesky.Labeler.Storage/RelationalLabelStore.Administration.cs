@@ -496,6 +496,91 @@ internal abstract partial class RelationalLabelStore
         }, cancellationToken);
     }
 
+    /// <summary>Changes one administrator alert address without placing it in audit records.</summary>
+    public Task<LabelServiceResult<LabelAdministrationReceipt>> SetTeamNotificationEmailAsync(
+        LabelAdministrationCaller caller,
+        LabelTeamNotificationEmailChange change,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(caller);
+        ArgumentNullException.ThrowIfNull(change);
+        byte[] intent = Intent(
+            caller.Actor.Value,
+            change.Target.Value,
+            change.NotificationEmail ?? string.Empty,
+            change.Reason);
+        return AdministrationAsync(async (connection, transaction, state) =>
+        {
+            AdministrationState team = await ReadAdministrationAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+            bool allowed = await HasPermissionAsync(
+                connection: connection,
+                transaction: transaction,
+                state: state,
+                administration: team,
+                caller: caller,
+                permission: LabelAdministrationPermission.ManageTeam,
+                token: cancellationToken).ConfigureAwait(false);
+            if (!allowed)
+            {
+                await AuditAdministrationAsync(
+                    connection: connection,
+                    transaction: transaction,
+                    administration: team,
+                    actor: caller.Actor,
+                    localIdentity: caller.LocalIdentity,
+                    operationId: change.OperationId,
+                    action: "set-team-notification-email",
+                    reason: change.Reason,
+                    succeeded: false,
+                    token: cancellationToken).ConfigureAwait(false);
+                return AdminFailure<LabelAdministrationReceipt>("Current administrator authority is required.");
+            }
+
+            LabelServiceResult<LabelAdministrationReceipt>? original = await AdministrationReceiptAsync(
+                connection: connection,
+                transaction: transaction,
+                operationId: change.OperationId,
+                intent: intent,
+                token: cancellationToken).ConfigureAwait(false);
+            if (original is not null)
+            {
+                return original;
+            }
+
+            if (!team.Members.TryGetValue(change.Target.Value, out AdministrationMember? member) ||
+                member is not { Active: true, Removed: false, Role: LabelTeamRole.Administrator })
+            {
+                await AuditAdministrationAsync(
+                    connection: connection,
+                    transaction: transaction,
+                    administration: team,
+                    actor: caller.Actor,
+                    localIdentity: caller.LocalIdentity,
+                    operationId: change.OperationId,
+                    action: "set-team-notification-email",
+                    reason: change.Reason,
+                    succeeded: false,
+                    token: cancellationToken).ConfigureAwait(false);
+                return AdminFailure<LabelAdministrationReceipt>("Only an active administrator can register a policy-alert email.");
+            }
+
+            team.Members[change.Target.Value] = member with { NotificationEmail = change.NotificationEmail };
+            LabelAdministrationReceipt receipt = await AuditAdministrationAsync(
+                connection: connection,
+                transaction: transaction,
+                administration: team,
+                actor: caller.Actor,
+                localIdentity: caller.LocalIdentity,
+                operationId: change.OperationId,
+                action: "set-team-notification-email",
+                reason: change.Reason,
+                succeeded: true,
+                token: cancellationToken).ConfigureAwait(false);
+            await SaveAdministrationReceiptAsync(connection, transaction, receipt, intent, cancellationToken).ConfigureAwait(false);
+            return LabelServiceResult<LabelAdministrationReceipt>.Success(receipt);
+        }, cancellationToken);
+    }
+
     /// <summary>Applies a bounded team change after all invariant checks, leaving denied state unchanged.</summary>
     private static string? ApplyTeamChange(AdministrationState team, LabelTeamChange change)
     {
@@ -555,6 +640,7 @@ internal abstract partial class RelationalLabelStore
                     _ => member.Active
                 },
                 Removed = change.Action == LabelTeamAction.Remove,
+                NotificationEmail = change.Action == LabelTeamAction.Remove ? null : member.NotificationEmail,
                 Generation = checked(member.Generation + 1)
             };
             if (change.Action is LabelTeamAction.Suspend or LabelTeamAction.Remove)
@@ -580,6 +666,14 @@ internal abstract partial class RelationalLabelStore
             bool allowed = await HasPermissionAsync(
                 connection: connection, transaction: transaction, state: state, administration: team,
                 caller: caller, permission: LabelAdministrationPermission.Inspect, token: cancellationToken).ConfigureAwait(false);
+            bool canManageTeam = allowed && await HasPermissionAsync(
+                connection: connection,
+                transaction: transaction,
+                state: state,
+                administration: team,
+                caller: caller,
+                permission: LabelAdministrationPermission.ManageTeam,
+                token: cancellationToken).ConfigureAwait(false);
             await AuditAdministrationAsync(
                 connection: connection, transaction: transaction, administration: team, actor: caller.Actor,
                 localIdentity: caller.LocalIdentity, operationId: string.Empty, action: "team-read",
@@ -589,7 +683,11 @@ internal abstract partial class RelationalLabelStore
                 await ReconcileAssignmentsAsync(connection, transaction, team, caller, cancellationToken).ConfigureAwait(false);
             }
             return allowed ? LabelServiceResult<IReadOnlyList<LabelTeamMember>>.Success(
-                [.. team.Members.OrderBy(entry => entry.Key, StringComparer.Ordinal).Select(entry => new LabelTeamMember(new(entry.Key), entry.Value.Role, entry.Value.Active, entry.Value.Removed))])
+                [.. team.Members.OrderBy(entry => entry.Key, StringComparer.Ordinal).Select(entry =>
+                    new LabelTeamMember(new(entry.Key), entry.Value.Role, entry.Value.Active, entry.Value.Removed)
+                    {
+                        NotificationEmail = canManageTeam ? entry.Value.NotificationEmail : null
+                    })])
                 : AdminFailure<IReadOnlyList<LabelTeamMember>>("Inspection requires current team authority.");
         }, cancellationToken);
     }

@@ -4,6 +4,7 @@
 using System.Text.Json.Serialization;
 
 using idunno.AtProto;
+using idunno.Bluesky.Labeler.Administration;
 using idunno.Bluesky.Labeler.Issuance;
 using idunno.Bluesky.Labeler.Moderation;
 
@@ -346,6 +347,69 @@ internal sealed record ModerationReportData(
     }
 }
 
+/// <summary>Retains an authenticated report before policy scope can be established.</summary>
+internal sealed record PendingModerationReportData(
+    long Id,
+    string Subject,
+    string? Cid,
+    string ReasonType,
+    string? Reason,
+    string? ToolName,
+    string? ToolMetadata,
+    string Reporter,
+    DateTimeOffset CreatedAt,
+    string Audience,
+    string TokenHash,
+    DateTimeOffset ExpiresAt,
+    ModerationAppealChallenge[]? AppealChallenges = null,
+    bool PendingVerification = true,
+    string? PolicyVersion = null,
+    DateTimeOffset? ProcessedAt = null,
+    string? ResolutionReason = null)
+{
+    /// <summary>Revalidates the bounded report intent before exposing it to an authorized moderator.</summary>
+    internal LabelPendingModerationReport ToPendingReport()
+    {
+        System.Text.Json.JsonElement? metadata = null;
+        if (ToolMetadata is not null)
+        {
+            using System.Text.Json.JsonDocument document = System.Text.Json.JsonDocument.Parse(ToolMetadata);
+            metadata = document.RootElement.Clone();
+        }
+
+        return new(
+            Id: Id,
+            Submission: new(
+                subject: Cid is null ? LabelReportSubject.Account(new(Subject)) : LabelReportSubject.Record(new(Subject), new(Cid)),
+                reasonType: ReasonType,
+                reason: Reason,
+                modToolName: ToolName,
+                modToolMetadata: metadata),
+            ReportedBy: new(Reporter),
+            CreatedAt: CreatedAt,
+            PendingVerification: PendingVerification,
+            PolicyVersion: PolicyVersion,
+            ProcessedAt: ProcessedAt,
+            ResolutionReason: ResolutionReason);
+    }
+
+    /// <summary>Copies the pending submission into the ordinary report representation for verified promotion.</summary>
+    internal ModerationReportData ToReport(long caseId, string policyVersion) => new(
+        Id: Id,
+        CaseId: caseId,
+        Subject: Subject,
+        Cid: Cid,
+        ReasonType: ReasonType,
+        Reason: Reason,
+        ToolName: ToolName,
+        ToolMetadata: ToolMetadata,
+        Reporter: Reporter,
+        CreatedAt: CreatedAt,
+        PolicyVersion: policyVersion,
+        Audience: Audience,
+        TokenHash: TokenHash);
+}
+
 /// <summary>Supplies trimming-safe metadata for moderation state, retry intent and history.</summary>
 [JsonSerializable(typeof(ModerationCaseData))]
 [JsonSerializable(typeof(ModerationCaseIntent))]
@@ -356,6 +420,7 @@ internal sealed record ModerationReportData(
 [JsonSerializable(typeof(ModerationPolicyOperation))]
 [JsonSerializable(typeof(ModerationPolicyHistory))]
 [JsonSerializable(typeof(ModerationReportData))]
+[JsonSerializable(typeof(PendingModerationReportData))]
 [JsonSerializable(typeof(ModerationDecisionIntent))]
 [JsonSerializable(typeof(ModerationDecisionData))]
 [JsonSerializable(typeof(ModerationAppealData))]

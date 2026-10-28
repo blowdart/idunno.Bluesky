@@ -100,6 +100,18 @@ public interface ILabelAdministrationStore
         LabelTeamChange change,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Registers or clears an active administrator's policy-alert email under live team authority.</summary>
+    /// <param name="caller">The authenticated invocation evidence.</param>
+    /// <param name="change">The validated address change and audit reason.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The original or newly committed receipt, or a classified denial.</returns>
+    /// <remarks><para>The address is returned only to callers with current team-management permission and is
+    /// never written to audit text. Only active administrators receive policy-verification notifications.</para></remarks>
+    Task<LabelServiceResult<LabelAdministrationReceipt>> SetTeamNotificationEmailAsync(
+        LabelAdministrationCaller caller,
+        LabelTeamNotificationEmailChange change,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Reads the bounded team after checking live inspection authority.</summary>
     /// <param name="caller">The authenticated invocation evidence.</param>
     /// <param name="cancellationToken">The cancellation token.</param>

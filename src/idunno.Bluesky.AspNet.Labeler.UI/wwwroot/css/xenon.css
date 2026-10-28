@@ -66,7 +66,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 }
 .skip-link { position: absolute; left: -10000px; top: 1rem; background: var(--surface); padding: .75rem; z-index: 2; }
 .skip-link:focus { left: 1rem; }
-.site-header { display: flex; flex-wrap: wrap; align-items: center; gap: 2rem; padding: 1rem max(1rem, calc((100% - 72rem) / 2)); background: #172b42; color: white; }
+.site-header { display: flex; flex-wrap: wrap; align-items: center; gap: 2rem; padding: 1rem; background: #172b42; color: white; }
 .brand { display: inline-flex; align-items: center; gap: .5rem; color: white; font-size: 1.25rem; font-weight: 700; text-decoration: none; white-space: nowrap; }
 nav { display: flex; flex-wrap: wrap; gap: 1rem; }
 .site-header nav a, .sign-out { color: white; }
@@ -93,7 +93,8 @@ nav { display: flex; flex-wrap: wrap; gap: 1rem; }
 .account-menu-panel .sign-out:hover { background: var(--background); }
 .page { width: 100%; max-width: 72rem; margin: 2rem auto; padding: 0 1rem 3rem; flex: 1; }
 .page-wide { max-width: none; }
-.site-footer { border-top: 1px solid var(--border); padding: 1rem max(1rem, calc((100% - 70rem) / 2)); text-align: right; color: var(--muted); font-size: .875rem; overflow-wrap: anywhere; }
+.site-footer { border-top: 1px solid var(--border); padding: 1rem 0; color: var(--muted); font-size: .875rem; overflow-wrap: anywhere; }
+.site-footer-content { width: 100%; margin: 0 auto; padding: 0 1rem; text-align: right; }
 .site-footer .build-number { color: var(--text); }
 .site-footer p { margin: .25rem 0; }
 .theme-picker { margin-bottom: .75rem; }

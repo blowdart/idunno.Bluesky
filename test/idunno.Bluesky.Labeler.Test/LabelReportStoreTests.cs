@@ -146,6 +146,131 @@ public class LabelReportStoreTests
     [InlineData("sqlite")]
     [InlineData("postgresql")]
     [InlineData("mysql")]
+    public async Task PendingReportSurvivesRestartAndPromotesOnlyAfterVerifiedPolicyRecovery(string engine)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        (LabelAdministrationCaller administrator, LabelPolicyState policy) = await ActivateAsync(fixture);
+        ILabelReportStore store = (ILabelReportStore)fixture.Store;
+        ModerationReportAuthenticationResult authentication = await ReportTestAuthentication.CreateAsync(
+            s_reporter, policy.DatabaseTime, "pending-report");
+        LabelReportSubmission submission = new(s_account, Reason, "Policy verification is temporarily unavailable.");
+
+        LabelReportIntakeReceipt receipt = Success(await store.AcceptReportAsync(
+            authentication: authentication,
+            submission: submission,
+            expectedPolicyRevision: null,
+            maximumPendingReports: 1,
+            cancellationToken: token));
+        Assert.True(receipt.PendingVerification);
+        Assert.Equal(LabelServiceErrorCode.Unauthorized,
+            (await store.AcceptReportAsync(
+                authentication: authentication,
+                submission: submission,
+                expectedPolicyRevision: null,
+                maximumPendingReports: 1,
+                cancellationToken: token)).Error!.Code);
+
+        ILabelReportStore restarted = (ILabelReportStore)fixture.NewStore();
+        ILabelTableStore table = (ILabelTableStore)fixture.NewStore();
+        LabelTablePage pending = Success(await table.ReadTableAsync(administrator, new(LabelTableKind.PendingReports), token));
+        LabelPendingModerationReport pendingReport = Assert.Single(pending.PendingReports!);
+        Assert.Equal(receipt.Id, pendingReport.Id);
+        Assert.True(pendingReport.PendingVerification);
+        Assert.Empty(Success(await restarted.GetReportsAsync(administrator, cancellationToken: token)));
+        Assert.Empty(Success(await ((ILabelModerationStore)fixture.NewStore()).GetCasesAsync(administrator, cancellationToken: token)));
+
+        LabelPendingReportBatchResult batch = Success(await restarted.ProcessPendingReportsAsync(policy.Revision, 1, token));
+        Assert.Equal(1, batch.Processed);
+        Assert.False(batch.HasMore);
+        LabelModerationReport promoted = Assert.Single(Success(await restarted.GetReportsAsync(administrator, cancellationToken: token)));
+        Assert.Equal(receipt.Id, promoted.Id);
+        Assert.Equal(submission.Reason, promoted.Submission.Reason);
+        Assert.Equal("v1", promoted.PolicyVersion);
+        Assert.NotEqual(0, promoted.CaseId);
+        Assert.Equal(promoted.CaseId, Success(await ((ILabelModerationStore)fixture.NewStore())
+            .GetCaseAsync(administrator, promoted.CaseId, token)).Id);
+        Assert.Empty(Success(await table.ReadTableAsync(administrator, new(LabelTableKind.PendingReports), token)).PendingReports!);
+        Assert.Equal(0, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
+    }
+
+    [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task PendingReportCapacityRejectsOnlyNewIntakeAndReleasesAfterProcessing(string engine)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        (_, LabelPolicyState policy) = await ActivateAsync(fixture);
+        ILabelReportStore store = (ILabelReportStore)fixture.Store;
+        ModerationReportAuthenticationResult first = await ReportTestAuthentication.CreateAsync(s_reporter, policy.DatabaseTime, "queue-first");
+        ModerationReportAuthenticationResult second = await ReportTestAuthentication.CreateAsync(s_reporter, policy.DatabaseTime, "queue-second");
+        LabelReportSubmission submission = new(s_account, Reason);
+
+        Assert.True((await store.AcceptReportAsync(
+            authentication: first,
+            submission: submission,
+            expectedPolicyRevision: null,
+            maximumPendingReports: 1,
+            cancellationToken: token)).Succeeded);
+        Assert.Equal(LabelServiceErrorCode.PendingReportQueueFull,
+            (await store.AcceptReportAsync(
+                authentication: second,
+                submission: submission,
+                expectedPolicyRevision: null,
+                maximumPendingReports: 1,
+                cancellationToken: token)).Error!.Code);
+        Assert.Equal(1, Success(await store.ProcessPendingReportsAsync(policy.Revision, 1, token)).Processed);
+
+        LabelReportIntakeReceipt acceptedAfterCapacityFreed = Success(await store.AcceptReportAsync(
+            authentication: second,
+            submission: submission,
+            expectedPolicyRevision: null,
+            maximumPendingReports: 1,
+            cancellationToken: token));
+        Assert.True(acceptedAfterCapacityFreed.PendingVerification);
+        Assert.Equal(1, Success(await store.ProcessPendingReportsAsync(policy.Revision, 1, token)).Processed);
+        Assert.Equal(2, Success(await store.GetReportsAsync(caller: Success(await ((ILabelAdministrationStore)fixture.Store)
+            .AuthenticateLocalAsync("uid:0", token)), cancellationToken: token)).Count);
+    }
+
+    [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task PendingReportOutsideVerifiedSubjectScopeIsClosedWithoutCreatingCase(string engine)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        (LabelAdministrationCaller administrator, LabelPolicyState policy) = await ActivateAsync(
+            fixture, allowAccounts: false, subjectTypes: ["record"]);
+        ILabelReportStore store = (ILabelReportStore)fixture.Store;
+        ModerationReportAuthenticationResult authentication = await ReportTestAuthentication.CreateAsync(
+            s_reporter, policy.DatabaseTime, "out-of-scope-account");
+        LabelReportIntakeReceipt receipt = Success(await store.AcceptReportAsync(
+            authentication: authentication,
+            submission: new(s_account, Reason),
+            expectedPolicyRevision: null,
+            maximumPendingReports: 1,
+            cancellationToken: token));
+
+        LabelPendingReportBatchResult batch = Success(await store.ProcessPendingReportsAsync(policy.Revision, 1, token));
+        Assert.Equal(1, batch.Processed);
+        Assert.Empty(Success(await store.GetReportsAsync(administrator, cancellationToken: token)));
+        Assert.Empty(Success(await ((ILabelModerationStore)fixture.Store).GetCasesAsync(administrator, cancellationToken: token)));
+        LabelPendingModerationReport retained = Assert.Single(Success(await ((ILabelTableStore)fixture.Store)
+            .ReadTableAsync(administrator, new(LabelTableKind.PendingReports), token)).PendingReports!);
+        Assert.Equal(receipt.Id, retained.Id);
+        Assert.False(retained.PendingVerification);
+        Assert.Equal("Not Applicable", retained.ResolutionReason);
+        Assert.NotNull(retained.ProcessedAt);
+    }
+
+    [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
     public async Task ConcurrentFreshTokensRetainEveryReportButShareOneExactSubjectCase(string engine)
     {
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
@@ -418,7 +543,10 @@ public class LabelReportStoreTests
     /// <summary>Bootstraps protected review and independently verifies a complete report-accepting policy.</summary>
     private static async Task<(LabelAdministrationCaller Administrator, LabelPolicyState Policy)> ActivateAsync(
         StoreFixture fixture,
-        string reasonFields = "")
+        string reasonFields = "",
+        bool allowAccounts = true,
+        bool allowRecords = true,
+        IReadOnlyList<string>? subjectTypes = null)
     {
         CancellationToken token = TestContext.Current.CancellationToken;
         ILabelAdministrationStore team = (ILabelAdministrationStore)fixture.Store;
@@ -426,12 +554,17 @@ public class LabelReportStoreTests
         LabelAdministrationCaller administrator = Success(await team.AuthenticateLocalAsync("uid:0", token));
         ILabelPolicyStore store = (ILabelPolicyStore)fixture.Store;
         LabelPolicyState initial = await store.InitializePolicyAsync(cancellationToken: token);
+        string declarationSubjectTypes = JsonSerializer.Serialize(subjectTypes ?? ["account", "record"]);
         using JsonDocument declaration = JsonDocument.Parse($$"""
             {"$type":"app.bsky.labeler.service","policies":{"labelValues":["spam"]},
-             "createdAt":"2026-01-01T00:00:00Z","subjectTypes":["account","record"]{{reasonFields}}}
+             "createdAt":"2026-01-01T00:00:00Z","subjectTypes":{{declarationSubjectTypes}}{{reasonFields}}}
             """);
         LabelPolicyDefinition definition = new(
-            version: "v1", declaration: declaration.RootElement, allowAccounts: true, allowRecords: true, rules: "Review reports.");
+            version: "v1",
+            declaration: declaration.RootElement,
+            allowAccounts: allowAccounts,
+            allowRecords: allowRecords,
+            rules: "Review reports.");
         Success(await store.SavePolicyAsync(administrator, "draft", definition, "Draft.", token));
         LabelPolicyState publishing = Success(await store.BeginPolicyPublicationAsync(
             caller: administrator, operationId: "publish", version: "v1", expectedRevision: initial.Revision,

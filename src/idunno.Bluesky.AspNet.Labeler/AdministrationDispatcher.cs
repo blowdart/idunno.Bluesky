@@ -38,7 +38,7 @@ internal sealed partial class AdministrationDispatcher(
     ];
     internal static readonly string[] s_methods =
     [
-        "getTeam", "getAudit", "changeTeam", "enroll", "issueLabel", "negateLabel",
+        "getTeam", "getAudit", "changeTeam", "setTeamNotificationEmail", "enroll", "issueLabel", "negateLabel",
         "getOperation", "getPublicationState", "getMaintenanceState", "authorizeMaintenance",
         "beginRetirement", "advanceRetirement", "beginGracePeriod", "completeRetirement",
         "purgeRetiredData", "beginRotation", "confirmHostStopped", "captureRotationBoundary",
@@ -51,7 +51,7 @@ internal sealed partial class AdministrationDispatcher(
     ];
     internal static readonly string[] s_postMethods =
     [
-        "changeTeam", "enroll", "issueLabel", "negateLabel", "authorizeMaintenance",
+        "changeTeam", "setTeamNotificationEmail", "enroll", "issueLabel", "negateLabel", "authorizeMaintenance",
         "beginRetirement", "advanceRetirement", "beginGracePeriod", "completeRetirement", "purgeRetiredData",
         "beginRotation", "confirmHostStopped", "captureRotationBoundary", "verifyRotationKeyPublication",
         "resignRotationBatch", "completeRotation",
@@ -131,7 +131,7 @@ internal sealed partial class AdministrationDispatcher(
                     LabelServiceResult<IReadOnlyList<LabelTeamMember>> result = await administration.GetTeamAsync(caller, token).ConfigureAwait(false);
                     return result.Succeeded
                         ? new(true, Members: [.. result.Result.Select(member => new AdministrationMemberView(
-                            member.Did.Value, member.Role, member.Active, member.Removed))])
+                            member.Did.Value, member.Role, member.Active, member.Removed, member.NotificationEmail))])
                         : Failure(result.Error);
                 }
             case "getAudit":
@@ -160,6 +160,33 @@ internal sealed partial class AdministrationDispatcher(
                         change: new(
                             operationId: command.OperationId, action: command.Action.Value, target: did,
                             reason: command.Reason, role: command.Role, credential: command.Credential),
+                        cancellationToken: token).ConfigureAwait(false);
+                    return result.Succeeded ? new(true, Sequence: result.Result.Sequence, OperationId: result.Result.OperationId) : Failure(result.Error);
+                }
+            case "setTeamNotificationEmail":
+                {
+                    if (!Did.TryParse(command.Target, out Did? did))
+                    {
+                        return new(false, "InvalidRequest", "Supply the active administrator's DID.");
+                    }
+
+                    LabelTeamNotificationEmailChange change;
+                    try
+                    {
+                        change = new(
+                            operationId: command.OperationId,
+                            target: did,
+                            notificationEmail: command.NotificationEmail,
+                            reason: command.Reason);
+                    }
+                    catch (ArgumentException)
+                    {
+                        return new(false, "InvalidRequest", "Supply a valid email address and an audit reason without email addresses.");
+                    }
+
+                    LabelServiceResult<LabelAdministrationReceipt> result = await administration.SetTeamNotificationEmailAsync(
+                        caller: caller,
+                        change: change,
                         cancellationToken: token).ConfigureAwait(false);
                     return result.Succeeded ? new(true, Sequence: result.Result.Sequence, OperationId: result.Result.OperationId) : Failure(result.Error);
                 }
@@ -789,7 +816,8 @@ internal sealed record AdministrationCommand(
     bool Confirmed = false,
     string? ReplacementKeyId = null,
     ModerationCommand? Moderation = null,
-    long? ExpectedLabelSequence = null)
+    long? ExpectedLabelSequence = null,
+    string? NotificationEmail = null)
 {
     internal const int MaximumAuditPageSize = 16;
 
@@ -825,7 +853,12 @@ internal sealed record AdministrationResponse(
 internal sealed record AdministrationAuthorSummaryView(string Did, long Reports, long Records, IReadOnlyDictionary<string, long> ReportKinds);
 
 /// <summary>Contains public team inspection fields.</summary>
-internal sealed record AdministrationMemberView(string Did, LabelTeamRole Role, bool Active, bool Removed);
+internal sealed record AdministrationMemberView(
+    string Did,
+    LabelTeamRole Role,
+    bool Active,
+    bool Removed,
+    string? NotificationEmail = null);
 /// <summary>Contains authorized audit inspection fields.</summary>
 internal sealed record AdministrationAuditView(long Sequence, string OperationId, string? Actor, string? LocalIdentity, string Action, string Reason, bool Succeeded, DateTimeOffset? CreatedAt = null);
 /// <summary>Contains authorized publication and lifecycle checkpoints.</summary>

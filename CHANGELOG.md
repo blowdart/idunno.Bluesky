@@ -9,10 +9,12 @@
 * Checks the active public policy in the background every five minutes with a default 30-minute verification lifetime; moderation health reads stored freshness without remote requests. Failed lookups do not extend validity, and confirmed differences require administrator recovery.
 
 * Resumes bounded policy-label withdrawal batches in the background independently of browser lifetime and remote administration enablement, signing with the host's active key and waiting for durable stream publication.
+* Added durable, bounded pending report intake during policy-verification outages, with authenticated replay protection, moderator visibility, automatic verified-scope promotion, and retained out-of-scope outcomes without cases.
 * Added explicitly optional Xenon report intake, bounded service authentication/admission and independent declaration verification, plus shared local/HTTPS case, appeal, workflow-queue and policy-recovery administration. Public label distribution and remote CLI enablement remain independent.
 * Separates optional moderation policy health at `/health/labeler/moderation` from distribution readiness so policy failures do not remove recovery routes from traffic; malformed Unicode reports and policy inputs return classified input errors.
 * Rejects fractional-millisecond moderation verification freshness during registration so configured and persisted health-check intervals cannot disagree.
 * Adds a shared, restart-resumed background checker that resolves deleted-post reports and appeals only after an authoritative PDS `RecordNotFound`, with reason `Post deleted`, explicit system audit, revision fencing and no label changes.
+* Optionally sends deduplicated policy-verification failure alerts to active administrators who register an address, using authenticated SMTP with mandatory STARTTLS and durable retry state.
 
 * Added opt-in exact-audience, method-bound service-token administrative endpoints and protected Windows named-pipe/Linux Unix-socket administration, including explicit browserless root/SID setup and shared team authorization.
 * Remote administration is disabled by default and can be enabled or disabled through reloadable host options independently of protected local administration.
@@ -42,6 +44,7 @@
 * Loads the current policy into the editor and supports clearing only unsaved editor values. Current-state metadata uses a two-column table, declarations are pretty-printed and failed saves retain entered values.
 * Lists all unpublished policy drafts in Current State with per-draft loading and server-confirmed deletion, describes editable internal identifiers as Policy IDs and uses submission alone to confirm draft saving. Policy phase names are displayed as separate words.
 * Searches the full team by DID or verified handle with counted, filtered paging; spaces team glyphs and hides the role selector for membership actions other than Change role when scripting is enabled.
+* Lets active administrators register or clear their policy-verification alert email from Team settings.
 * Uses a compact team search with aligned actions and adds placeholder hints to team and audit identity filters.
 * Selects team members by their displayed identity to prefill the update form with their DID and current role, and uses form submission alone to confirm enrollment and membership updates.
 * Shows eye, gavel and user-gear glyphs beside team roles and visually subdues removed members while retaining their identity links. A single Status column distinguishes Active, Suspended and Removed members with circle-check, circle-pause and circle-xmark glyphs alongside the state names.

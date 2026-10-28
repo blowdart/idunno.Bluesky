@@ -525,6 +525,14 @@ internal sealed partial class AdministrationDispatcher
         value.Submission.ModToolName, value.Submission.ModToolMetadata,
         value.DecisionOperationId, value.HandledAt, value.ResolutionReason);
 
+    /// <summary>Projects pending intake without creating a case link or exposing replay evidence.</summary>
+    private static PendingModerationReportView PendingReportView(LabelPendingModerationReport value) => new(
+        ModerationWire.ReportOutput(value.Id, value.Submission, value.ReportedBy, value.CreatedAt),
+        value.PendingVerification ? "PendingVerification" : "NotApplicable",
+        value.PolicyVersion,
+        value.ProcessedAt,
+        value.ResolutionReason);
+
     /// <summary>Projects complete versioned policy intent without repository credentials.</summary>
     private static ModerationPolicyDefinitionView DefinitionView(LabelPolicyDefinition value)
     {
@@ -618,7 +626,8 @@ internal sealed record ModerationResponse(
     long[]? PendingAppealCaseIds = null,
     string[]? AccountLabels = null,
     ModerationActivityPageView? Activity = null,
-    ModerationSearchPageView? Search = null);
+    ModerationSearchPageView? Search = null,
+    PendingModerationReportView[]? PendingReports = null);
 
 /// <summary>Contains one authorized mixed report/appeal search page and explicit index-coverage information.</summary>
 internal sealed record ModerationSearchPageView(long Page, long Total, ModerationSearchHitView[] Hits, long PendingHandleCases, long UnavailableHandleCases);
@@ -687,6 +696,13 @@ internal sealed record ModerationCaseView(long Id, long Revision, ReportSubjectV
 internal sealed record ModerationCaseEventView(long Sequence, string OperationId, string Action, string Actor, string? LocalIdentity, string Reason, DateTimeOffset CreatedAt, ModerationCaseView Case);
 /// <summary>Contains confidential report linkage and acceptance provenance.</summary>
 internal sealed record ModerationReportView(long CaseId, ReportOutput Report, string PolicyVersion, string Audience, string? ModToolName, JsonElement? ModToolMetadata, string? DecisionOperationId, DateTimeOffset? HandledAt, string? ResolutionReason = null);
+/// <summary>Contains an authenticated report retained outside case review until policy scope is known.</summary>
+internal sealed record PendingModerationReportView(
+    ReportOutput Report,
+    string Status,
+    string? PolicyVersion,
+    DateTimeOffset? ProcessedAt,
+    string? ResolutionReason);
 /// <summary>Contains a complete selected policy definition for explicit publication or inspection.</summary>
 internal sealed record ModerationPolicyDefinitionView(string Version, JsonElement Declaration, bool AllowAccounts, bool AllowRecords, string[]? AllowedRecordCollections, string Rules);
 /// <summary>Contains the shared durable gate, observation deadline and conditional-update CID.</summary>

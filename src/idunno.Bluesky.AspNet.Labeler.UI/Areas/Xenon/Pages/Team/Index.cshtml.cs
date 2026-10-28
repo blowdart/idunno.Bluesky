@@ -26,9 +26,18 @@ public sealed class IndexModel : PageModel
     /// <summary>Gets the selected member's current persisted role.</summary>
     internal LabelTeamRole SelectedRole { get; private set; } = LabelTeamRole.Viewer;
 
+    /// <summary>Gets whether the current administrator can manage policy-alert email settings.</summary>
+    internal bool CanManagePolicyEmail { get; private set; }
+
+    /// <summary>Gets the current administrator's registered policy-alert email.</summary>
+    internal string? CurrentNotificationEmail { get; private set; }
+
     /// <summary>Loads active members and retained membership tombstones.</summary>
     public async Task OnGetAsync()
     {
+        LabelerModerationOptions? moderationOptions = HttpContext.RequestServices.GetService<LabelerModerationOptions>();
+        CanManagePolicyEmail = ViewData["CurrentRole"] is LabelTeamRole.Administrator &&
+            moderationOptions?.PolicyEmail is { Enabled: true, Server: { Length: > 0 } };
         Table = TableNavigation.Read(Request, new(LabelTableKind.Team, Sort: LabelTableSort.Subject, Ascending: true));
         if (Table is null)
         {
@@ -65,6 +74,16 @@ public sealed class IndexModel : PageModel
             Data.TryGetProperty("members", out JsonElement members) &&
             members.ValueKind == JsonValueKind.Array)
         {
+            string? actor = User.FindFirst(idunno.AtProto.Authentication.AtProtoClaims.Did)?.Value;
+            JsonElement currentMember = members.EnumerateArray()
+                .FirstOrDefault(member => member.GetProperty("did").GetString() == actor);
+            if (currentMember.ValueKind == JsonValueKind.Object &&
+                currentMember.TryGetProperty("notificationEmail", out JsonElement notificationEmail) &&
+                notificationEmail.ValueKind == JsonValueKind.String)
+            {
+                CurrentNotificationEmail = notificationEmail.GetString();
+            }
+
             string selected = Request.Query["member"].ToString();
             JsonElement member = members.EnumerateArray().FirstOrDefault(member => member.GetProperty("did").GetString() == selected);
             if (member.ValueKind == JsonValueKind.Object)
@@ -138,6 +157,45 @@ public sealed class IndexModel : PageModel
         if (response.Succeeded)
         {
             TempData["Status"] = $"Membership operation {operationId} completed.";
+            return RedirectToPage();
+        }
+
+        await OnGetAsync().ConfigureAwait(false);
+        return Page();
+    }
+
+    /// <summary>Registers or clears the current administrator's policy-verification alert address.</summary>
+    /// <returns>An action result that displays the outcome of the update.</returns>
+    public async Task<IActionResult> OnPostNotificationEmailAsync()
+    {
+        LabelerModerationOptions? moderationOptions = HttpContext.RequestServices.GetService<LabelerModerationOptions>();
+        if (ViewData["CurrentRole"] is not LabelTeamRole.Administrator ||
+            moderationOptions?.PolicyEmail is not { Enabled: true, Server: { Length: > 0 } })
+        {
+            return Forbid();
+        }
+
+        string? actor = User.FindFirst(idunno.AtProto.Authentication.AtProtoClaims.Did)?.Value;
+        if (actor is null || !idunno.AtProto.Did.TryParse(actor, out idunno.AtProto.Did? did))
+        {
+            return Forbid();
+        }
+
+        string email = await UiPageHelpers.FormValueAsync(this, "notificationEmail", 254).ConfigureAwait(false);
+        string operationId = await UiPageHelpers.FormValueAsync(this, "operationId", 256).ConfigureAwait(false);
+        AdministrationResponse response = await UiPageHelpers.DispatchAsync(
+            this,
+            new AdministrationCommand(
+                Method: "setTeamNotificationEmail",
+                OperationId: operationId,
+                Reason: "Update policy alert email.",
+                Target: did.Value,
+                NotificationEmail: email.Length == 0 ? null : email)).ConfigureAwait(false);
+        if (response.Succeeded)
+        {
+            TempData["Status"] = email.Length == 0
+                ? "Policy verification alert email cleared."
+                : "Policy verification alert email updated.";
             return RedirectToPage();
         }
 

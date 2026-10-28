@@ -36,20 +36,23 @@ publication and independently verifies the authoritative declaration.
 |---|---|---|
 | `MaximumConcurrentReports` | 16 | Concurrent report requests admitted by one process |
 | `ReportsPerMinute` | 120 | Requests admitted in one process's admission window |
+| `MaximumPendingReports` | 200,000 | Authenticated reports retained while policy verification is unavailable |
 | `VerificationFreshness` | 30 minutes | Maximum persisted independent-observation age |
 | `MaximumServiceTokenLifetime` | 15 minutes | Maximum reporting assertion lifetime |
 
 All hosts sharing a database must use its persisted verification freshness.
+They must also use the same pending-report capacity.
 Configure freshness in whole milliseconds; registration rejects fractional
 milliseconds rather than silently truncating them to database precision.
 Traffic limits are process-local, not cluster quotas. Apply additional
 deployment-wide limits at the trusted proxy. Report intake and scheduled
 verification have bounded deadlines; a lookup timeout does not refresh
-permission. A background task checks the active public policy at startup and
-every five minutes, independently of traffic. Pending publications and recovery
-conflicts are not automatically activated by this task. A confirmed mismatch
-closes moderation immediately; an unavailable check leaves the previous
-verification deadline unchanged.
+permission. Report intake reads only the stored verification gate and never
+waits on a remote declaration lookup. A background task checks the active public
+policy at startup and every five minutes, independently of traffic. Pending
+publications and recovery conflicts are not automatically activated by this
+task. A confirmed mismatch closes moderation immediately; an unavailable check
+leaves the previous verification deadline unchanged.
 
 `MapLabelerModeration()` maps `/health/labeler/moderation` for separate policy
 monitoring. This check reads stored policy state and freshness without making
@@ -106,6 +109,25 @@ administration envelope. It excludes case identifiers, captured appeal labels,
 policy/authentication evidence and tool metadata. Report, replay reservation,
 case linkage, any appeal capture and audit commit atomically. Intake never
 issues or withdraws a label.
+
+If policy verification is unavailable, authenticated reports are durably queued
+and receive the ordinary successful protocol response. They remain visible in
+Xenon's Reports page but are not cases and cannot be acted on or cause label
+issuance. This applies when the policy is stale, conflicting or not yet
+published; report requests do not block on remote verification. Pending reports
+do not expire. After an administrator verifies an active policy, the background
+verifier processes the queue in bounded restart-resumable batches:
+subjects allowed by the policy enter ordinary case review, while subjects
+outside its scope remain retained as `Not Applicable` without creating a case.
+Appeal ownership is checked at intake, and eligible appeal reports preserve
+their label snapshot from that time.
+
+The configured queue limit counts only reports still awaiting verification.
+When it is reached, new authenticated submissions receive `503 Service
+Unavailable` with `Retry-After`; already queued reports are retained. The limit
+is a storage-protection boundary, not a time-based retention policy. Database
+failures and request deadlines remain explicit service errors and do not produce
+a success-shaped receipt.
 
 ## Cases, workflow views and decisions
 
@@ -285,6 +307,50 @@ rejects closure; the durable schedule allows a later fresh check after restart.
 History and audit use explicit `system:deleted-post` provenance.
 This shared worker operates with or without the UI and independently of remote
 CLI administration.
+
+### Policy verification email alerts
+
+Email alerts are optional. When enabled, independent background policy-verification
+failures create one durable notification per continuous failure incident. Delivery
+is retried after SMTP errors and resumes after restart; SMTP cannot participate in
+the database transaction, so delivery is at-least-once. A successful verification
+closes the incident without discarding an undelivered alert. Reports remain queued
+and non-actionable while verification is unavailable; email configuration does not
+change report intake or return behavior.
+
+Active administrators can register or clear their own alert address on the Xenon
+Team page. Only active administrators with a registered address receive alerts.
+The message contains the labeler DID, failure category and first failure time, not
+report contents. Addresses are persisted with team state, are visible only to
+administrators, and are excluded from audit reasons and delivery logs.
+
+Configure `LabelerModerationOptions.PolicyEmail` from application settings before
+calling `AddLabelerModeration`. `SmtpClient` uses mandatory STARTTLS; a server that
+does not advertise STARTTLS or cannot establish TLS is rejected, with no plaintext
+fallback. SMTP username and password must be configured together. Keep the password
+in a secret store or environment-backed configuration rather than a checked-in file.
+
+```json
+{
+  "LabelerModeration": {
+    "PolicyEmail": {
+      "Enabled": true,
+      "Server": "smtp.example.net",
+      "Port": 587,
+      "FromAddress": "xenon@example.net",
+      "UserName": "xenon-smtp",
+      "Password": "<secret from deployment configuration>"
+    }
+  }
+}
+```
+
+Bind the section to `LabelerModerationOptions` and pass it to
+`AddLabelerModeration(issuer, httpClient, options)`. Port defaults to 587; the
+server and sender address are required when email is enabled.
+When enabled, the shared label store must also implement
+`ILabelPolicyAlertStore`; custom stores do not need that capability while email
+alerts remain disabled.
 
 Audit is application-append-only and atomic with mutations. Successful
 inspection does not append another audit entry; denied operations remain

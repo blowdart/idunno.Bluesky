@@ -10,6 +10,23 @@
 }
 <h1>Team and membership</h1>
 <p>Team authority is persisted by DID. Suspension, removal and role changes take effect on the next server-side authorization check.</p>
+@if (Model.CanManagePolicyEmail)
+{
+    <section class="panel">
+        <h2>Policy verification alerts</h2>
+        <p>@(Model.CurrentNotificationEmail is null
+            ? "Register an address for alerts when background policy verification fails."
+            : "Update your email address for alerts when background policy verification fails.")
+            Notifications go only to active administrators with a registered address. Leave the field blank to clear your address.</p>
+        <form method="post" asp-page-handler="NotificationEmail">
+            <input type="hidden" name="operationId" value="@(ViewData["OperationId"] ?? Guid.NewGuid().ToString("N"))" />
+            <label class="field" for="notification-email">Your alert email address
+                <input id="notification-email" name="notificationEmail" type="email" value="@Model.CurrentNotificationEmail" maxlength="254" autocomplete="email" />
+            </label>
+            <p class="form-actions"><button type="submit">@(Model.CurrentNotificationEmail is null ? "Save alert email" : "Update email")</button></p>
+        </form>
+    </section>
+}
 <form method="get" class="panel team-search">
     <label class="field" for="team-search">Team member DID or handle
         <input id="team-search" name="Search" value="@Request.Query["Search"]" maxlength="256" placeholder="DID or handle" />
