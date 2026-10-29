@@ -337,7 +337,7 @@ internal sealed partial class AdministrationDispatcher
                     {
                         LabelIssuanceService issuance = new(
                             issuer: caller.Issuer,
-                            signingKey: signingKeyRing.GetSigningKey(signingKeyRing.ActiveKeyId),
+                            signingKey: SigningKeys.GetSigningKey(SigningKeys.ActiveKeyId),
                             store: store,
                             authorizer: new LabelTeamAuthorizer(administration, caller),
                             policyProvider: policy,

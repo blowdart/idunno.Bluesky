@@ -198,6 +198,12 @@ You'll need to work through existing labels, publish any required withdrawals, a
 an opportunity to retrieve them. The store remembers your progress; it doesn't make those decisions
 or run the shutdown for you.
 
+For an actual deployment, use the authorized [retirement workflow](retirement.md), not raw store
+helpers. It couples immutable command receipts, action-specific challenges, live authority and audit,
+and runs bounded withdrawal/purge work in a durable server worker. It requires explicit 1-365 day grace
+selection and completion availability attestation. The following raw primitives describe storage
+mechanics only; they do not supply that operator authorization or confirmation.
+
 Start with `BeginRetirementAsync(expectedRevision)`. This stops ordinary issuance and fixes the last
 historical sequence your retirement service needs to inspect. That service works through the history
 and signs the negations required by your policy. Publish all existing history before reading it through

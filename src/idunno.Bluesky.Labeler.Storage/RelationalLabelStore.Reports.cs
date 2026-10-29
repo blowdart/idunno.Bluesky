@@ -10,6 +10,7 @@ using System.Text.Json;
 
 using idunno.AtProto;
 using idunno.Bluesky.Labeler.Administration;
+using idunno.Bluesky.Labeler.Maintenance;
 using idunno.Bluesky.Labeler.Moderation;
 
 namespace idunno.Bluesky.Labeler.Storage;
@@ -43,6 +44,12 @@ internal abstract partial class RelationalLabelStore
                 result = CaseFailure<LabelReportIntakeReceipt>(
                     LabelServiceErrorCode.Unauthorized,
                     "The reporting token is expired or addressed to another labeler.");
+            }
+            else if (state.Phase != LabelerLifecyclePhase.Active)
+            {
+                result = CaseFailure<LabelReportIntakeReceipt>(
+                    LabelServiceErrorCode.IssuanceClosed,
+                    "Report and appeal intake is closed because the labeler is retiring.");
             }
             else
             {
@@ -125,6 +132,13 @@ internal abstract partial class RelationalLabelStore
         ArgumentOutOfRangeException.ThrowIfGreaterThan(limit, 100);
         return AdministrationAsync(async (connection, transaction, state) =>
         {
+            if (state.Phase != LabelerLifecyclePhase.Active)
+            {
+                return CaseFailure<LabelPendingReportBatchResult>(
+                    LabelServiceErrorCode.IssuanceClosed,
+                    "Pending reports remain retained for staff reconciliation after retirement starts.");
+            }
+
             long now = await DatabaseTimeAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             ModerationPolicyGate? gate = await ReadPolicyGateAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             if (gate is null || gate.Revision != expectedPolicyRevision ||
@@ -413,6 +427,13 @@ internal abstract partial class RelationalLabelStore
         if ((authentication is null) == (pending is null))
         {
             throw new InvalidOperationException("Report promotion requires exactly one authentication source.");
+        }
+
+        if (state.Phase != LabelerLifecyclePhase.Active)
+        {
+            return CaseFailure<LabelModerationReport>(
+                LabelServiceErrorCode.IssuanceClosed,
+                "Report and appeal intake is closed because the labeler is retiring.");
         }
 
         ModerationPolicyGate? gate = await ReadPolicyGateAsync(connection, transaction, token).ConfigureAwait(false);

@@ -88,6 +88,13 @@ internal abstract partial class RelationalLabelStore
                         : LabelServiceResult<LabelPolicyDefinition>.Failure(recovered.Error);
                 }
 
+                if ((await StateAsync(connection, transaction, cancellationToken).ConfigureAwait(false)).Phase != LabelerLifecyclePhase.Active)
+                {
+                    return CaseFailure<LabelPolicyDefinition>(
+                        LabelServiceErrorCode.IssuanceClosed,
+                        "New policy workflows are closed because the labeler is retiring.");
+                }
+
                 if (await ReadPolicyGateAsync(connection, transaction, cancellationToken).ConfigureAwait(false) is null)
                 {
                     return CaseFailure<LabelPolicyDefinition>(LabelServiceErrorCode.PolicyUnavailable, "Moderation is not enabled.");

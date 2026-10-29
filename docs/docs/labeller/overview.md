@@ -70,7 +70,7 @@ flowchart TD
     operate --> retire["Announce shutdown and stop ordinary issuance"]
     retire --> withdraw["Work through history and publish withdrawals"]
     withdraw --> grace["Keep distribution running for a grace period"]
-    grace --> finish["Finish retirement and take the service offline"]
+    grace --> finish["Attest availability and complete; distribution may continue"]
     finish --> retain["Keep or remove local data under your retention policy"]
 ```
 
@@ -207,7 +207,8 @@ an explicitly supported transaction, not two unrelated database writes and cross
 
 If you're retiring the Bureau, tell people what's happening and how long distribution and review channels
 will remain available. Stop ordinary issuance and take a fixed boundary of the history you'll work through.
-Then decide which labels need withdrawing, sign the negations, and save your progress as you go.
+Use the [confirmed retirement workflow](retirement.md) to start the durable bounded worker.
+It signs the required negations and saves progress across restarts.
 Existing negations, expiry and later decisions matter here: don't blindly negate every historical entry.
 
 Once all those withdrawals are published, keep queries and subscriptions running for a **grace period**.
@@ -215,14 +216,18 @@ This gives disconnected consumers an opportunity to catch up. You choose the dur
 mandate one, and waiting doesn't prove everyone has received the withdrawals.
 Saving a deadline in the database won't keep your host running or finish retirement for you.
 
-After the grace period, explicitly complete retirement, take the service offline, and update discovery
-and public information to match. Think carefully before removing public verification keys: consumers may
+Explicitly select 1-365 days with no implicit default. Review outages and extend grace when necessary;
+completion requires an explicit operator availability attestation, not merely an elapsed deadline.
+After completion, distribution of retained negations continues until a separate offline or cleanup
+decision. Update public information to reflect that decision. Think carefully before removing public verification keys: consumers may
 still need them to check historical labels against the current DID document.
 Destroying a private key is a separate decision, not something a database purge does.
 
 Finally, follow your retention and backup policies. If you've authorized local deletion, purge in batches
 so you can resume after an interruption. Keep the stream identity and sequence high-water marks so old
-positions can't be reused. Removing local history won't erase backups or copies held by other people.
+positions can't be reused. Label-history cleanup retains moderation and administrative audit.
+Removing local history won't erase backups or copies held by other people. The separate key-removal
+workflow records operator inventory/attestation; it does not verify external deletion.
 
 ## What's doing all this work?
 

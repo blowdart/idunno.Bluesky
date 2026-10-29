@@ -25,7 +25,7 @@ namespace idunno.Bluesky.Labeler.Storage;
 internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetrics metrics)
     : ILabelStore, ILabelAdministrationStore, ILabelMaintenanceStore, ILabelSigningKeySelectionStore, ILabelModerationStore, ILabelPolicyStore, ILabelReportStore, ILabelAppealStore, ILabelTableStore, ILabelSearchStore, ILabelDeletedPostStore, ILabelPolicyAlertStore
 {
-    private const int SchemaVersion = 11;
+    private const int SchemaVersion = 12;
     private const long MaximumSequence = 9_007_199_254_740_991;
     private static readonly UTF8Encoding s_strictUtf8 = new(false, true);
     /// <summary>Gets or sets the test hook for failures known to occur before commit submission.</summary>
@@ -80,7 +80,7 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
             transaction: transaction,
             sql: schema,
             token: token).ConfigureAwait(false);
-        // Backfill is repeatable after interrupted nontransactional MySQL DDL. Old writers reject v11.
+        // Backfill is repeatable after interrupted nontransactional MySQL DDL. Old writers reject v12.
         await BackfillDistributionAsync(connection, transaction, token).ConfigureAwait(false);
         await BackfillDecisionIndexAsync(connection, transaction, token).ConfigureAwait(false);
         await BackfillSubjectIndexAsync(connection, transaction, token).ConfigureAwait(false);
@@ -97,7 +97,7 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
         await ExecuteAsync(
             connection: connection,
             transaction: transaction,
-            sql: "UPDATE label_schema SET version=11 WHERE id=1",
+            sql: "UPDATE label_schema SET version=12 WHERE id=1",
             token: token).ConfigureAwait(false);
     }
 
@@ -1842,91 +1842,108 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
                 throw new InvalidOperationException("Only a completely retired labeler can be purged.");
             }
 
-            long nextFloor = state.ReplayFloor + Math.Min(limit, state.IssuedThrough - state.ReplayFloor);
-            await ExecuteAsync(
-                connection: connection,
-                transaction: transaction,
-                sql: "DELETE FROM label_distribution WHERE seq<=@floor",
-                token: cancellationToken,
-                ("@floor", nextFloor)).ConfigureAwait(false);
-            await ExecuteAsync(
-                connection: connection,
-                transaction: transaction,
-                sql: "DELETE FROM label_decision_index WHERE seq<=@floor",
-                token: cancellationToken,
-                ("@floor", nextFloor)).ConfigureAwait(false);
-            await ExecuteAsync(
-                connection: connection,
-                transaction: transaction,
-                sql: "DELETE FROM label_subject_index WHERE seq<=@floor",
-                token: cancellationToken,
-                ("@floor", nextFloor)).ConfigureAwait(false);
-            await ExecuteAsync(
-                connection: connection,
-                transaction: transaction,
-                sql: "DELETE FROM label_entries WHERE seq<=@floor",
-                token: cancellationToken,
-                ("@floor", nextFloor)).ConfigureAwait(false);
-            // Receipts are bounded separately, including zero-label retirement checkpoint receipts.
-            DbCommand keys = Command(
-                connection: connection,
-                transaction: transaction,
-                sql: "SELECT operation_hash FROM label_operations ORDER BY revision LIMIT @limit",
-                ("@limit", limit));
-            await using ConfiguredAsyncDisposable keysDisposal = keys.ConfigureAwait(false);
-            List<byte[]> hashes = [];
-            DbDataReader reader = await keys.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-            await using (reader.ConfigureAwait(false))
-            {
-                while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-                {
-                    hashes.Add((byte[])reader.GetValue(0));
-                }
-            }
-
-            foreach (byte[] hash in hashes)
-            {
-                await ExecuteAsync(
-                    connection: connection,
-                    transaction: transaction,
-                    sql: "DELETE FROM label_operations WHERE operation_hash=@hash",
-                    token: cancellationToken,
-                    ("@hash", hash)).ConfigureAwait(false);
-            }
-
-            object? remaining = await ScalarAsync(
-                connection: connection,
-                transaction: transaction,
-                sql: "SELECT 1 FROM label_operations LIMIT 1",
-                token: cancellationToken).ConfigureAwait(false);
-            // Service receipts include no-op decisions with no sequence. Purge them independently in
-            // bounded revision order so neither those receipts nor their audit context survive purge.
-            await ExecuteAsync(
-                connection: connection,
-                transaction: transaction,
-                sql: "DELETE FROM label_decisions WHERE revision IN (SELECT revision FROM (SELECT revision FROM label_decisions ORDER BY revision LIMIT @limit) AS purge_decisions)",
-                token: cancellationToken,
-                ("@limit", limit)).ConfigureAwait(false);
-            object? decisionsRemaining = await ScalarAsync(
-                connection: connection,
-                transaction: transaction,
-                sql: "SELECT 1 FROM label_decisions LIMIT 1",
-                token: cancellationToken).ConfigureAwait(false);
-            LabelStoreState next = state with
-            {
-                Revision = checked(state.Revision + 1),
-                ReplayFloor = nextFloor,
-                Phase = nextFloor == state.IssuedThrough && remaining is null && decisionsRemaining is null
-                    ? LabelerLifecyclePhase.Purged : LabelerLifecyclePhase.Purging
-            };
-            await SaveAsync(
-                connection: connection,
-                transaction: transaction,
-                state: next,
-                token: cancellationToken).ConfigureAwait(false);
-            return next;
+            return await PurgeHistoryAsync(connection, transaction, state, limit, cancellationToken).ConfigureAwait(false);
         },
             token: cancellationToken);
+    }
+
+    /// <summary>Deletes one bounded history batch under the caller's existing authorization and stream transaction.</summary>
+    private static async Task<LabelStoreState> PurgeHistoryAsync(
+        DbConnection connection,
+        DbTransaction transaction,
+        LabelStoreState state,
+        int limit,
+        CancellationToken cancellationToken)
+    {
+        long nextFloor = state.ReplayFloor + Math.Min(limit, state.IssuedThrough - state.ReplayFloor);
+        await ExecuteAsync(
+            connection: connection,
+            transaction: transaction,
+            sql: "DELETE FROM label_retirement_slots WHERE seq<=@floor",
+            token: cancellationToken,
+            ("@floor", nextFloor)).ConfigureAwait(false);
+        await ExecuteAsync(
+            connection: connection,
+            transaction: transaction,
+            sql: "DELETE FROM label_distribution WHERE seq<=@floor",
+            token: cancellationToken,
+            ("@floor", nextFloor)).ConfigureAwait(false);
+        await ExecuteAsync(
+            connection: connection,
+            transaction: transaction,
+            sql: "DELETE FROM label_decision_index WHERE seq<=@floor",
+            token: cancellationToken,
+            ("@floor", nextFloor)).ConfigureAwait(false);
+        await ExecuteAsync(
+            connection: connection,
+            transaction: transaction,
+            sql: "DELETE FROM label_subject_index WHERE seq<=@floor",
+            token: cancellationToken,
+            ("@floor", nextFloor)).ConfigureAwait(false);
+        await ExecuteAsync(
+            connection: connection,
+            transaction: transaction,
+            sql: "DELETE FROM label_entries WHERE seq<=@floor",
+            token: cancellationToken,
+            ("@floor", nextFloor)).ConfigureAwait(false);
+        // Receipts are bounded separately, including zero-label retirement checkpoint receipts.
+        DbCommand keys = Command(
+            connection: connection,
+            transaction: transaction,
+            sql: "SELECT operation_hash FROM label_operations ORDER BY revision LIMIT @limit",
+            ("@limit", limit));
+        await using ConfiguredAsyncDisposable keysDisposal = keys.ConfigureAwait(false);
+        List<byte[]> hashes = [];
+        DbDataReader reader = await keys.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        await using (reader.ConfigureAwait(false))
+        {
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                hashes.Add((byte[])reader.GetValue(0));
+            }
+        }
+
+        foreach (byte[] hash in hashes)
+        {
+            await ExecuteAsync(
+                connection: connection,
+                transaction: transaction,
+                sql: "DELETE FROM label_operations WHERE operation_hash=@hash",
+                token: cancellationToken,
+                ("@hash", hash)).ConfigureAwait(false);
+        }
+
+        object? remaining = await ScalarAsync(
+            connection: connection,
+            transaction: transaction,
+            sql: "SELECT 1 FROM label_operations LIMIT 1",
+            token: cancellationToken).ConfigureAwait(false);
+        // Service receipts include no-op decisions with no sequence. Purge them independently in
+        // bounded revision order so neither those receipts nor their audit context survive purge.
+        await ExecuteAsync(
+            connection: connection,
+            transaction: transaction,
+            sql: "DELETE FROM label_decisions WHERE revision IN (SELECT revision FROM (SELECT revision FROM label_decisions ORDER BY revision LIMIT @limit) AS purge_decisions)",
+            token: cancellationToken,
+            ("@limit", limit)).ConfigureAwait(false);
+        object? decisionsRemaining = await ScalarAsync(
+            connection: connection,
+            transaction: transaction,
+            sql: "SELECT 1 FROM label_decisions LIMIT 1",
+            token: cancellationToken).ConfigureAwait(false);
+        LabelStoreState next = state with
+        {
+            Revision = checked(state.Revision + 1),
+            ReplayFloor = nextFloor,
+            Phase = nextFloor == state.IssuedThrough && remaining is null && decisionsRemaining is null
+                ? LabelerLifecyclePhase.Purged : LabelerLifecyclePhase.Purging
+        };
+        await SaveAsync(
+            connection: connection,
+            transaction: transaction,
+            state: next,
+            token: cancellationToken).ConfigureAwait(false);
+        return next;
     }
 
     public async Task<LabelStoreSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default)

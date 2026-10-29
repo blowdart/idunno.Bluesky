@@ -27,6 +27,29 @@ namespace idunno.Bluesky.AspNet.Labeler.Integration.Test;
 
 public class AdministrationTests
 {
+    [Theory]
+    [InlineData("issueLabel")]
+    [InlineData("negateLabel")]
+    [InlineData("advanceRetirement")]
+    public async Task SigningAdministrationCannotBypassStoppedHostAdmission(string method)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(key, identity);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        Assert.True((await team.BootstrapAsync(s_actor, "uid:0", "bootstrap-admission", token)).Succeeded);
+        LabelAdministrationCaller caller = (await team.AuthenticateLocalAsync("uid:0", token)).Result!;
+        await fixture.Services.GetRequiredService<LabelerHost>().StopAsync(token);
+        AdministrationResponse response = await fixture.Services.GetRequiredService<AdministrationDispatcher>().DispatchAsync(
+            caller: caller,
+            command: new(Method: method, Reason: "Check stopped signing admission."),
+            token: token);
+        Assert.False(response.Succeeded);
+        Assert.Equal("MaintenanceActive", response.Error);
+        Assert.Equal(0, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
+    }
+
     private static readonly Did s_actor = new("did:plc:administration-actor");
     private static readonly AtProtoServiceReference s_audience = new(TestServerBuilder.s_issuer, "labeler_admin");
 
@@ -509,9 +532,13 @@ public class AdministrationTests
     public async Task LocalRetirementAdvancesWithSignedNegationsAndDurableCheckpoints(bool tiedCidTimestamps)
     {
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
-        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
+        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase(), labelPublication: true));
         string endpoint = LocalEndpoint();
-        await using TestServerBuilder fixture = await CreateAsync(key, identity, endpoint);
+        await using TestServerBuilder fixture = await CreateAsync(
+            key: key,
+            identity: identity,
+            endpoint: endpoint,
+            publicEndpoint: new Uri("https://labeler.example"));
         Assert.True((await fixture.Services.BootstrapLocalAdministratorAsync(
             s_actor, "bootstrap", TestContext.Current.CancellationToken)).Succeeded);
         DateTimeOffset now = await DatabaseNowAsync(fixture);
@@ -542,26 +569,37 @@ public class AdministrationTests
             cancellationToken: TestContext.Current.CancellationToken);
         await store.PublishAsync(cancellationToken: TestContext.Current.CancellationToken);
 
+        using JsonDocument preview = JsonDocument.Parse(await LabelerLocalAdministration.SendLocalCommandAsync(
+            endpoint,
+            """{"method":"prepareRetirement","target":"beginRetirement","operationId":"retirement-begin","reason":"Close issuance."}""",
+            TestContext.Current.CancellationToken));
+        Assert.True(preview.RootElement.GetProperty("succeeded").GetBoolean());
+        Assert.Equal(LabelerLifecyclePhase.Active, (await store.GetStateAsync(TestContext.Current.CancellationToken)).Phase);
+        string challenge = preview.RootElement.GetProperty("retirement").GetProperty("confirmation").GetString()!;
         using JsonDocument started = JsonDocument.Parse(await LabelerLocalAdministration.SendLocalCommandAsync(
             endpoint,
-            """{"method":"beginRetirement","operationId":"retirement-begin","reason":"Close issuance."}""",
+            $$"""{"method":"beginRetirement","operationId":"retirement-begin","reason":"Close issuance.","confirmation":"{{challenge}}"}""",
             TestContext.Current.CancellationToken));
         Assert.True(started.RootElement.GetProperty("succeeded").GetBoolean());
         Assert.Equal("Retiring", started.RootElement.GetProperty("state").GetProperty("phase").GetString());
 
-        using JsonDocument advanced = JsonDocument.Parse(await LabelerLocalAdministration.SendLocalCommandAsync(
-            endpoint,
-            """{"method":"advanceRetirement","operationId":"retirement-advance","reason":"Negate retained active labels."}""",
-            TestContext.Current.CancellationToken));
-        Assert.True(advanced.RootElement.GetProperty("succeeded").GetBoolean());
-        JsonElement state = advanced.RootElement.GetProperty("state");
-        Assert.Equal("Distributing", state.GetProperty("phase").GetString());
-        Assert.Equal(3, state.GetProperty("retirementThrough").GetInt64());
-        Assert.Equal(6, state.GetProperty("issuedThrough").GetInt64());
-        await store.PublishAsync(cancellationToken: TestContext.Current.CancellationToken);
+        LabelStoreState state = await store.GetStateAsync(TestContext.Current.CancellationToken);
+        for (int step = 0; step < 8 && (state.Phase != LabelerLifecyclePhase.Distributing || state.PublishedThrough != state.IssuedThrough); step++)
+        {
+            using JsonDocument advanced = JsonDocument.Parse(await LabelerLocalAdministration.SendLocalCommandAsync(
+                endpoint,
+                $$"""{"method":"advanceRetirement","operationId":"retirement-advance-{{step}}","reason":"Negate retained active labels."}""",
+                TestContext.Current.CancellationToken));
+            Assert.True(advanced.RootElement.GetProperty("succeeded").GetBoolean());
+            state = await store.GetStateAsync(TestContext.Current.CancellationToken);
+        }
+        Assert.Equal(LabelerLifecyclePhase.Distributing, state.Phase);
+        Assert.Equal(3, state.RetirementThrough);
+        Assert.Equal(6, state.IssuedThrough);
+        Assert.Equal(6, state.PublishedThrough);
 
         LabelPage page = await store.ReplayAsync(
-            streamId: Guid.Parse(state.GetProperty("streamId").GetString()!),
+            streamId: state.StreamId,
             after: 0,
             through: 6,
             limit: 10,
@@ -805,9 +843,11 @@ public class AdministrationTests
         HttpClient identity,
         string? endpoint = null,
         TimeSpan? maximumServiceTokenLifetime = null,
-        bool remoteAdministrationEnabled = true)
+        bool remoteAdministrationEnabled = true,
+        Uri? publicEndpoint = null)
     {
         TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
+            options: publicEndpoint is null ? null : new() { PublicEndpoint = publicEndpoint },
             configureAdministration: services =>
             {
                 services.AddSingleton<ILabelIssuancePolicyProvider, Policy>();
@@ -911,7 +951,7 @@ public class AdministrationTests
     }
 
     /// <summary>Serves matching account DID documents without external identity services.</summary>
-    private sealed class IdentityHandler(string multikey) : HttpMessageHandler
+    private sealed class IdentityHandler(string multikey, bool labelPublication = false) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
@@ -920,6 +960,15 @@ public class AdministrationTests
                 {"id":"{{actor}}","verificationMethod":[{"id":"{{actor}}#atproto","type":"Multikey",
                 "controller":"{{actor}}","publicKeyMultibase":"{{multikey}}"}]}
                 """;
+            if (labelPublication)
+            {
+                document = $$"""
+                    {"id":"{{actor}}","verificationMethod":[
+                    {"id":"{{actor}}#atproto","type":"Multikey","controller":"{{actor}}","publicKeyMultibase":"{{multikey}}"},
+                    {"id":"{{actor}}#atproto_label","type":"Multikey","controller":"{{actor}}","publicKeyMultibase":"{{multikey}}"}],
+                    "service":[{"id":"{{actor}}#atproto_labeler","type":"AtprotoLabeler","serviceEndpoint":"https://labeler.example"}]}
+                    """;
+            }
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(document, Encoding.UTF8, "application/json")

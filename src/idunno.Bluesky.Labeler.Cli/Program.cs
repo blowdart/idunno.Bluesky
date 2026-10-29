@@ -343,14 +343,30 @@ internal static partial class Program
     }
 
     /// <summary>Creates authorized resumable retirement lifecycle commands.</summary>
-    private static Command CreateRetirementCommand()
+    internal static Command CreateRetirementCommand()
     {
-        Command command = new("retire", "Advance the labeler retirement lifecycle.");
-        command.Subcommands.Add(CreateRetirementStepCommand("begin", "Close ordinary issuance and freeze retirement history.", "beginRetirement"));
-        command.Subcommands.Add(CreateRetirementStepCommand("advance", "Publish and process one bounded negation/checkpoint batch.", "advanceRetirement"));
+        Command command = new("retire", "Inspect and control durable background retirement; issuance never reopens.");
+        Command status = new("status", "Show checkpoints, publication, grace, pause and key-removal state.");
+        TransportOptions transport = AddTransportOptions(status);
+        status.SetAction((parsed, token) => ExecuteAsync(
+            method: "getRetirementState",
+            request: new(Method: "getRetirementState", Reason: "Administrative retirement inspection."),
+            transport: transport,
+            parseResult: parsed,
+            cancellationToken: token));
+        command.Subcommands.Add(status);
+        command.Subcommands.Add(CreateRetirementStepCommand("preflight", "Preview immutable intent and obtain an expiring action-specific challenge; does not execute the action.", "prepareRetirement"));
+        command.Subcommands.Add(CreateRetirementStepCommand("begin", "Irreversibly close issuance and intake; start the durable worker.", "beginRetirement"));
+        command.Subcommands.Add(CreateRetirementStepCommand("advance", "Manual compatibility: process one bounded step, not the normal worker path.", "advanceRetirement"));
+        command.Subcommands.Add(CreateRetirementStepCommand("pause", "Pause new worker batches without reopening issuance.", "pauseRetirement"));
+        command.Subcommands.Add(CreateRetirementStepCommand("resume", "Renew authority for the saved workflow using a new command operation ID.", "resumeRetirement"));
         command.Subcommands.Add(CreateRetirementStepCommand("grace", "Begin the downstream distribution grace period.", "beginGracePeriod"));
-        command.Subcommands.Add(CreateRetirementStepCommand("complete", "Complete retirement after the grace deadline.", "completeRetirement"));
-        command.Subcommands.Add(CreateRetirementStepCommand("purge", "Delete retired local history in a bounded batch.", "purgeRetiredData"));
+        command.Subcommands.Add(CreateRetirementStepCommand("extend-grace", "Extend, never shorten, the distribution grace deadline.", "extendGracePeriod"));
+        command.Subcommands.Add(CreateRetirementStepCommand("complete", "Complete after grace with an explicit distribution-availability attestation.", "completeRetirement"));
+        command.Subcommands.Add(CreateRetirementStepCommand("purge", "Delete label history/receipts only; retain moderation, audit, backups and downstream copies.", "purgeRetiredData"));
+        command.Subcommands.Add(CreateRetirementStepCommand("request-key-removal", "Fence signing and record the external key/host/copy inventory; does not delete keys.", "requestKeyRemoval"));
+        command.Subcommands.Add(CreateRetirementStepCommand("attest-key-removal", "Record operator-performed external key removal, not verified deletion.", "attestKeyRemoval"));
+        command.Subcommands.Add(CreateRetirementStepCommand("confirm-host-stopped", "Attest independently verified stopped retirement host; does not detect or stop a process.", "confirmRetirementHostStopped"));
         return command;
     }
 
@@ -361,17 +377,48 @@ internal static partial class Program
         TransportOptions transport = AddTransportOptions(command);
         Option<string> operationId = new("--operation-id") { Description = "The operation identity recorded in the maintenance audit.", Required = true };
         Option<string> reason = new("--reason") { Description = "The operator's audit reason.", Required = true };
-        Option<bool> yes = new("--yes") { Description = "Confirm without an interactive prompt." };
-        Option<int> days = new("--days") { Description = "The distribution grace period in days (1 through 365).", Required = method == "beginGracePeriod" };
+        bool preview = method == "prepareRetirement";
+        Option<string> action = new("--action") { Description = "The exact administration method being previewed, such as beginRetirement.", Required = preview };
+        Option<string?> confirmation = new("--confirmation") { Description = "The action-specific server challenge returned by preflight. --yes cannot replace it." };
+        Option<string?> attestation = new("--attestation") { Description = "Availability evidence for completion, or external-removal evidence for key attestation." };
+        Option<string?> inventory = new("--inventory") { Description = "Key IDs/public fingerprints, signing hosts, copies and backup categories; never secret material." };
+        Option<string?> hostId = new("--host-id") { Description = "The exact retirement host registration GUID independently verified as stopped.", Required = method == "confirmRetirementHostStopped" };
+        Option<bool> yes = new("--yes") { Description = "Skip the ordinary prompt only; never substitutes for --confirmation or attestation." };
+        Option<int> days = new("--days") { Description = "An explicitly selected grace duration or extension in days (1 through 365).", Required = method is "beginGracePeriod" or "extendGracePeriod" };
         Option<int> limit = new("--limit")
         {
-            Description = "The bounded local purge batch size (1 through 1,000).",
+            Description = "Legacy purge batch hint (1-1,000). The durable worker controls its bounded batches.",
             DefaultValueFactory = _ => 100
         };
         command.Options.Add(operationId);
         command.Options.Add(reason);
         command.Options.Add(yes);
-        if (method == "beginGracePeriod")
+        if (preview)
+        {
+            command.Options.Add(action);
+        }
+
+        if (preview || RequiresRetirementConfirmation(method))
+        {
+            command.Options.Add(confirmation);
+        }
+
+        if (preview || method is "completeRetirement" or "attestKeyRemoval" or "confirmRetirementHostStopped")
+        {
+            command.Options.Add(attestation);
+        }
+
+        if (preview || method == "confirmRetirementHostStopped")
+        {
+            command.Options.Add(hostId);
+        }
+
+        if (preview || method is "requestKeyRemoval" or "attestKeyRemoval")
+        {
+            command.Options.Add(inventory);
+        }
+
+        if (preview || method is "beginGracePeriod" or "extendGracePeriod")
         {
             command.Options.Add(days);
         }
@@ -385,17 +432,43 @@ internal static partial class Program
         {
             string? operation = parseResult.GetValue(operationId);
             string? auditReason = parseResult.GetValue(reason);
-            int graceDays = method == "beginGracePeriod" ? parseResult.GetValue(days) : 0;
+            string intendedAction = preview ? parseResult.GetValue(action) ?? "" : method;
+            int graceDays = preview || method is "beginGracePeriod" or "extendGracePeriod" ? parseResult.GetValue(days) : 0;
             int purgeLimit = method == "purgeRetiredData" ? parseResult.GetValue(limit) : 100;
-            if (string.IsNullOrWhiteSpace(operation) || string.IsNullOrWhiteSpace(auditReason) ||
-                method == "beginGracePeriod" && graceDays is < 1 or > 365 ||
-                method == "purgeRetiredData" && purgeLimit is < 1 or > 1000)
+            string? hostText = preview || method == "confirmRetirementHostStopped" ? parseResult.GetValue(hostId) : null;
+            Guid? host = null;
+            if (hostText is not null)
             {
-                await Console.Error.WriteLineAsync("Supply a valid operation ID, reason, and lifecycle option.").ConfigureAwait(false);
+                if (!Guid.TryParse(hostText, out Guid parsedHost) || parsedHost == Guid.Empty)
+                {
+                    await Console.Error.WriteLineAsync("Supply the exact non-empty host registration GUID for --host-id.").ConfigureAwait(false);
+                    return 2;
+                }
+
+                host = parsedHost;
+            }
+
+            AdministrationCommand request = new(
+                Method: method,
+                OperationId: operation ?? "",
+                Reason: auditReason ?? "",
+                Target: preview ? intendedAction : "",
+                Limit: purgeLimit,
+                GracePeriodDays: graceDays,
+                Confirmation: preview || RequiresRetirementConfirmation(method) ? parseResult.GetValue(confirmation) : null,
+                Attestation: preview || method is "completeRetirement" or "attestKeyRemoval" or "confirmRetirementHostStopped" ? parseResult.GetValue(attestation) : null,
+                Inventory: preview || method is "requestKeyRemoval" or "attestKeyRemoval" ? parseResult.GetValue(inventory) : null,
+                HostInstanceId: host);
+            if (!HasValidRetirementIntent(request, preview) || purgeLimit is < 1 or > 1000)
+            {
+                await Console.Error.WriteLineAsync(
+                    "Supply a supported action, stable operation ID and reason, explicit 1-365 grace days where applicable, " +
+                    "and required inventory/attestation/host ID. Irreversible actions and stopped-host attestation require --confirmation from " +
+                    "retire preflight with the SAME action, operation ID, reason, days, inventory, attestation and host ID. --yes is insufficient.").ConfigureAwait(false);
                 return 2;
             }
 
-            if (!await ConfirmAsync(
+            if (!preview && !RequiresRetirementConfirmation(method) && !await ConfirmAsync(
                 parseResult.GetValue(yes),
                 $"{method} for labeler '{parseResult.GetValue(transport.AudienceText) ?? "configured labeler"}'?",
                 cancellationToken).ConfigureAwait(false))
@@ -405,18 +478,37 @@ internal static partial class Program
 
             return await ExecuteAsync(
                 method: method,
-                request: new(
-                    Method: method,
-                    OperationId: operation,
-                    Reason: auditReason,
-                    Limit: purgeLimit,
-                    GracePeriodDays: graceDays,
-                    Confirmed: method == "purgeRetiredData"),
+                request: request,
                 transport: transport,
                 parseResult: parseResult,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         });
         return command;
+    }
+
+    /// <summary>Identifies actions whose server-issued proof cannot be replaced by a blanket CLI flag.</summary>
+    internal static bool RequiresRetirementConfirmation(string method) =>
+        method is "beginRetirement" or "purgeRetiredData" or "completeRetirement" or "requestKeyRemoval" or "attestKeyRemoval" or "confirmRetirementHostStopped";
+
+    /// <summary>Validates immutable intent before transport, including the same evidence in preview and execution.</summary>
+    internal static bool HasValidRetirementIntent(AdministrationCommand command, bool preview)
+    {
+        string action = preview ? command.Target : command.Method;
+        bool grace = action is "beginGracePeriod" or "extendGracePeriod";
+        bool keys = action is "requestKeyRemoval" or "attestKeyRemoval";
+        bool attestation = action is "completeRetirement" or "attestKeyRemoval" or "confirmRetirementHostStopped";
+        bool stoppedHost = action == "confirmRetirementHostStopped";
+        return action is ("beginRetirement" or "advanceRetirement" or "pauseRetirement" or "resumeRetirement" or
+                "beginGracePeriod" or "extendGracePeriod" or "completeRetirement" or "purgeRetiredData" or
+                "requestKeyRemoval" or "attestKeyRemoval" or "confirmRetirementHostStopped") &&
+            !string.IsNullOrWhiteSpace(command.OperationId) &&
+            !string.IsNullOrWhiteSpace(command.Reason) &&
+            (grace ? command.GracePeriodDays is >= 1 and <= 365 : command.GracePeriodDays == 0) &&
+            (keys ? !string.IsNullOrWhiteSpace(command.Inventory) : command.Inventory is null) &&
+            (attestation ? !string.IsNullOrWhiteSpace(command.Attestation) : command.Attestation is null) &&
+            (stoppedHost ? command.HostInstanceId is Guid host && host != Guid.Empty : command.HostInstanceId is null) &&
+            (preview ? command.Confirmation is null :
+                !RequiresRetirementConfirmation(action) || !string.IsNullOrWhiteSpace(command.Confirmation));
     }
 
     /// <summary>Creates resumable host maintenance and signing-key rotation commands.</summary>
@@ -1240,7 +1332,7 @@ internal static partial class Program
 
     /// <summary>Identifies read-only methods that use the remote administration GET routes.</summary>
     internal static bool IsRemoteGetMethod(string method) =>
-        method is "getTeam" or "getPublicationState" or "getMaintenanceState" or "getAudit" or "getOperation";
+        method is "getTeam" or "getPublicationState" or "getMaintenanceState" or "getRetirementState" or "getAudit" or "getOperation";
 
     /// <summary>Builds a remote administration URI with the required query for a read method.</summary>
     internal static Uri BuildRemoteRequestUri(
@@ -1376,7 +1468,11 @@ internal static partial class Program
         int GracePeriodDays = 0,
         bool Confirmed = false,
         string? ReplacementKeyId = null,
-        PolicyCommand? Moderation = null);
+        PolicyCommand? Moderation = null,
+        string? Confirmation = null,
+        string? Attestation = null,
+        string? Inventory = null,
+        Guid? HostInstanceId = null);
 
     /// <summary>Separates a bounded administrative response from its presentation.</summary>
     internal sealed record AdministrationReply(string Body, HttpStatusCode StatusCode);

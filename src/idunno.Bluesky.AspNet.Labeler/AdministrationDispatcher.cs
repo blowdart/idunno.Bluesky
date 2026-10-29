@@ -5,7 +5,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using idunno.AtProto;
-using idunno.AtProto.Labels;
 using idunno.Bluesky.Labeler;
 using idunno.Bluesky.Labeler.Administration;
 using idunno.Bluesky.Labeler.Identity;
@@ -22,12 +21,16 @@ internal sealed partial class AdministrationDispatcher(
     ILabelAdministrationStore administration,
     ILabelMaintenanceStore maintenance,
     HttpClient httpClient,
-    ILabelSigningKeyRing signingKeyRing,
+    ILabelSigningKeyRing? signingKeyRing,
     ILabelIssuancePolicyProvider policy,
     Uri? publicEndpoint,
     TimeProvider clock,
     LabelerHost? host)
 {
+    /// <summary>Requires a real installed key only for an operation that actually signs.</summary>
+    private ILabelSigningKeyRing SigningKeys => signingKeyRing
+        ?? throw new InvalidOperationException("This retired host has no private signing keys.");
+
     // Bounded POST bodies keep confidential moderation filters out of URLs on both adapters.
     internal static readonly string[] s_moderationMethods =
     [
@@ -41,18 +44,21 @@ internal sealed partial class AdministrationDispatcher(
         "getTeam", "getAudit", "changeTeam", "setTeamNotificationEmail", "enroll", "issueLabel", "negateLabel",
         "getOperation", "getPublicationState", "getMaintenanceState", "authorizeMaintenance",
         "beginRetirement", "advanceRetirement", "beginGracePeriod", "completeRetirement",
-        "purgeRetiredData", "beginRotation", "confirmHostStopped", "captureRotationBoundary",
+        "purgeRetiredData", "getRetirementState", "prepareRetirement", "pauseRetirement", "resumeRetirement",
+        "extendGracePeriod", "requestKeyRemoval", "attestKeyRemoval", "beginRotation", "confirmHostStopped", "captureRotationBoundary",
         "verifyRotationKeyPublication", "resignRotationBatch", "completeRotation",
         .. s_moderationMethods
     ];
     internal static readonly string[] s_getMethods =
     [
-        "getTeam", "getAudit", "getOperation", "getPublicationState", "getMaintenanceState"
+        "getTeam", "getAudit", "getOperation", "getPublicationState", "getMaintenanceState", "getRetirementState"
     ];
     internal static readonly string[] s_postMethods =
     [
         "changeTeam", "setTeamNotificationEmail", "enroll", "issueLabel", "negateLabel", "authorizeMaintenance",
         "beginRetirement", "advanceRetirement", "beginGracePeriod", "completeRetirement", "purgeRetiredData",
+        "prepareRetirement", "pauseRetirement", "resumeRetirement", "extendGracePeriod", "requestKeyRemoval", "attestKeyRemoval",
+        "confirmRetirementHostStopped",
         "beginRotation", "confirmHostStopped", "captureRotationBoundary", "verifyRotationKeyPublication",
         "resignRotationBatch", "completeRotation",
         .. s_moderationMethods
@@ -71,7 +77,7 @@ internal sealed partial class AdministrationDispatcher(
         }
 
         AdministrationResponse response;
-        bool labelBearing = command.Method is "issueLabel" or "negateLabel" ||
+        bool labelBearing = command.Method is "issueLabel" or "negateLabel" or "advanceRetirement" ||
             command.Method == "decideCase" && command.Moderation?.Actions is { Length: > 0 };
         if (labelBearing && host is not null)
         {
@@ -116,14 +122,6 @@ internal sealed partial class AdministrationDispatcher(
             return await DispatchModerationAsync(caller, command, token).ConfigureAwait(false);
         }
 
-        LabelIssuanceService issuance = new(
-            issuer: caller.Issuer,
-            signingKey: signingKeyRing.GetSigningKey(signingKeyRing.ActiveKeyId),
-            store: store,
-            authorizer: new LabelTeamAuthorizer(administration, caller),
-            policyProvider: policy,
-            httpClient: httpClient,
-            timeProvider: clock);
         switch (command.Method)
         {
             case "getTeam":
@@ -205,6 +203,19 @@ internal sealed partial class AdministrationDispatcher(
             case "issueLabel":
             case "negateLabel":
                 {
+                    if (signingKeyRing is null)
+                    {
+                        return new(false, "IssuanceClosed", "This retired host has no private signing keys.");
+                    }
+
+                    LabelIssuanceService issuance = new(
+                        issuer: caller.Issuer,
+                        signingKey: signingKeyRing.GetSigningKey(signingKeyRing.ActiveKeyId),
+                        store: store,
+                        authorizer: new LabelTeamAuthorizer(administration, caller),
+                        policyProvider: policy,
+                        httpClient: httpClient,
+                        timeProvider: clock);
                     Cid? cid = command.Cid is null ? null : new(command.Cid);
                     LabelTarget target;
                     if (command.Target.StartsWith("at://", StringComparison.Ordinal))
@@ -235,13 +246,26 @@ internal sealed partial class AdministrationDispatcher(
                 }
             case "getOperation":
                 {
-                    LabelServiceResult<LabelOperationReceipt> result = await issuance.GetOperationAsync(
-                        operationId: command.OperationId, context: new(caller.Actor, command.Reason), cancellationToken: token).ConfigureAwait(false);
+                    LabelServiceResult<LabelAuthorizationGrant> grant = await administration.AuthorizeAsync(
+                        caller: caller, permission: LabelAdministrationPermission.Inspect, reason: command.Reason, cancellationToken: token).ConfigureAwait(false);
+                    if (!grant.Succeeded)
+                    {
+                        return Failure(grant.Error);
+                    }
+
+                    LabelServiceResult<LabelOperationReceipt> result = await store.GetOperationAsync(command.OperationId, token).ConfigureAwait(false);
                     return result.Succeeded ? Receipt(result.Result) : Failure(result.Error);
                 }
             case "getPublicationState":
                 {
-                    LabelServiceResult<LabelStoreState> result = await issuance.GetPublicationStateAsync(new(caller.Actor, command.Reason), token).ConfigureAwait(false);
+                    LabelServiceResult<LabelAuthorizationGrant> grant = await administration.AuthorizeAsync(
+                        caller: caller, permission: LabelAdministrationPermission.Inspect, reason: command.Reason, cancellationToken: token).ConfigureAwait(false);
+                    if (!grant.Succeeded)
+                    {
+                        return Failure(grant.Error);
+                    }
+
+                    LabelServiceResult<LabelStoreState> result = LabelServiceResult<LabelStoreState>.Success(await store.GetStateAsync(token).ConfigureAwait(false));
                     return result.Succeeded
                         ? new(true, State: new(
                             result.Result.StreamId,
@@ -276,6 +300,14 @@ internal sealed partial class AdministrationDispatcher(
             case "beginGracePeriod":
             case "completeRetirement":
             case "purgeRetiredData":
+            case "getRetirementState":
+            case "prepareRetirement":
+            case "pauseRetirement":
+            case "resumeRetirement":
+            case "extendGracePeriod":
+            case "requestKeyRemoval":
+            case "attestKeyRemoval":
+            case "confirmRetirementHostStopped":
                 {
                     return await DispatchRetirementAsync(caller, command, token).ConfigureAwait(false);
                 }
@@ -389,12 +421,12 @@ internal sealed partial class AdministrationDispatcher(
 
         string replacementKeyId = command.ReplacementKeyId
             ?? throw new ArgumentException("A preinstalled replacement key identity is required.", nameof(command));
-        string activeKeyId = signingKeyRing.ActiveKeyId;
+        string activeKeyId = SigningKeys.ActiveKeyId;
         return maintenance.BeginRotationAsync(
             operationId: command.OperationId,
             previousKeyId: activeKeyId,
             replacementKeyId: replacementKeyId,
-            replacementPublicKey: signingKeyRing.GetPublicKeyMultibase(replacementKeyId),
+            replacementPublicKey: SigningKeys.GetPublicKeyMultibase(replacementKeyId),
             cancellationToken: token,
             caller: caller);
     }
@@ -443,7 +475,7 @@ internal sealed partial class AdministrationDispatcher(
         LabelerIdentityDocument.VerifyPublication(
             didDocument: document,
             did: caller.Issuer,
-            signingKey: signingKeyRing.GetSigningKey(state.ReplacementKeyId),
+            signingKey: SigningKeys.GetSigningKey(state.ReplacementKeyId),
             labelerEndpoint: publicEndpoint);
         return await maintenance.VerifyRotationKeyPublicationAsync(
             operationId: command.OperationId,
@@ -469,7 +501,7 @@ internal sealed partial class AdministrationDispatcher(
             store: store,
             maintenanceStore: maintenance,
             operationId: command.OperationId,
-            replacementKey: signingKeyRing.GetSigningKey(state.ReplacementKeyId),
+            replacementKey: SigningKeys.GetSigningKey(state.ReplacementKeyId),
             batchSize: command.Limit,
             cancellationToken: token,
             caller: caller).ConfigureAwait(false);
@@ -498,21 +530,21 @@ internal sealed partial class AdministrationDispatcher(
         }
 
         if (!string.Equals(
-            signingKeyRing.GetPublicKeyMultibase(state.ReplacementKeyId),
+            SigningKeys.GetPublicKeyMultibase(state.ReplacementKeyId),
             state.ReplacementPublicKey,
             StringComparison.Ordinal))
         {
             throw new InvalidOperationException("The locally installed replacement key does not match the verified published key.");
         }
 
-        if (!string.Equals(signingKeyRing.ActiveKeyId, state.ReplacementKeyId, StringComparison.Ordinal))
+        if (!string.Equals(SigningKeys.ActiveKeyId, state.ReplacementKeyId, StringComparison.Ordinal))
         {
-            await signingKeyRing.ActivateAsync(state.ReplacementKeyId, token).ConfigureAwait(false);
+            await SigningKeys.ActivateAsync(state.ReplacementKeyId, token).ConfigureAwait(false);
         }
 
         return await maintenance.CompleteRotationAsync(
             operationId: command.OperationId,
-            activeKeyId: signingKeyRing.ActiveKeyId,
+            activeKeyId: SigningKeys.ActiveKeyId,
             cancellationToken: token,
             caller: caller).ConfigureAwait(false);
     }
@@ -541,227 +573,102 @@ internal sealed partial class AdministrationDispatcher(
         AdministrationCommand command,
         CancellationToken token)
     {
-        if (string.IsNullOrWhiteSpace(command.Reason) ||
-            string.IsNullOrWhiteSpace(command.OperationId) ||
-            command.Method is "purgeRetiredData" && (!command.Confirmed || command.Limit is < 1 or > 1000) ||
-            command.Method is "beginGracePeriod" && command.GracePeriodDays is not (>= 1 and <= 365))
+        if (store is not ILabelRetirementStore retirement)
         {
-            return new(false, "InvalidRequest", "Supply an operation ID, reason, valid lifecycle options, and explicit purge confirmation.");
+            return new(false, "StorageUnavailable", "The provider does not implement durable retirement.");
         }
 
-        LabelServiceResult<LabelAuthorizationGrant> authorization = await administration.AuthorizeAsync(
-            caller: caller,
-            permission: LabelAdministrationPermission.Maintain,
-            reason: command.Reason,
-            cancellationToken: token).ConfigureAwait(false);
-        if (!authorization.Succeeded)
-        {
-            return Failure(authorization.Error);
-        }
-
-        string operationId = command.OperationId;
-        LabelStoreState state;
         try
         {
-            state = await store.GetStateAsync(token).ConfigureAwait(false);
-            state = command.Method switch
+            if (command.Method == "advanceRetirement")
             {
-                "beginRetirement" => await store.BeginRetirementAsync(state.Revision, caller, token).ConfigureAwait(false),
-                "advanceRetirement" => await AdvanceRetirementAsync(caller, state, token).ConfigureAwait(false),
-                "beginGracePeriod" when command.GracePeriodDays is >= 1 and <= 365 =>
-                    await store.BeginGracePeriodAsync(
-                        expectedRevision: state.Revision,
-                        gracePeriod: TimeSpan.FromDays(command.GracePeriodDays),
-                        caller: caller,
-                        cancellationToken: token).ConfigureAwait(false),
-                "beginGracePeriod" => throw new InvalidOperationException("A valid grace period is required."),
-                "completeRetirement" => await store.CompleteRetirementAsync(state.Revision, caller, token).ConfigureAwait(false),
-                "purgeRetiredData" => await store.PurgeAsync(
-                    expectedRevision: state.Revision,
-                    confirmed: command.Confirmed,
-                    limit: command.Limit,
-                    cancellationToken: token,
-                    caller: caller).ConfigureAwait(false),
-                _ => throw new InvalidOperationException("The retirement operation is not supported.")
+                LabelServiceResult<LabelAuthorizationGrant> authority = await administration.AuthorizeAsync(
+                    caller: caller, permission: LabelAdministrationPermission.Maintain, reason: command.Reason, cancellationToken: token).ConfigureAwait(false);
+                if (!authority.Succeeded)
+                {
+                    return Failure(authority.Error);
+                }
+
+                LabelServiceError? error = await new LabelRetirementService(store, retirement, signingKeyRing).AdvanceAsync(token).ConfigureAwait(false);
+                if (error is not null)
+                {
+                    return Failure(error);
+                }
+            }
+
+            string action = command.Method == "prepareRetirement" ? command.Target : command.Method;
+            string? verifiedKey = null;
+            bool needsSigning = action == "beginRetirement" ||
+                action == "resumeRetirement" && (await store.GetStateAsync(token).ConfigureAwait(false)).Phase == LabelerLifecyclePhase.Retiring;
+            if (needsSigning)
+            {
+                if (signingKeyRing is null || publicEndpoint is null)
+                {
+                    return new(false, "SigningFailed", "Configure the selected signing key and public endpoint before starting or resuming retirement.");
+                }
+
+                LabelServiceResult<LabelAuthorizationGrant> authority = await administration.AuthorizeAsync(
+                    caller: caller,
+                    permission: LabelAdministrationPermission.Maintain,
+                    reason: command.Reason,
+                    cancellationToken: token).ConfigureAwait(false);
+                if (!authority.Succeeded)
+                {
+                    return Failure(authority.Error);
+                }
+
+                try
+                {
+                    DidDocument? document = await IdentityResolution.ResolveDidDocumentAsync(
+                        did: caller.Issuer,
+                        httpClient: httpClient,
+                        cancellationToken: token).ConfigureAwait(false);
+                    if (document is null)
+                    {
+                        return new(false, "SigningFailed", "The public labeler DID document could not be resolved.");
+                    }
+
+                    LabelerIdentityDocument.VerifyPublication(
+                        didDocument: document,
+                        did: caller.Issuer,
+                        signingKey: SigningKeys.GetSigningKey(SigningKeys.ActiveKeyId),
+                        labelerEndpoint: publicEndpoint);
+                    verifiedKey = SigningKeys.GetPublicKeyMultibase(SigningKeys.ActiveKeyId);
+                }
+                catch (Exception exception) when (exception is InvalidDataException or InvalidOperationException or KeyNotFoundException or HttpRequestException)
+                {
+                    return new(false, "SigningFailed", "Verify the selected key, public DID verification method and labeler endpoint before starting or resuming retirement.");
+                }
+            }
+
+            LabelRetirementCommand request = new(
+                Action: action,
+                OperationId: command.OperationId,
+                Reason: command.Reason,
+                GracePeriodDays: command.GracePeriodDays,
+                Confirmation: command.Confirmation,
+                Attestation: command.Attestation,
+                Inventory: command.Inventory,
+                VerifiedSigningPublicKey: verifiedKey,
+                HostInstanceId: command.HostInstanceId);
+            LabelServiceResult<LabelRetirementView> result = command.Method switch
+            {
+                "getRetirementState" or "advanceRetirement" => await retirement.InspectRetirementAsync(caller, null, token).ConfigureAwait(false),
+                "prepareRetirement" => await retirement.InspectRetirementAsync(caller, request, token).ConfigureAwait(false),
+                _ => await retirement.ExecuteRetirementAsync(caller, request, token).ConfigureAwait(false)
             };
+            return result.Succeeded
+                ? new(true, OperationId: command.OperationId, State: PublicationView(await store.GetStateAsync(token).ConfigureAwait(false)), Retirement: result.Result)
+                : Failure(result.Error);
         }
         catch (ArgumentException exception)
         {
-            LabelServiceError error = new(
-                code: LabelServiceErrorCode.InvalidTarget,
-                message: "The retirement operation contains invalid input.",
-                exception: exception);
-            return Failure(error);
+            return new(false, "InvalidRequest", exception.Message);
         }
-        catch (InvalidOperationException exception)
+        catch (InvalidDataException)
         {
-            LabelServiceError error = new(
-                code: LabelServiceErrorCode.StaleDecision,
-                message: "The retirement state changed or does not permit this transition.",
-                exception: exception);
-            LabelServiceResult<LabelAdministrationReceipt> failedAudit = await administration.AuditMaintenanceAsync(
-                caller: caller,
-                operationId: operationId,
-                reason: command.Reason,
-                phase: LabelMaintenanceAuditPhase.Failed,
-                cancellationToken: token).ConfigureAwait(false);
-            return failedAudit.Succeeded ? Failure(error) : Failure(failedAudit.Error);
+            return new(false, "StorageUnavailable", "Retirement history is inconsistent; preserve diagnostics and recover before resuming.");
         }
-        catch (InvalidDataException exception)
-        {
-            LabelServiceError error = new(
-                code: LabelServiceErrorCode.StorageUnavailable,
-                message: "Retirement history or durable state is unavailable.",
-                exception: exception);
-            LabelServiceResult<LabelAdministrationReceipt> failedAudit = await administration.AuditMaintenanceAsync(
-                caller: caller,
-                operationId: operationId,
-                reason: command.Reason,
-                phase: LabelMaintenanceAuditPhase.Failed,
-                cancellationToken: token).ConfigureAwait(false);
-            return failedAudit.Succeeded ? Failure(error) : Failure(failedAudit.Error);
-        }
-
-        LabelServiceResult<LabelAdministrationReceipt> audit = await administration.AuditMaintenanceAsync(
-            caller: caller,
-            operationId: operationId,
-            reason: command.Reason,
-            phase: LabelMaintenanceAuditPhase.Completed,
-            cancellationToken: token).ConfigureAwait(false);
-        return audit.Succeeded ? new(true, State: PublicationView(state)) : Failure(audit.Error);
-    }
-
-    /// <summary>Publishes and examines one retirement page, appending only authorized signed negations with its checkpoint.</summary>
-    private async Task<LabelStoreState> AdvanceRetirementAsync(
-        LabelAdministrationCaller caller,
-        LabelStoreState state,
-        CancellationToken token)
-    {
-        LabelSigningKey signingKey = signingKeyRing.GetSigningKey(signingKeyRing.ActiveKeyId);
-        if (state.Phase != LabelerLifecyclePhase.Retiring)
-        {
-            throw new InvalidOperationException("The labeler is not in the retirement enumeration phase.");
-        }
-
-        if (state.PublishedThrough < state.RetirementUpperBound)
-        {
-            state = await store.PublishAsync(limit: 250, cancellationToken: token).ConfigureAwait(false);
-            if (state.PublishedThrough < state.RetirementUpperBound)
-            {
-                return state;
-            }
-        }
-
-        LabelDistributionPage page = await store.ReadDistributionAsync(
-            streamId: state.StreamId,
-            after: state.RetirementThrough,
-            through: state.RetirementUpperBound,
-            uriPatterns: [],
-            sources: [],
-            limit: 250,
-            scanLimit: 1_000,
-            cancellationToken: token).ConfigureAwait(false);
-        if (page.ScannedThrough <= state.RetirementThrough)
-        {
-            throw new InvalidDataException("Retirement enumeration did not advance its durable checkpoint.");
-        }
-
-        string batchOperationId = $"retire:{state.StreamId:N}:{state.RetirementUpperBound}:{page.ScannedThrough}";
-        LabelAppendReceipt? receipt = await store.GetReceiptAsync(batchOperationId, token).ConfigureAwait(false);
-        if (receipt is not null)
-        {
-            return await store.GetStateAsync(token).ConfigureAwait(false);
-        }
-
-        Dictionary<string, DateTimeOffset> latestTimes = new(StringComparer.Ordinal);
-        List<StoredLabel> candidates = [];
-        List<(LabelTarget Target, string Value)> decisionQueries = [];
-        List<SignedLabelSnapshot> negations = [];
-        DateTimeOffset now = clock.GetUtcNow();
-        foreach (StoredLabel retained in page.Labels)
-        {
-            Label prior = retained.SignedLabel.Label;
-            if (prior.IsNegationLabel ||
-                prior.ExpiresAt is { } expiry && expiry <= now)
-            {
-                continue;
-            }
-
-            if (!TryCreateTarget(prior, out LabelTarget? target) || target is null)
-            {
-                throw new InvalidDataException("A retained label has an invalid subject URI.");
-            }
-
-            candidates.Add(retained);
-            decisionQueries.Add((target, prior.Value));
-        }
-
-        IReadOnlyList<DateTimeOffset?> latestTimestamps = await store.ReadRetirementTimestampsAsync(
-            decisionQueries,
-            token).ConfigureAwait(false);
-        for (int index = 0; index < candidates.Count; index++)
-        {
-            StoredLabel retained = candidates[index];
-            Label prior = retained.SignedLabel.Label;
-            string decisionKey = prior.Uri + "\0" + prior.Value;
-            DateTimeOffset latestTimestamp = latestTimestamps[index] ?? DateTimeOffset.MinValue;
-            if (latestTimes.TryGetValue(decisionKey, out DateTimeOffset batchPrevious) &&
-                batchPrevious > latestTimestamp)
-            {
-                latestTimestamp = batchPrevious;
-            }
-
-            DateTimeOffset created;
-            if (now > latestTimestamp)
-            {
-                created = now;
-            }
-            else
-            {
-                if (latestTimestamp == DateTimeOffset.MaxValue)
-                {
-                    throw new InvalidOperationException("No representable timestamp can supersede retained history.");
-                }
-
-                created = latestTimestamp.AddTicks(1);
-            }
-
-            latestTimes[decisionKey] = created;
-            negations.Add(new SignedLabelSnapshot(signingKey.CreateNegation(
-                source: caller.Issuer,
-                uri: prior.Uri,
-                value: prior.Value,
-                creationTimestamp: created,
-                cid: prior.Cid)));
-        }
-
-        await store.AppendAsync(
-            operationId: batchOperationId,
-            labels: negations,
-            expectedRevision: state.Revision,
-            retirementThrough: page.ScannedThrough,
-            cancellationToken: token,
-            caller: caller).ConfigureAwait(false);
-        return await store.GetStateAsync(token).ConfigureAwait(false);
-    }
-
-    /// <summary>Builds a typed decision target from a signed label's account DID or record AT URI.</summary>
-    private static bool TryCreateTarget(Label label, out LabelTarget? target)
-    {
-        target = null;
-        if (Did.TryParse(label.Uri, out Did? did))
-        {
-            target = LabelTarget.Account(did);
-            return label.Cid is null;
-        }
-
-        if (AtUri.TryParse(label.Uri, out AtUri? uri))
-        {
-            target = LabelTarget.Record(uri, label.Cid);
-            return true;
-        }
-
-        return false;
     }
 
     /// <summary>Projects every durable stream lifecycle checkpoint to the shared administration wire view.</summary>
@@ -817,7 +724,11 @@ internal sealed record AdministrationCommand(
     string? ReplacementKeyId = null,
     ModerationCommand? Moderation = null,
     long? ExpectedLabelSequence = null,
-    string? NotificationEmail = null)
+    string? NotificationEmail = null,
+    string? Confirmation = null,
+    string? Attestation = null,
+    string? Inventory = null,
+    Guid? HostInstanceId = null)
 {
     internal const int MaximumAuditPageSize = 16;
 
@@ -847,7 +758,8 @@ internal sealed record AdministrationResponse(
     long? TotalCount = null,
     long? PageNumber = null,
     AdministrationAuthorSummaryView[]? AuthorSummaries = null,
-    string? Target = null);
+    string? Target = null,
+    LabelRetirementView? Retirement = null);
 
 /// <summary>Contains all-time issuer-local report counts for the authors on one authorized case page.</summary>
 internal sealed record AdministrationAuthorSummaryView(string Did, long Reports, long Records, IReadOnlyDictionary<string, long> ReportKinds);

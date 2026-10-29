@@ -44,6 +44,7 @@ internal sealed partial class LabelerHost(
     private readonly object _admissionLock = new();
 #endif
     private readonly SemaphoreSlim _maintenanceRefreshGate = new(1, 1);
+    private readonly TaskCompletionSource _initialPublication = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private CancellationTokenSource _maintenanceLifetime = new();
     private TaskCompletionSource? _drained;
     private CancellationTokenRegistration _stoppingRegistration;
@@ -56,6 +57,9 @@ internal sealed partial class LabelerHost(
     private bool _shuttingDown;
     private volatile bool _ready;
     private readonly CancellationTokenSource _lifetime = CancellationTokenSource.CreateLinkedTokenSource(applicationLifetime.ApplicationStopping);
+
+    /// <summary>Gets the first completed publication observation, independently of other workers' timer registrations.</summary>
+    internal Task InitialPublication => _initialPublication.Task;
 
     /// <summary>Gets or sets an internal phase barrier for deterministic read, handoff and cancellation tests.</summary>
     internal Func<CancellationToken, Task>? BeforeReadAsync { get; set; }
@@ -130,11 +134,13 @@ internal sealed partial class LabelerHost(
                         }
                     }
 
+                    _initialPublication.TrySetResult();
                     await Task.Delay(options.PollInterval, clock, stoppingToken).ConfigureAwait(false);
                     continue;
                 }
 
                 _ready = true;
+                _initialPublication.TrySetResult();
                 if (state.PublishedThrough == state.IssuedThrough)
                 {
                     await Task.Delay(options.PollInterval, clock, stoppingToken).ConfigureAwait(false);
@@ -147,12 +153,14 @@ internal sealed partial class LabelerHost(
         }
         catch (Exception exception) when (exception is DbException or InvalidDataException or InvalidOperationException or OverflowException)
         {
+            _initialPublication.TrySetException(exception);
             metrics.Failure("publication");
             Failed(logger, exception, "publication");
             throw;
         }
         finally
         {
+            _initialPublication.TrySetCanceled(stoppingToken);
             _ready = false;
         }
     }
@@ -333,6 +341,12 @@ internal sealed partial class LabelerHost(
 
         if (signingKeyRing is null)
         {
+            if (state.Phase == LabelMaintenancePhase.ReadyToReopen &&
+                state.Hosts.FirstOrDefault(host => host.InstanceId == _instanceId) is { RequiresSigningKey: true })
+            {
+                throw new InvalidOperationException("A signing participant cannot reopen without its replacement signing key.");
+            }
+
             return state;
         }
 

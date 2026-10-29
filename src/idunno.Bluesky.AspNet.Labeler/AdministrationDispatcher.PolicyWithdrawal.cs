@@ -41,7 +41,7 @@ internal sealed partial class AdministrationDispatcher
         {
             if (batch.Labels.Count != 0)
             {
-                LabelSigningKey key = signingKeyRing.GetSigningKey(signingKeyRing.ActiveKeyId);
+                LabelSigningKey key = SigningKeys.GetSigningKey(SigningKeys.ActiveKeyId);
                 publicKey = key.ExportPublicKeyMultibase();
                 for (int i = 0; i < batch.Labels.Count; i++)
                 {

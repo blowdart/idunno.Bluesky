@@ -137,6 +137,8 @@ items:
             href: labeller/moderation.md
           - name: Xenon moderation web UI
             href: labeller/ui.md
+          - name: Safe retirement and local cleanup
+            href: labeller/retirement.md
           - name: Standalone deployment and updates
             href: labeller/deployment.md
 

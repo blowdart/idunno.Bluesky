@@ -462,6 +462,7 @@ public class ModerationTests
         DeclarationHandler handler = new(key.ExportPublicKeyMultibase());
         using HttpClient identity = new(handler);
         await using TestServerBuilder fixture = await CreateAsync(key, identity);
+        await fixture.Clock.PolicyVerificationRegistrations.Reader.ReadAsync(TestContext.Current.CancellationToken);
         await VerifyPolicyAsync(fixture);
         using MetricCollector<long> metrics = new(
             fixture.Services.GetRequiredService<IMeterFactory>(), LabelerModerationHost.MeterName,

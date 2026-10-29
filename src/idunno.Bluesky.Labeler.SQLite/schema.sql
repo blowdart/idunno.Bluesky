@@ -47,6 +47,12 @@ CREATE TABLE IF NOT EXISTS label_decisions (
     receipt BLOB NOT NULL
 );
 CREATE INDEX IF NOT EXISTS label_decisions_revision ON label_decisions(revision);
+CREATE TABLE IF NOT EXISTS label_retirement (id INTEGER PRIMARY KEY CHECK(id=1), payload BLOB NOT NULL);
+CREATE TABLE IF NOT EXISTS label_retirement_receipts (operation_hash BLOB PRIMARY KEY, payload BLOB NOT NULL);
+CREATE TABLE IF NOT EXISTS label_retirement_confirmations (token_hash BLOB PRIMARY KEY, expires_ms INTEGER NOT NULL, payload BLOB NOT NULL);
+CREATE INDEX IF NOT EXISTS label_retirement_confirmation_expiry ON label_retirement_confirmations(expires_ms);
+CREATE TABLE IF NOT EXISTS label_retirement_slots (seq INTEGER PRIMARY KEY, slot_hash BLOB NOT NULL, slot_key BLOB NOT NULL);
+CREATE INDEX IF NOT EXISTS label_retirement_slot ON label_retirement_slots(slot_hash);
 INSERT OR IGNORE INTO label_state(id, stream_id, issuer) VALUES(1, '00000000000000000000000000000000', '');
 CREATE TABLE IF NOT EXISTS label_team (id INTEGER PRIMARY KEY CHECK(id=1), payload BLOB NOT NULL);
 CREATE TABLE IF NOT EXISTS label_admin_audit (seq INTEGER PRIMARY KEY, payload BLOB NOT NULL);
@@ -196,4 +202,4 @@ CREATE TABLE IF NOT EXISTS label_post_review_checks (
     case_id INTEGER PRIMARY KEY REFERENCES label_cases(case_id),
     checked_ms INTEGER NOT NULL
 );
-INSERT OR IGNORE INTO label_schema(id, version) VALUES(1, 11);
+INSERT OR IGNORE INTO label_schema(id, version) VALUES(1, 12);

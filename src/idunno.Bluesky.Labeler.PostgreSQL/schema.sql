@@ -47,6 +47,12 @@ CREATE TABLE IF NOT EXISTS label_decisions (
     receipt BYTEA NOT NULL
 );
 CREATE INDEX IF NOT EXISTS label_decisions_revision ON label_decisions(revision);
+CREATE TABLE IF NOT EXISTS label_retirement (id INTEGER PRIMARY KEY CHECK(id=1), payload BYTEA NOT NULL);
+CREATE TABLE IF NOT EXISTS label_retirement_receipts (operation_hash BYTEA PRIMARY KEY, payload BYTEA NOT NULL);
+CREATE TABLE IF NOT EXISTS label_retirement_confirmations (token_hash BYTEA PRIMARY KEY, expires_ms BIGINT NOT NULL, payload BYTEA NOT NULL);
+CREATE INDEX IF NOT EXISTS label_retirement_confirmation_expiry ON label_retirement_confirmations(expires_ms);
+CREATE TABLE IF NOT EXISTS label_retirement_slots (seq BIGINT PRIMARY KEY, slot_hash BYTEA NOT NULL, slot_key BYTEA NOT NULL);
+CREATE INDEX IF NOT EXISTS label_retirement_slot ON label_retirement_slots(slot_hash);
 INSERT INTO label_state(id, stream_id, issuer) VALUES(1, '00000000000000000000000000000000', '') ON CONFLICT DO NOTHING;
 CREATE TABLE IF NOT EXISTS label_team (id INTEGER PRIMARY KEY CHECK(id=1), payload BYTEA NOT NULL);
 CREATE TABLE IF NOT EXISTS label_admin_audit (seq BIGINT PRIMARY KEY, payload BYTEA NOT NULL);
@@ -196,4 +202,4 @@ CREATE TABLE IF NOT EXISTS label_post_review_checks (
     case_id BIGINT PRIMARY KEY REFERENCES label_cases(case_id),
     checked_ms BIGINT NOT NULL
 );
-INSERT INTO label_schema(id, version) VALUES(1, 11) ON CONFLICT DO NOTHING;
+INSERT INTO label_schema(id, version) VALUES(1, 12) ON CONFLICT DO NOTHING;

@@ -314,28 +314,28 @@ identity where applicable. Required denial audit failures fail closed.
 coordinator outcomes. These audit events are distinct from the durable maintenance lease and
 cross-host rotation coordinator described below.
 
-The `retire` CLI commands use this shared maintenance authorization and audit path together with
-the durable lifecycle checkpoints:
+The `retire` CLI commands use the shared authorization path and durable retirement service.
+Follow the [retirement runbook](retirement.md) for action-specific preflight/challenge examples,
+worker progress, pause/resume, explicit grace selection/extension, availability attestation,
+optional label-history cleanup and separately attested external key removal.
 
-```text
-labeler-admin retire begin --operation-id retire-start --reason "Close the service" --local-endpoint /run/bean-bureau/admin.sock
-labeler-admin retire advance --operation-id retire-batch --reason "Negate retained active labels" --local-endpoint /run/bean-bureau/admin.sock
-labeler-admin retire grace --days 30 --operation-id retire-grace --reason "Allow consumers to catch up" --local-endpoint /run/bean-bureau/admin.sock
-labeler-admin retire complete --operation-id retire-complete --reason "Grace period elapsed" --local-endpoint /run/bean-bureau/admin.sock
-labeler-admin retire purge --limit 100 --operation-id retire-purge --reason "Approved local cleanup" --local-endpoint /run/bean-bureau/admin.sock
-```
-
-`begin` permanently closes ordinary issuance. Repeat `advance` until status reports `Distributing`;
-each call publishes pending labels and processes one bounded page, appending signed negations and
-the enumeration checkpoint atomically. It negates only the current unexpired positive decisions,
-preserving CID scope, and skips existing negations and expired decisions. Start the grace period only
-after status shows all issued labels published. `complete` is rejected before the database-clock
-deadline. `purge` requires separate confirmation and removes a bounded local batch; it does not destroy
-the signing key or backups. Retirement does not stop distribution automatically.
+`retire status` uses `getRetirementState` (GET); `retire preflight --action <exact-method>`
+uses `prepareRetirement` (POST), with `target` naming the intended administration method.
+Preflight and execution must carry identical operation ID, reason, grace days, inventory and
+attestation. Begin, purge, completion and both key-removal actions require their own expiring
+confirmation; bare `--yes` is insufficient. Every mutation remains POST.
+`confirmRetirementHostStopped` is a separately challenged POST with an exact `hostInstanceId`
+GUID and nonblank stopped-process attestation. It remains available in Retired/Purged after a
+key-removal request fences rotation; it records independent operator evidence, not process detection.
+Normal begin/resume uses the durable background worker, not a CLI polling loop. `advance`
+is manual one-step compatibility only. Completion never automatically stops distribution, and
+purge deletes label history/receipts rather than moderation, administrative audit, backups or
+downstream copies.
 
 Team mutations retain same-intent receipts by operation ID. On `OutcomeUnknown`, recover using that
-ID and the current authorized account; do not invent a new operation. Maintenance audit events are
-append-only observations, not an idempotent maintenance execution ledger. Keep clocks synchronized,
+ID and the current authorized account; do not invent a new operation. Retirement commands also
+retain immutable-intent receipts; legacy maintenance audit observations alone are not an execution
+ledger. Keep clocks synchronized,
 protect database credentials and backups, and treat raw provider/setup/key helpers as trusted
 infrastructure unavailable to remote callers.
 

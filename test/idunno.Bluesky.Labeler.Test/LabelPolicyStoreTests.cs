@@ -34,6 +34,50 @@ public class LabelPolicyStoreTests
     [InlineData("sqlite")]
     [InlineData("postgresql")]
     [InlineData("mysql")]
+    public async Task RetirementClosesNewPolicyWorkflowsButRetainsDraftRecoveryAndInspection(string engine)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
+        ILabelPolicyStore policies = (ILabelPolicyStore)fixture.Store;
+        LabelPolicyState initial = await policies.InitializePolicyAsync(cancellationToken: token);
+        Success(await policies.SavePolicyAsync(
+            caller: administrator,
+            operationId: "draft",
+            policy: Policy(),
+            reason: "Save draft.",
+            cancellationToken: token));
+        LabelStoreState before = await fixture.Store.GetStateAsync(token);
+        await fixture.Store.BeginRetirementAsync(before.Revision, cancellationToken: token);
+
+        ILabelPolicyStore restarted = (ILabelPolicyStore)fixture.NewStore();
+        Success(await restarted.SavePolicyAsync(
+            caller: administrator,
+            operationId: "draft",
+            policy: Policy(),
+            reason: "Save draft.",
+            cancellationToken: token));
+        Assert.True((await restarted.GetPolicyVersionAsync(administrator, "v1", token)).Succeeded);
+        Assert.Equal(LabelServiceErrorCode.IssuanceClosed, (await restarted.SavePolicyAsync(
+            caller: administrator,
+            operationId: "new-draft",
+            policy: Policy(),
+            reason: "Save draft.",
+            cancellationToken: token)).Error!.Code);
+        Assert.Equal(LabelServiceErrorCode.IssuanceClosed, (await restarted.BeginPolicyPublicationAsync(
+            caller: administrator,
+            operationId: "retired-publication",
+            version: "v1",
+            expectedRevision: initial.Revision,
+            previousCid: null,
+            reason: "Do not start publication.",
+            cancellationToken: token)).Error!.Code);
+    }
+
+    [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
     public async Task DraftDeletionRetainsHistoryAndPreventsLoadingPublicationAndVersionReuse(string engine)
     {
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);

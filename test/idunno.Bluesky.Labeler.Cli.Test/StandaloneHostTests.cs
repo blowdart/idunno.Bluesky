@@ -148,7 +148,16 @@ public class StandaloneHostTests
         Assert.Equal("http://127.0.0.1/", metadata.RootElement.GetProperty("redirect_uris")[0].GetString());
         string[] scopes = metadata.RootElement.GetProperty("scope").GetString()!.Split(' ');
         Assert.Contains("atproto", scopes);
-        Assert.Equal(47, scopes.Length);
+        Assert.Equal(scopes.Length, scopes.Distinct(StringComparer.Ordinal).Count());
+        string[] retirementMethods =
+        [
+            "getRetirementState", "prepareRetirement", "pauseRetirement", "resumeRetirement",
+            "extendGracePeriod", "requestKeyRemoval", "attestKeyRemoval", "confirmRetirementHostStopped"
+        ];
+        foreach (string method in retirementMethods)
+        {
+            Assert.Contains($"rpc:dev.idunno.labeler.admin.{method}?aud=did%3Aweb%3Alabeler.example%23labeler_admin", scopes);
+        }
         Assert.Contains("identity:*", scopes);
         Assert.Contains("repo:app.bsky.labeler.service?action=create", scopes);
         Assert.Contains("repo:app.bsky.labeler.service?action=update", scopes);

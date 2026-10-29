@@ -25,7 +25,7 @@ public sealed class InMemoryProviderTests
     public async Task SameEventDeletionMarksNewActions()
     {
         (InMemoryDatabaseProvider database, _) = await CreateProvider();
-        await ActionStorageTests.VerifySameEventDeletionAsync(database);
+        await ActionStorageTests.VerifySameEventDeletionAsync(database, static () => Task.CompletedTask);
     }
 
     /// <summary>Does not interpret custom payload properties as reply roots, but retains source deletion.</summary>

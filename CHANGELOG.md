@@ -6,6 +6,8 @@
 
 #### idunno.Bluesky.AspNet.Labeler
 
+* Runs durable retirement and optional local-purge batches independently of administration-client lifetime, retaining public distribution during grace and after retirement; supports explicitly keyless administration only on terminal retired storage.
+
 * Checks the active public policy in the background every five minutes with a default 30-minute verification lifetime; moderation health reads stored freshness without remote requests. Failed lookups do not extend validity, and confirmed differences require administrator recovery.
 
 * Resumes bounded policy-label withdrawal batches in the background independently of browser lifetime and remote administration enablement, signing with the host's active key and waiting for durable stream publication.
@@ -33,6 +35,9 @@
 * Bounds subscription admission with a retryable deadline without limiting established sockets; keeps keyless distribution replicas healthy through rotation and restart while still requiring every host to drain.
 
 #### idunno.Bluesky.AspNet.Labeler.UI
+
+* Adds separately challenged per-host stopped-process attestation after retirement, without treating stale contact as proof or requiring a rotation after key removal is requested.
+* Adds phase-specific retirement progress/recovery and read-only immutable-intent previews with separate action-specific confirmation, explicit grace selection, availability attestation, and separate label-history cleanup and operator-attested key removal.
 
 * Avoids a circular authentication-options dependency that blocked Xenon requests when the separate policy-publication scheme was registered.
 * Shows durable database-clock worker-activity and progress timestamps during policy-label withdrawal, distinguishing recorded pauses and waiting for label publication without claiming that a recent attempt proves a worker is still running.
@@ -109,6 +114,8 @@
 
 #### idunno.Bluesky.Labeler.Host
 
+* Supports explicit `Labeler:SigningKeyProvider=none` for an initialized retired labeler with no pending signatures, publication or rotation, preserving keyless read-only distribution and authorized recovery administration.
+
 * Adds repeatable test-host policy drafts and fictional team/identity examples across roles, suspension, removal and a local CLI viewer binding; fresh databases also include an earlier verified policy publication, while existing operator edits and selected policies are retained.
 * Added independently opt-in Xenon UI and Bluesky sign-in pages to the canonical host; the UI requires the optional moderation backend and remains disabled by default.
 * Serves website OAuth metadata from the same configured options as Xenon sign-in, with a web callback and identity plus read-only profile scopes, alongside the separate native CLI metadata; the shared claims transformer supplies handle and avatar claims.
@@ -125,6 +132,10 @@
 
 #### idunno.Bluesky.Labeler.Cli
 
+* Adds `retire confirm-host-stopped` with exact registration GUID, independent operator evidence and its own preflight challenge; it records an attestation, not process detection or key deletion.
+
+* Adds retirement status/preflight, pause/resume, grace extension and separately confirmed external key-removal request/attestation. Irreversible actions require a server-issued challenge even with `--yes`; completion requires availability evidence and normal begin/resume uses the durable server worker.
+
 * Waits for removed-label cleanup before policy publication/recovery writes, renews paused authority through live administration, and adds confirmed `policy resume` for the selected operation.
 * Added explicit policy inspection, save/begin/verify/abandon and conditional publication/recovery commands. Publication separates administrator and labeler-account OAuth authority, preserves raw declaration fields/default omissions, and rejects abandoned, superseded or conflicting intent.
 
@@ -138,6 +149,9 @@
 * Release tags publish an attested standalone labeler container image to the public GHCR package and include its immutable digest in the release assets.
 
 #### idunno.Bluesky.Labeler
+
+* Adds irreversible, authorized retirement with action-bound confirmations, bounded timestamp-aware signed negations, resumable database checkpoints, live worker authority, explicit 1–365 day grace selection and distribution-availability attestation. Local history purge and operator-attested external key removal remain separate confirmations; moderation and audit history, backups and downstream copies are not erased.
+* Closes new label/report/appeal/policy workflows on retirement while retaining non-label case completion and explicitly coordinated recovery signing-key rotation without reopening issuance.
 
 * Withdraws existing applications of removed policy label values in durable batches of at most 250 history entries before replacement publication, retaining exact URI/CID scopes, commit-time authorization, audit and restart recovery. Abandonment stops pending batches without undoing completed negations.
 * Adds audited, retry-safe deletion of unpublished policy drafts while retaining their definitions and operation history. Deleted versions cannot be loaded, published or reused, and selected or previously published versions cannot be deleted.
@@ -174,6 +188,8 @@
 * Defaults the canonical host to environment-backed current and optional previous keys using separate indexed variables. Filesystem-backed installations must explicitly select the `pem` provider; database-backed active selection and coordinated rotation remain authoritative.
 
 #### idunno.Bluesky.Labeler.SQLite / PostgreSQL / MySQL
+
+* Adds additive schema-twelve retirement state, exact-intent receipts, expiring confirmation challenges and bounded CID-slot selection across all three providers, preserving existing lifecycle checkpoints until explicitly adopted.
 
 * Automatically handles authenticated reports with disallowed reasons as Not Applicable, retaining original submissions and system audit provenance without changing labels or existing case workflow; subject scope, replay and appeal-ownership checks remain enforced.
 

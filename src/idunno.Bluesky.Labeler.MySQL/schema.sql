@@ -53,6 +53,10 @@ CREATE TABLE IF NOT EXISTS label_decisions (
     INDEX label_decisions_revision(revision)
 ) ENGINE=InnoDB;
 INSERT INTO label_state(id, stream_id, issuer) VALUES(1, '00000000000000000000000000000000', '') ON DUPLICATE KEY UPDATE id=id;
+CREATE TABLE IF NOT EXISTS label_retirement (id INTEGER PRIMARY KEY CHECK(id=1), payload LONGBLOB NOT NULL) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_retirement_receipts (operation_hash BINARY(32) PRIMARY KEY, payload LONGBLOB NOT NULL) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_retirement_confirmations (token_hash BINARY(32) PRIMARY KEY, expires_ms BIGINT NOT NULL, payload LONGBLOB NOT NULL, INDEX label_retirement_confirmation_expiry(expires_ms)) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_retirement_slots (seq BIGINT PRIMARY KEY, slot_hash BINARY(32) NOT NULL, slot_key LONGBLOB NOT NULL, INDEX label_retirement_slot(slot_hash)) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS label_team (id INTEGER PRIMARY KEY CHECK(id=1), payload LONGBLOB NOT NULL) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS label_admin_audit (seq BIGINT PRIMARY KEY, payload LONGBLOB NOT NULL) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS label_admin_receipts (
@@ -219,4 +223,4 @@ CREATE TABLE IF NOT EXISTS label_post_review_checks (
     checked_ms BIGINT NOT NULL,
     FOREIGN KEY(case_id) REFERENCES label_cases(case_id)
 ) ENGINE=InnoDB;
-INSERT INTO label_schema(id, version) VALUES(1, 11) ON DUPLICATE KEY UPDATE id=id;
+INSERT INTO label_schema(id, version) VALUES(1, 12) ON DUPLICATE KEY UPDATE id=id;

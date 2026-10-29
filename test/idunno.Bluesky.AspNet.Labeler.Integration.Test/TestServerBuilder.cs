@@ -194,6 +194,8 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
         }
 
         await fixture._app.StartAsync();
+        using CancellationTokenSource publicationWatchdog = new(TimeSpan.FromSeconds(30));
+        await fixture.Host.InitialPublication.WaitAsync(publicationWatchdog.Token);
         await fixture.Clock.WaitForTimerAsync(options?.PollInterval ?? TimeSpan.FromSeconds(1));
         if (network)
         {
