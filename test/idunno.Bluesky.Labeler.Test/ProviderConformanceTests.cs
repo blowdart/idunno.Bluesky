@@ -1038,6 +1038,7 @@ public class ProviderConformanceTests
     [InlineData("label_policy_events")]
     [InlineData("label_policy_history")]
     [InlineData("label_subject_index")]
+    [InlineData("label_pending_reports")]
     public async Task RejectsMySqlTablesChangedToNontransactionalStorage(string table)
     {
         await using StoreFixture fixture = await StoreFixture.CreateAsync("mysql");
