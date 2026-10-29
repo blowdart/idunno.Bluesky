@@ -833,7 +833,7 @@ internal sealed class TolerantPolymorphicConverter(
 
             // Renamed properties now look like ordinary unknown fields to System.Text.Json, allowing
             // its normal extension-data handling to capture them. Restore aliases per object afterward.
-            ConditionalWeakTable<object, ExtensionDataSnapshot> extensionSnapshots = new();
+            ConditionalWeakTable<object, ExtensionDataSnapshot> extensionSnapshots = [];
             JsonSerializerOptions readOptions = new(underlyingOptions)
             {
                 TypeInfoResolver = underlyingOptions.TypeInfoResolver!.WithAddedModifier(info =>

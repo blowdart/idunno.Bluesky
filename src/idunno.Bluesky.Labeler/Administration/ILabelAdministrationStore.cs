@@ -59,6 +59,17 @@ public interface ILabelAdministrationStore
         string localIdentity,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Creates short-lived caller evidence for an authenticated browser identity.</summary>
+    /// <param name="actor">The DID established by a trusted browser authentication handler.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>Invocation evidence for an active member or an explicit denial.</returns>
+    /// <remarks><para>Call only after validating the browser's authenticated principal. This method does not
+    /// authenticate an identity itself. It rechecks live membership and issues expiring provider-backed
+    /// evidence that is revalidated for every operation and mutation commit.</para></remarks>
+    Task<LabelServiceResult<LabelAdministrationCaller>> AuthenticateBrowserAsync(
+        Did actor,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Consumes a verified service token's replay identity across all hosts.</summary>
     /// <param name="authentication">The protocol verifier's successful result.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
@@ -87,6 +98,18 @@ public interface ILabelAdministrationStore
     Task<LabelServiceResult<LabelAdministrationReceipt>> ChangeTeamAsync(
         LabelAdministrationCaller caller,
         LabelTeamChange change,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Registers or clears an active administrator's policy-alert email under live team authority.</summary>
+    /// <param name="caller">The authenticated invocation evidence.</param>
+    /// <param name="change">The validated address change and audit reason.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The original or newly committed receipt, or a classified denial.</returns>
+    /// <remarks><para>The address is returned only to callers with current team-management permission and is
+    /// never written to audit text. Only active administrators receive policy-verification notifications.</para></remarks>
+    Task<LabelServiceResult<LabelAdministrationReceipt>> SetTeamNotificationEmailAsync(
+        LabelAdministrationCaller caller,
+        LabelTeamNotificationEmailChange change,
         CancellationToken cancellationToken = default);
 
     /// <summary>Reads the bounded team after checking live inspection authority.</summary>

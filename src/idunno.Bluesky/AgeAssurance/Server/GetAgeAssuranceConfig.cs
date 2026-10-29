@@ -52,11 +52,11 @@ public static partial class BlueskyServer
         {
             Config config = response.Result with
             {
-                Regions = WithoutNullEntries(response.Result.Regions, service, nameof(Config.Regions), loggerFactory)
+                Regions = [.. WithoutNullEntries(response.Result.Regions, service, nameof(Config.Regions), loggerFactory)
                     .Select(region => region with
                     {
                         Rules = WithoutNullEntries(region.Rules, service, nameof(ConfigRegion.Rules), loggerFactory)
-                    }).ToList()
+                    })]
             };
 
             return new AtProtoHttpResult<Config>(

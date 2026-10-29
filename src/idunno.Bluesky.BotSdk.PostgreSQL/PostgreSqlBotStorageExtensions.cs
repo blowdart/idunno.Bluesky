@@ -7,7 +7,9 @@ using Microsoft.Extensions.Configuration;
 
 using Npgsql;
 
+#pragma warning disable IDE0130 // Preserve the established namespace independently of folder layout.
 namespace idunno.Bluesky.BotSdk.DataProviders;
+#pragma warning restore IDE0130
 
 /// <summary>Registers PostgreSQL storage for the durable bot runtime.</summary>
 public static class PostgreSqlBotStorageExtensions

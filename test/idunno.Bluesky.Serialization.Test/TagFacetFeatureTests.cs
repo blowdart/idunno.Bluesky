@@ -128,14 +128,14 @@ public class TagFacetFeatureTests
     public void PostStillRejectsNullTopLevelTags()
     {
         ArgumentException exception = Assert.Throws<ArgumentException>(
-            () => new Post("post", tags: new string[] { null! }));
+            () => new Post("post", tags: [null!]));
         Assert.Equal("tags", exception.ParamName);
     }
 
     private static void AssertPostFacets(Post post)
     {
         Assert.NotNull(post.Facets);
-        Facet[] facets = post.Facets.ToArray();
+        Facet[] facets = [.. post.Facets];
         Assert.Equal(4, facets.Length);
         Assert.Equal(string.Empty, Assert.IsType<TagFacetFeature>(Assert.Single(facets[0].Features)).Tag);
         Assert.Equal("normal", Assert.IsType<TagFacetFeature>(Assert.Single(facets[1].Features)).Tag);

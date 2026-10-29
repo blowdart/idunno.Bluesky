@@ -23,9 +23,9 @@ namespace idunno.Bluesky.Labeler.Storage;
 /// <remarks><para>Linked into each provider assembly. SQL, client types and transaction fault hooks stay
 /// internal; application services submit typed commands rather than holding database connections.</para></remarks>
 internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetrics metrics)
-    : ILabelStore, ILabelAdministrationStore, ILabelMaintenanceStore, ILabelSigningKeySelectionStore, ILabelModerationStore, ILabelPolicyStore, ILabelReportStore, ILabelAppealStore
+    : ILabelStore, ILabelAdministrationStore, ILabelMaintenanceStore, ILabelSigningKeySelectionStore, ILabelModerationStore, ILabelPolicyStore, ILabelReportStore, ILabelAppealStore, ILabelTableStore, ILabelSearchStore, ILabelDeletedPostStore, ILabelPolicyAlertStore
 {
-    private const int SchemaVersion = 9;
+    private const int SchemaVersion = 11;
     private const long MaximumSequence = 9_007_199_254_740_991;
     private static readonly UTF8Encoding s_strictUtf8 = new(false, true);
     /// <summary>Gets or sets the test hook for failures known to occur before commit submission.</summary>
@@ -80,10 +80,11 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
             transaction: transaction,
             sql: schema,
             token: token).ConfigureAwait(false);
-        // Backfill is repeatable after interrupted nontransactional MySQL DDL. Old writers reject v9.
+        // Backfill is repeatable after interrupted nontransactional MySQL DDL. Old writers reject v11.
         await BackfillDistributionAsync(connection, transaction, token).ConfigureAwait(false);
         await BackfillDecisionIndexAsync(connection, transaction, token).ConfigureAwait(false);
         await BackfillSubjectIndexAsync(connection, transaction, token).ConfigureAwait(false);
+        await BackfillSearchTextAsync(connection, transaction, token).ConfigureAwait(false);
         await ExecuteAsync(
             connection: connection,
             transaction: transaction,
@@ -96,7 +97,7 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
         await ExecuteAsync(
             connection: connection,
             transaction: transaction,
-            sql: "UPDATE label_schema SET version=9 WHERE id=1",
+            sql: "UPDATE label_schema SET version=11 WHERE id=1",
             token: token).ConfigureAwait(false);
     }
 
@@ -557,6 +558,11 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
             {
                 throw new InvalidOperationException("Ordinary issuance is closed during retirement.");
             }
+            if (await ReadPolicyGateAsync(connection, transaction, cancellationToken).ConfigureAwait(false) is
+                { Phase: LabelPolicyPhase.Withdrawing } && batch.Any(label => !label.Label.IsNegationLabel))
+            {
+                throw new InvalidOperationException("New positive labels are blocked during policy withdrawal.");
+            }
 
             long last = checked(state.IssuedThrough + batch.Length);
             if (last > MaximumSequence)
@@ -564,42 +570,13 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
                 throw new OverflowException("The label stream sequence space is exhausted.");
             }
             long now = await DatabaseTimeAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
-            for (int i = 0; i < batch.Length; i++)
-            {
-                Label label = batch[i].Label;
-                if (!string.Equals(label.Source.Value, state.Issuer, StringComparison.Ordinal))
-                {
-                    throw new InvalidDataException("A signed label has the wrong issuer.");
-                }
-
-                await ExecuteAsync(
-                    connection: connection,
-                    transaction: transaction,
-                    sql: "INSERT INTO label_entries(seq, signed_json, payload, format_version, queued_at) VALUES(@seq,@json,@payload,1,@now)",
-                    token: cancellationToken,
-                    ("@seq", checked(state.IssuedThrough + i + 1)),
-                    ("@json", batch[i].GetJsonBytes()),
-                    ("@payload", batch[i].GetCanonicalUnsignedBytes()),
-                    ("@now", now)).ConfigureAwait(false);
-                await IndexDistributionAsync(
-                    connection: connection,
-                    transaction: transaction,
-                    sequence: state.IssuedThrough + i + 1,
-                    signed: batch[i],
-                    token: cancellationToken).ConfigureAwait(false);
-                await IndexDecisionAsync(
-                    connection: connection,
-                    transaction: transaction,
-                    sequence: state.IssuedThrough + i + 1,
-                    signed: batch[i],
-                    token: cancellationToken).ConfigureAwait(false);
-                await IndexSubjectAsync(
-                    connection: connection,
-                    transaction: transaction,
-                    sequence: state.IssuedThrough + i + 1,
-                    signed: batch[i],
-                    token: cancellationToken).ConfigureAwait(false);
-            }
+            await AppendSignedBatchAsync(
+                connection: connection,
+                transaction: transaction,
+                state: state,
+                labels: batch,
+                queuedAt: now,
+                token: cancellationToken).ConfigureAwait(false);
 
             LabelStoreState next = state with
             {
@@ -896,7 +873,7 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
             connection: connection,
             transaction: transaction,
             sql: sql,
-            values: parameters.ToArray());
+            values: [.. parameters]);
         await using ConfiguredAsyncDisposable commandDisposal = command.ConfigureAwait(false);
         DbDataReader reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false);
         await using ConfiguredAsyncDisposable readerDisposal = reader.ConfigureAwait(false);
@@ -949,12 +926,12 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
         List<LabelServiceResult<LabelDecisionSnapshot>> results = new(queries.Count);
         foreach ((LabelTarget target, string value) in queries)
         {
-            (StoredLabel? Current, bool Ambiguous) decision = decisions[(target.Subject, value)];
-            results.Add(decision.Ambiguous && !allowTiedTimestamps
+            (StoredLabel? Current, bool Ambiguous) = decisions[(target.Subject, value)];
+            results.Add(Ambiguous && !allowTiedTimestamps
                 ? LabelServiceResult<LabelDecisionSnapshot>.Failure(new(
                     code: LabelServiceErrorCode.AmbiguousHistory,
                     message: "Conflicting labels have the same latest creation timestamp; inspect history before deciding."))
-                : LabelServiceResult<LabelDecisionSnapshot>.Success(new(state, decision.Current)));
+                : LabelServiceResult<LabelDecisionSnapshot>.Success(new(state, Current)));
         }
 
         return results;
@@ -984,7 +961,7 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(queries);
-        queries = queries.ToArray();
+        queries = [.. queries];
         ArgumentOutOfRangeException.ThrowIfGreaterThan(queries.Count, 400);
         foreach ((LabelTarget target, string value) in queries)
         {
@@ -1016,10 +993,10 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
         }
         catch (DbException exception)
         {
-            return queries.Select(_ => LabelServiceResult<LabelDecisionSnapshot>.Failure(new(
+            return [.. queries.Select(_ => LabelServiceResult<LabelDecisionSnapshot>.Failure(new(
                 code: LabelServiceErrorCode.StorageUnavailable,
                 message: "Label storage is unavailable; retry the original request when storage recovers.",
-                exception: exception))).ToArray();
+                exception: exception)))];
         }
     }
 
@@ -1028,7 +1005,7 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(queries);
-        queries = queries.ToArray();
+        queries = [.. queries];
         ArgumentOutOfRangeException.ThrowIfGreaterThan(queries.Count, 400);
         foreach ((LabelTarget target, string value) in queries)
         {
@@ -1061,9 +1038,9 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
                     queries: queries,
                     token: cancellationToken,
                     allowTiedTimestamps: true).ConfigureAwait(false);
-                return snapshots.Select(result =>
+                return [.. snapshots.Select(result =>
                     (result.Result ?? throw new InvalidDataException("Retirement timestamp lookup did not return a snapshot."))
-                        .CurrentLabel?.SignedLabel.Label.CreationTimestamp).ToArray();
+                        .CurrentLabel?.SignedLabel.Label.CreationTimestamp)];
             },
             token: cancellationToken).ConfigureAwait(false);
     }
@@ -1177,6 +1154,52 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
                     code: LabelServiceErrorCode.OutcomeUnknown,
                     message: "The commit acknowledgement is uncertain; recover the original operation ID before retrying.",
                     exception: exception.InnerException));
+        }
+    }
+
+    /// <summary>Appends fixed signed snapshots and all subject/decision/distribution indexes within the caller's mutation transaction.</summary>
+    private static async Task AppendSignedBatchAsync(
+        DbConnection connection,
+        DbTransaction transaction,
+        LabelStoreState state,
+        SignedLabelSnapshot[] labels,
+        long queuedAt,
+        CancellationToken token)
+    {
+        for (int i = 0; i < labels.Length; i++)
+        {
+            if (labels[i].Label.Source.Value != state.Issuer)
+            {
+                throw new InvalidDataException("A signed label has the wrong issuer.");
+            }
+            long sequence = checked(state.IssuedThrough + i + 1);
+            await ExecuteAsync(
+                connection: connection,
+                transaction: transaction,
+                sql: "INSERT INTO label_entries(seq,signed_json,payload,format_version,queued_at) VALUES(@seq,@json,@payload,1,@now)",
+                token: token,
+                ("@seq", sequence),
+                ("@json", labels[i].GetJsonBytes()),
+                ("@payload", labels[i].GetCanonicalUnsignedBytes()),
+                ("@now", queuedAt)).ConfigureAwait(false);
+            await IndexDistributionAsync(
+                connection: connection,
+                transaction: transaction,
+                sequence: sequence,
+                signed: labels[i],
+                token: token).ConfigureAwait(false);
+            await IndexDecisionAsync(
+                connection: connection,
+                transaction: transaction,
+                sequence: sequence,
+                signed: labels[i],
+                token: token).ConfigureAwait(false);
+            await IndexSubjectAsync(
+                connection: connection,
+                transaction: transaction,
+                sequence: sequence,
+                signed: labels[i],
+                token: token).ConfigureAwait(false);
         }
     }
 
@@ -1709,7 +1732,8 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
                 throw new InvalidOperationException("Lifecycle transitions are blocked during coordinated maintenance.");
             }
 
-            if ((await ReadPolicyGateAsync(connection, transaction, token).ConfigureAwait(false))?.Phase == LabelPolicyPhase.Publishing)
+            if ((await ReadPolicyGateAsync(connection, transaction, token).ConfigureAwait(false))?.Phase is
+                LabelPolicyPhase.Publishing or LabelPolicyPhase.Withdrawing)
             {
                 throw new InvalidOperationException("Lifecycle transitions are blocked while declaration publication is pending.");
             }

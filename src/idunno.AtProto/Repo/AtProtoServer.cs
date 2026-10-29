@@ -357,7 +357,7 @@ public static partial class AtProtoServer
     /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
     /// <param name="onCredentialsUpdated"><para>An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</para></param>
     /// <param name="loggerFactory"><para>An instance of <see cref="ILoggerFactory"/> to use to create a logger.</para></param>
-    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
+    /// <param name="maximumResponseSize"><para>The maximum number of bytes to read from the response body.</para></param>
     /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -465,7 +465,7 @@ public static partial class AtProtoServer
     /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
     /// <param name="onCredentialsUpdated"><para>An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</para></param>
     /// <param name="loggerFactory"><para>An instance of <see cref="ILoggerFactory"/> to use to create a logger.</para></param>
-    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
+    /// <param name="maximumResponseSize"><para>The maximum number of bytes to read from the response body.</para></param>
     /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -675,7 +675,7 @@ public static partial class AtProtoServer
     /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
     /// <param name="onCredentialsUpdated"><para>An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</para></param>
     /// <param name="loggerFactory"><para>An instance of <see cref="ILoggerFactory"/> to use to create a logger.</para></param>
-    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
+    /// <param name="maximumResponseSize"><para>The maximum number of bytes to read from the response body.</para></param>
     /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -754,7 +754,7 @@ public static partial class AtProtoServer
     /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
     /// <param name="onCredentialsUpdated"><para>An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</para></param>
     /// <param name="loggerFactory"><para>An instance of <see cref="ILoggerFactory"/> to use to create a logger.</para></param>
-    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
+    /// <param name="maximumResponseSize"><para>The maximum number of bytes to read from the response body.</para></param>
     /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -863,7 +863,7 @@ public static partial class AtProtoServer
     /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
     /// <param name="onCredentialsUpdated"><para>An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</para></param>
     /// <param name="loggerFactory"><para>An instance of <see cref="ILoggerFactory"/> to use to create a logger.</para></param>
-    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
+    /// <param name="maximumResponseSize"><para>The maximum number of bytes to read from the response body.</para></param>
     /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -945,7 +945,7 @@ public static partial class AtProtoServer
     /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
     /// <param name="onCredentialsUpdated"><para>An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</para></param>
     /// <param name="loggerFactory"><para>An instance of <see cref="ILoggerFactory"/> to use to create a logger.</para></param>
-    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
+    /// <param name="maximumResponseSize"><para>The maximum number of bytes to read from the response body.</para></param>
     /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">

@@ -4,10 +4,12 @@
 using System.Text.Json;
 
 using idunno.AtProto;
+using idunno.AtProto.Labels;
 using idunno.Bluesky.Labeler;
 using idunno.Bluesky.Labeler.Administration;
 using idunno.Bluesky.Labeler.Issuance;
 using idunno.Bluesky.Labeler.Moderation;
+using idunno.Bluesky.Labeler.Storage;
 
 namespace idunno.Bluesky.AspNet.Labeler;
 
@@ -28,6 +30,159 @@ internal sealed partial class AdministrationDispatcher
         ModerationCommand input = command.Moderation ?? new();
         switch (command.Method)
         {
+            case "deletePolicyDraft":
+                {
+                    if (store is not ILabelTableStore tables)
+                    {
+                        return new(false, "UnsupportedPolicy", "This provider does not support draft deletion.");
+                    }
+
+                    LabelServiceResult<LabelPolicyDefinition> result = await tables.DeletePolicyDraftAsync(
+                        caller: caller,
+                        operationId: command.OperationId,
+                        version: input.PolicyVersion ?? throw new ArgumentException("A draft version is required."),
+                        reason: command.Reason,
+                        cancellationToken: token).ConfigureAwait(false);
+                    return result.Succeeded ? new(true, Moderation: new(Definition: DefinitionView(result.Result))) : Failure(result.Error);
+                }
+            case "getManualLabelChoices":
+                return await ReadManualLabelChoicesAsync(caller, command, policies, token).ConfigureAwait(false);
+            case "searchModeration":
+                {
+                    if (store is not ILabelSearchStore search)
+                    {
+                        return new(false, "UnsupportedSearch", "Moderation search is unavailable for this provider.");
+                    }
+
+                    LabelServiceResult<LabelSearchPage> result = await search.SearchAsync(
+                        caller: caller,
+                        query: input.SearchQuery ?? throw new ArgumentException("Enter search text."),
+                        page: input.HistoryPage,
+                        cancellationToken: token).ConfigureAwait(false);
+                    return result.Succeeded
+                        ? new(true, Moderation: new(Search: new(
+                            result.Result.Page,
+                            result.Result.Total,
+                            [.. result.Result.Hits.Select(hit => new ModerationSearchHitView(
+                                Report: hit.Report is { } report ? ReportView(report) : null,
+                                Appeal: hit.Appeal is { } appeal ? AppealView(appeal) : null,
+                                Text: hit.MatchText,
+                                RelatedReportId: hit.RelatedReportId))],
+                            result.Result.PendingHandleCases,
+                            result.Result.UnavailableHandleCases)))
+                        : Failure(result.Error);
+                }
+            case "getCaseActivity":
+                {
+                    if (store is not ILabelTableStore activityStore)
+                    {
+                        return new(false, "UnsupportedTable", "Case activity is unavailable for this provider.");
+                    }
+
+                    LabelServiceResult<LabelCaseActivityPage> activity = await activityStore.ReadCaseActivityAsync(
+                        caller: caller, caseId: input.CaseId, page: input.HistoryPage, cancellationToken: token).ConfigureAwait(false);
+                    return activity.Succeeded
+                        ? new(true, Moderation: new(Activity: new(
+                            activity.Result.Page,
+                            activity.Result.Total,
+                            [.. activity.Result.Entries.Select(entry => new ModerationActivityView(
+                                Report: entry.Report is { } report ? ReportView(report) : null,
+                                Event: entry.Event is { } caseEvent ? CaseEventView(caseEvent) : null,
+                                Decision: entry.Decision is { } decision ? DecisionView(decision) : null))])))
+                        : Failure(activity.Error);
+                }
+            case "getModerationOverview":
+                {
+                    if (store is not ILabelTableStore tables)
+                    {
+                        return new(false, "UnsupportedTable", "Open moderation counts are unavailable for this provider.");
+                    }
+
+                    LabelServiceResult<LabelNavigationCounts> counts = await tables.ReadNavigationCountsAsync(caller, token).ConfigureAwait(false);
+                    return counts.Succeeded
+                        ? new(true, Moderation: new(OpenCounts: new(counts.Result.Cases, counts.Result.Reports, counts.Result.Appeals)))
+                        : Failure(counts.Error);
+                }
+            case "getCaseLabels":
+                {
+                    LabelServiceResult<LabelModerationCase> result = await cases.GetCaseAsync(caller, input.CaseId, token).ConfigureAwait(false);
+                    if (!result.Succeeded)
+                    {
+                        return Failure(result.Error);
+                    }
+
+                    LabelServiceResult<LabelPolicyState> gate = await policies.GetPolicyStateAsync(caller, token).ConfigureAwait(false);
+                    if (!gate.Succeeded)
+                    {
+                        return Failure(gate.Error);
+                    }
+
+                    if (gate.Result.Policy is not { } definition)
+                    {
+                        return new(false, "PolicyUnavailable", "The current label choices are unavailable until a policy is selected.");
+                    }
+
+                    LabelReportSubject subject = result.Result.Subject;
+                    if (store is not ILabelTableStore labelReader)
+                    {
+                        return new(false, "UnsupportedTable", "Active subject labels are unavailable for this provider.");
+                    }
+
+                    LabelServiceResult<StoredLabel[]> applied = await labelReader.ReadSubjectLabelsAsync(caller, subject, token).ConfigureAwait(false);
+                    if (!applied.Succeeded)
+                    {
+                        return Failure(applied.Error);
+                    }
+
+                    string[] accountLabels = [];
+                    if (subject.RecordUri is not null)
+                    {
+                        LabelServiceResult<StoredLabel[]> account = await labelReader.ReadSubjectLabelsAsync(
+                            caller, LabelReportSubject.Account(subject.Repository), token).ConfigureAwait(false);
+                        if (!account.Succeeded)
+                        {
+                            return Failure(account.Error);
+                        }
+
+                        accountLabels = [.. account.Result.Select(label => label.SignedLabel.Label.Value).Order(StringComparer.Ordinal)];
+                    }
+
+                    LabelTarget target = subject.Cid is null
+                        ? LabelTarget.Account(subject.Repository)
+                        : LabelTarget.Record(new AtUri(subject.Subject), subject.Cid);
+                    List<ModerationLabelChoiceView> choices = [];
+                    foreach (string[] values in definition.Issuance.DeclaredValues
+                        .Concat(applied.Result.Select(label => label.SignedLabel.Label.Value))
+                        .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).Chunk(400))
+                    {
+                        IReadOnlyList<LabelServiceResult<LabelDecisionSnapshot>> snapshots = await store.ReadDecisionBatchAsync(
+                            [.. values.Select(value => (target, value))], token).ConfigureAwait(false);
+                        for (int index = 0; index < values.Length; index++)
+                        {
+                            LabelServiceResult<LabelDecisionSnapshot> snapshot = snapshots[index];
+                            if (!snapshot.Succeeded)
+                            {
+                                return Failure(snapshot.Error);
+                            }
+
+                            StoredLabel? current = snapshot.Result.CurrentLabel;
+                            Label? label = current?.SignedLabel.Label;
+                            bool active = label is { IsNegationLabel: false } &&
+                                (label.ExpiresAt is null || label.ExpiresAt > gate.Result.DatabaseTime);
+                            choices.Add(new(
+                                Value: values[index],
+                                Applied: active && label!.Cid == subject.Cid,
+                                Sequence: current?.Sequence ?? 0,
+                                OtherVersion: active && label!.Cid != subject.Cid));
+                        }
+                    }
+
+                    return new(true, Moderation: new(
+                        Case: CaseView(result.Result),
+                        Policy: PolicyView(gate.Result),
+                        LabelChoices: [.. choices],
+                        AccountLabels: accountLabels));
+                }
             case "getPolicyVersion":
                 {
                     LabelServiceResult<LabelPolicyDefinition> result = await policies.GetPolicyVersionAsync(
@@ -136,19 +291,31 @@ internal sealed partial class AdministrationDispatcher
                         return new(false, "InvalidRequest", "Supply a policy version and an explicit bounded action list.");
                     }
 
-                    LabelCaseDecision request = new(
-                        operationId: command.OperationId,
-                        caseId: input.CaseId,
-                        expectedRevision: input.ExpectedRevision,
-                        policyVersion: input.PolicyVersion,
-                        reason: command.Reason,
-                        actions: input.Actions.Select(action => new LabelCaseLabelAction(
-                            kind: action.Kind,
-                            value: action.Value,
-                            expiresAt: action.ExpiresAt,
-                            expectedLabelSequence: action.ExpectedLabelSequence)).ToArray(),
-                        appealIds: input.AppealIds,
-                        appealOutcome: input.AppealOutcome);
+                    LabelCaseDecision request;
+                    try
+                    {
+                        request = new(
+                            operationId: command.OperationId,
+                            caseId: input.CaseId,
+                            expectedRevision: input.ExpectedRevision,
+                            policyVersion: input.PolicyVersion,
+                            reason: command.Reason,
+                            actions: [.. input.Actions.Select(action => new LabelCaseLabelAction(
+                                kind: action.Kind,
+                                value: action.Value,
+                                expiresAt: action.ExpiresAt,
+                                expectedLabelSequence: action.ExpectedLabelSequence))],
+                            appealIds: input.AppealIds,
+                            appealOutcome: input.AppealOutcome,
+                            reportId: input.ReportId == 0 ? null : input.ReportId,
+                            handleOtherReports: input.HandleOtherReports);
+                    }
+                    catch (ArgumentException exception)
+                    {
+                        return new(false, "InvalidRequest", exception.ParamName == "actions"
+                            ? "The appeal outcome does not match the label selection. Keep the existing decision requires unchanged labels; Remove labels requires removing applied labels without adding any; Replace labels requires a changed selection. A superseded acknowledgement cannot change labels."
+                            : exception.Message);
+                    }
                     LabelServiceResult<LabelCaseDecisionReceipt> result;
                     if (request.Actions.Count == 0)
                     {
@@ -251,6 +418,19 @@ internal sealed partial class AdministrationDispatcher
                         reason: command.Reason, cancellationToken: token).ConfigureAwait(false);
                     return result.Succeeded ? new(true, Moderation: new(Policy: PolicyView(result.Result))) : Failure(result.Error);
                 }
+            case "resumePolicyPublication":
+                {
+                    if (store is not ILabelPolicyWithdrawalStore withdrawals)
+                    {
+                        return new(false, "PolicyUnavailable", "The provider does not support resumable policy cleanup.");
+                    }
+                    LabelServiceResult<LabelPolicyState> result = await withdrawals.ResumePolicyWithdrawalAsync(
+                        caller: caller,
+                        operationId: command.OperationId,
+                        reason: command.Reason,
+                        cancellationToken: token).ConfigureAwait(false);
+                    return result.Succeeded ? new(true, Moderation: new(Policy: PolicyView(result.Result))) : Failure(result.Error);
+                }
             case "verifyPolicy":
                 {
                     LabelServiceResult<LabelAuthorizationGrant> admission = await administration.AuthorizeAsync(
@@ -303,7 +483,7 @@ internal sealed partial class AdministrationDispatcher
         Reason: value.Request.Reason,
         PolicyVersion: value.Request.PolicyVersion,
         Event: CaseEventView(value.CaseEvent),
-        Actions: value.Labels.Select(label =>
+        Actions: [.. value.Labels.Select(label =>
         {
             JsonElement? signed = null;
             if (label.Label is { } outcome)
@@ -315,10 +495,12 @@ internal sealed partial class AdministrationDispatcher
             return new ModerationLabelOutcomeView(
                 label.Request.OperationId, label.Request.Kind.ToString(), label.Request.Value,
                 label.Changed, label.Label?.Sequence, signed);
-        }).ToArray(),
+        })],
         State: PublicationView(value.StateAtCommit),
         AppealIds: [.. value.Request.AppealIds],
-        AppealOutcome: value.Request.AppealOutcome?.ToString());
+        AppealOutcome: value.Request.AppealOutcome?.ToString(),
+        ReportId: value.Request.ReportId,
+        HandleOtherReports: value.Request.HandleOtherReports);
 
     /// <summary>Projects original signed challenges without replacing them with current label history.</summary>
     private static ModerationAppealView AppealView(LabelAppeal value) => new(
@@ -326,20 +508,30 @@ internal sealed partial class AdministrationDispatcher
         CaseId: value.CaseId,
         Initiator: value.Initiator.Value,
         Subject: ModerationWire.SubjectView(value.Subject),
-        Challenges: value.Challenges.Select(challenge =>
+        Challenges: [.. value.Challenges.Select(challenge =>
         {
             using JsonDocument document = JsonDocument.Parse(challenge.SignedLabel.GetJsonBytes());
             return new ModerationChallengeView(challenge.Sequence, document.RootElement.Clone());
-        }).ToArray(),
+        })],
         Status: value.Status.ToString(),
         CreatedAt: value.CreatedAt,
         UpdatedAt: value.UpdatedAt,
-        DecisionOperationId: value.DecisionOperationId);
+        DecisionOperationId: value.DecisionOperationId,
+        ResolutionReason: value.ResolutionReason);
 
     /// <summary>Projects confidential report metadata only after live protected inspection.</summary>
     private static ModerationReportView ReportView(LabelModerationReport value) => new(
         value.CaseId, ModerationWire.ReportOutput(value), value.PolicyVersion, value.Audience,
-        value.Submission.ModToolName, value.Submission.ModToolMetadata);
+        value.Submission.ModToolName, value.Submission.ModToolMetadata,
+        value.DecisionOperationId, value.HandledAt, value.ResolutionReason);
+
+    /// <summary>Projects pending intake without creating a case link or exposing replay evidence.</summary>
+    private static PendingModerationReportView PendingReportView(LabelPendingModerationReport value) => new(
+        ModerationWire.ReportOutput(value.Id, value.Submission, value.ReportedBy, value.CreatedAt),
+        value.PendingVerification ? "PendingVerification" : "NotApplicable",
+        value.PolicyVersion,
+        value.ProcessedAt,
+        value.ResolutionReason);
 
     /// <summary>Projects complete versioned policy intent without repository credentials.</summary>
     private static ModerationPolicyDefinitionView DefinitionView(LabelPolicyDefinition value)
@@ -356,7 +548,7 @@ internal sealed partial class AdministrationDispatcher
         value.Revision, value.Phase.ToString(), value.Policy is null ? null : DefinitionView(value.Policy),
         value.PreviousCid?.ToString(), value.VerifiedCid?.ToString(), value.VerifiedUntil,
         checked((long)value.VerificationFreshness.TotalMilliseconds), value.DatabaseTime,
-        value.Issuer.Value, value.PublicationOperationId);
+        value.Issuer.Value, value.PublicationOperationId, value.Withdrawal);
 
     /// <summary>Projects historical policy intent and observations without claiming that old freshness grants current permission.</summary>
     private static ModerationPolicyHistoryView PolicyHistoryView(LabelPolicyHistoryEntry value)
@@ -406,7 +598,10 @@ internal sealed record ModerationCommand(
     LabelCaseWorkflow Queue = LabelCaseWorkflow.Unresolved,
     string? ReasonType = null,
     string? Cursor = null,
-    string? AfterVersion = null);
+    string? AfterVersion = null,
+    bool HandleOtherReports = false,
+    long HistoryPage = 1,
+    string? SearchQuery = null);
 
 /// <summary>Defines one bounded label-slot action without accepting target or actor overrides.</summary>
 internal sealed record ModerationLabelActionInput(LabelOperationKind Kind, string Value, DateTimeOffset? ExpiresAt = null, long? ExpectedLabelSequence = null);
@@ -425,7 +620,32 @@ internal sealed record ModerationResponse(
     long[]? ReportIds = null,
     string? Cursor = null,
     ModerationPolicyDefinitionView[]? Definitions = null,
-    ModerationPolicyHistoryView[]? PolicyHistory = null);
+    ModerationPolicyHistoryView[]? PolicyHistory = null,
+    ModerationLabelChoiceView[]? LabelChoices = null,
+    ModerationOpenCountsView? OpenCounts = null,
+    long[]? PendingAppealCaseIds = null,
+    string[]? AccountLabels = null,
+    ModerationActivityPageView? Activity = null,
+    ModerationSearchPageView? Search = null,
+    PendingModerationReportView[]? PendingReports = null);
+
+/// <summary>Contains one authorized mixed report/appeal search page and explicit index-coverage information.</summary>
+internal sealed record ModerationSearchPageView(long Page, long Total, ModerationSearchHitView[] Hits, long PendingHandleCases, long UnavailableHandleCases);
+
+/// <summary>Preserves the distinction between reports and appeals while exposing original matching text.</summary>
+internal sealed record ModerationSearchHitView(ModerationReportView? Report, ModerationAppealView? Appeal, string? Text, long? RelatedReportId);
+
+/// <summary>Contains one newest-first page of workflow and report history.</summary>
+internal sealed record ModerationActivityPageView(long Page, long Total, ModerationActivityView[] Entries);
+
+/// <summary>Distinguishes original submissions from shared case events and their exact decision provenance.</summary>
+internal sealed record ModerationActivityView(ModerationReportView? Report, ModerationCaseEventView? Event, ModerationDecisionView? Decision);
+
+/// <summary>Contains current authorized open-work counts for the three workflow navigation links.</summary>
+internal sealed record ModerationOpenCountsView(long Cases, long Reports, long Appeals);
+
+/// <summary>Contains a declared label's exact-target state and sequence fence without exposing issuance internals.</summary>
+internal sealed record ModerationLabelChoiceView(string Value, bool Applied, long Sequence, bool OtherVersion);
 
 /// <summary>Contains immutable policy publication and observation history for protected recovery.</summary>
 internal sealed record ModerationPolicyHistoryView(
@@ -450,7 +670,9 @@ internal sealed record ModerationDecisionView(
     ModerationLabelOutcomeView[] Actions,
     AdministrationPublicationView State,
     long[] AppealIds,
-    string? AppealOutcome);
+    string? AppealOutcome,
+    long? ReportId,
+    bool HandleOtherReports);
 /// <summary>Contains protected immutable challenge provenance and the latest explicit review outcome.</summary>
 internal sealed record ModerationAppealView(
     long Id,
@@ -461,7 +683,8 @@ internal sealed record ModerationAppealView(
     string Status,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
-    string? DecisionOperationId);
+    string? DecisionOperationId,
+    string? ResolutionReason = null);
 /// <summary>Contains the original signed stream outcome captured when an appeal was accepted.</summary>
 internal sealed record ModerationChallengeView(long Sequence, JsonElement Label);
 /// <summary>Contains original signed or no-op label provenance without internal diagnostics.</summary>
@@ -472,8 +695,15 @@ internal sealed record ModerationCaseView(long Id, long Revision, ReportSubjectV
 /// <summary>Contains a protected immutable case event and its historical outcome.</summary>
 internal sealed record ModerationCaseEventView(long Sequence, string OperationId, string Action, string Actor, string? LocalIdentity, string Reason, DateTimeOffset CreatedAt, ModerationCaseView Case);
 /// <summary>Contains confidential report linkage and acceptance provenance.</summary>
-internal sealed record ModerationReportView(long CaseId, ReportOutput Report, string PolicyVersion, string Audience, string? ModToolName, JsonElement? ModToolMetadata);
+internal sealed record ModerationReportView(long CaseId, ReportOutput Report, string PolicyVersion, string Audience, string? ModToolName, JsonElement? ModToolMetadata, string? DecisionOperationId, DateTimeOffset? HandledAt, string? ResolutionReason = null);
+/// <summary>Contains an authenticated report retained outside case review until policy scope is known.</summary>
+internal sealed record PendingModerationReportView(
+    ReportOutput Report,
+    string Status,
+    string? PolicyVersion,
+    DateTimeOffset? ProcessedAt,
+    string? ResolutionReason);
 /// <summary>Contains a complete selected policy definition for explicit publication or inspection.</summary>
 internal sealed record ModerationPolicyDefinitionView(string Version, JsonElement Declaration, bool AllowAccounts, bool AllowRecords, string[]? AllowedRecordCollections, string Rules);
 /// <summary>Contains the shared durable gate, observation deadline and conditional-update CID.</summary>
-internal sealed record ModerationPolicyView(long Revision, string Phase, ModerationPolicyDefinitionView? Definition, string? PreviousCid, string? VerifiedCid, DateTimeOffset? VerifiedUntil, long VerificationFreshnessMilliseconds, DateTimeOffset DatabaseTime, string Issuer, string? PublicationOperationId);
+internal sealed record ModerationPolicyView(long Revision, string Phase, ModerationPolicyDefinitionView? Definition, string? PreviousCid, string? VerifiedCid, DateTimeOffset? VerifiedUntil, long VerificationFreshnessMilliseconds, DateTimeOffset DatabaseTime, string Issuer, string? PublicationOperationId, LabelPolicyWithdrawalProgress? Withdrawal = null);

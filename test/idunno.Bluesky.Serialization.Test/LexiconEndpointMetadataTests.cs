@@ -13,8 +13,8 @@ namespace idunno.Bluesky.Serialization.Test;
 
 public class LexiconEndpointMetadataTests
 {
-    public static TheoryData<Type> EndpointTypes => new()
-    {
+    public static TheoryData<Type> EndpointTypes =>
+    [
         typeof(Config),
         typeof(ConfigRegion),
         typeof(ConfigRegionRule),
@@ -34,14 +34,14 @@ public class LexiconEndpointMetadataTests
         typeof(GetEmbedExternalResponse),
         typeof(EmptyResponse),
         typeof(AtErrorDetail)
-    };
+    ];
 
     [Theory]
     [MemberData(nameof(EndpointTypes))]
     public void EndpointSerializerPreservesEveryReachableType(Type root)
     {
         JsonSerializerOptions options = BlueskyServer.BlueskyJsonSerializerOptions;
-        Assert.All(TypeResolver.JsonTypeInfoResolvers, resolver => Assert.IsAssignableFrom<JsonSerializerContext>(resolver));
+        Assert.All(TypeResolver.JsonTypeInfoResolvers, resolver => Assert.IsType<JsonSerializerContext>(resolver, exactMatch: false));
         JsonSerializerOptions contracts = new(options)
         {
             TypeInfoResolver = JsonTypeInfoResolver.Combine(TypeResolver.JsonTypeInfoResolvers.ToArray())
@@ -82,7 +82,7 @@ public class LexiconEndpointMetadataTests
 
             if (metadata.PolymorphismOptions is not null)
             {
-                foreach (var derivedType in metadata.PolymorphismOptions.DerivedTypes)
+                foreach (JsonDerivedType derivedType in metadata.PolymorphismOptions.DerivedTypes)
                 {
                     Verify(derivedType.DerivedType);
                 }

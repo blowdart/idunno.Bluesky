@@ -8,28 +8,20 @@ namespace idunno.Bluesky.Chat;
 /// <summary>
 /// Encapsulates the availability of a conversation.
 /// </summary>
-public sealed class ConversationAvailability
+/// <param name="canChat">A flag indicating whether the user can chat with the other user.</param>
+/// <param name="conversation">The conversation between the user and the other user, if it exists.</param>
+public sealed class ConversationAvailability(bool canChat, ConversationView? conversation)
 {
-    /// <summary>
-    /// Creates a new instance of <see cref="ConversationAvailability"/>.
-    /// </summary>
-    /// <param name="canChat">A flag indicating whether the user can chat with the other user.</param>
-    /// <param name="conversation">The conversation between the user and the other user, if it exists.</param>
-    public ConversationAvailability(bool canChat, ConversationView? conversation)
-    {
-        CanChat = canChat;
-        Conversation = conversation;
-    }
 
     /// <summary>
     /// Gets a flag indicating whether the user can chat with the other user.
     /// </summary>
     [JsonRequired]
-    public bool CanChat { get; init; }
+    public bool CanChat { get; init; } = canChat;
 
     /// <summary>
     /// Gets the conversation between the user and the other user, if it exists.
     /// </summary>
     [JsonPropertyName("convo")]
-    public ConversationView? Conversation { get; init; }
+    public ConversationView? Conversation { get; init; } = conversation;
 }

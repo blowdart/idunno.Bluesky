@@ -16,7 +16,10 @@ public sealed class LabelModerationReport
         Did reportedBy,
         DateTimeOffset createdAt,
         string policyVersion,
-        string audience)
+        string audience,
+        string? decisionOperationId = null,
+        DateTimeOffset? handledAt = null,
+        string? resolutionReason = null)
     {
         Id = id;
         CaseId = caseId;
@@ -25,6 +28,9 @@ public sealed class LabelModerationReport
         CreatedAt = createdAt;
         PolicyVersion = policyVersion;
         Audience = audience;
+        DecisionOperationId = decisionOperationId;
+        HandledAt = handledAt;
+        ResolutionReason = resolutionReason;
     }
 
     /// <summary>Gets the stable accepted report ID.</summary>
@@ -48,4 +54,13 @@ public sealed class LabelModerationReport
     /// <summary>Gets the actual signed service audience.</summary>
     /// <value>The exact-service or legacy bare-DID audience used by this report.</value>
     public string Audience { get; }
+    /// <summary>Gets the atomic decision or automatic closure that handled this report without changing its submitted evidence.</summary>
+    /// <value>The handling operation identifier, or <see langword="null"/> while unhandled.</value>
+    public string? DecisionOperationId { get; }
+    /// <summary>Gets when the report was handled.</summary>
+    /// <value>The database-assigned handling time, or <see langword="null"/> while unhandled.</value>
+    public DateTimeOffset? HandledAt { get; }
+    /// <summary>Gets the retained handling or automatic closure reason without changing original submission text.</summary>
+    /// <value>The resolution reason, or <see langword="null"/> for a report without recorded handling provenance.</value>
+    public string? ResolutionReason { get; }
 }

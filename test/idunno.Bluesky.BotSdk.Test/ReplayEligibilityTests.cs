@@ -176,7 +176,7 @@ public sealed class ReplayEligibilityTests
     [InlineData(1, true)]
     public void SampleUsesWitnessedTimeRatherThanPostCreationTime(int? seconds, bool eligible)
     {
-        var item = TestRecords.Event("#beans") with
+        JetstreamCommitEvent item = TestRecords.Event("#beans") with
         {
             WitnessedAt = seconds is int offset ? TestRecords.Start.AddSeconds(offset) : null
         };

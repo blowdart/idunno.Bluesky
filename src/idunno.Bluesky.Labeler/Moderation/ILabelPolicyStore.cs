@@ -59,7 +59,7 @@ public interface ILabelPolicyStore
         CancellationToken cancellationToken = default);
 
     /// <summary>Enables fail-closed moderation gates without selecting or publishing a declaration.</summary>
-    /// <param name="verificationFreshness">The maximum observation age, or <see langword="null"/> for 60 seconds.</param>
+    /// <param name="verificationFreshness">The maximum observation age, or <see langword="null"/> for 30 minutes.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The initialized durable gate.</returns>
     /// <exception cref="ArgumentOutOfRangeException">The freshness is less than one millisecond or greater than one day.</exception>
@@ -127,7 +127,7 @@ public interface ILabelPolicyStore
     /// <returns>The resulting verified or conflicted gate, or a stale-observation failure.</returns>
     /// <remarks><para>A matching observation cannot clear a previously detected conflict; an administrator
     /// must first create a new publication/reconciliation intent. Invalid declarations produce a conflict
-    /// with a bounded JSON <c>null</c> history marker and the observed CID rather than retaining invalid payloads.
+    /// with a bounded JSON <see langword="null"/> history marker and the observed CID rather than retaining invalid payloads.
     /// Stale observations cannot change the gate. No network work occurs inside the transaction.</para></remarks>
     Task<LabelServiceResult<LabelPolicyState>> ObservePolicyAsync(
         long expectedRevision, DateTimeOffset verificationStartedAt, Cid? observedCid, JsonElement declaration, CancellationToken cancellationToken = default);

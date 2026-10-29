@@ -24,7 +24,7 @@ internal static class ReportTestAuthentication
         bool legacy = false,
         Did? labeler = null)
     {
-        Did destination = labeler ?? StoreFixture.Issuer;
+        Did destination = labeler ?? StoreFixture.s_issuer;
         FakeTimeProvider clock = new(databaseTime);
         using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
         byte[] privateKey = key.ExportPkcs8PrivateKey();

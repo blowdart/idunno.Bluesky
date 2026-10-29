@@ -36,19 +36,27 @@ publication and independently verifies the authoritative declaration.
 |---|---|---|
 | `MaximumConcurrentReports` | 16 | Concurrent report requests admitted by one process |
 | `ReportsPerMinute` | 120 | Requests admitted in one process's admission window |
-| `VerificationFreshness` | 60 seconds | Maximum persisted independent-observation age |
+| `MaximumPendingReports` | 200,000 | Authenticated reports retained while policy verification is unavailable |
+| `VerificationFreshness` | 30 minutes | Maximum persisted independent-observation age |
 | `MaximumServiceTokenLifetime` | 15 minutes | Maximum reporting assertion lifetime |
 
 All hosts sharing a database must use its persisted verification freshness.
+They must also use the same pending-report capacity.
 Configure freshness in whole milliseconds; registration rejects fractional
 milliseconds rather than silently truncating them to database precision.
 Traffic limits are process-local, not cluster quotas. Apply additional
-deployment-wide limits at the trusted proxy. Report intake and policy-health
+deployment-wide limits at the trusted proxy. Report intake and scheduled
 verification have bounded deadlines; a lookup timeout does not refresh
-permission.
+permission. Report intake reads only the stored verification gate and never
+waits on a remote declaration lookup. A background task checks the active public
+policy at startup and every five minutes, independently of traffic. Pending
+publications and recovery conflicts are not automatically activated by this
+task. A confirmed mismatch closes moderation immediately; an unavailable check
+leaves the previous verification deadline unchanged.
 
 `MapLabelerModeration()` maps `/health/labeler/moderation` for separate policy
-monitoring. Do not use this endpoint for traffic routing: a closed policy gate
+monitoring. This check reads stored policy state and freshness without making
+remote requests. Do not use this endpoint for traffic routing: a closed policy gate
 must not hide distribution or authenticated recovery routes.
 `/health/labeler/ready` continues to check only the distribution host and store.
 
@@ -80,6 +88,17 @@ Missing `reasonTypes` and `subjectCollections` mean unrestricted within the
 supported subject kinds; empty arrays permit none. Explicit JSON null and
 unsupported subjects, including chat messages, are rejected.
 
+An authenticated report for an allowed subject whose reason is outside
+`reasonTypes` receives the normal report receipt, but is immediately retained as
+handled with resolution reason `Not Applicable`. It does not enter the open-work
+counts, create a pending appeal or change labels. Existing case status, assignment
+and revision are unchanged; if no unresolved case exists, its case is created
+already resolved. The original reporter, reason and evidence remain available.
+History and audit attribute the automatic action to the issuer DID with
+`system:report-reason` provenance. Authentication, token replay protection,
+verified-policy fencing, subject restrictions and appeal ownership still apply.
+The report, resolution, history, audit and token reservation commit atomically.
+
 The host bounds request bytes, depth, report context and optional tool metadata,
 and rejects duplicate, unknown and forged fields. Report context may be empty
 or whitespace. Limits apply before costly authentication and durable audit where
@@ -90,6 +109,25 @@ administration envelope. It excludes case identifiers, captured appeal labels,
 policy/authentication evidence and tool metadata. Report, replay reservation,
 case linkage, any appeal capture and audit commit atomically. Intake never
 issues or withdraws a label.
+
+If policy verification is unavailable, authenticated reports are durably queued
+and receive the ordinary successful protocol response. They remain visible in
+Xenon's Reports page but are not cases and cannot be acted on or cause label
+issuance. This applies when the policy is stale, conflicting or not yet
+published; report requests do not block on remote verification. Pending reports
+do not expire. After an administrator verifies an active policy, the background
+verifier processes the queue in bounded restart-resumable batches:
+subjects allowed by the policy enter ordinary case review, while subjects
+outside its scope remain retained as `Not Applicable` without creating a case.
+Appeal ownership is checked at intake, and eligible appeal reports preserve
+their label snapshot from that time.
+
+The configured queue limit counts only reports still awaiting verification.
+When it is reached, new authenticated submissions receive `503 Service
+Unavailable` with `Retry-After`; already queued reports are retained. The limit
+is a storage-protection boundary, not a time-based retention policy. Database
+failures and request deadlines remain explicit service errors and do not produce
+a success-shaped receipt.
 
 ## Cases, workflow views and decisions
 
@@ -147,8 +185,8 @@ capture creates another pending appeal.
 
 A case decision explicitly names up to sixteen pending appeals and an outcome:
 `Upheld` and `Superseded` cannot mutate labels; `Withdrawn` explicitly negates
-selected challenged values; `Replaced` explicitly issues replacement outcomes,
-optionally withdrawing challenged labels. Arbitrary reason text never chooses
+selected challenged values; `Replaced` explicitly adds or removes labels,
+including partial withdrawal that retains other labels. Arbitrary reason text never chooses
 labels to reverse. Every captured sequence must still be current and active for
 an uphold or correction. Newer or expired outcomes require an explicit
 superseded acknowledgment instead of withdrawing a newer outcome.
@@ -173,13 +211,35 @@ Publication is deliberately separate from a database transaction:
 1. Save the complete intended immutable version.
 2. Begin publication with a stable operation identity, observed gate revision
    and expected previous record CID, or absence for creation. This closes
-   reports and new issuance.
-3. Explicitly sign in as the labeler account and use conditional declaration
+   reports and new issuance. Explicit confirmation also authorizes permanent
+   withdrawal of existing applications of any label values removed by the new
+   definition.
+3. If values were removed and label history exists, wait for the **Withdrawing**
+   phase to finish. The host signs and publishes negations in durable, bounded
+   batches before allowing declaration verification or the CLI's PDS write.
+4. Explicitly sign in as the labeler account and use conditional declaration
    creation/update against its discovered PDS. Do not retain PDS credentials in
    the host or send them through the administration API.
-4. Ask the host to independently resolve the issuer/PDS and verify
+5. Ask the host to independently resolve the issuer/PDS and verify
    `app.bsky.labeler.service/self`. Client assertions of publication success
    cannot reopen the gate.
+
+Withdrawal scans a fixed history boundary in pages of at most 250 entries and
+signs at most 250 negations per batch. Only the latest, unexpired, non-negated
+applications of removed values are withdrawn, preserving their account or exact
+record URI/CID scope. Values still declared by the replacement are unchanged.
+Saving a draft or deleting an unpublished draft does not withdraw labels.
+Cleanup does not reapply labels if a value is later reintroduced.
+
+The host resumes from durable checkpoints after restart; it does not depend on
+an open browser or enabled remote CLI administration. Each batch rechecks saved
+administrator authority, lifecycle/maintenance admission and the current policy
+revision. Expired or revoked authority pauses cleanup. An active administrator
+can explicitly resume the same selected operation from the UI or with
+`policy resume`; this renews authority without discarding completed work.
+Errors leave the gate closed and are surfaced in host logs; authorization pauses
+also retain a visible reason in policy state. Publication remains blocked until
+the required negations are durably published, not merely signed or queued.
 
 Keep the original creation time and extension data when constructing a new
 declaration. A concurrent `InvalidSwap` is a conflict, not permission to
@@ -208,7 +268,9 @@ issuance commits. Safe negations and recovery reads remain available.
 
 `AbandonPolicyPublicationAsync` records an explicit fail-closed recovery result.
 It does not cancel an in-flight PDS write or assume rollback. A late write may
-still become visible. Retained history includes publication intent, conditional
+still become visible. It stops pending withdrawal batches but cannot undo
+already committed negations, even if the new declaration is never published.
+Retained history includes publication intent, conditional
 CID, selected version, authoritative observations and abandonment. Historical
 gate freshness is not current permission.
 
@@ -230,6 +292,65 @@ database, using the existing cross-process transaction boundary. Schema nine
 additively preserves schema-eight stream/signature, team, maintenance and key
 selection state. Stop old writers and take a consistent backup before upgrading.
 MySQL requires InnoDB for moderation tables as well as ordinary label tables.
+
+Schema ten adds local search projections and restart-resumed deleted-post checks.
+`AddLabelerModeration` runs one bounded existence-check batch each minute, with
+database-timed five-minute spacing between checks of a case. Only
+`app.bsky.feed.post` record cases with unresolved reports or pending appeals are
+eligible. The checker fetches the current record without pinning its old CID:
+an edited record still exists. An explicit authoritative PDS `RecordNotFound`
+with HTTP 400 or 404 resolves the case, handles remaining reports and marks
+pending appeals Superseded, all with reason `Post deleted`. It never changes
+labels, challenges, signed history or original report text. Inconclusive failures
+are logged and leave review work open. A case revision change or stale lookup
+rejects closure; the durable schedule allows a later fresh check after restart.
+History and audit use explicit `system:deleted-post` provenance.
+This shared worker operates with or without the UI and independently of remote
+CLI administration.
+
+### Policy verification email alerts
+
+Email alerts are optional. When enabled, independent background policy-verification
+failures create one durable notification per continuous failure incident. Delivery
+is retried after SMTP errors and resumes after restart; SMTP cannot participate in
+the database transaction, so delivery is at-least-once. A successful verification
+closes the incident without discarding an undelivered alert. Reports remain queued
+and non-actionable while verification is unavailable; email configuration does not
+change report intake or return behavior.
+
+Active administrators can register or clear their own alert address on the Xenon
+Team page. Only active administrators with a registered address receive alerts.
+The message contains the labeler DID, failure category and first failure time, not
+report contents. Addresses are persisted with team state, are visible only to
+administrators, and are excluded from audit reasons and delivery logs.
+
+Configure `LabelerModerationOptions.PolicyEmail` from application settings before
+calling `AddLabelerModeration`. `SmtpClient` uses mandatory STARTTLS; a server that
+does not advertise STARTTLS or cannot establish TLS is rejected, with no plaintext
+fallback. SMTP username and password must be configured together. Keep the password
+in a secret store or environment-backed configuration rather than a checked-in file.
+
+```json
+{
+  "LabelerModeration": {
+    "PolicyEmail": {
+      "Enabled": true,
+      "Server": "smtp.example.net",
+      "Port": 587,
+      "FromAddress": "xenon@example.net",
+      "UserName": "xenon-smtp",
+      "Password": "<secret from deployment configuration>"
+    }
+  }
+}
+```
+
+Bind the section to `LabelerModerationOptions` and pass it to
+`AddLabelerModeration(issuer, httpClient, options)`. Port defaults to 587; the
+server and sender address are required when email is enabled.
+When enabled, the shared label store must also implement
+`ILabelPolicyAlertStore`; custom stores do not need that capability while email
+alerts remain disabled.
 
 Audit is application-append-only and atomic with mutations. Successful
 inspection does not append another audit entry; denied operations remain
@@ -272,7 +393,11 @@ the gate and preserves the declaration without injecting DTO defaults.
 
 `begin` records publication without signing in to the labeler account. `publish`
 and `recover` additionally perform the conditional PDS write and request
-independent host verification. For example, after saving the example draft:
+independent host verification. All publication commands explicitly confirm the
+irreversible cleanup of removed label values, including when later publication
+fails or is abandoned. `publish` and `recover` wait for cleanup before signing
+in to the labeler account or writing its declaration; cancellation does not roll
+back committed negations. For example, after saving the example draft:
 
 ```powershell
 .\idunno.Bluesky.Labeler.Cli.exe policy publish `
@@ -293,7 +418,8 @@ With local administration, replace the administrator's remote options with
 `--local-endpoint`; the separate labeler-account sign-in is still required.
 
 The administrator and labeler account need not be the same DID or team member.
-Administrative sign-in requests only the three publication/recovery RPC scopes;
+Administrative sign-in requests only the four publication/recovery RPC scopes,
+including the ability to renew paused cleanup authorization;
 labeler-account sign-in requests only create or update permission for
 `app.bsky.labeler.service`, never delete, identity, account or general repository
 authority. The authenticated labeler DID must match the issuer returned by the
@@ -313,3 +439,18 @@ an already admitted remote write cannot cancel it.
 `abandon --expected-revision ... --operation-id ... --reason ...` records a new,
 explicit fail-closed recovery decision. Neither command is an unconditional
 publication retry.
+
+If cleanup pauses because its original administrator authority expired or was
+revoked, an active administrator can explicitly renew it without a labeler-account
+sign-in:
+
+```powershell
+.\idunno.Bluesky.Labeler.Cli.exe policy resume `
+  --local-endpoint idunno-labeler `
+  --operation-id publish-v1 --reason "Continue reviewed label withdrawal." --yes
+```
+
+Use the currently selected publication operation ID, not a new one. `resume`
+returns the durable state; the background worker continues the batches.
+An actively waiting `publish` or `recover` command renews paused authorization
+through its live administrative connection before continuing.

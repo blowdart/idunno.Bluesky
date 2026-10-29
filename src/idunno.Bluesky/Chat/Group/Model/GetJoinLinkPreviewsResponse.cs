@@ -25,9 +25,7 @@ public sealed record GetJoinLinkPreviewsResponse
     [JsonRequired]
     public IReadOnlyCollection<JoinLinkPreviewViewBase> JoinLinkPreviews
     {
-        get => _joinLinkPreviews;
-        init => _joinLinkPreviews = ChatCollection.Copy(value);
-    }
-
-    private readonly IReadOnlyCollection<JoinLinkPreviewViewBase> _joinLinkPreviews = null!;
+        get;
+        init => field = ChatCollection.Copy(value);
+    } = null!;
 }

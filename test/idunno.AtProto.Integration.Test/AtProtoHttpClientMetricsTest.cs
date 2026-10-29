@@ -251,8 +251,8 @@ public class AtProtoHttpClientMetricsTest
         Assert.True(result.Succeeded);
 
         IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = requestCollector.GetMeasurementSnapshot();
-        Assert.Single(requestMeasurements);
-        Assert.True(requestMeasurements[0]!.ContainsTags("http_method"));
+        CollectedMeasurement<long> item = Assert.Single(requestMeasurements);
+        Assert.True(item!.ContainsTags("http_method"));
         Assert.Equal(
             "POST",
             requestMeasurements[0]!.Tags["http_method"]);
@@ -262,15 +262,15 @@ public class AtProtoHttpClientMetricsTest
             requestMeasurements[0]!.Tags["server"]);
 
         IReadOnlyList<CollectedMeasurement<long>> responseMeasurements = responseCollector.GetMeasurementSnapshot();
-        Assert.Single(responseMeasurements);
-        Assert.True(responseMeasurements[0]!.ContainsTags("server"));
+        CollectedMeasurement<long> item_2 = Assert.Single(responseMeasurements);
+        Assert.True(item_2!.ContainsTags("server"));
         Assert.Equal(
             TestServerBuilder.DefaultUri.Host,
             responseMeasurements[0]!.Tags["server"]);
 
         IReadOnlyList<CollectedMeasurement<long>> successfulMeasurements = successfulCollector.GetMeasurementSnapshot();
-        Assert.Single(successfulMeasurements);
-        Assert.True(successfulMeasurements[0]!.ContainsTags("server"));
+        CollectedMeasurement<long> item_3 = Assert.Single(successfulMeasurements);
+        Assert.True(item_3!.ContainsTags("server"));
         Assert.Equal(
             TestServerBuilder.DefaultUri.Host,
             successfulMeasurements[0]!.Tags["server"]);
@@ -285,8 +285,8 @@ public class AtProtoHttpClientMetricsTest
         Assert.Empty(deserializationFailureMeasurements);
 
         IReadOnlyList<CollectedMeasurement<long>> xrpcRequestMeasurements = xrpcRequestCollector.GetMeasurementSnapshot();
-        Assert.Single(xrpcRequestMeasurements);
-        Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("xrpc_endpoint"));
+        CollectedMeasurement<long> item_4 = Assert.Single(xrpcRequestMeasurements);
+        Assert.True(item_4!.ContainsTags("xrpc_endpoint"));
         Assert.Equal(
             "com.atproto.repo.createRecord",
             xrpcRequestMeasurements[0]!.Tags["xrpc_endpoint"]);
@@ -354,8 +354,8 @@ public class AtProtoHttpClientMetricsTest
         Assert.True(result.Succeeded);
 
         IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = requestCollector.GetMeasurementSnapshot();
-        Assert.Single(requestMeasurements);
-        Assert.True(requestMeasurements[0]!.ContainsTags("http_method"));
+        CollectedMeasurement<long> item = Assert.Single(requestMeasurements);
+        Assert.True(item!.ContainsTags("http_method"));
         Assert.Equal(
             "GET",
             requestMeasurements[0]!.Tags["http_method"]);
@@ -365,16 +365,16 @@ public class AtProtoHttpClientMetricsTest
             requestMeasurements[0]!.Tags["server"]);
 
         IReadOnlyList<CollectedMeasurement<long>> responseMeasurements = responseCollector.GetMeasurementSnapshot();
-        Assert.Single(responseMeasurements);
+        CollectedMeasurement<long> item_2 = Assert.Single(responseMeasurements);
         Assert.Equal(
             TestServerBuilder.DefaultUri.Host,
-            responseMeasurements[0]!.Tags["server"]);
+            item_2!.Tags["server"]);
 
         IReadOnlyList<CollectedMeasurement<long>> successfulMeasurements = successfulCollector.GetMeasurementSnapshot();
-        Assert.Single(successfulMeasurements);
+        CollectedMeasurement<long> item_3 = Assert.Single(successfulMeasurements);
         Assert.Equal(
             TestServerBuilder.DefaultUri.Host,
-            successfulMeasurements[0]!.Tags["server"]);
+            item_3!.Tags["server"]);
 
         IReadOnlyList<CollectedMeasurement<long>> failureMeasurements = failureCollector.GetMeasurementSnapshot();
         Assert.Empty(failureMeasurements);
@@ -386,8 +386,8 @@ public class AtProtoHttpClientMetricsTest
         Assert.Empty(deserializationFailureMeasurements);
 
         IReadOnlyList<CollectedMeasurement<long>> xrpcRequestMeasurements = xrpcRequestCollector.GetMeasurementSnapshot();
-        Assert.Single(xrpcRequestMeasurements);
-        Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("xrpc_endpoint"));
+        CollectedMeasurement<long> item_4 = Assert.Single(xrpcRequestMeasurements);
+        Assert.True(item_4!.ContainsTags("xrpc_endpoint"));
         Assert.Equal(
             "com.atproto.repo.getRecord",
             xrpcRequestMeasurements[0]!.Tags["xrpc_endpoint"]);
@@ -467,7 +467,7 @@ public class AtProtoHttpClientMetricsTest
 
         IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = requestCollector.GetMeasurementSnapshot();
         Assert.Equal(2, requestMeasurements.Count);
-        foreach (var measurement in requestMeasurements)
+        foreach (CollectedMeasurement<long> measurement in requestMeasurements)
         {
             Assert.True(measurement!.ContainsTags("http_method"));
             Assert.Contains(
@@ -481,7 +481,7 @@ public class AtProtoHttpClientMetricsTest
 
         IReadOnlyList<CollectedMeasurement<long>> responseMeasurements = responseCollector.GetMeasurementSnapshot();
         Assert.Equal(2, responseMeasurements.Count);
-        foreach (var measurement in requestMeasurements)
+        foreach (CollectedMeasurement<long> measurement in requestMeasurements)
         {
             Assert.True(measurement.ContainsTags("server"));
             Assert.Equal(
@@ -568,8 +568,8 @@ public class AtProtoHttpClientMetricsTest
         Assert.False(result.Succeeded);
 
         IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = requestCollector.GetMeasurementSnapshot();
-        Assert.Single(requestMeasurements);
-        Assert.True(requestMeasurements[0]!.ContainsTags("http_method"));
+        CollectedMeasurement<long> item = Assert.Single(requestMeasurements);
+        Assert.True(item!.ContainsTags("http_method"));
         Assert.Equal(
             "GET",
             requestMeasurements[0]!.Tags["http_method"]);
@@ -579,8 +579,8 @@ public class AtProtoHttpClientMetricsTest
             requestMeasurements[0]!.Tags["server"]);
 
         IReadOnlyList<CollectedMeasurement<long>> responseMeasurements = responseCollector.GetMeasurementSnapshot();
-        Assert.Single(responseMeasurements);
-        Assert.True(responseMeasurements[0]!.ContainsTags("server"));
+        CollectedMeasurement<long> item_2 = Assert.Single(responseMeasurements);
+        Assert.True(item_2!.ContainsTags("server"));
         Assert.Equal(
             TestServerBuilder.DefaultUri.Host,
             responseMeasurements[0]!.Tags["server"]);
@@ -589,8 +589,8 @@ public class AtProtoHttpClientMetricsTest
         Assert.Empty(successfulMeasurements);
 
         IReadOnlyList<CollectedMeasurement<long>> failureMeasurements = failureCollector.GetMeasurementSnapshot();
-        Assert.Single(failureMeasurements);
-        Assert.True(failureMeasurements[0]!.ContainsTags("http_status_code"));
+        CollectedMeasurement<long> item_3 = Assert.Single(failureMeasurements);
+        Assert.True(item_3!.ContainsTags("http_status_code"));
         Assert.Equal(
             404,
             failureMeasurements[0]!.Tags["http_status_code"]);
@@ -606,8 +606,8 @@ public class AtProtoHttpClientMetricsTest
         Assert.Empty(deserializationFailureMeasurements);
 
         IReadOnlyList<CollectedMeasurement<long>> xrpcRequestMeasurements = xrpcRequestCollector.GetMeasurementSnapshot();
-        Assert.Single(xrpcRequestMeasurements);
-        Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("xrpc_endpoint"));
+        CollectedMeasurement<long> item_4 = Assert.Single(xrpcRequestMeasurements);
+        Assert.True(item_4!.ContainsTags("xrpc_endpoint"));
         Assert.Equal(
             "com.atproto.repo.getRecord",
             xrpcRequestMeasurements[0]!.Tags["xrpc_endpoint"]);
@@ -806,27 +806,27 @@ public class AtProtoHttpClientMetricsTest
         Assert.True(result.Succeeded);
 
         IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = requestCollector.GetMeasurementSnapshot();
-        Assert.Single(requestMeasurements);
-        Assert.Single(requestMeasurements);
-        Assert.True(requestMeasurements[0]!.ContainsTags("http_method"));
+        CollectedMeasurement<long> item = Assert.Single(requestMeasurements);
+        CollectedMeasurement<long> item_5 = Assert.Single(requestMeasurements);
+        Assert.True(item!.ContainsTags("http_method"));
         Assert.Equal(
             "POST",
-            requestMeasurements[0]!.Tags["http_method"]);
+            item_5!.Tags["http_method"]);
         Assert.True(requestMeasurements[0]!.ContainsTags("server"));
         Assert.Equal(
             TestServerBuilder.DefaultUri.Host,
             requestMeasurements[0]!.Tags["server"]);
 
         IReadOnlyList<CollectedMeasurement<long>> responseMeasurements = responseCollector.GetMeasurementSnapshot();
-        Assert.Single(responseMeasurements);
-        Assert.True(responseMeasurements[0]!.ContainsTags("server"));
+        CollectedMeasurement<long> item_2 = Assert.Single(responseMeasurements);
+        Assert.True(item_2!.ContainsTags("server"));
         Assert.Equal(
             TestServerBuilder.DefaultUri.Host,
             responseMeasurements[0]!.Tags["server"]);
 
         IReadOnlyList<CollectedMeasurement<long>> successfulMeasurements = successfulCollector.GetMeasurementSnapshot();
-        Assert.Single(successfulMeasurements);
-        Assert.True(successfulMeasurements[0]!.ContainsTags("server"));
+        CollectedMeasurement<long> item_3 = Assert.Single(successfulMeasurements);
+        Assert.True(item_3!.ContainsTags("server"));
         Assert.Equal(
             TestServerBuilder.DefaultUri.Host,
             successfulMeasurements[0]!.Tags["server"]);
@@ -841,8 +841,8 @@ public class AtProtoHttpClientMetricsTest
         Assert.Empty(deserializationFailureMeasurements);
 
         IReadOnlyList<CollectedMeasurement<long>> xrpcRequestMeasurements = xrpcRequestCollector.GetMeasurementSnapshot();
-        Assert.Single(xrpcRequestMeasurements);
-        Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("xrpc_endpoint"));
+        CollectedMeasurement<long> item_4 = Assert.Single(xrpcRequestMeasurements);
+        Assert.True(item_4!.ContainsTags("xrpc_endpoint"));
         Assert.Equal(
             "com.atproto.repo.uploadBlob",
             xrpcRequestMeasurements[0]!.Tags["xrpc_endpoint"]);
@@ -907,8 +907,8 @@ public class AtProtoHttpClientMetricsTest
         Assert.False(result.Succeeded);
 
         IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = requestCollector.GetMeasurementSnapshot();
-        Assert.Single(requestMeasurements);
-        Assert.True(requestMeasurements[0]!.ContainsTags("http_method"));
+        CollectedMeasurement<long> item = Assert.Single(requestMeasurements);
+        Assert.True(item!.ContainsTags("http_method"));
         Assert.Equal(
             "GET",
             requestMeasurements[0]!.Tags["http_method"]);
@@ -918,15 +918,15 @@ public class AtProtoHttpClientMetricsTest
             requestMeasurements[0]!.Tags["server"]);
 
         IReadOnlyList<CollectedMeasurement<long>> responseMeasurements = responseCollector.GetMeasurementSnapshot();
-        Assert.Single(responseMeasurements);
-        Assert.True(responseMeasurements[0]!.ContainsTags("server"));
+        CollectedMeasurement<long> item_2 = Assert.Single(responseMeasurements);
+        Assert.True(item_2!.ContainsTags("server"));
         Assert.Equal(
             TestServerBuilder.DefaultUri.Host,
             responseMeasurements[0]!.Tags["server"]);
 
         IReadOnlyList<CollectedMeasurement<long>> successfulMeasurements = successfulCollector.GetMeasurementSnapshot();
-        Assert.Single(successfulMeasurements);
-        Assert.True(successfulMeasurements[0]!.ContainsTags("server"));
+        CollectedMeasurement<long> item_3 = Assert.Single(successfulMeasurements);
+        Assert.True(item_3!.ContainsTags("server"));
         Assert.Equal(
             TestServerBuilder.DefaultUri.Host,
             successfulMeasurements[0]!.Tags["server"]);
@@ -938,8 +938,8 @@ public class AtProtoHttpClientMetricsTest
         Assert.Empty(dPoPMeasurements);
 
         IReadOnlyList<CollectedMeasurement<long>> deserializationFailureMeasurements = deserializationFailuresCollector.GetMeasurementSnapshot();
-        Assert.Single(deserializationFailureMeasurements);
-        Assert.True(deserializationFailureMeasurements[0]!.ContainsTags("type"));
+        CollectedMeasurement<long> item_4 = Assert.Single(deserializationFailureMeasurements);
+        Assert.True(item_4!.ContainsTags("type"));
         Assert.Equal(
             "idunno.AtProto.Integration.Test.TestRecord",
             deserializationFailureMeasurements[0]!.Tags["type"]);
@@ -957,8 +957,8 @@ public class AtProtoHttpClientMetricsTest
             deserializationFailureMeasurements[0]!.Tags["http_method"]);
 
         IReadOnlyList<CollectedMeasurement<long>> xrpcRequestMeasurements = xrpcRequestCollector.GetMeasurementSnapshot();
-        Assert.Single(xrpcRequestMeasurements);
-        Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("xrpc_endpoint"));
+        CollectedMeasurement<long> item_5 = Assert.Single(xrpcRequestMeasurements);
+        Assert.True(item_5!.ContainsTags("xrpc_endpoint"));
         Assert.Equal(
             "com.atproto.repo.getRecord",
             xrpcRequestMeasurements[0]!.Tags["xrpc_endpoint"]);
@@ -1026,8 +1026,8 @@ public class AtProtoHttpClientMetricsTest
         Assert.True(result.Succeeded);
 
         IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = requestCollector.GetMeasurementSnapshot();
-        Assert.Single(requestMeasurements);
-        Assert.True(requestMeasurements[0]!.ContainsTags("http_method"));
+        CollectedMeasurement<long> item = Assert.Single(requestMeasurements);
+        Assert.True(item!.ContainsTags("http_method"));
         Assert.Equal(
             "POST",
             requestMeasurements[0]!.Tags["http_method"]);
@@ -1037,15 +1037,15 @@ public class AtProtoHttpClientMetricsTest
             requestMeasurements[0]!.Tags["server"]);
 
         IReadOnlyList<CollectedMeasurement<long>> responseMeasurements = responseCollector.GetMeasurementSnapshot();
-        Assert.Single(responseMeasurements);
-        Assert.True(responseMeasurements[0]!.ContainsTags("server"));
+        CollectedMeasurement<long> item_2 = Assert.Single(responseMeasurements);
+        Assert.True(item_2!.ContainsTags("server"));
         Assert.Equal(
             TestServerBuilder.DefaultUri.Host,
             responseMeasurements[0]!.Tags["server"]);
 
         IReadOnlyList<CollectedMeasurement<long>> successfulMeasurements = successfulCollector.GetMeasurementSnapshot();
-        Assert.Single(successfulMeasurements);
-        Assert.True(successfulMeasurements[0]!.ContainsTags("server"));
+        CollectedMeasurement<long> item_3 = Assert.Single(successfulMeasurements);
+        Assert.True(item_3!.ContainsTags("server"));
         Assert.Equal(
             TestServerBuilder.DefaultUri.Host,
             successfulMeasurements[0]!.Tags["server"]);
@@ -1060,8 +1060,8 @@ public class AtProtoHttpClientMetricsTest
         Assert.Empty(deserializationFailureMeasurements);
 
         IReadOnlyList<CollectedMeasurement<long>> xrpcRequestMeasurements = xrpcRequestCollector.GetMeasurementSnapshot();
-        Assert.Single(xrpcRequestMeasurements);
-        Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("xrpc_endpoint"));
+        CollectedMeasurement<long> item_4 = Assert.Single(xrpcRequestMeasurements);
+        Assert.True(item_4!.ContainsTags("xrpc_endpoint"));
         Assert.Equal(
             "com.atproto.repo.createRecord",
             xrpcRequestMeasurements[0]!.Tags["xrpc_endpoint"]);
@@ -1121,8 +1121,8 @@ public class AtProtoHttpClientMetricsTest
         Assert.True(result.Succeeded);
 
         IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = requestCollector.GetMeasurementSnapshot();
-        Assert.Single(requestMeasurements);
-        Assert.True(requestMeasurements[0]!.ContainsTags("http_method"));
+        CollectedMeasurement<long> item = Assert.Single(requestMeasurements);
+        Assert.True(item!.ContainsTags("http_method"));
         Assert.Equal(
             "GET",
             requestMeasurements[0]!.Tags["http_method"]);
@@ -1132,16 +1132,16 @@ public class AtProtoHttpClientMetricsTest
             requestMeasurements[0]!.Tags["server"]);
 
         IReadOnlyList<CollectedMeasurement<long>> responseMeasurements = responseCollector.GetMeasurementSnapshot();
-        Assert.Single(responseMeasurements);
+        CollectedMeasurement<long> item_2 = Assert.Single(responseMeasurements);
         Assert.Equal(
             TestServerBuilder.DefaultUri.Host,
-            responseMeasurements[0]!.Tags["server"]);
+            item_2!.Tags["server"]);
 
         IReadOnlyList<CollectedMeasurement<long>> successfulMeasurements = successfulCollector.GetMeasurementSnapshot();
-        Assert.Single(successfulMeasurements);
+        CollectedMeasurement<long> item_3 = Assert.Single(successfulMeasurements);
         Assert.Equal(
             TestServerBuilder.DefaultUri.Host,
-            successfulMeasurements[0]!.Tags["server"]);
+            item_3!.Tags["server"]);
 
         IReadOnlyList<CollectedMeasurement<long>> failureMeasurements = failureCollector.GetMeasurementSnapshot();
         Assert.Empty(failureMeasurements);
@@ -1153,8 +1153,8 @@ public class AtProtoHttpClientMetricsTest
         Assert.Empty(deserializationFailureMeasurements);
 
         IReadOnlyList<CollectedMeasurement<long>> xrpcRequestMeasurements = xrpcRequestCollector.GetMeasurementSnapshot();
-        Assert.Single(xrpcRequestMeasurements);
-        Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("xrpc_endpoint"));
+        CollectedMeasurement<long> item_4 = Assert.Single(xrpcRequestMeasurements);
+        Assert.True(item_4!.ContainsTags("xrpc_endpoint"));
         Assert.Equal(
             "com.atproto.repo.getRecord",
             xrpcRequestMeasurements[0]!.Tags["xrpc_endpoint"]);
@@ -1236,7 +1236,7 @@ public class AtProtoHttpClientMetricsTest
 
         IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = requestCollector.GetMeasurementSnapshot();
         Assert.Equal(2, requestMeasurements.Count);
-        foreach (var measurement in requestMeasurements)
+        foreach (CollectedMeasurement<long> measurement in requestMeasurements)
         {
             Assert.True(measurement!.ContainsTags("http_method"));
             Assert.Contains(
@@ -1250,7 +1250,7 @@ public class AtProtoHttpClientMetricsTest
 
         IReadOnlyList<CollectedMeasurement<long>> responseMeasurements = responseCollector.GetMeasurementSnapshot();
         Assert.Equal(2, responseMeasurements.Count);
-        foreach (var measurement in requestMeasurements)
+        foreach (CollectedMeasurement<long> measurement in requestMeasurements)
         {
             Assert.True(measurement.ContainsTags("server"));
             Assert.Equal(
@@ -1337,8 +1337,8 @@ public class AtProtoHttpClientMetricsTest
         Assert.False(result.Succeeded);
 
         IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = requestCollector.GetMeasurementSnapshot();
-        Assert.Single(requestMeasurements);
-        Assert.True(requestMeasurements[0]!.ContainsTags("http_method"));
+        CollectedMeasurement<long> item = Assert.Single(requestMeasurements);
+        Assert.True(item!.ContainsTags("http_method"));
         Assert.Equal(
             "GET",
             requestMeasurements[0]!.Tags["http_method"]);
@@ -1348,8 +1348,8 @@ public class AtProtoHttpClientMetricsTest
             requestMeasurements[0]!.Tags["server"]);
 
         IReadOnlyList<CollectedMeasurement<long>> responseMeasurements = responseCollector.GetMeasurementSnapshot();
-        Assert.Single(responseMeasurements);
-        Assert.True(responseMeasurements[0]!.ContainsTags("server"));
+        CollectedMeasurement<long> item_2 = Assert.Single(responseMeasurements);
+        Assert.True(item_2!.ContainsTags("server"));
         Assert.Equal(
             TestServerBuilder.DefaultUri.Host,
             responseMeasurements[0]!.Tags["server"]);
@@ -1358,8 +1358,8 @@ public class AtProtoHttpClientMetricsTest
         Assert.Empty(successfulMeasurements);
 
         IReadOnlyList<CollectedMeasurement<long>> failureMeasurements = failureCollector.GetMeasurementSnapshot();
-        Assert.Single(failureMeasurements);
-        Assert.True(failureMeasurements[0]!.ContainsTags("http_status_code"));
+        CollectedMeasurement<long> item_3 = Assert.Single(failureMeasurements);
+        Assert.True(item_3!.ContainsTags("http_status_code"));
         Assert.Equal(
             404,
             failureMeasurements[0]!.Tags["http_status_code"]);
@@ -1375,8 +1375,8 @@ public class AtProtoHttpClientMetricsTest
         Assert.Empty(deserializationFailureMeasurements);
 
         IReadOnlyList<CollectedMeasurement<long>> xrpcRequestMeasurements = xrpcRequestCollector.GetMeasurementSnapshot();
-        Assert.Single(xrpcRequestMeasurements);
-        Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("xrpc_endpoint"));
+        CollectedMeasurement<long> item_4 = Assert.Single(xrpcRequestMeasurements);
+        Assert.True(item_4!.ContainsTags("xrpc_endpoint"));
         Assert.Equal(
             "com.atproto.repo.getRecord",
             xrpcRequestMeasurements[0]!.Tags["xrpc_endpoint"]);
@@ -1571,8 +1571,8 @@ public class AtProtoHttpClientMetricsTest
         Assert.False(result.Succeeded);
 
         IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = requestCollector.GetMeasurementSnapshot();
-        Assert.Single(requestMeasurements);
-        Assert.True(requestMeasurements[0]!.ContainsTags("http_method"));
+        CollectedMeasurement<long> item = Assert.Single(requestMeasurements);
+        Assert.True(item!.ContainsTags("http_method"));
         Assert.Equal(
             "GET",
             requestMeasurements[0]!.Tags["http_method"]);
@@ -1582,15 +1582,15 @@ public class AtProtoHttpClientMetricsTest
             requestMeasurements[0]!.Tags["server"]);
 
         IReadOnlyList<CollectedMeasurement<long>> responseMeasurements = responseCollector.GetMeasurementSnapshot();
-        Assert.Single(responseMeasurements);
-        Assert.True(responseMeasurements[0]!.ContainsTags("server"));
+        CollectedMeasurement<long> item_2 = Assert.Single(responseMeasurements);
+        Assert.True(item_2!.ContainsTags("server"));
         Assert.Equal(
             TestServerBuilder.DefaultUri.Host,
             responseMeasurements[0]!.Tags["server"]);
 
         IReadOnlyList<CollectedMeasurement<long>> successfulMeasurements = successfulCollector.GetMeasurementSnapshot();
-        Assert.Single(successfulMeasurements);
-        Assert.True(successfulMeasurements[0]!.ContainsTags("server"));
+        CollectedMeasurement<long> item_3 = Assert.Single(successfulMeasurements);
+        Assert.True(item_3!.ContainsTags("server"));
         Assert.Equal(
             TestServerBuilder.DefaultUri.Host,
             successfulMeasurements[0]!.Tags["server"]);
@@ -1602,8 +1602,8 @@ public class AtProtoHttpClientMetricsTest
         Assert.Empty(dPoPMeasurements);
 
         IReadOnlyList<CollectedMeasurement<long>> deserializationFailureMeasurements = deserializationFailuresCollector.GetMeasurementSnapshot();
-        Assert.Single(deserializationFailureMeasurements);
-        Assert.True(deserializationFailureMeasurements[0]!.ContainsTags("type"));
+        CollectedMeasurement<long> item_4 = Assert.Single(deserializationFailureMeasurements);
+        Assert.True(item_4!.ContainsTags("type"));
         Assert.Equal(
             "idunno.AtProto.Repo.AtProtoRepositoryRecord`1[[idunno.AtProto.Integration.Test.TestRecord, idunno.AtProto.Integration.Test, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5289fcbcf27e814d]]",
             deserializationFailureMeasurements[0]!.Tags["type"]);
@@ -1621,8 +1621,8 @@ public class AtProtoHttpClientMetricsTest
             deserializationFailureMeasurements[0]!.Tags["http_method"]);
 
         IReadOnlyList<CollectedMeasurement<long>> xrpcRequestMeasurements = xrpcRequestCollector.GetMeasurementSnapshot();
-        Assert.Single(xrpcRequestMeasurements);
-        Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("xrpc_endpoint"));
+        CollectedMeasurement<long> item_5 = Assert.Single(xrpcRequestMeasurements);
+        Assert.True(item_5!.ContainsTags("xrpc_endpoint"));
         Assert.Equal(
             "com.atproto.repo.getRecord",
             xrpcRequestMeasurements[0]!.Tags["xrpc_endpoint"]);

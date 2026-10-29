@@ -35,9 +35,7 @@ public abstract record MessageRelatedProfilesLogBase : MessageLogBase
     [JsonRequired]
     public IReadOnlyCollection<ProfileViewBasic> RelatedProfiles
     {
-        get => _relatedProfiles;
-        init => _relatedProfiles = ChatCollection.Copy(value);
-    }
-
-    private readonly IReadOnlyCollection<ProfileViewBasic> _relatedProfiles = null!;
+        get;
+        init => field = ChatCollection.Copy(value);
+    } = null!;
 }

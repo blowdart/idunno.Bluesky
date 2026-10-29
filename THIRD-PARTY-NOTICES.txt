@@ -41,6 +41,22 @@ The standalone labeler host also uses idunno.Bluesky.AspNet.Authentication for n
 OAuth metadata publication and idunno.Security.Ssrf (MIT) for protected identity resolution.
 These components and their dependencies are listed below.
 
+The development-only Xenon.TestHost also uses the existing
+idunno.Bluesky.AspNet.Authentication.SQLite provider and Microsoft.Data.Sqlite
+(MIT) for retained authentication state and Data Protection keys.
+
+The idunno.Bluesky.AspNet.Labeler.UI package bundles unmodified Font Awesome
+Free SVG icons by Fonticons, Inc. (https://fontawesome.com), licensed under
+Creative Commons Attribution 4.0 International (CC BY 4.0):
+https://creativecommons.org/licenses/by/4.0/
+The icons, including the eye, gavel and user-gear team roles and the
+circle-check, circle-pause and circle-xmark membership states and the
+eye-slash, circle-play, filter and download controls, are served locally,
+not from a CDN. Their original attribution
+comments are preserved, and the upstream license notice is distributed at
+wwwroot/vendor/fontawesome/LICENSE.txt within the UI package.
+Source: https://github.com/FortAwesome/Font-Awesome
+
 The idunno.Bluesky.Labeler provider packages use Microsoft.Extensions.DependencyInjection
 and Microsoft.Extensions.Logging (MIT). The SQLite provider uses Microsoft.Data.Sqlite
 (MIT), the PostgreSQL provider uses Npgsql (PostgreSQL license), and the MySQL

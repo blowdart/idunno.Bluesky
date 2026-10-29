@@ -6,7 +6,9 @@ using System.Text.Json.Serialization;
 using idunno.AtProto;
 using idunno.AtProto.Labels;
 
+#pragma warning disable IDE0130 // Preserve the established namespace independently of folder layout.
 namespace idunno.Bluesky.Actor;
+#pragma warning restore IDE0130
 
 /// <summary>
 /// Encapsulates a view over a user profile.

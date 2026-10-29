@@ -1,0 +1,30 @@
+@model idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Labels.ManualLabelFormDisplay
+<input type="hidden" name="labelState" value="@(Model.State ?? string.Empty)" data-target="@Model.Target" />
+@if (Model.Error is { } error)
+{
+    <p role="alert">@error</p>
+}
+else if (Model.State is null)
+{
+    <p>Enter a target and load its labels before selecting changes.</p>
+}
+else
+{
+    <p>Active labels from this labeler are selected. Select to add a label; deselect to remove it. Changes are applied only when submitted.</p>
+}
+<fieldset class="label-choices" disabled="@(Model.State is null || Model.Retrying)">
+    <legend>Labels</legend>
+    @foreach (ModerationLabelChoiceView label in Model.Choices)
+    {
+        string status = (label.OtherVersion, label.Applied) switch
+        {
+            (true, _) => "Applied to a different record version",
+            (_, true) => "Currently applied",
+            _ => "Not applied"
+        };
+        <label class="label-chip" data-applied="@(label.Applied ? "true" : "false")">
+            <input type="checkbox" name="selectedLabels" value="@label.Value" checked="@(Model.Selected is { } selected ? selected.Contains(label.Value, StringComparer.Ordinal) : label.Applied)" disabled="@label.OtherVersion" />
+            <span>@label.Value <small class="label-baseline">@status</small><small class="label-add">Will be added</small><small class="label-remove">Will be removed</small></span>
+        </label>
+    }
+</fieldset>

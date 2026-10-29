@@ -32,8 +32,8 @@ public class DeclarationTests
         Assert.Equal("bafyreigsxv3tc4fjy27ry7j3vhcp2qphm3o4ex5wx6gqhp7ax63sdnxoh4", declarationRecord.Cid);
 
         Assert.NotNull(declarationRecord.Value);
-        Assert.IsType<Chat.Actor.Declaration>(declarationRecord.Value);
-        var declaration = declarationRecord.Value as Chat.Actor.Declaration;
+        Declaration typed = Assert.IsType<Chat.Actor.Declaration>(declarationRecord.Value);
+        Declaration declaration = typed;
         Assert.NotNull(declaration);
         Assert.Equal(Chat.Actor.AllowIncoming.Following, declaration.AllowIncoming);
         Assert.Equal(Chat.Actor.AllowGroupInvites.Following, declaration.AllowGroupInvites);

@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using idunno.AtProto.Repo;
+using idunno.AtProto.Server;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
@@ -27,12 +28,12 @@ public class AtProtoHttpClientTests
         });
         using AtProtoAgent agent = new(TestServerBuilder.DefaultUri, new TestHttpClientFactory(server));
 
-        var result = await agent.DescribeServer(TestServerBuilder.DefaultUri, cancellationToken: TestContext.Current.CancellationToken);
+        AtProtoHttpResult<ServerDescription> result = await agent.DescribeServer(TestServerBuilder.DefaultUri, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.False(result.Succeeded);
         Assert.Equal(System.Net.HttpStatusCode.Forbidden, result.StatusCode);
         Assert.IsType(expectedType, result.AtErrorDetail);
-        AtErrorDetail detail = Assert.IsAssignableFrom<AtErrorDetail>(result.AtErrorDetail);
+        AtErrorDetail detail = Assert.IsType<AtErrorDetail>(result.AtErrorDetail, exactMatch: false);
         Assert.Equal(error, detail.Error);
         Assert.Equal(message, detail.Message);
     }

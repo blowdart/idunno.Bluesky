@@ -14,13 +14,21 @@ public sealed class LabelerModerationOptions
     /// <value>The per-process limit, initially 120, including rejected authenticated submissions.</value>
     public int ReportsPerMinute { get; init; } = 120;
 
+    /// <summary>Gets the maximum number of authenticated reports retained while policy verification is unavailable.</summary>
+    /// <value>The shared-database queue limit, initially 200,000 reports.</value>
+    public int MaximumPendingReports { get; init; } = 200_000;
+
     /// <summary>Gets the maximum declaration-observation age.</summary>
-    /// <value>The shared persisted freshness, initially 60 seconds, from one millisecond to one day in whole milliseconds.</value>
-    public TimeSpan VerificationFreshness { get; init; } = TimeSpan.FromSeconds(60);
+    /// <value>The shared persisted freshness, initially 30 minutes, from one millisecond to one day in whole milliseconds.</value>
+    public TimeSpan VerificationFreshness { get; init; } = TimeSpan.FromMinutes(30);
 
     /// <summary>Gets the maximum accepted reporter service-token lifetime.</summary>
     /// <value>The positive lifetime, initially 15 minutes.</value>
     public TimeSpan MaximumServiceTokenLifetime { get; init; } = TimeSpan.FromMinutes(15);
+
+    /// <summary>Gets SMTP settings for administrator policy-verification alerts.</summary>
+    /// <value>The optional SMTP configuration; STARTTLS is always required when enabled.</value>
+    public LabelerPolicyEmailOptions PolicyEmail { get; init; } = new();
 
     /// <summary>Rejects unbounded admission or incompatible verification configuration before serving traffic.</summary>
     internal void Validate()
@@ -29,11 +37,15 @@ public sealed class LabelerModerationOptions
         ArgumentOutOfRangeException.ThrowIfGreaterThan(MaximumConcurrentReports, 1024);
         ArgumentOutOfRangeException.ThrowIfLessThan(ReportsPerMinute, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(ReportsPerMinute, 100000);
+        ArgumentOutOfRangeException.ThrowIfLessThan(MaximumPendingReports, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(MaximumPendingReports, 1_000_000);
         ArgumentOutOfRangeException.ThrowIfLessThan(VerificationFreshness, TimeSpan.FromMilliseconds(1));
         ArgumentOutOfRangeException.ThrowIfGreaterThan(VerificationFreshness, TimeSpan.FromDays(1));
         ArgumentOutOfRangeException.ThrowIfNotEqual(
             VerificationFreshness.Ticks % TimeSpan.TicksPerMillisecond,
             0);
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(MaximumServiceTokenLifetime, TimeSpan.Zero);
+        ArgumentNullException.ThrowIfNull(PolicyEmail);
+        PolicyEmail.Validate();
     }
 }

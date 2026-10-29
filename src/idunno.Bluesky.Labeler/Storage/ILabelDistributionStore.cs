@@ -24,7 +24,7 @@ public interface ILabelDistributionStore
     /// <exception cref="InvalidDataException">The stream or retained sequence boundaries are invalid.</exception>
     /// <exception cref="ArgumentException">A pattern is invalid.</exception>
     /// <exception cref="ArgumentOutOfRangeException">A limit is outside its supported range, or <paramref name="after"/>
-    /// is below the current replay floor. A pruned position uses <c>after</c> as the exception parameter name.</exception>
+    /// is below the current replay floor. A pruned position uses <paramref name="after"/> as the exception parameter name.</exception>
     Task<LabelDistributionPage> ReadDistributionAsync(
         Guid streamId,
         long after,

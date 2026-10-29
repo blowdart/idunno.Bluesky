@@ -164,9 +164,9 @@ public class ProfileTests
             CreatedAt = new DateTimeOffset(2026, 10, 1, 0, 0, 0, TimeSpan.Zero),
             JoinedViaStarterPack = reference,
             PinnedPost = reference,
-            Links = [reference]
+            Links = [reference],
+            Bot = true
         };
-        source.Bot = true;
         using JsonDocument document = JsonDocument.Parse(JsonSerializer.Serialize(source, BlueskyJsonSerializerOptions.Default));
 
         Profile strict = Profile.Parse(document);

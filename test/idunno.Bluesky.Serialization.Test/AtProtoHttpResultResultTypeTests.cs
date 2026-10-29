@@ -16,10 +16,10 @@ public class AtProtoHttpResultResultTypeTests
         "idunno.AtProto.AtProtoAgent.Login"
     ];
 
-    public static TheoryData<Assembly> Assemblies =>
+    public static TheoryData<Type> Assemblies =>
     [
-        typeof(AtProtoAgent).Assembly,
-        typeof(BlueskyAgent).Assembly
+        typeof(AtProtoAgent),
+        typeof(BlueskyAgent)
     ];
 
     /// <summary>
@@ -36,8 +36,9 @@ public class AtProtoHttpResultResultTypeTests
     /// </remarks>
     [Theory]
     [MemberData(nameof(Assemblies))]
-    public void NoEndpointReturnsAnAtProtoHttpResultOfANonNullableValueType(Assembly assembly)
+    public void NoEndpointReturnsAnAtProtoHttpResultOfANonNullableValueType(Type assemblyType)
     {
+        Assembly assembly = assemblyType.Assembly;
         List<string> offenders = [];
 
         foreach (Type type in assembly.GetTypes())

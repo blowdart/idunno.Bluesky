@@ -68,7 +68,7 @@ public class LabelDecisionPrecisionTests
         SignedLabelSnapshot? replacement = changed
             ? new(
                 key.CreateLabel(
-                    source: StoreFixture.Issuer,
+                    source: StoreFixture.s_issuer,
                     uri: TargetResolutionHandler.SubjectDid,
                     value: "spam",
                     creationTimestamp: evaluatedAt,

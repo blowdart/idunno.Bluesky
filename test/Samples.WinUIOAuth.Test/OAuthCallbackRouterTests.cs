@@ -80,7 +80,7 @@ public class OAuthCallbackRouterTests
         FakeTimeProvider timeProvider = new();
         OAuthCallbackRouter router = new(timeProvider);
         router.Begin(CreateState());
-        timeProvider.Advance(OAuthCallbackRouter.LoginLifetime);
+        timeProvider.Advance(OAuthCallbackRouter.s_loginLifetime);
 
         Assert.Throws<InvalidOperationException>(() => router.Take(new Uri(ValidCallback)));
         router.Begin(CreateState());

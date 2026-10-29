@@ -7,8 +7,8 @@ using System.Text.Json;
 using idunno.AtProto.Authentication;
 
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.Extensions.Time.Testing;
+using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace idunno.AtProto.Test;
 

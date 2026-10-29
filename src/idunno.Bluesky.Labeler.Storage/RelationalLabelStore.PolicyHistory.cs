@@ -26,7 +26,12 @@ internal abstract partial class RelationalLabelStore
             action: async (connection, transaction, _) =>
             {
                 ModerationPolicyData? draft = await ReadPolicyDraftAsync(connection, transaction, version, cancellationToken).ConfigureAwait(false);
-                return draft is null
+                return draft is null || await HasPolicyVersionActionAsync(
+                    connection: connection,
+                    transaction: transaction,
+                    version: version,
+                    action: "deleteDraft",
+                    token: cancellationToken).ConfigureAwait(false)
                     ? CaseFailure<LabelPolicyDefinition>(LabelServiceErrorCode.OperationNotFound, "The retained policy version was not found.")
                     : LabelServiceResult<LabelPolicyDefinition>.Success(draft.ToPolicy());
             },
@@ -56,8 +61,9 @@ internal abstract partial class RelationalLabelStore
                 DbCommand command = Command(
                     connection: connection,
                     transaction: transaction,
-                    sql: "SELECT version,payload FROM label_policy_versions" +
-                        (afterVersion is null ? string.Empty : " WHERE version>@after") + " ORDER BY version LIMIT @limit",
+                    sql: "SELECT v.version,v.payload FROM label_policy_versions v WHERE NOT EXISTS " +
+                        $"(SELECT 1 FROM label_policy_events t WHERE {TableJsonField("Version")}=v.version AND {TableJsonField("Action")}='deleteDraft')" +
+                        (afterVersion is null ? string.Empty : " AND v.version>@after") + " ORDER BY v.version LIMIT @limit",
                     ("@after", afterVersion),
                     ("@limit", limit));
                 await using ConfiguredAsyncDisposable commandDisposal = command.ConfigureAwait(false);

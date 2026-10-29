@@ -1,0 +1,85 @@
+@page
+@model idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Appeals.IndexModel
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Appeals";
+    ViewData["WideLayout"] = true;
+    JsonElement? appeals = Model.Data.ValueKind == JsonValueKind.Object &&
+        Model.Data.TryGetProperty("moderation", out JsonElement moderation) &&
+        moderation.TryGetProperty("appeals", out JsonElement values) ? values : null;
+}
+<h1>Appeals</h1>
+<form method="get" class="panel">
+    <input type="hidden" name="Sort" value="@(Model.Table?.Query.Sort ?? LabelTableSort.Received)" />
+    <input type="hidden" name="Ascending" value="@((Model.Table?.Query.Ascending ?? false).ToString())" />
+    <label for="status">Status</label>
+    <select id="status" name="Status">
+        <option value="">All</option>
+        @foreach (LabelAppealStatus status in Enum.GetValues<LabelAppealStatus>())
+        {
+            <option value="@status" selected="@(Model.Status == status)">@(status switch
+                {
+                    LabelAppealStatus.Withdrawn => "Labels withdrawn",
+                    LabelAppealStatus.Replaced => "Labels changed",
+                    LabelAppealStatus.Upheld => "Labels kept",
+                    _ => status.ToString()
+                })</option>
+        }
+    </select>
+    <button type="submit" aria-label="Filter appeals" title="Filter appeals"><span class="fa-icon fa-filter" aria-hidden="true"></span></button>
+</form>
+@if (appeals is { ValueKind: JsonValueKind.Array } list && list.GetArrayLength() > 0)
+{
+    <section class="panel">
+        <table>
+            <caption>@Model.Table!.Total appeal records</caption>
+            <thead><tr>
+                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Number, "Appeal", Numeric: true))
+                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Case, "Case", Numeric: true))
+                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Subject, "Subject"))
+                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Actor, "Initiator"))
+                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Status, "Status"))
+                <th scope="col">Captured labels</th>
+                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Received, "Received"))
+            </tr></thead>
+            <tbody>
+                @foreach (JsonElement appeal in list.EnumerateArray())
+                {
+                    <tr>
+                        <td class="numeric">@appeal.GetProperty("id").GetInt64()</td>
+                        <td class="numeric"><a asp-area="Xenon" asp-page="/Cases/Detail" asp-route-id="@appeal.GetProperty("caseId").GetInt64()" asp-route-AppealId="@appeal.GetProperty("id").GetInt64()">#@appeal.GetProperty("caseId").GetInt64()</a></td>
+                        <td>@await Html.PartialAsync("_Identity", new IdentityDisplayModel(appeal.GetProperty("subject").TryGetProperty("uri", out JsonElement subjectUri) ? subjectUri.GetString() : appeal.GetProperty("subject").GetProperty("did").GetString(), Subject: true))</td>
+                        <td>@await Html.PartialAsync("_Identity", new IdentityDisplayModel(appeal.GetProperty("initiator").GetString()))</td>
+                        <td>@await Html.PartialAsync("_WorkflowStatus", appeal.GetProperty("status").GetString())
+                            @if (appeal.TryGetProperty("resolutionReason", out JsonElement resolution))
+                            {
+                                <p>@resolution.GetString()</p>
+                            }
+                        </td>
+                        <td>
+                            @foreach (JsonElement challenge in appeal.GetProperty("challenges").EnumerateArray())
+                            {
+                                JsonElement label = challenge.GetProperty("label");
+                                <details>
+                                    <summary>Sequence @challenge.GetProperty("sequence").GetInt64(): @label.GetProperty("val").GetString()</summary>
+                                    <p>Subject: @await Html.PartialAsync("_Identity", new IdentityDisplayModel(label.GetProperty("uri").GetString(), Detailed: true))</p>
+                                    <p>Source: @await Html.PartialAsync("_Identity", new IdentityDisplayModel(label.GetProperty("src").GetString(), Detailed: true))</p>
+                                    @if (label.TryGetProperty("cid", out JsonElement cid))
+                                    {
+                                        <p>Record CID: <code>@cid.GetString()</code></p>
+                                    }
+                                </details>
+                            }
+                        </td>
+                        <td><time data-relative-time datetime="@appeal.GetProperty("createdAt").GetDateTimeOffset().ToString("O")">@appeal.GetProperty("createdAt").GetDateTimeOffset().ToString("u")</time></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @await Html.PartialAsync("_Pagination", Model.Table)
+    </section>
+}
+else if (ViewData["Error"] is null)
+{
+    <p class="panel">No appeals match this filter.</p>
+}

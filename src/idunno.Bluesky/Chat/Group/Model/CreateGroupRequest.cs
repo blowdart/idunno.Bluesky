@@ -18,7 +18,7 @@ internal record CreateGroupRequest
         ArgumentOutOfRangeException.ThrowIfGreaterThan(name.GetUtf8Length(), Maximum.GroupNameLengthInBytes);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(name.GetGraphemeLength(), Maximum.GroupNameLengthInGraphemes);
 
-        Members = new List<Did>(members);
+        Members = [.. members];
         Name = name;
     }
 

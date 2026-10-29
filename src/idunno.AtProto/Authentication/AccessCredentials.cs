@@ -20,8 +20,6 @@ public class AccessCredentials : RefreshCredential, IAccessCredential
 #endif
 
     private string _accessToken;
-    private DateTimeOffset _expiresOn;
-    private Did _did;
 
     /// <summary>
     /// Creates a new instance of <see cref="AccessCredentials"/> with the specified <paramref name="accessJwt"/> and <paramref name="refreshToken"/>.
@@ -41,7 +39,7 @@ public class AccessCredentials : RefreshCredential, IAccessCredential
         ArgumentException.ThrowIfNullOrWhiteSpace(accessJwt);
         ArgumentException.ThrowIfNullOrWhiteSpace(refreshToken);
 
-        (_did, _expiresOn) = ExtractJwtProperties(accessJwt);
+        (Did, ExpiresOn) = ExtractJwtProperties(accessJwt);
         _accessToken = accessJwt;
     }
 
@@ -78,8 +76,8 @@ public class AccessCredentials : RefreshCredential, IAccessCredential
             lock (_accessCredentialsLock)
             {
                 _accessToken = value;
-                _did = did;
-                _expiresOn = expiresOn;
+                Did = did;
+                ExpiresOn = expiresOn;
             }
         }
     }
@@ -103,9 +101,11 @@ public class AccessCredentials : RefreshCredential, IAccessCredential
         {
             lock (_accessCredentialsLock)
             {
-                return _expiresOn;
+                return field;
             }
         }
+
+        private set;
     }
 
     /// <summary>
@@ -117,9 +117,11 @@ public class AccessCredentials : RefreshCredential, IAccessCredential
         {
             lock (_accessCredentialsLock)
             {
-                return _did;
+                return field;
             }
         }
+
+        private set;
     }
 
     /// <summary>

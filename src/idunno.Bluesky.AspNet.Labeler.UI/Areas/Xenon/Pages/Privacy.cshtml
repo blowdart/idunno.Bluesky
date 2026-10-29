@@ -1,0 +1,30 @@
+@page
+@{
+    ViewData["Title"] = "Privacy";
+}
+<h1>Privacy notice</h1>
+<section class="panel">
+    <h2>Who operates this service</h2>
+    <p>The operator of this deployment is responsible for how personal information is used here. The Xenon software author and contributors do not become the operator simply because this service uses their software.</p>
+    <p>This general notice describes Xenon's functionality, not a complete deployment-specific privacy policy. The operator must supply its identity and contact details, applicable legal bases, retention periods, hosting and service providers, international transfer information where relevant, and any additional disclosures required by law.</p>
+    <h2>Sign-in and browser storage</h2>
+    <p>Bluesky OAuth sign-in involves your account's identity and authorization services. The service processes your verified DID, authentication claims and session information, and uses authentication and request-forgery protection cookies. OAuth credentials and related state are handled by the configured authentication components; storage and lifetime depend on the deployment.</p>
+    <p>Those cookies support sign-in, session security and form protection, rather than advertising. Blocking or clearing them may prevent sign-in or form submissions. Signing out ends the browser session but does not erase retained moderation or audit records.</p>
+    <p>An explicit light or dark theme choice is saved in this browser's local storage. System appearance is used when no override is saved. Choosing System removes the saved override; clearing browser storage also resets it. Theme preferences are not synchronized to a server-side account or other devices.</p>
+    <p>Your UTC or local-time display choice is also saved in this browser's local storage and restored on subsequent pages and visits. Clearing browser storage resets it to UTC. The preference is not synchronized to your account or other devices and does not change stored timestamps.</p>
+    <h2>Moderation and administration records</h2>
+    <p>The service processes team membership, roles and status; reports and reporter identities; account DIDs and record URIs, including optional CIDs; case assignments, notes, decisions and appeals; policy versions; label operations; and audit reasons, timestamps and operation identifiers.</p>
+    <p>These records support authorized moderation, access control, review, recovery from interrupted work and accountability. Handles are display aids and can change. DIDs remain the retained identifiers for identities and administrative actions.</p>
+    <p>The hosting infrastructure, reverse proxy and configured logging or monitoring providers may also process request information such as IP addresses, request paths, timestamps and error details. The operator must describe its actual logging and analytics practices; this notice does not promise that a deployment has no additional tracking.</p>
+    <h2>External services and disclosures</h2>
+    <p>Authentication and identity verification can contact Bluesky or AT Protocol services, the PLC directory, and servers named by DID documents and handles. Record verification may contact the account's personal data server. These requests disclose network and requested-identifier information to the contacted services. Verified handle lookups are cached to reduce repeated requests.</p>
+    <p>Opening a reported subject's preview sends anonymous server-side requests for that subject to the public Bluesky AppView, and may retrieve images from the Bluesky CDN. Those services see the server's network information and the requested identifiers. Previews are rendered locally without third-party embeds or direct browser requests for remote images; following a Bluesky link visits that external service. Previews show current public content, not a preserved report-time snapshot.</p>
+    <p>Moderation and administration records are available to authorized team members according to their permissions. Infrastructure and storage providers may process them on the operator's behalf. The operator is responsible for explaining any other disclosures, including those required by law.</p>
+    <p>If public label distribution is enabled, signed labels disclose their source, subject account or record, label value, timestamps and other signed fields to subscribers and querying clients. External services may retain copies. Report text and internal case notes are not part of the public label payload.</p>
+    <h2>Retention and your choices</h2>
+    <p>Retention depends on the operator's configuration and obligations. Moderation history, audit records, operation receipts and backups can outlast a browser session or team membership. Suspension, removal, label negation and case closure do not necessarily delete those records or downstream copies.</p>
+    <p>Contact the operator through its published channels for privacy questions and requests to access, correct, restrict or erase personal information, or to exercise other rights available under applicable law. Some records may need to be retained for security, accountability or legal obligations. Where applicable, you may also contact the relevant data protection authority.</p>
+    <p>Do not submit unnecessary sensitive information. If the deployment does not provide the operator information you need to understand its practices, obtain it before submitting personal information.</p>
+    <h2>Related information</h2>
+    <p>See the <a asp-area="Xenon" asp-page="/Terms">terms and conditions</a> and the operator's moderation policy and supplementary privacy information. The operator is responsible for keeping its disclosures accurate and communicating material changes.</p>
+</section>

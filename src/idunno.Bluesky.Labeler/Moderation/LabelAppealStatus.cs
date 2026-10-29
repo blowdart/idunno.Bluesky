@@ -12,7 +12,7 @@ public enum LabelAppealStatus
     Upheld,
     /// <summary>A moderator explicitly withdrew selected challenged labels.</summary>
     Withdrawn,
-    /// <summary>A moderator explicitly issued replacement outcomes, optionally withdrawing challenged labels.</summary>
+    /// <summary>A moderator explicitly changed the label selection, including partial withdrawal while retaining other labels.</summary>
     Replaced,
     /// <summary>A moderator acknowledged that newer outcomes superseded the captured challenge without changing labels.</summary>
     Superseded

@@ -19,8 +19,151 @@ namespace idunno.Bluesky.Labeler.Test;
 
 public class LabelAdministrationTests
 {
+    [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task AuditTimesUseDatabaseClockSurviveRetriesAndRetainUnknownLegacyTimes(string engine)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        FakeTimeProvider clock = new(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine, databaseClock: clock);
+        ILabelAdministrationStore store = (ILabelAdministrationStore)fixture.Store;
+        LabelAdministrationReceipt original = (await store.BootstrapAsync(s_administrator, "uid:0", "timestamp-bootstrap", token)).Result!;
+        Assert.Equal(clock.GetUtcNow(), original.CreatedAt);
+        clock.Advance(TimeSpan.FromHours(1));
+        ILabelAdministrationStore restarted = (ILabelAdministrationStore)fixture.NewStore();
+        LabelAdministrationReceipt retry = (await restarted.BootstrapAsync(s_administrator, "uid:0", "timestamp-bootstrap", token)).Result!;
+        Assert.Equal(original, retry);
+        LabelAdministrationCaller caller = (await restarted.AuthenticateLocalAsync("uid:0", token)).Result!;
+        LabelAdministrationReceipt denial = (await restarted.RecordAdministrationDenialAsync("Test denied event timestamp.", caller, token)).Result!;
+        Assert.Equal(clock.GetUtcNow(), denial.CreatedAt);
+        IReadOnlyList<LabelAdministrationReceipt> audit = (await restarted.GetAdministrationAuditAsync(caller, cancellationToken: token)).Result!;
+        Assert.Equal(original.CreatedAt, Assert.Single(audit, item => item.Sequence == original.Sequence).CreatedAt);
+        Assert.Equal(denial.CreatedAt, Assert.Single(audit, item => item.Sequence == denial.Sequence).CreatedAt);
+
+        string legacy = Convert.ToHexString(Encoding.UTF8.GetBytes(
+            """{"Sequence":1,"OperationId":"legacy","Actor":null,"LocalIdentity":null,"Action":"legacy","Reason":"Historical event without timestamp.","Succeeded":true}"""));
+        string payload = engine == "postgresql" ? $"decode('{legacy}','hex')" : $"X'{legacy}'";
+        await fixture.ExecuteAsync($"UPDATE label_admin_audit SET payload={payload} WHERE seq=1");
+        audit = (await restarted.GetAdministrationAuditAsync(caller, cancellationToken: token)).Result!;
+        Assert.Null(Assert.Single(audit, item => item.Sequence == 1).CreatedAt);
+        LabelTableQuery dated = new(
+            Kind: LabelTableKind.Audit,
+            Sort: LabelTableSort.Received,
+            AuditFrom: original.CreatedAt,
+            AuditTo: denial.CreatedAt);
+        LabelServiceResult<LabelTablePage> legacyFiltered = await ((ILabelTableStore)fixture.NewStore()).ReadTableAsync(caller, dated, token);
+        Assert.True(legacyFiltered.Succeeded, legacyFiltered.Error?.Message + legacyFiltered.Error?.Exception);
+        Assert.Equal(1, legacyFiltered.Result.Total);
+        Assert.Equal(denial.Sequence, Assert.Single(legacyFiltered.Result.Audit!).Sequence);
+    }
+
     private static readonly Did s_administrator = new("did:plc:administrator");
     private static readonly Did s_member = new("did:plc:member");
+
+    [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task AuditFiltersCountAndPageTheSameInclusiveDatabaseTimeRange(string engine)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        DateTimeOffset start = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        FakeTimeProvider clock = new(start.AddMilliseconds(123));
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine, databaseClock: clock);
+        ILabelAdministrationStore store = (ILabelAdministrationStore)fixture.Store;
+        LabelAdministrationCaller administrator = await BootstrapAsync(store);
+        List<LabelAdministrationReceipt> denials = [];
+        for (int index = 0; index < 35; index++)
+        {
+            clock.Advance(TimeSpan.FromMinutes(1));
+            LabelServiceResult<LabelAdministrationReceipt> result = await store.RecordAdministrationDenialAsync(
+                reason: "Test audit filter event.",
+                caller: index % 2 == 0 ? administrator : null,
+                cancellationToken: token);
+            Assert.True(result.Succeeded, result.Error?.Message);
+            denials.Add(result.Result);
+        }
+
+        DateTimeOffset first = denials[0].CreatedAt!.Value;
+        DateTimeOffset last = denials[^1].CreatedAt!.Value;
+        LabelTableQuery defaults = new(LabelTableKind.Audit, Sort: LabelTableSort.Received, Ascending: true);
+        foreach ((LabelTableQuery query, long total) in new (LabelTableQuery, long)[]
+        {
+            (defaults, 36),
+            (defaults with { AuditSucceeded = true }, 1),
+            (defaults with { AuditSucceeded = false }, 35),
+            (defaults with { AuditActor = s_administrator.Value }, 19),
+            (defaults with { AuditActor = "uid:0" }, 0),
+            (defaults with { AuditActor = "missing' OR 1=1 --" }, 0),
+            (defaults with { AuditFrom = first, AuditTo = last }, 35),
+            (defaults with { AuditFrom = first.AddTicks(1), AuditTo = last.AddTicks(-1) }, 33),
+            (defaults with { AuditFrom = first, AuditTo = first }, 1),
+            (defaults with { AuditFrom = first.ToOffset(TimeSpan.FromHours(-8)), AuditTo = first }, 1),
+            (defaults with { AuditFrom = last }, 1),
+            (defaults with { AuditTo = first }, 2),
+            (defaults with { AuditFrom = last.AddMilliseconds(1) }, 0)
+        })
+        {
+            LabelServiceResult<LabelTablePage> result = await ((ILabelTableStore)fixture.NewStore()).ReadTableAsync(administrator, query, token);
+            Assert.True(result.Succeeded, result.Error?.Message + result.Error?.Exception);
+            Assert.Equal(total, result.Result.Total);
+            Assert.Equal(Math.Min(total, LabelTableQuery.PageSize), result.Result.Audit!.Count);
+        }
+
+        LabelTableQuery combined = defaults with
+        {
+            AuditActor = s_administrator.Value,
+            AuditSucceeded = false,
+            AuditFrom = first,
+            AuditTo = last
+        };
+        ILabelTableStore tables = (ILabelTableStore)fixture.Store;
+        LabelTablePage pageOne = (await tables.ReadTableAsync(administrator, combined, token)).Result!;
+        LabelTablePage pageTwo = (await tables.ReadTableAsync(administrator, combined with { Page = 99 }, token)).Result!;
+        Assert.Equal(18, pageOne.Total);
+        Assert.Equal(18, pageTwo.Total);
+        Assert.Equal(2, pageTwo.Page);
+        Assert.Equal(denials.Where((_, index) => index % 2 == 0).Select(item => item.Sequence),
+            pageOne.Audit!.Concat(pageTwo.Audit!).Select(item => item.Sequence));
+        Assert.Throws<ArgumentException>(() => (combined with { AuditTo = first.AddDays(-1) }).Validate());
+
+        LabelServiceResult<LabelAdministrationReceipt> started = await tables.BeginAuditExportAsync(administrator, defaults, token);
+        Assert.True(started.Succeeded, started.Error?.Message + started.Error?.Exception);
+        Assert.Equal("audit-export-started", started.Result.Action);
+        Assert.Equal(administrator.Actor, started.Result.Actor);
+        Assert.Equal(clock.GetUtcNow(), started.Result.CreatedAt);
+        long cutoff = started.Result.Sequence - 1;
+        await store.RecordAdministrationDenialAsync("Concurrent event after export cutoff.", administrator, token);
+        List<long> exported = [];
+        long cursor = 0;
+        while (true)
+        {
+            LabelServiceResult<IReadOnlyList<LabelAdministrationReceipt>> result = await tables.ReadAuditExportPageAsync(
+                caller: administrator,
+                query: defaults with { Sort = LabelTableSort.Number, AuditAfterSequence = cursor, AuditThroughSequence = cutoff },
+                cancellationToken: token);
+            Assert.True(result.Succeeded, result.Error?.Message + result.Error?.Exception);
+            IReadOnlyList<LabelAdministrationReceipt> entries = result.Result;
+            if (entries.Count == 0)
+            {
+                break;
+            }
+
+            exported.AddRange(entries.Select(entry => entry.Sequence));
+            cursor = entries[^1].Sequence;
+        }
+
+        Assert.Equal(Enumerable.Range(1, 36).Select(value => (long)value), exported);
+        await EnrollAndBindAsync(store, administrator, LabelTeamRole.Viewer);
+        LabelAdministrationCaller member = (await store.AuthenticateLocalAsync("uid:1", token)).Result!;
+        Assert.True((await tables.BeginAuditExportAsync(member, defaults, token)).Succeeded);
+        Assert.True((await store.ChangeTeamAsync(administrator, Change(LabelTeamAction.Suspend, "suspend-exporter"), token)).Succeeded);
+        Assert.False((await tables.ReadTableAsync(member, defaults, token)).Succeeded);
+        Assert.False((await tables.ReadAuditExportPageAsync(member, defaults with { AuditThroughSequence = cutoff }, token)).Succeeded);
+        Assert.False((await tables.BeginAuditExportAsync(member, defaults, token)).Succeeded);
+    }
 
     [Theory]
     [InlineData("sqlite")]
@@ -75,6 +218,55 @@ public class LabelAdministrationTests
         Assert.Equal("uid:0", caller.LocalIdentity);
         LabelTeamMember member = Assert.Single((await restarted.GetTeamAsync(caller, TestContext.Current.CancellationToken)).Result!);
         Assert.Equal(LabelTeamRole.Administrator, member.Role);
+    }
+
+    [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task BrowserCallerEvidenceUsesDatabaseTimeAndExpiresAfterTenMinutes(string engine)
+    {
+        FakeTimeProvider databaseClock = new(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine, databaseClock: databaseClock);
+        ILabelAdministrationStore store = (ILabelAdministrationStore)fixture.Store;
+        await BootstrapAsync(store);
+
+        LabelServiceResult<LabelAdministrationCaller> authenticated = await store.AuthenticateBrowserAsync(
+            s_administrator,
+            TestContext.Current.CancellationToken);
+        Assert.True(authenticated.Succeeded, authenticated.Error?.Message);
+        Assert.Equal(databaseClock.GetUtcNow().AddMinutes(10), authenticated.Result!.ExpiresAt);
+        Assert.True((await store.GetTeamAsync(authenticated.Result, TestContext.Current.CancellationToken)).Succeeded);
+
+        databaseClock.Advance(TimeSpan.FromMinutes(10));
+
+        Assert.False((await store.GetTeamAsync(authenticated.Result, TestContext.Current.CancellationToken)).Succeeded);
+    }
+
+    [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task BrowserCallerEvidenceIsRejectedAfterMemberSuspension(string engine)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        ILabelAdministrationStore store = (ILabelAdministrationStore)fixture.Store;
+        LabelAdministrationCaller administrator = await BootstrapAsync(store);
+        await EnrollAndBindAsync(store, administrator, LabelTeamRole.Viewer);
+        LabelAdministrationCaller browser = (await store.AuthenticateBrowserAsync(
+            s_member,
+            TestContext.Current.CancellationToken)).Result!;
+        Assert.True((await store.GetTeamAsync(browser, TestContext.Current.CancellationToken)).Succeeded);
+
+        Assert.True((await store.ChangeTeamAsync(
+            administrator,
+            Change(LabelTeamAction.Suspend, "suspend-browser-member"),
+            TestContext.Current.CancellationToken)).Succeeded);
+
+        Assert.False((await store.GetTeamAsync(browser, TestContext.Current.CancellationToken)).Succeeded);
+        Assert.False((await store.AuthenticateBrowserAsync(
+            s_member,
+            TestContext.Current.CancellationToken)).Succeeded);
     }
 
     [Theory]
@@ -177,7 +369,7 @@ public class LabelAdministrationTests
         using HttpClient http = new(new TargetResolutionHandler());
         BlockingPolicy policy = new();
         LabelIssuanceService service = new(
-            issuer: StoreFixture.Issuer, signingKey: key, store: fixture.Store,
+            issuer: StoreFixture.s_issuer, signingKey: key, store: fixture.Store,
             authorizer: new LabelTeamAuthorizer(store, member), policyProvider: policy, httpClient: http);
         Task<LabelServiceResult<LabelOperationReceipt>> pending = service.ExecuteAsync(LabelOperationRequest.Issue(
             operationId: "revoked-label", target: LabelTarget.Account(new Did(TargetResolutionHandler.SubjectDid)),
@@ -224,7 +416,7 @@ public class LabelAdministrationTests
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         using HttpClient identity = new(new ServiceIdentityHandler(key.ExportPublicKeyMultibase()));
         FakeTimeProvider clock = new(await DatabaseNowAsync(fixture));
-        AtProtoServiceReference audience = new(StoreFixture.Issuer, "labeler_admin");
+        AtProtoServiceReference audience = new(StoreFixture.s_issuer, "labeler_admin");
         const string method = "dev.idunno.labeler.admin.getTeam";
         ServiceAuthenticationResult first = await ServiceAuthentication.VerifyAsync(
             token: ServiceToken(key, clock.GetUtcNow(), audience), audience: audience, method: method,
@@ -316,7 +508,7 @@ public class LabelAdministrationTests
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         using HttpClient http = new(new TargetResolutionHandler());
         LabelIssuanceService service = new(
-            issuer: StoreFixture.Issuer,
+            issuer: StoreFixture.s_issuer,
             signingKey: key,
             store: fixture.Store,
             authorizer: new LabelTeamAuthorizer(store, member),
@@ -386,7 +578,7 @@ public class LabelAdministrationTests
         await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         SignedLabelSnapshot signed = new(key.CreateLabel(
-            source: StoreFixture.Issuer, uri: "did:plc:subject", value: "spam",
+            source: StoreFixture.s_issuer, uri: "did:plc:subject", value: "spam",
             creationTimestamp: new DateTimeOffset(2026, 1, 2, 3, 4, 5, TimeSpan.Zero)));
         await fixture.Store.AppendAsync("before-upgrade", [signed], cancellationToken: TestContext.Current.CancellationToken);
         await fixture.Store.PublishAsync(cancellationToken: TestContext.Current.CancellationToken);
@@ -399,7 +591,7 @@ public class LabelAdministrationTests
             UPDATE label_schema SET version=3;
             """);
         ILabelStore reopened = fixture.NewStore();
-        await reopened.InitializeAsync(StoreFixture.Issuer, TestContext.Current.CancellationToken);
+        await reopened.InitializeAsync(StoreFixture.s_issuer, TestContext.Current.CancellationToken);
         Assert.Equal(before, await reopened.GetStateAsync(TestContext.Current.CancellationToken));
         StoredLabel restored = Assert.Single((await reopened.ReplayAsync(
             streamId: before.StreamId, after: 0, through: before.IssuedThrough,
@@ -424,9 +616,9 @@ public class LabelAdministrationTests
             _ => "DROP INDEX label_admin_token_expiry"
         });
         ILabelStore reopened = fixture.NewStore();
-        await reopened.InitializeAsync(StoreFixture.Issuer, TestContext.Current.CancellationToken);
+        await reopened.InitializeAsync(StoreFixture.s_issuer, TestContext.Current.CancellationToken);
         await AssertTokenExpiryIndexAsync(fixture);
-        await reopened.InitializeAsync(StoreFixture.Issuer, TestContext.Current.CancellationToken);
+        await reopened.InitializeAsync(StoreFixture.s_issuer, TestContext.Current.CancellationToken);
         await AssertTokenExpiryIndexAsync(fixture);
     }
 

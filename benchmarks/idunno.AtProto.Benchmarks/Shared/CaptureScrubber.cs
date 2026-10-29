@@ -5,7 +5,9 @@ using System.Buffers;
 using System.Text;
 using System.Text.Json;
 
+#pragma warning disable IDE0130 // Preserve the established namespace independently of folder layout.
 namespace idunno.AtProto.Benchmarks;
+#pragma warning restore IDE0130
 
 /// <summary>
 /// Removes anything which identifies the capturing account from an authenticated response before it is written to a corpus.

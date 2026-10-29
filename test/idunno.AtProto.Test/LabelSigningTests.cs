@@ -299,7 +299,7 @@ public class LabelSigningTests
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         DidDocument document = Document(key);
         TaskCompletionSource start = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        Task[] signers = Enumerable.Range(0, 16).Select(_ => Task.Run(async () =>
+        Task[] signers = [.. Enumerable.Range(0, 16).Select(_ => Task.Run(async () =>
         {
             await start.Task;
             try
@@ -310,7 +310,7 @@ public class LabelSigningTests
             {
                 Assert.Throws<ObjectDisposedException>(() => key.Sign(ReadLabel()));
             }
-        }, TestContext.Current.CancellationToken)).ToArray();
+        }, TestContext.Current.CancellationToken))];
         Task disposal = Task.Run(async () =>
         {
             await start.Task;

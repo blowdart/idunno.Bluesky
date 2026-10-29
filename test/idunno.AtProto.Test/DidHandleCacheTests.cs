@@ -56,7 +56,10 @@ public class DidHandleCacheTests
         Exception? thrown;
         if (failingMeasurement == 1)
         {
-            thrown = Record.Exception(() => cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken));
+            thrown = Record.Exception(() =>
+            {
+                _ = cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken).AsTask();
+            });
         }
         else
         {
@@ -672,25 +675,29 @@ public class DidHandleCacheTests
         Assert.Null(options.MeterFactory);
     }
 
-    public static TheoryData<Func<DidHandleCacheOptions>> InvalidOptions => new()
-    {
-        () => new DidHandleCacheOptions { Size = 0 },
-        () => new DidHandleCacheOptions { MaximumConcurrentResolutions = 0 },
-        () => new DidHandleCacheOptions { MaximumConcurrentResolutions = -1 },
-        () => new DidHandleCacheOptions { Duration = TimeSpan.Zero },
-        () => new DidHandleCacheOptions { Duration = TimeSpan.FromDays(100) },
-        () => new DidHandleCacheOptions { FailedResolutionDuration = TimeSpan.FromSeconds(-1) },
-        () => new DidHandleCacheOptions { FailedResolutionDuration = TimeSpan.FromDays(100) },
-        () => new DidHandleCacheOptions { ResolutionTimeout = TimeSpan.Zero },
-        () => new DidHandleCacheOptions { ResolutionTimeout = TimeSpan.FromDays(100) },
-        () => new DidHandleCacheOptions { TimeProvider = null! },
-    };
-
     [Theory]
-    [MemberData(nameof(InvalidOptions))]
-    public void InvalidOptionsThrow(Func<DidHandleCacheOptions> create)
+    [InlineData(nameof(DidHandleCacheOptions.Size), 0)]
+    [InlineData(nameof(DidHandleCacheOptions.MaximumConcurrentResolutions), 0)]
+    [InlineData(nameof(DidHandleCacheOptions.MaximumConcurrentResolutions), -1)]
+    [InlineData(nameof(DidHandleCacheOptions.Duration), 0)]
+    [InlineData(nameof(DidHandleCacheOptions.Duration), 100 * 24 * 60 * 60)]
+    [InlineData(nameof(DidHandleCacheOptions.FailedResolutionDuration), -1)]
+    [InlineData(nameof(DidHandleCacheOptions.FailedResolutionDuration), 100 * 24 * 60 * 60)]
+    [InlineData(nameof(DidHandleCacheOptions.ResolutionTimeout), 0)]
+    [InlineData(nameof(DidHandleCacheOptions.ResolutionTimeout), 100 * 24 * 60 * 60)]
+    [InlineData(nameof(DidHandleCacheOptions.TimeProvider), 0)]
+    public void InvalidOptionsThrow(string property, int seconds)
     {
-        Assert.ThrowsAny<ArgumentException>(() => create());
+        Assert.ThrowsAny<ArgumentException>(() => property switch
+        {
+            nameof(DidHandleCacheOptions.Size) => new DidHandleCacheOptions { Size = seconds },
+            nameof(DidHandleCacheOptions.MaximumConcurrentResolutions) => new DidHandleCacheOptions { MaximumConcurrentResolutions = seconds },
+            nameof(DidHandleCacheOptions.Duration) => new DidHandleCacheOptions { Duration = TimeSpan.FromSeconds(seconds) },
+            nameof(DidHandleCacheOptions.FailedResolutionDuration) => new DidHandleCacheOptions { FailedResolutionDuration = TimeSpan.FromSeconds(seconds) },
+            nameof(DidHandleCacheOptions.ResolutionTimeout) => new DidHandleCacheOptions { ResolutionTimeout = TimeSpan.FromSeconds(seconds) },
+            nameof(DidHandleCacheOptions.TimeProvider) => new DidHandleCacheOptions { TimeProvider = null! },
+            _ => throw new InvalidOperationException($"Unknown option {property}.")
+        });
     }
 
     private sealed class TestResolver(Func<CancellationToken, Task<Handle>> resolve)
@@ -701,7 +708,7 @@ public class DidHandleCacheTests
 
         public CancellationToken LastCancellationToken { get; private set; }
 
-        public Task<Handle> ResolveAsync(Did did, CancellationToken cancellationToken)
+        public Task<Handle> ResolveAsync(Did _, CancellationToken cancellationToken)
         {
             Interlocked.Increment(ref _calls);
             LastCancellationToken = cancellationToken;

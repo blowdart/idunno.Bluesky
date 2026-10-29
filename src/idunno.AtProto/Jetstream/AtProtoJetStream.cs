@@ -739,7 +739,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                 return false;
             }
 
-            foreach (var (state, client) in changes)
+            foreach ((WebSocketState state, ClientWebSocket? client) in changes)
             {
                 if (ReferenceEquals(client, _client))
                 {
@@ -766,7 +766,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
             ConnectionStateChangedEventArgs args;
             lock (_syncLock)
             {
-                if (!_stateNotifications.TryDequeue(out var notification))
+                if (!_stateNotifications.TryDequeue(out (ConnectionStateChangedEventArgs Args, ClientWebSocket? Client) notification))
                 {
                     _dispatchingStateNotifications = false;
                     break;

@@ -14,8 +14,11 @@ namespace idunno.Bluesky.BotSdk;
 /// </remarks>
 public sealed class BotReplayProgress
 {
+#if NET9_0_OR_GREATER
+    private readonly Lock _gate = new();
+#else
     private readonly object _gate = new();
-    private ReplayProgressSnapshot _snapshot;
+#endif
     private CancellationToken? _ownershipPeriod;
 
     internal BotReplayProgress()
@@ -30,9 +33,11 @@ public sealed class BotReplayProgress
         {
             lock (_gate)
             {
-                return _snapshot;
+                return field;
             }
         }
+
+        private set;
     }
 
     internal void BeginOwnership(CancellationToken ownershipPeriod)
@@ -42,7 +47,7 @@ public sealed class BotReplayProgress
             if (_ownershipPeriod != ownershipPeriod)
             {
                 _ownershipPeriod = ownershipPeriod;
-                _snapshot = default;
+                Snapshot = default;
             }
         }
     }
@@ -51,7 +56,7 @@ public sealed class BotReplayProgress
     {
         lock (_gate)
         {
-            _snapshot = new(sequence, witnessedAt, observedAt);
+            Snapshot = new(sequence, witnessedAt, observedAt);
         }
     }
 }

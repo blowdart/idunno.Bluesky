@@ -21,7 +21,7 @@ public class ProfileAssociatedChatTests
         string property = policy is null ? string.Empty : $""","allowGroupInvites":"{policy}" """;
         string json = $$"""{"allowIncoming":"following"{{property}}}""";
 
-        var chat = JsonSerializer.Deserialize<ProfileAssociatedChat>(json, BlueskyServer.BlueskyJsonSerializerOptions);
+        ProfileAssociatedChat? chat = JsonSerializer.Deserialize<ProfileAssociatedChat>(json, BlueskyServer.BlueskyJsonSerializerOptions);
 
         Assert.NotNull(chat);
         Assert.Equal(AllowIncomingChat.Following, chat.AllowIncoming);

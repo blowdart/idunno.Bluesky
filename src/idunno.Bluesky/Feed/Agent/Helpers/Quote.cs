@@ -1110,7 +1110,9 @@ public partial class BlueskyAgent
     public async Task<AtProtoHttpResult<CreateRecordResult>> Quote(
         RecordKey? rKey,
         StrongReference strongReference,
+#pragma warning disable IDE0060 // Preserve the public overload signature; this overload has no text to extract facets from.
         bool extractFacets,
+#pragma warning restore IDE0060
         ICollection<EmbeddedImage>? images = null,
         ICollection<string>? tags = null,
         CancellationToken cancellationToken = default)

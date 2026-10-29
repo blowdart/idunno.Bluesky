@@ -127,9 +127,9 @@ public class ModerationTests
         Assert.Equal("reasonType", actual.ReasonType);
         Assert.Equal("reason", actual.Reason);
         Assert.Equal("did:plc:hfgp6pj3akhqxntgqwramlbg", actual.ReportedBy);
-        Assert.IsType<RepoReference>(actual.Subject);
+        RepoReference typed = Assert.IsType<RepoReference>(actual.Subject);
 
-        RepoReference? actualRepoReference = actual.Subject as RepoReference;
+        RepoReference? actualRepoReference = typed;
         Assert.NotNull(actualRepoReference);
         Assert.Equal("did:plc:cl36izgkuk57kn6ulbliqssk", actualRepoReference.Did);
     }
@@ -160,9 +160,9 @@ public class ModerationTests
         Assert.Equal("reasonType", actual.ReasonType);
         Assert.Equal("reason", actual.Reason);
         Assert.Equal("did:plc:hfgp6pj3akhqxntgqwramlbg", actual.ReportedBy);
-        Assert.IsType<RepoReference>(actual.Subject);
+        RepoReference typed = Assert.IsType<RepoReference>(actual.Subject);
 
-        RepoReference? actualRepoReference = actual.Subject as RepoReference;
+        RepoReference? actualRepoReference = typed;
         Assert.NotNull(actualRepoReference);
         Assert.Equal("did:plc:cl36izgkuk57kn6ulbliqssk", actualRepoReference.Did);
     }
@@ -194,9 +194,9 @@ public class ModerationTests
         Assert.Equal("reasonType", actual.ReasonType);
         Assert.Equal("reason", actual.Reason);
         Assert.Equal("did:plc:hfgp6pj3akhqxntgqwramlbg", actual.ReportedBy);
-        Assert.IsType<StrongReference>(actual.Subject);
+        StrongReference typed = Assert.IsType<StrongReference>(actual.Subject);
 
-        StrongReference? actualRepoReference = actual.Subject as StrongReference;
+        StrongReference? actualRepoReference = typed;
         Assert.NotNull(actualRepoReference);
         Assert.Equal("at://did:plc:g2p3bnbzcvcbohfpvjxfazqv/app.bsky.feed.post/3lmawgzjbc22v", actualRepoReference.Uri);
         Assert.Equal("bafyreify2biwc5pv4ymit7s4aq2xtgd6v5slbj7kl4nokhhwjo7nuzfov4", actualRepoReference.Cid);
@@ -229,9 +229,9 @@ public class ModerationTests
         Assert.Equal("reasonType", actual.ReasonType);
         Assert.Equal("reason", actual.Reason);
         Assert.Equal("did:plc:hfgp6pj3akhqxntgqwramlbg", actual.ReportedBy);
-        Assert.IsType<StrongReference>(actual.Subject);
+        StrongReference typed = Assert.IsType<StrongReference>(actual.Subject);
 
-        StrongReference? actualRepoReference = actual.Subject as StrongReference;
+        StrongReference? actualRepoReference = typed;
         Assert.NotNull(actualRepoReference);
         Assert.Equal("at://did:plc:g2p3bnbzcvcbohfpvjxfazqv/app.bsky.feed.post/3lmawgzjbc22v", actualRepoReference.Uri);
         Assert.Equal("bafyreify2biwc5pv4ymit7s4aq2xtgd6v5slbj7kl4nokhhwjo7nuzfov4", actualRepoReference.Cid);

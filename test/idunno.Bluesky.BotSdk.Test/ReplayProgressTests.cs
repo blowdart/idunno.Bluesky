@@ -270,7 +270,7 @@ public sealed class ReplayProgressTests
                 progress.Observe(sequence, TestRecords.Start.AddSeconds(sequence));
             }
         }, TestContext.Current.CancellationToken);
-        Task[] readers = Enumerable.Range(0, 4).Select(_ => Task.Run(() =>
+        Task[] readers = [.. Enumerable.Range(0, 4).Select(_ => Task.Run(() =>
         {
             try
             {
@@ -292,7 +292,7 @@ public sealed class ReplayProgressTests
             {
                 start.RemoveParticipant();
             }
-        }, TestContext.Current.CancellationToken)).ToArray();
+        }, TestContext.Current.CancellationToken))];
 
         await Task.WhenAll(readers.Append(writer));
         Assert.Equal(1000, observations.Snapshot.Sequence);

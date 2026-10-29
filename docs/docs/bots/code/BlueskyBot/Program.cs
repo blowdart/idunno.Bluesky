@@ -50,7 +50,9 @@ sealed class Post(IOptions<BotSettings> botSettings, ILoggerFactory loggerFactor
         {
             await agent.Login(botSettings.Value.Handle, botSettings.Value.AppPassword);
             await agent.Post("I'm a scheduled bot post.");
+#pragma warning disable CA1303 // The documentation sample uses fixed English console output.
             Console.WriteLine("Just posted");
+#pragma warning restore CA1303
         }
 
         return;

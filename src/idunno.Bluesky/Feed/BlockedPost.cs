@@ -29,7 +29,7 @@ public sealed record BlockedPost : PostViewBase
     [JsonRequired]
     public bool Blocked
     {
-        get => _blocked;
+        get;
         init
         {
             if (!value)
@@ -37,11 +37,9 @@ public sealed record BlockedPost : PostViewBase
                 throw new ArgumentException("A blocked post must have its blocked flag set.", nameof(value));
             }
 
-            _blocked = value;
+            field = value;
         }
-    }
-
-    private readonly bool _blocked = true;
+    } = true;
 
     /// <summary>
     /// Gets the blocked author of the post.

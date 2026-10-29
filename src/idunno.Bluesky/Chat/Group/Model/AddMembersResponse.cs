@@ -38,9 +38,7 @@ public sealed record AddMembersResponse
     /// <exception cref="ArgumentException">The collection contains a <see langword="null"/> entry.</exception>
     public IReadOnlyCollection<ProfileViewBasic>? AddedMembers
     {
-        get => _addedMembers;
-        init => _addedMembers = value is null ? null : ChatCollection.Copy(value);
+        get;
+        init => field = value is null ? null : ChatCollection.Copy(value);
     }
-
-    private readonly IReadOnlyCollection<ProfileViewBasic>? _addedMembers;
 }

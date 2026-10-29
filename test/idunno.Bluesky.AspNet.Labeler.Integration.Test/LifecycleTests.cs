@@ -22,6 +22,7 @@ public class LifecycleTests
 {
     private const string Meter = "idunno.Bluesky.AspNet.Labeler";
     private const string Prefix = "idunno.bluesky.labeler.host.";
+    private static readonly string[] s_errorFields = ["name", "error"];
 
     [Theory]
     [InlineData(false, false)]
@@ -209,7 +210,7 @@ public class LifecycleTests
         CancellationToken token = TestContext.Current.CancellationToken;
         await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync();
         ILabelMaintenanceStore maintenance = fixture.Services.GetRequiredService<ILabelMaintenanceStore>();
-        IDisposable lease = Assert.IsAssignableFrom<IDisposable>(fixture.Host.TryAdmitAdministrativeIssuance());
+        IDisposable lease = Assert.IsType<IDisposable>(fixture.Host.TryAdmitAdministrativeIssuance(), exactMatch: false);
         try
         {
             await maintenance.BeginRotationAsync(
@@ -628,7 +629,7 @@ public class LifecycleTests
         CborReader reader = new(frame, allowMultipleRootLevelValues: true);
         reader.SkipValue();
         reader.ReadStartMap();
-        Assert.Contains(reader.ReadTextString(), new[] { "name", "error" });
+        Assert.Contains(reader.ReadTextString(), s_errorFields);
         return reader.ReadTextString();
     }
 }

@@ -4,7 +4,9 @@
 using System.Buffers.Binary;
 using System.IO.Compression;
 
+#pragma warning disable IDE0130 // Preserve the established namespace independently of folder layout.
 namespace idunno.AtProto.Benchmarks;
+#pragma warning restore IDE0130
 
 /// <summary>
 /// Reads and writes the captured message corpora used by the benchmarks and the allocation budget tests.

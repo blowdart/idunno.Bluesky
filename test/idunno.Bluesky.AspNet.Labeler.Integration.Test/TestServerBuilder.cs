@@ -2,11 +2,13 @@
 // Licensed under the MIT License.
 
 using System.Net;
+using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Encodings.Web;
 using System.Threading.Channels;
 
 using idunno.AtProto;
+using idunno.AtProto.Authentication;
 using idunno.Bluesky.Labeler;
 using idunno.Bluesky.Labeler.Moderation;
 using idunno.Bluesky.Labeler.Signing;
@@ -35,12 +37,11 @@ namespace idunno.Bluesky.AspNet.Labeler.Integration.Test;
 internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposable
 {
     internal static readonly Did s_issuer = new("did:plc:label-issuer");
-    private readonly string _database = database ?? Path.Combine(Path.GetTempPath(), "label_host_" + Guid.NewGuid().ToString("N") + ".db");
     private readonly bool _ownsDatabase = database is null;
     private WebApplication _app = null!;
     internal ILabelStore Store => _app.Services.GetRequiredService<ILabelStore>();
     internal IServiceProvider Services => _app.Services;
-    internal string DatabasePath => _database;
+    internal string DatabasePath { get; } = database ?? Path.Combine(Path.GetTempPath(), "label_host_" + Guid.NewGuid().ToString("N") + ".db");
     internal string? OwnedSocketDirectory { get; set; }
     internal bool RemoteAdministrationEnabled { get; set; }
     internal LabelerHost Host => _app.Services.GetRequiredService<LabelerHost>();
@@ -60,7 +61,8 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
         bool? remoteAdministrationEnabled = true,
         bool fallbackAuthorizationRequired = false,
         ILabelSigningKeyRing? signingKeyRing = null,
-        bool moderation = false)
+        bool moderation = false,
+        bool xenonUi = false)
     {
         TestServerBuilder fixture = new(database);
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
@@ -81,7 +83,7 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
             builder.Services.AddSingleton(signingKeyRing);
         }
 
-        builder.Services.AddSqliteLabelStorage($"Data Source={fixture._database}");
+        builder.Services.AddSqliteLabelStorage($"Data Source={fixture.DatabasePath}");
         builder.Services.AddBlueskyLabeler(s_issuer, options);
         if (remoteAdministrationEnabled is null)
         {
@@ -93,11 +95,21 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
         {
             builder.Services.AddAuthentication("test")
                 .AddScheme<AuthenticationSchemeOptions, RejectingAuthenticationHandler>("test", _ => { });
-            builder.Services.AddAuthorization(options =>
-                options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
+            builder.Services.AddAuthorizationBuilder()
+                .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
         }
 
         configureAdministration?.Invoke(builder.Services);
+        if (xenonUi)
+        {
+            builder.Services.AddAuthentication(XenonTestAuthenticationHandler.SchemeName)
+                .AddScheme<AuthenticationSchemeOptions, XenonTestAuthenticationHandler>(
+                    XenonTestAuthenticationHandler.SchemeName,
+                    _ => { });
+            builder.Services.AddAuthorization();
+            builder.Services.AddLabelerUI();
+        }
+
         fixture._app = builder.Build();
         if (configureAdministration is not null)
         {
@@ -137,6 +149,11 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
             fixture._app.UseAuthorization();
             fixture._app.MapGet("/test/fallback", () => "fallback");
         }
+        else if (xenonUi)
+        {
+            fixture._app.UseAuthentication();
+            fixture._app.UseAuthorization();
+        }
 
         fixture._app.UseWebSockets();
         fixture._app.MapBlueskyLabeler();
@@ -155,6 +172,10 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
                 fixture._app.MapLabelerAdministration();
             }
         }
+        if (xenonUi)
+        {
+            fixture._app.MapRazorPages();
+        }
 
         await fixture.Store.InitializeAsync(s_issuer);
         if (moderation)
@@ -165,6 +186,11 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
         if (initialize is not null)
         {
             await initialize(fixture.Store);
+        }
+        if (moderation)
+        {
+            fixture.Clock.SetUtcNow((await fixture.Services.GetRequiredService<ILabelPolicyStore>()
+                .ReadPolicyStateAsync(TestContext.Current.CancellationToken))!.DatabaseTime);
         }
 
         await fixture._app.StartAsync();
@@ -194,14 +220,14 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
     internal ServiceProvider OtherProvider()
     {
         ServiceCollection services = new();
-        services.AddSqliteLabelStorage($"Data Source={_database}");
+        services.AddSqliteLabelStorage($"Data Source={DatabasePath}");
         return services.BuildServiceProvider();
     }
 
     /// <summary>Simulates an incompatible external schema change without exposing connection details through health output.</summary>
     internal async Task CorruptSchemaAsync()
     {
-        await using SqliteConnection connection = new($"Data Source={_database};Pooling=False");
+        await using SqliteConnection connection = new($"Data Source={DatabasePath};Pooling=False");
         await connection.OpenAsync(TestContext.Current.CancellationToken);
         await using SqliteCommand command = connection.CreateCommand();
         command.CommandText = "UPDATE label_schema SET version=999";
@@ -211,7 +237,7 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
     /// <summary>Moves a test database's retained boundary atomically to exercise readers racing explicit retention.</summary>
     internal async Task PruneAsync(long through)
     {
-        await using SqliteConnection connection = new($"Data Source={_database};Pooling=False");
+        await using SqliteConnection connection = new($"Data Source={DatabasePath};Pooling=False");
         await connection.OpenAsync(TestContext.Current.CancellationToken);
         using SqliteTransaction transaction = connection.BeginTransaction();
         await using SqliteCommand command = connection.CreateCommand();
@@ -236,7 +262,7 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
         {
             foreach (string suffix in new[] { string.Empty, "-wal", "-shm" })
             {
-                File.Delete(_database + suffix);
+                File.Delete(DatabasePath + suffix);
             }
             if (OwnedSocketDirectory is { } directory)
             {
@@ -256,6 +282,29 @@ internal sealed class RejectingAuthenticationHandler(
         Task.FromResult(AuthenticateResult.NoResult());
 }
 
+/// <summary>Authenticates only explicitly marked test requests as a named Bluesky DID.</summary>
+internal sealed class XenonTestAuthenticationHandler(
+    IOptionsMonitor<AuthenticationSchemeOptions> options,
+    ILoggerFactory logger,
+    UrlEncoder encoder) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
+{
+    internal const string SchemeName = "xenon-test";
+
+    protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+    {
+        if (!Request.Headers.TryGetValue("X-Test-Did", out Microsoft.Extensions.Primitives.StringValues did))
+        {
+            return Task.FromResult(AuthenticateResult.NoResult());
+        }
+
+        ClaimsPrincipal principal = new(new ClaimsIdentity(
+            [new Claim(AtProtoClaims.Did, did.ToString())],
+            SchemeName));
+        AuthenticationTicket ticket = new(principal, SchemeName);
+        return Task.FromResult(AuthenticateResult.Success(ticket));
+    }
+}
+
 /// <summary>Uses official fake time while signaling timer registration before a test advances deadlines.</summary>
 internal sealed class SignalClock : TimeProvider
 {
@@ -268,6 +317,10 @@ internal sealed class SignalClock : TimeProvider
         second: 5,
         offset: TimeSpan.Zero));
     internal Channel<TimeSpan> Registrations { get; } = Channel.CreateUnbounded<TimeSpan>();
+    /// <summary>Keeps withdrawal phase barriers independent of the host publisher's timer-registration consumer.</summary>
+    internal Channel<bool> WithdrawalRegistrations { get; } = Channel.CreateUnbounded<bool>();
+    /// <summary>Signals completion of a verification iteration when its next default refresh delay is registered.</summary>
+    internal Channel<bool> PolicyVerificationRegistrations { get; } = Channel.CreateUnbounded<bool>();
     public override DateTimeOffset GetUtcNow() => _clock.GetUtcNow();
     public override long GetTimestamp() => _clock.GetTimestamp();
     public override long TimestampFrequency => _clock.TimestampFrequency;
@@ -284,6 +337,14 @@ internal sealed class SignalClock : TimeProvider
             dueTime: dueTime,
             period: period);
         Registrations.Writer.TryWrite(dueTime);
+        if (dueTime == TimeSpan.FromSeconds(5))
+        {
+            WithdrawalRegistrations.Writer.TryWrite(true);
+        }
+        if (dueTime == TimeSpan.FromMinutes(5) && period == Timeout.InfiniteTimeSpan)
+        {
+            PolicyVerificationRegistrations.Writer.TryWrite(true);
+        }
         return timer;
     }
 

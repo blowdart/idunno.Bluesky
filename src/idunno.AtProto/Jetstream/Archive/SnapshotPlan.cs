@@ -11,8 +11,6 @@ namespace idunno.AtProto.Jetstream.Archive;
 /// </summary>
 public sealed record SnapshotPlan
 {
-    private IReadOnlyList<PlannedSegment> _segments = [];
-    private SnapshotPlanStats _stats = null!;
 
     /// <summary>Gets the last sequence covered by this plan page.</summary>
     [JsonRequired]
@@ -27,7 +25,7 @@ public sealed record SnapshotPlan
     [JsonRequired]
     public required IReadOnlyList<PlannedSegment> Segments
     {
-        get => _segments;
+        get;
         init
         {
             if (value is null || value.Any(segment => segment is null))
@@ -35,18 +33,18 @@ public sealed record SnapshotPlan
                 throw new JsonException("The archive plan segments cannot contain null.");
             }
 
-            _segments = value;
+            field = value;
         }
-    }
+    } = [];
 
     /// <summary>Gets the planner statistics.</summary>
     /// <exception cref="JsonException">The archive plan's statistics are <see langword="null"/>.</exception>
     [JsonRequired]
     public required SnapshotPlanStats Stats
     {
-        get => _stats;
-        init => _stats = value ?? throw new JsonException("The archive plan statistics cannot be null.");
-    }
+        get;
+        init => field = value ?? throw new JsonException("The archive plan statistics cannot be null.");
+    } = null!;
 }
 
 /// <summary>
@@ -136,7 +134,6 @@ public sealed record SnapshotPlanStats
 /// </summary>
 public sealed record SegmentList
 {
-    private IReadOnlyList<SegmentInfo> _segments = [];
 
     /// <summary>Gets the cursor for the following page, if any.</summary>
     public string? Cursor { get; init; }
@@ -146,7 +143,7 @@ public sealed record SegmentList
     [JsonRequired]
     public required IReadOnlyList<SegmentInfo> Segments
     {
-        get => _segments;
+        get;
         init
         {
             if (value is null || value.Any(segment => segment is null))
@@ -154,9 +151,9 @@ public sealed record SegmentList
                 throw new JsonException("The archive segment list cannot contain null.");
             }
 
-            _segments = value;
+            field = value;
         }
-    }
+    } = [];
 }
 
 /// <summary>

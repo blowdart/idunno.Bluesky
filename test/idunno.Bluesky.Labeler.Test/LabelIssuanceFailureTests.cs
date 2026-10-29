@@ -43,14 +43,14 @@ public class LabelIssuanceFailureTests
         LabelTarget target = scenario is "records" or "collection"
             ? LabelTarget.Record(new AtUri($"at://{TargetResolutionHandler.SubjectDid}/example.test.record/key"))
             : LabelTarget.Account(TargetResolutionHandler.SubjectDid);
-        LabelOperationContext context = new(StoreFixture.Issuer, "Failure boundary");
+        LabelOperationContext context = new(StoreFixture.s_issuer, "Failure boundary");
         if (scenario == "timestamp")
         {
             await fixture.Store.AppendAsync(
                 operationId: "future",
                 labels: [new(
                     key.CreateLabel(
-                        source: StoreFixture.Issuer,
+                        source: StoreFixture.s_issuer,
                         uri: target.Subject,
                         value: "spam",
                         creationTimestamp: DateTimeOffset.MaxValue))],
@@ -76,7 +76,7 @@ public class LabelIssuanceFailureTests
                 context: context,
                 expiresAt: scenario == "expiry" ? DateTimeOffset.MinValue : null);
         LabelIssuanceService service = new(
-            issuer: StoreFixture.Issuer,
+            issuer: StoreFixture.s_issuer,
             signingKey: key,
             store: fixture.Store,
             authorizer: new TestLabelIssuanceAuthorizer(),
@@ -96,7 +96,7 @@ public class LabelIssuanceFailureTests
         using HttpClient client = new(new TargetResolutionHandler());
         using CancellationTokenSource cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
         LabelIssuanceService service = new(
-            issuer: StoreFixture.Issuer,
+            issuer: StoreFixture.s_issuer,
             signingKey: key,
             store: fixture.Store,
             authorizer: new TestLabelIssuanceAuthorizer(),
@@ -122,7 +122,7 @@ public class LabelIssuanceFailureTests
             operationId: "cancelled",
             target: LabelTarget.Account(TargetResolutionHandler.SubjectDid),
             value: "spam",
-            context: new(StoreFixture.Issuer, "Commit cancellation"));
+            context: new(StoreFixture.s_issuer, "Commit cancellation"));
         LabelServiceResult<LabelOperationReceipt> result = await service.ExecuteAsync(request, cancellation.Token);
         Assert.False(result.Succeeded);
         Assert.Equal(LabelServiceErrorCode.OutcomeUnknown, result.Error.Code);

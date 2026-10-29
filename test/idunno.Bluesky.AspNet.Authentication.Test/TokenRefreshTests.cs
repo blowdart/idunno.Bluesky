@@ -55,7 +55,7 @@ public class TokenRefreshTests
             Advance();
         }
 
-        internal Task WaitForNextWait() =>
+        internal Task<bool> WaitForNextWait() =>
             _waits.Reader.ReadAsync(TestContext.Current.CancellationToken).AsTask().WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
 
         internal void Advance() => _clock.Advance(TimeSpan.FromSeconds(1));

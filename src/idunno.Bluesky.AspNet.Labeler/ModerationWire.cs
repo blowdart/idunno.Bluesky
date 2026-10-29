@@ -4,6 +4,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+using idunno.AtProto;
 using idunno.Bluesky.Labeler.Moderation;
 
 namespace idunno.Bluesky.AspNet.Labeler;
@@ -87,6 +88,31 @@ internal static class ModerationWire
         ReportedBy: report.ReportedBy.Value,
         CreatedAt: report.CreatedAt,
         Reason: report.Submission.Reason);
+
+    /// <summary>Projects the standard protocol receipt without disclosing whether policy verification delayed review.</summary>
+    internal static ReportOutput ReportOutput(
+        LabelReportIntakeReceipt receipt,
+        LabelReportSubmission submission,
+        Did reporter) => new(
+            Id: receipt.Id,
+            ReasonType: submission.ReasonType,
+            Subject: SubjectView(submission.Subject),
+            ReportedBy: reporter.Value,
+            CreatedAt: receipt.CreatedAt,
+            Reason: submission.Reason);
+
+    /// <summary>Projects a retained pending report using the standard protocol report fields.</summary>
+    internal static ReportOutput ReportOutput(
+        long id,
+        LabelReportSubmission submission,
+        Did reporter,
+        DateTimeOffset createdAt) => new(
+            Id: id,
+            ReasonType: submission.ReasonType,
+            Subject: SubjectView(submission.Subject),
+            ReportedBy: reporter.Value,
+            CreatedAt: createdAt,
+            Reason: submission.Reason);
 
     /// <summary>Projects a reference without converting an account into its profile record.</summary>
     internal static ReportSubjectView SubjectView(LabelReportSubject subject) => subject.RecordUri is null

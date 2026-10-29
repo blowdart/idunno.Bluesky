@@ -6,7 +6,11 @@ using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 
 using idunno.AtProto;
+using idunno.Bluesky.Actor;
+using idunno.Bluesky.Embed;
 using idunno.Bluesky.Embed.External;
+using idunno.Bluesky.Feed;
+using idunno.Bluesky.Graph;
 using idunno.Bluesky.Unspecced;
 
 namespace idunno.Bluesky.Integration.Test;
@@ -35,7 +39,7 @@ public class LiveLexiconTests
     public async Task PublicHydrationEndpointDeserializesThroughTheSdk()
     {
         using BlueskyAgent agent = new();
-        var result = await agent.GetEmbedExternalViewResponse(
+        AtProtoHttpResult<EmbeddedExternalViewResponse> result = await agent.GetEmbedExternalViewResponse(
             new Uri("https://blog.aster.place/3mwqgs7dp2s2a"),
             new AtUri("at://did:plc:ifn645rwvsuolxg7o3w7ouo4/site.standard.document/3mwqgs7dp2s2a"),
             cancellationToken: TestContext.Current.CancellationToken);
@@ -49,7 +53,7 @@ public class LiveLexiconTests
     public async Task PublicListFeedExposesStartCursor()
     {
         using BlueskyAgent agent = new();
-        var result = await agent.GetListFeed(
+        AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>> result = await agent.GetListFeed(
             new AtUri("at://did:plc:v7gngzva22rilmcp6fiypowf/app.bsky.graph.list/3lbcrdr5d452n"),
             limit: 2, cancellationToken: TestContext.Current.CancellationToken);
 
@@ -62,7 +66,7 @@ public class LiveLexiconTests
     {
         using BlueskyAgent agent = new();
 #pragma warning disable BSKYUnspecced
-        var result = await agent.GetSuggestedStarterPacksWithRecommendation(
+        AtProtoHttpResult<RecommendationReadOnlyCollection<StarterPackView>> result = await agent.GetSuggestedStarterPacksWithRecommendation(
             limit: 1, cancellationToken: TestContext.Current.CancellationToken);
 #pragma warning restore BSKYUnspecced
 
@@ -74,7 +78,7 @@ public class LiveLexiconTests
     public async Task PublicProfileEndpointDeserializesThroughTheSdk()
     {
         using BlueskyAgent agent = new();
-        var result = await agent.GetProfile(new Handle("bsky.app"), cancellationToken: TestContext.Current.CancellationToken);
+        AtProtoHttpResult<ProfileViewDetailed> result = await agent.GetProfile(new Handle("bsky.app"), cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded, $"Profile returned {result.StatusCode}: {result.AtErrorDetail}");
         Assert.Equal("bsky.app", result.Result.Handle.ToString());
@@ -90,13 +94,13 @@ public class LiveLexiconTests
 
         using TimelineResponseCapture capture = new();
         using BlueskyAgent agent = new(capture);
-        var login = await agent.Login(handle, password, cancellationToken: TestContext.Current.CancellationToken);
+        AtProtoHttpResult<bool> login = await agent.Login(handle, password, cancellationToken: TestContext.Current.CancellationToken);
         Assert.True(login.Succeeded, $"Login returned HTTP {(int)login.StatusCode}.");
 
         string? cursor = null;
         for (int page = 0; page < 2; page++)
         {
-            var result = await agent.GetTimeline(
+            AtProtoHttpResult<Timeline> result = await agent.GetTimeline(
                 limit: 2, cursor: cursor, cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.True(result.Succeeded, $"Timeline returned HTTP {(int)result.StatusCode}.");

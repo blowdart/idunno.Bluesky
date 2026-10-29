@@ -705,8 +705,8 @@ public class OAuthClientMetadataTests
             {
                 services.AddRouting();
                 services.AddAuthentication(BlueskyAuthenticationDefaults.AuthenticationScheme).AddBluesky();
-                services.AddAuthorization(options =>
-                    options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
+                services.AddAuthorizationBuilder()
+                    .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
                 services.Configure<BlueskyAgentOptions>(options =>
                     options.OAuthOptions = new OAuthOptions(ClientId, new Uri(Callback)));
                 services.AddBlueskyOAuthClientMetadata();

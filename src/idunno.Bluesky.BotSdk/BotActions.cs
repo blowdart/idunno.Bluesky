@@ -108,7 +108,7 @@ public static class BotActions
     /// <param name="listUri">The list record's AT URI.</param>
     /// <param name="author">The author DID whose membership record is keyed.</param>
     /// <returns>A deterministic 13-character record key for this list and author pair.</returns>
-    /// <remarks>A raw hexadecimal digest is not a valid rkey because list-item records require a TID.</remarks>
+    /// <remarks><para>A raw hexadecimal digest is not a valid rkey because list-item records require a TID.</para></remarks>
     private static string StableListItemRecordKey(
         AtUri listUri,
         Did author)

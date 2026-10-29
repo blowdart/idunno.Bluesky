@@ -43,7 +43,7 @@ public class StarterPackRecordTests
 
     private static TestServer CreateServer(
         string method,
-        ICollection<JsonElement> requests,
+        List<JsonElement> requests,
         string? error = null) =>
         TestServerBuilder.CreateServer(
             TestServerBuilder.DefaultUri,

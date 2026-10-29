@@ -5,8 +5,8 @@ using idunno.Bluesky;
 using idunno.Bluesky.AspNet.Authentication;
 using idunno.Bluesky.Authentication;
 
-using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Options;
 

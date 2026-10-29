@@ -1,0 +1,25 @@
+@page
+@model idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Labels.IndexModel
+@{
+    ViewData["Title"] = "Manual labels";
+}
+<h1>Manual label operation</h1>
+<p>This workflow is independent of reports and cases. Account labels target a repository DID; record labels target one complete AT URI and may be scoped to an expected CID. A profile record is not the account itself.</p>
+<section class="panel">
+    <form method="post" data-manual-labels>
+        <label class="field">Account DID/handle, record AT URI or Bluesky URL
+            <input name="target" value="@Model.Target" required maxlength="2048" autocomplete="off" />
+        </label>
+        <label class="field" data-record-cid>Expected record CID (optional; record targets only)
+            <input name="cid" value="@Model.Cid" maxlength="128" autocomplete="off" />
+        </label>
+        <p><button type="submit" asp-page-handler="Lookup" data-load-labels formnovalidate>Load labels</button></p>
+        <div data-manual-label-controls aria-live="polite" aria-busy="false">
+            @await Html.PartialAsync("_ManualLabelChoices", Model.Labels)
+        </div>
+        <label class="field">Reason for labelling
+            <textarea name="reason" required maxlength="4096" readonly="@Model.Labels.Retrying">@Model.Reason</textarea>
+        </label>
+        <p class="form-actions"><button type="submit" data-submit-labels disabled="@(Model.Labels.State is null)">@(Model.Labels.Retrying ? "Retry unchanged changes" : "Submit label changes")</button></p>
+    </form>
+</section>

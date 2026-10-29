@@ -23,7 +23,7 @@ public class LabelDecisionBoundaryTests
         second: 0,
         offset: TimeSpan.Zero);
     private static readonly LabelTarget s_target = LabelTarget.Account(TargetResolutionHandler.SubjectDid);
-    private static readonly LabelOperationContext s_context = new(StoreFixture.Issuer, "Boundary decision");
+    private static readonly LabelOperationContext s_context = new(StoreFixture.s_issuer, "Boundary decision");
 
     [Theory]
     [InlineData("sqlite")]
@@ -35,7 +35,7 @@ public class LabelDecisionBoundaryTests
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         SignedLabelSnapshot signed = new(
             key.CreateLabel(
-                source: StoreFixture.Issuer,
+                source: StoreFixture.s_issuer,
                 uri: s_target.Subject,
                 value: "spam",
                 creationTimestamp: s_instant));
@@ -47,8 +47,8 @@ public class LabelDecisionBoundaryTests
         await fixture.ExecuteAsync("DROP TABLE label_decisions; DROP TABLE label_decision_index; UPDATE label_schema SET version=1 WHERE id=1");
 
         ILabelStore upgraded = fixture.NewStore();
-        await upgraded.InitializeAsync(StoreFixture.Issuer, TestContext.Current.CancellationToken);
-        await upgraded.InitializeAsync(StoreFixture.Issuer, TestContext.Current.CancellationToken);
+        await upgraded.InitializeAsync(StoreFixture.s_issuer, TestContext.Current.CancellationToken);
+        await upgraded.InitializeAsync(StoreFixture.s_issuer, TestContext.Current.CancellationToken);
         Assert.Equal(original, await upgraded.GetStateAsync(TestContext.Current.CancellationToken));
         LabelServiceResult<LabelDecisionSnapshot> snapshot = await upgraded.ReadDecisionAsync(s_target, "spam", TestContext.Current.CancellationToken);
         Assert.True(snapshot.Succeeded);
@@ -98,7 +98,7 @@ public class LabelDecisionBoundaryTests
             expectedRevision: 0,
             signedLabel: new(
                 key.CreateLabel(
-                    source: StoreFixture.Issuer,
+                    source: StoreFixture.s_issuer,
                     uri: s_target.Subject,
                     value: "spam",
                     creationTimestamp: s_instant)),
@@ -142,13 +142,13 @@ public class LabelDecisionBoundaryTests
             operationId: "conflict",
             labels: [new(
                 key.CreateLabel(
-                    source: StoreFixture.Issuer,
+                    source: StoreFixture.s_issuer,
                     uri: s_target.Subject,
                     value: "spam",
                     creationTimestamp: s_instant)),
              new(
                  key.CreateNegation(
-                     source: StoreFixture.Issuer,
+                     source: StoreFixture.s_issuer,
                      uri: s_target.Subject,
                      value: "spam",
                      creationTimestamp: s_instant))],
@@ -171,7 +171,7 @@ public class LabelDecisionBoundaryTests
             operationId: "later",
             labels: [new(
                 key.CreateNegation(
-                    source: StoreFixture.Issuer,
+                    source: StoreFixture.s_issuer,
                     uri: s_target.Subject,
                     value: "spam",
                     creationTimestamp: s_instant.AddTicks(1)))],

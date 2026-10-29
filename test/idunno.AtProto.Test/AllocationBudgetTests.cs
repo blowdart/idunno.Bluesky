@@ -7,6 +7,7 @@ using System.Text.Json;
 using idunno.AtProto.Benchmarks;
 using idunno.AtProto.Firehose;
 using idunno.AtProto.Jetstream;
+
 using ZstdSharp;
 
 namespace idunno.AtProto.Test;

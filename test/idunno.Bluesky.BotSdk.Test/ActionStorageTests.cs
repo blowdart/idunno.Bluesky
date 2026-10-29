@@ -255,7 +255,7 @@ public sealed class ActionStorageTests
             1,
             await store.Database.RetryAsync(
             like,
-            DateTimeOffset.UtcNow.AddHours(1),
+            DateTimeOffset.MaxValue,
             "retry only this like",
             CancellationToken.None));
         Assert.Equal(
@@ -266,6 +266,9 @@ public sealed class ActionStorageTests
             $"at://{TestRecords.BotDid}/app.bsky.feed.post/reply",
             "confirmed",
             CancellationToken.None));
+        await store.SetPendingReadyAsync(ready: false);
+        Assert.Null(await store.Database.NextWorkAsync(CancellationToken.None));
+        await store.SetPendingReadyAsync(ready: true);
         BotAction durable = (await store.Database.NextWorkAsync(CancellationToken.None))!;
         Assert.Equal(
             secondLike,
@@ -656,8 +659,24 @@ public sealed class ActionStorageTests
             SqlAsync("CREATE UNIQUE INDEX legacy_record_key ON reply_work(record_key)");
 
         public Task MakeRetriesDueAsync() => SqlAsync(_provider == "Postgres"
-            ? "UPDATE reply_work SET next_retry = now()"
+            ? "UPDATE reply_work SET next_retry = 'epoch'"
             : "UPDATE reply_work SET next_retry = 0");
+
+        /// <summary>
+        /// Controls pending eligibility independently of wall-clock changes, without rescheduling uncertain actions.
+        /// </summary>
+        public Task SetPendingReadyAsync(bool ready)
+        {
+            string deadline = (_provider, ready) switch
+            {
+                ("Postgres", true) => "'epoch'",
+                ("Postgres", false) => "'infinity'",
+                (_, true) => "0",
+                _ => long.MaxValue.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            };
+
+            return SqlAsync($"UPDATE reply_work SET next_retry = {deadline} WHERE status = 'pending'");
+        }
 
         public Task<long> CountAsync(string condition) =>
             ScalarAsync($"SELECT count(*) FROM reply_work WHERE {condition}");

@@ -336,9 +336,9 @@ public class LabelerTests
         Assert.NotNull(labelerView.Creator.Associated);
         Assert.True(labelerView.Creator.Associated.Labeler);
 
-        Assert.IsType<LabelerViewDetailed>(labelerView);
+        LabelerViewDetailed typed = Assert.IsType<LabelerViewDetailed>(labelerView);
 
-        LabelerViewDetailed labelerViewDetailed = (LabelerViewDetailed)labelerView;
+        LabelerViewDetailed labelerViewDetailed = typed;
 
         Assert.NotEmpty(labelerViewDetailed.Policies.LabelValueDefinitions);
 

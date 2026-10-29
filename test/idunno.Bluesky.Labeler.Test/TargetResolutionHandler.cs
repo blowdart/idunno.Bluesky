@@ -3,7 +3,6 @@
 
 using System.Net;
 using System.Text;
-using System.Text.Json;
 
 namespace idunno.Bluesky.Labeler.Test;
 
@@ -21,6 +20,10 @@ internal sealed class TargetResolutionHandler : HttpMessageHandler
     internal bool Offline { get; set; }
 
     internal bool RecordNotFound { get; set; }
+
+    internal HttpStatusCode? RecordErrorStatus { get; set; }
+
+    internal string RecordError { get; set; } = "NotFound";
 
     internal string Cid { get; set; } = RecordCid;
 
@@ -55,6 +58,11 @@ internal sealed class TargetResolutionHandler : HttpMessageHandler
         if (string.Equals(request.RequestUri.Host, "pds.example", StringComparison.Ordinal) &&
             string.Equals(request.RequestUri.AbsolutePath, "/xrpc/com.atproto.repo.getRecord", StringComparison.Ordinal))
         {
+            if (RecordErrorStatus is { } status)
+            {
+                return Task.FromResult(JsonResponse(status, $$"""{"error":"{{RecordError}}"}"""));
+            }
+
             if (RecordNotFound)
             {
                 return Task.FromResult(JsonResponse(HttpStatusCode.NotFound, """{"error":"RecordNotFound"}"""));

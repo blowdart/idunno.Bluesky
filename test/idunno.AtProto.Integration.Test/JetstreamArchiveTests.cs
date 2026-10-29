@@ -697,8 +697,8 @@ public class JetstreamArchiveTests
             return (sequences, checkpoints, error);
         }
 
-        var firstAttempt = await Enumerate(null);
-        Exception firstError = Assert.IsAssignableFrom<Exception>(firstAttempt.Error);
+        (List<long?> Sequences, List<SnapshotCheckpoint> Checkpoints, Exception? Error) = await Enumerate(null);
+        Exception firstError = Assert.IsType<Exception>(Error, exactMatch: false);
         if (invalidDid)
         {
             Assert.IsType<ArgumentException>(firstError);
@@ -710,22 +710,22 @@ public class JetstreamArchiveTests
         }
         else
         {
-            Assert.IsAssignableFrom<System.Text.Json.JsonException>(firstError);
+            Assert.IsType<System.Text.Json.JsonException>(firstError, exactMatch: false);
         }
 
-        Assert.Equal([10], firstAttempt.Sequences);
-        SnapshotCheckpoint lastCheckpoint = Assert.Single(firstAttempt.Checkpoints);
+        Assert.Equal([10], Sequences);
+        SnapshotCheckpoint lastCheckpoint = Assert.Single(Checkpoints);
         Assert.Null(lastCheckpoint.SegmentName);
         Assert.Equal(0, lastCheckpoint.NextBlockIndex);
 
-        var resumedAttempt = await Enumerate(lastCheckpoint);
+        (List<long?> Sequences, List<SnapshotCheckpoint> Checkpoints, Exception? Error) resumedAttempt = await Enumerate(lastCheckpoint);
         Assert.Equal(firstError.GetType(), resumedAttempt.Error?.GetType());
         Assert.Equal(firstError.Message, resumedAttempt.Error?.Message);
         Assert.Equal([10], resumedAttempt.Sequences);
         Assert.Empty(resumedAttempt.Checkpoints);
 
         List<(long Sequence, Type ExceptionType, string Message)> recordErrors = [];
-        var skippedAttempt = await Enumerate(null, (sequence, exception) =>
+        (List<long?> Sequences, List<SnapshotCheckpoint> Checkpoints, Exception? Error) skippedAttempt = await Enumerate(null, (sequence, exception) =>
         {
             recordErrors.Add((
                 sequence ?? throw new InvalidOperationException("A record failure has no sequence."),
@@ -743,7 +743,7 @@ public class JetstreamArchiveTests
         Assert.Equal(Segment, completedBlock.SegmentName);
         Assert.Equal(1, completedBlock.NextBlockIndex);
 
-        var resumedAfterSkip = await Enumerate(completedBlock);
+        (List<long?> Sequences, List<SnapshotCheckpoint> Checkpoints, Exception? Error) resumedAfterSkip = await Enumerate(completedBlock);
         Assert.Null(resumedAfterSkip.Error);
         Assert.Empty(resumedAfterSkip.Sequences);
         Assert.Equal(4, plans);
@@ -1939,7 +1939,7 @@ public class JetstreamArchiveTests
 
     private static byte[] PostBlock(params (long Sequence, byte[] Record, string Did)[] records)
     {
-        byte[][] dids = records.Select(record => Encoding.UTF8.GetBytes(record.Did)).ToArray();
+        byte[][] dids = [.. records.Select(record => Encoding.UTF8.GetBytes(record.Did))];
         byte[] collection = Encoding.UTF8.GetBytes("app.bsky.feed.post");
         byte[] rkey = Encoding.UTF8.GetBytes("3mfrqvim56e25");
         byte[] rev = Encoding.UTF8.GetBytes("3mpksbjhx5s26");

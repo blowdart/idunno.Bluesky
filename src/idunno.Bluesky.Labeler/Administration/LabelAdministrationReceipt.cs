@@ -20,4 +20,8 @@ public sealed record LabelAdministrationReceipt(
     string? LocalIdentity,
     string Action,
     string Reason,
-    bool Succeeded);
+    bool Succeeded)
+{
+    /// <summary>Gets the database UTC time of the original event, or <see langword="null"/> for legacy events without a recorded time.</summary>
+    public DateTimeOffset? CreatedAt { get; init; }
+}

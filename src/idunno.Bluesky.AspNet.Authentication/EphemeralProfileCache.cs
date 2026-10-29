@@ -31,8 +31,6 @@ public sealed class EphemeralProfileCache : IProfileCache, IDisposable
 
     private static volatile bool s_warned;
     private static volatile bool s_capacityWarned;
-
-    private readonly MemoryCache _cache;
     private readonly int _sizeLimit;
     private readonly TimeProvider _timeProvider;
 
@@ -74,7 +72,7 @@ public sealed class EphemeralProfileCache : IProfileCache, IDisposable
         EntryTTL = entryTimeToLive ?? new(0, 0, 15, 0);
 
         _sizeLimit = sizeLimit ?? DefaultSizeLimit;
-        _cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = _sizeLimit, Clock = new TimeProviderSystemClock(_timeProvider) });
+        Cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = _sizeLimit, Clock = new TimeProviderSystemClock(_timeProvider) });
 
         if (!s_warned)
         {
@@ -89,7 +87,7 @@ public sealed class EphemeralProfileCache : IProfileCache, IDisposable
         }
     }
 
-    private MemoryCache Cache => _cache;
+    private MemoryCache Cache { get; }
 
     private TimeSpan EntryTTL { get; set; }
 
@@ -198,6 +196,6 @@ public sealed class EphemeralProfileCache : IProfileCache, IDisposable
         // Set before the cache is disposed so a concurrent caller fails its disposal guard rather than reaching a
         // half disposed cache.
         _disposed = true;
-        _cache.Dispose();
+        Cache.Dispose();
     }
 }

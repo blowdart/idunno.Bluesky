@@ -124,8 +124,8 @@ public class FeedResponseMetadataTests
 
         Assert.Equal(expected, feed.StartCursor);
         Assert.Equal("older", feed.Cursor);
-        Assert.Single(feed);
-        Assert.Equal("at://did:plc:test/app.bsky.feed.post/test", feed[0].Post.Uri.ToString());
+        FeedViewPost item = Assert.Single(feed);
+        Assert.Equal("at://did:plc:test/app.bsky.feed.post/test", item.Post.Uri.ToString());
     }
 
     [Fact]

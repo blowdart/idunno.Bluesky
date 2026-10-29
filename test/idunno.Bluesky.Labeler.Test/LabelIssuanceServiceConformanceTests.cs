@@ -562,7 +562,7 @@ public class LabelIssuanceServiceConformanceTests
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         LabelTarget target = LabelTarget.Account(new Did(TargetResolutionHandler.SubjectDid));
         Label signed = key.CreateLabel(
-            source: StoreFixture.Issuer,
+            source: StoreFixture.s_issuer,
             uri: TargetResolutionHandler.SubjectDid,
             value: "spam",
             creationTimestamp: s_instant);
@@ -602,7 +602,7 @@ public class LabelIssuanceServiceConformanceTests
         TestLabelIssuanceAuthorizer authorizer,
         TestLabelIssuancePolicyProvider policy) =>
         new(
-            issuer: StoreFixture.Issuer,
+            issuer: StoreFixture.s_issuer,
             signingKey: key,
             store: store,
             authorizer: authorizer,
@@ -624,8 +624,8 @@ public class LabelIssuanceServiceConformanceTests
     private static DidDocument SigningDocument(LabelSigningKey key) =>
         JsonSerializer.Deserialize<DidDocument>(
             $$"""
-            {"id":"{{StoreFixture.Issuer}}","verificationMethod":[{"id":"{{StoreFixture.Issuer}}#atproto_label",
-            "type":"Multikey","controller":"{{StoreFixture.Issuer}}","publicKeyMultibase":"{{key.ExportPublicKeyMultibase()}}"}]}
+            {"id":"{{StoreFixture.s_issuer}}","verificationMethod":[{"id":"{{StoreFixture.s_issuer}}#atproto_label",
+            "type":"Multikey","controller":"{{StoreFixture.s_issuer}}","publicKeyMultibase":"{{key.ExportPublicKeyMultibase()}}"}]}
             """,
             AtProtoJsonSerializerOptions.Default)!;
 }

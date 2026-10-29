@@ -145,7 +145,7 @@ public sealed class BotHostingTests
         while (current is DelegatingHandler delegating)
         {
             accounted |= current is OutboundHandler;
-            current = Assert.IsAssignableFrom<HttpMessageHandler>(delegating.InnerHandler);
+            current = Assert.IsType<HttpMessageHandler>(delegating.InnerHandler, exactMatch: false);
         }
         Assert.True(accounted);
         Assert.NotNull(Assert.IsType<SocketsHttpHandler>(current).ConnectCallback);

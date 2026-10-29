@@ -17,7 +17,7 @@ namespace idunno.Bluesky.Labeler.Cli;
 
 internal static partial class Program
 {
-    private static readonly string[] s_policyPublicationMethods = ["beginPolicyPublication", "getPolicy", "verifyPolicy"];
+    private static readonly string[] s_policyPublicationMethods = ["beginPolicyPublication", "resumePolicyPublication", "getPolicy", "verifyPolicy"];
 
     /// <summary>Includes both SDK request/response envelopes and the raw declaration's extension-data contract.</summary>
     internal static JsonSerializerOptions PolicyRecordJsonOptions { get; } = AtProtoJsonSerializerOptions.Create(options =>
@@ -40,6 +40,7 @@ internal static partial class Program
         command.Subcommands.Add(CreatePolicyMutationCommand("begin", "beginPolicyPublication"));
         command.Subcommands.Add(CreatePolicyMutationCommand("publish", "beginPolicyPublication"));
         command.Subcommands.Add(CreatePolicyMutationCommand("recover", "beginPolicyPublication"));
+        command.Subcommands.Add(CreatePolicyMutationCommand("resume", "resumePolicyPublication"));
         command.Subcommands.Add(CreatePolicyMutationCommand("verify", "verifyPolicy"));
         command.Subcommands.Add(CreatePolicyMutationCommand("abandon", "abandonPolicyPublication"));
         return command;
@@ -197,7 +198,10 @@ internal static partial class Program
                 }
             }
 
-            if (!await ConfirmAsync(parsed.GetValue(yes), "Change Xenon policy publication state?", token).ConfigureAwait(false))
+            string confirmation = publication || name == "resume"
+                ? "Authorize publication and irreversible batched negation of removed label values, even if publication later fails?"
+                : "Change Xenon policy publication state?";
+            if (!await ConfirmAsync(parsed.GetValue(yes), confirmation, token).ConfigureAwait(false))
             {
                 return 2;
             }
@@ -266,8 +270,12 @@ internal static partial class Program
             return failure;
         }
 
-        (PolicyState? current, failure) = await ReadPolicyReplyAsync(await sender(
-            new(Method: "getPolicy", Reason: request.Reason), cancellationToken).ConfigureAwait(false)).ConfigureAwait(false);
+        (PolicyState? current, failure) = await WaitForPolicyWithdrawalAsync(
+            sender: sender,
+            reason: request.Reason,
+            intent: intent,
+            clock: TimeProvider.System,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
         if (current is null)
         {
             return failure;
@@ -408,13 +416,53 @@ internal static partial class Program
 
     /// <summary>Rejects abandoned or replaced publication intent even when the selected version is unchanged.</summary>
     internal static bool MatchesPolicyPublication(PolicyState current, PolicyState intent) =>
+        MatchesPolicySelection(current, intent) &&
+        current.Phase is nameof(LabelPolicyPhase.Publishing) or nameof(LabelPolicyPhase.VerifiedActive);
+
+    /// <summary>Compares exact publication identity independently of whether cleanup has completed.</summary>
+    private static bool MatchesPolicySelection(PolicyState current, PolicyState intent) =>
         intent.PublicationOperationId is not null &&
         current.PublicationOperationId == intent.PublicationOperationId &&
         current.Issuer == intent.Issuer &&
         current.Definition is not null && intent.Definition is not null &&
         current.Definition.Version == intent.Definition.Version &&
-        current.PreviousCid == intent.PreviousCid &&
-        current.Phase is nameof(LabelPolicyPhase.Publishing) or nameof(LabelPolicyPhase.VerifiedActive);
+        current.PreviousCid == intent.PreviousCid;
+
+    /// <summary>Waits for durable batch publication without signing in as the labeler or writing the declaration early.</summary>
+    internal static async Task<(PolicyState? State, int Failure)> WaitForPolicyWithdrawalAsync(
+        AdministrationSender sender,
+        string reason,
+        PolicyState intent,
+        TimeProvider clock,
+        CancellationToken cancellationToken)
+    {
+        while (true)
+        {
+            (PolicyState? current, int failure) = await ReadPolicyReplyAsync(await sender(
+                new(Method: "getPolicy", Reason: reason), cancellationToken).ConfigureAwait(false)).ConfigureAwait(false);
+            if (current is null)
+            {
+                return (null, failure);
+            }
+            if (!MatchesPolicySelection(current, intent) || current.Phase != nameof(LabelPolicyPhase.Withdrawing))
+            {
+                return (current, 0);
+            }
+            if (current.Withdrawal?.PauseReason is not null)
+            {
+                (_, failure) = await ReadPolicyReplyAsync(await sender(new(
+                    Method: "resumePolicyPublication",
+                    OperationId: intent.PublicationOperationId!,
+                    Reason: reason), cancellationToken).ConfigureAwait(false)).ConfigureAwait(false);
+                if (failure != 0)
+                {
+                    return (null, failure);
+                }
+            }
+            await Console.Error.WriteLineAsync("Waiting for removed-label negations to be committed and published. Interrupting does not undo committed negations; recover the same publication operation.").ConfigureAwait(false);
+            await Task.Delay(TimeSpan.FromSeconds(5), clock, cancellationToken).ConfigureAwait(false);
+        }
+    }
 
     /// <summary>Requires independent verification of this exact publication rather than accepting any active policy.</summary>
     private static async Task<int> VerifyPublishedPolicyAsync(
@@ -459,7 +507,7 @@ internal static partial class Program
     }
 
     /// <summary>Contains policy-only protocol inputs without caller identity or credentials.</summary>
-    private sealed record PolicyCommand(
+    internal sealed record PolicyCommand(
         string? PolicyVersion = null,
         JsonElement? Declaration = null,
         bool AllowAccounts = false,
@@ -492,12 +540,17 @@ internal static partial class Program
         [property: JsonRequired] string Phase,
         string? PublicationOperationId = null,
         PolicyDefinition? Definition = null,
-        string? PreviousCid = null);
+        string? PreviousCid = null,
+        PolicyWithdrawal? Withdrawal = null);
+
+    /// <summary>Reads resumable authorization failures without treating cleanup as a declaration-ready publication.</summary>
+    internal sealed record PolicyWithdrawal(string? PauseReason = null);
 
     /// <summary>Provides reflection-free record and policy serialization without inserting declaration defaults.</summary>
     [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, RespectNullableAnnotations = true)]
     [JsonSerializable(typeof(PolicyDefinition))]
     [JsonSerializable(typeof(PolicyState))]
+    [JsonSerializable(typeof(PolicyWithdrawal))]
     [JsonSerializable(typeof(AtProtoRecord))]
     internal sealed partial class PolicyJsonContext : JsonSerializerContext;
 }

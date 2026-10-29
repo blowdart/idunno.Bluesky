@@ -4,6 +4,7 @@
 using System.Text.Json.Serialization;
 
 using idunno.AtProto;
+using idunno.Bluesky.Labeler.Administration;
 using idunno.Bluesky.Labeler.Issuance;
 using idunno.Bluesky.Labeler.Moderation;
 
@@ -118,7 +119,8 @@ internal sealed record ModerationPolicyGate(
     string? VerifiedCid,
     long? VerifiedUntil,
     long FreshnessMilliseconds,
-    string? PublicationOperationId = null)
+    string? PublicationOperationId = null,
+    ModerationPolicyWithdrawal? Withdrawal = null)
 {
     /// <summary>Projects a gate using the current database clock rather than an application clock.</summary>
     internal LabelPolicyState ToState(long now) => new(
@@ -131,8 +133,37 @@ internal sealed record ModerationPolicyGate(
         verifiedUntil: VerifiedUntil is { } deadline ? DateTimeOffset.FromUnixTimeMilliseconds(deadline) : null,
         verificationFreshness: TimeSpan.FromMilliseconds(FreshnessMilliseconds),
         databaseTime: DateTimeOffset.FromUnixTimeMilliseconds(now),
-        publicationOperationId: PublicationOperationId);
+        publicationOperationId: PublicationOperationId,
+        withdrawal: Withdrawal is null ? null : new(
+            Values: Withdrawal.Values,
+            UpperBound: Withdrawal.UpperBound,
+            ScannedThrough: Withdrawal.ScannedThrough,
+            NegatedThrough: Withdrawal.NegatedThrough,
+            NegationSequence: Withdrawal.NegationSequence,
+            PauseReason: Withdrawal.PauseReason,
+            LastActivityAt: Withdrawal.LastActivityAt,
+            LastProgressAt: Withdrawal.LastProgressAt,
+            PublishedThrough: Withdrawal.PublishedThrough));
 }
+
+/// <summary>Retains a publication's frozen scan, superseding timestamp and revocable caller evidence across host restarts.</summary>
+internal sealed record ModerationPolicyWithdrawal(
+    string[] Values,
+    long UpperBound,
+    long ScannedThrough,
+    long NegatedThrough,
+    long NegationSequence,
+    DateTimeOffset CreatedAt,
+    string Actor,
+    long Generation,
+    string Credential,
+    string? LocalIdentity,
+    DateTimeOffset ExpiresAt,
+    string Reason,
+    string? PauseReason = null,
+    DateTimeOffset? LastActivityAt = null,
+    DateTimeOffset? LastProgressAt = null,
+    long? PublishedThrough = null);
 
 /// <summary>Retains immutable publication intent and the historical result for uncertain-commit recovery.</summary>
 internal sealed record ModerationPolicyOperation(
@@ -184,7 +215,9 @@ internal sealed record ModerationDecisionIntent(
     string Reason,
     ModerationDecisionAction[] Actions,
     long[] AppealIds,
-    LabelAppealStatus? AppealOutcome)
+    LabelAppealStatus? AppealOutcome,
+    long? ReportId = null,
+    bool HandleOtherReports = false)
 {
     /// <summary>Copies immutable request intent before entering the provider transaction.</summary>
     internal static ModerationDecisionIntent FromDecision(Did actor, LabelCaseDecision decision) => new(
@@ -196,7 +229,9 @@ internal sealed record ModerationDecisionIntent(
         [.. decision.Actions.Select(action => new ModerationDecisionAction(
             action.Kind, action.Value, action.ExpiresAt, action.ExpectedLabelSequence))],
         [.. decision.AppealIds],
-        decision.AppealOutcome);
+        decision.AppealOutcome,
+        decision.ReportId,
+        decision.HandleOtherReports);
 
     /// <summary>Revalidates retained semantic intent when recovering a historical receipt.</summary>
     internal LabelCaseDecision ToDecision(string operationId) => new(
@@ -205,13 +240,15 @@ internal sealed record ModerationDecisionIntent(
         expectedRevision: ExpectedRevision,
         policyVersion: PolicyVersion,
         reason: Reason,
-        actions: Actions.Select(action => new LabelCaseLabelAction(
+        actions: [.. Actions.Select(action => new LabelCaseLabelAction(
             kind: action.Kind,
             value: action.Value,
             expiresAt: action.ExpiresAt,
-            expectedLabelSequence: action.ExpectedLabelSequence)).ToArray(),
+            expectedLabelSequence: action.ExpectedLabelSequence))],
         appealIds: AppealIds,
-        appealOutcome: AppealOutcome);
+        appealOutcome: AppealOutcome,
+        reportId: ReportId,
+        handleOtherReports: HandleOtherReports);
 }
 
 /// <summary>Retains the atomic case event and original signed receipt encodings without reconstructing signatures.</summary>
@@ -227,7 +264,7 @@ internal sealed record ModerationDecisionData(
         request: Intent.ToDecision(OperationId),
         actor: new(Intent.Actor),
         caseEvent: CaseEvent.ToReceipt(),
-        labels: LabelReceipts.Select(DecisionReceiptEncoding.Decode).ToArray(),
+        labels: [.. LabelReceipts.Select(DecisionReceiptEncoding.Decode)],
         stateAtCommit: StateAtCommit);
 }
 
@@ -245,7 +282,8 @@ internal sealed record ModerationAppealData(
     LabelAppealStatus Status,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
-    string? DecisionOperationId)
+    string? DecisionOperationId,
+    string? ResolutionReason = null)
 {
     /// <summary>Restores immutable challenge signatures without consulting current label state.</summary>
     internal LabelAppeal ToAppeal() => new(
@@ -253,11 +291,12 @@ internal sealed record ModerationAppealData(
         caseId: CaseId,
         initiator: new(Initiator),
         subject: Cid is null ? LabelReportSubject.Account(new(Subject)) : LabelReportSubject.Record(new(Subject), new(Cid)),
-        challenges: Challenges.Select(challenge => new StoredLabel(challenge.Sequence, new(challenge.SignedJson))).ToArray(),
+        challenges: [.. Challenges.Select(challenge => new StoredLabel(challenge.Sequence, new(challenge.SignedJson)))],
         status: Status,
         createdAt: CreatedAt,
         updatedAt: UpdatedAt,
-        decisionOperationId: DecisionOperationId);
+        decisionOperationId: DecisionOperationId,
+        resolutionReason: ResolutionReason);
 }
 
 /// <summary>Retains submitted report content and authentication provenance without retaining bearer tokens.</summary>
@@ -274,7 +313,10 @@ internal sealed record ModerationReportData(
     DateTimeOffset CreatedAt,
     string PolicyVersion,
     string Audience,
-    string TokenHash)
+    string TokenHash,
+    string? DecisionOperationId = null,
+    DateTimeOffset? HandledAt = null,
+    string? ResolutionReason = null)
 {
     /// <summary>Revalidates a retained report and defensively clones arbitrary tool metadata.</summary>
     internal LabelModerationReport ToReport()
@@ -298,8 +340,74 @@ internal sealed record ModerationReportData(
             reportedBy: new(Reporter),
             createdAt: CreatedAt,
             policyVersion: PolicyVersion,
-            audience: Audience);
+            audience: Audience,
+            decisionOperationId: DecisionOperationId,
+            handledAt: HandledAt,
+            resolutionReason: ResolutionReason);
     }
+}
+
+/// <summary>Retains an authenticated report before policy scope can be established.</summary>
+internal sealed record PendingModerationReportData(
+    long Id,
+    string Subject,
+    string? Cid,
+    string ReasonType,
+    string? Reason,
+    string? ToolName,
+    string? ToolMetadata,
+    string Reporter,
+    DateTimeOffset CreatedAt,
+    string Audience,
+    string TokenHash,
+    DateTimeOffset ExpiresAt,
+    ModerationAppealChallenge[]? AppealChallenges = null,
+    bool PendingVerification = true,
+    string? PolicyVersion = null,
+    DateTimeOffset? ProcessedAt = null,
+    string? ResolutionReason = null)
+{
+    /// <summary>Revalidates the bounded report intent before exposing it to an authorized moderator.</summary>
+    internal LabelPendingModerationReport ToPendingReport()
+    {
+        System.Text.Json.JsonElement? metadata = null;
+        if (ToolMetadata is not null)
+        {
+            using System.Text.Json.JsonDocument document = System.Text.Json.JsonDocument.Parse(ToolMetadata);
+            metadata = document.RootElement.Clone();
+        }
+
+        return new(
+            Id: Id,
+            Submission: new(
+                subject: Cid is null ? LabelReportSubject.Account(new(Subject)) : LabelReportSubject.Record(new(Subject), new(Cid)),
+                reasonType: ReasonType,
+                reason: Reason,
+                modToolName: ToolName,
+                modToolMetadata: metadata),
+            ReportedBy: new(Reporter),
+            CreatedAt: CreatedAt,
+            PendingVerification: PendingVerification,
+            PolicyVersion: PolicyVersion,
+            ProcessedAt: ProcessedAt,
+            ResolutionReason: ResolutionReason);
+    }
+
+    /// <summary>Copies the pending submission into the ordinary report representation for verified promotion.</summary>
+    internal ModerationReportData ToReport(long caseId, string policyVersion) => new(
+        Id: Id,
+        CaseId: caseId,
+        Subject: Subject,
+        Cid: Cid,
+        ReasonType: ReasonType,
+        Reason: Reason,
+        ToolName: ToolName,
+        ToolMetadata: ToolMetadata,
+        Reporter: Reporter,
+        CreatedAt: CreatedAt,
+        PolicyVersion: policyVersion,
+        Audience: Audience,
+        TokenHash: TokenHash);
 }
 
 /// <summary>Supplies trimming-safe metadata for moderation state, retry intent and history.</summary>
@@ -308,9 +416,11 @@ internal sealed record ModerationReportData(
 [JsonSerializable(typeof(ModerationCaseEvent))]
 [JsonSerializable(typeof(ModerationPolicyData))]
 [JsonSerializable(typeof(ModerationPolicyGate))]
+[JsonSerializable(typeof(ModerationPolicyWithdrawal))]
 [JsonSerializable(typeof(ModerationPolicyOperation))]
 [JsonSerializable(typeof(ModerationPolicyHistory))]
 [JsonSerializable(typeof(ModerationReportData))]
+[JsonSerializable(typeof(PendingModerationReportData))]
 [JsonSerializable(typeof(ModerationDecisionIntent))]
 [JsonSerializable(typeof(ModerationDecisionData))]
 [JsonSerializable(typeof(ModerationAppealData))]

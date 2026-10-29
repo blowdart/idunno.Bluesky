@@ -20,7 +20,6 @@ namespace idunno.Bluesky.AspNet.Labeler;
 /// <param name="issuer">The bound labeler DID.</param>
 /// <param name="httpClient">The caller-owned hardened identity client.</param>
 /// <param name="reports">The shared atomic report store.</param>
-/// <param name="policies">The trusted independent declaration verifier.</param>
 /// <param name="policyStore">The shared policy gate store.</param>
 /// <param name="settings">The validated immutable report limits.</param>
 /// <param name="clock">The clock shared by deadlines and admission windows.</param>
@@ -30,7 +29,6 @@ internal sealed partial class LabelerModerationHost(
     Did issuer,
     HttpClient httpClient,
     ILabelReportStore reports,
-    LabelPolicyService policies,
     ILabelPolicyStore policyStore,
     LabelerModerationOptions settings,
     TimeProvider clock,
@@ -38,7 +36,11 @@ internal sealed partial class LabelerModerationHost(
     IMeterFactory meterFactory) : IHealthCheck, IDisposable
 {
     internal const string MeterName = "idunno.Bluesky.AspNet.Labeler.Moderation";
+#if NET9_0_OR_GREATER
+    private readonly Lock _admissionLock = new();
+#else
     private readonly object _admissionLock = new();
+#endif
     private long _windowStarted = clock.GetTimestamp();
     private int _windowCount;
     private int _active;
@@ -119,11 +121,23 @@ internal sealed partial class LabelerModerationHost(
                 return;
             }
 
-            LabelServiceResult<LabelPolicyState> policy = await policies.GetVerifiedStateAsync(cancellationToken: linked.Token).ConfigureAwait(false);
-            LabelServiceResult<LabelModerationReport> result = await reports.SubmitReportAsync(
+            LabelPolicyState? storedPolicy = await policyStore.ReadPolicyStateAsync(linked.Token).ConfigureAwait(false);
+            long? expectedPolicyRevision = storedPolicy is
+            {
+                Phase: LabelPolicyPhase.VerifiedActive,
+                VerifiedUntil: { } validUntil
+            } &&
+                storedPolicy.Issuer == issuer &&
+                storedPolicy.VerificationFreshness == settings.VerificationFreshness &&
+                storedPolicy.DatabaseTime < validUntil &&
+                storedPolicy.DatabaseTime >= validUntil - storedPolicy.VerificationFreshness
+                    ? storedPolicy.Revision
+                    : null;
+            LabelServiceResult<LabelReportIntakeReceipt> result = await reports.AcceptReportAsync(
                 authentication: authentication,
                 submission: submission,
-                expectedPolicyRevision: policy.Succeeded ? policy.Result.Revision : null,
+                expectedPolicyRevision: expectedPolicyRevision,
+                maximumPendingReports: settings.MaximumPendingReports,
                 cancellationToken: linked.Token).ConfigureAwait(false);
             if (!result.Succeeded)
             {
@@ -131,10 +145,15 @@ internal sealed partial class LabelerModerationHost(
                 {
                     LabelServiceErrorCode.Unauthorized => "authentication-denied",
                     LabelServiceErrorCode.TargetNotAllowed => "scope-denied",
+                    LabelServiceErrorCode.PendingReportQueueFull => "pending-queue-full",
                     _ => "unavailable"
                 };
                 Rejected(logger, category);
                 Count(category);
+                if (result.Error.Code == LabelServiceErrorCode.PendingReportQueueFull)
+                {
+                    context.Response.Headers.RetryAfter = "300";
+                }
                 int status = result.Error.Code switch
                 {
                     LabelServiceErrorCode.Unauthorized => StatusCodes.Status401Unauthorized,
@@ -151,10 +170,11 @@ internal sealed partial class LabelerModerationHost(
                 return;
             }
 
-            Count("accepted");
+            Count(result.Result.PendingVerification ? "queued-policy" : "accepted");
             context.Response.ContentType = "application/json";
             byte[] output = JsonSerializer.SerializeToUtf8Bytes(
-                ModerationWire.ReportOutput(result.Result), LabelerModerationJsonContext.Default.ReportOutput);
+                ModerationWire.ReportOutput(result.Result, submission, authentication.Reporter),
+                LabelerModerationJsonContext.Default.ReportOutput);
             await context.Response.Body.WriteAsync(output, context.RequestAborted).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (!context.RequestAborted.IsCancellationRequested)
@@ -191,15 +211,17 @@ internal sealed partial class LabelerModerationHost(
                 return HealthCheckResult.Unhealthy("Moderation policy initialization is missing or inconsistent across hosts.");
             }
 
-            LabelServiceResult<LabelPolicyState> verified = await policies.GetVerifiedStateAsync(cancellationToken: linked.Token).ConfigureAwait(false);
-            return verified.Succeeded
+            DateTimeOffset now = gate.DatabaseTime;
+            return gate.Phase == LabelPolicyPhase.VerifiedActive &&
+                gate.VerifiedUntil is { } validUntil && now < validUntil &&
+                now >= validUntil - gate.VerificationFreshness
                 ? HealthCheckResult.Healthy()
                 : HealthCheckResult.Unhealthy("Moderation has no fresh independently verified declaration.");
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             Rejected(logger, "health-deadline");
-            return HealthCheckResult.Unhealthy("Moderation declaration verification exceeded its deadline.");
+            return HealthCheckResult.Unhealthy("Reading moderation policy health exceeded its deadline.");
         }
         catch (Exception exception) when (exception is DbException or InvalidDataException)
         {

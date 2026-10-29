@@ -282,7 +282,7 @@ if (postCallbackCount != 1)
 {
     throw new InvalidOperationException("The caller's modifier was not applied to the Bluesky source-generated Post.");
 }
-var finalizedBuilder = BlueskyAgent.CreateBuilder();
+BlueskyAgentBuilder finalizedBuilder = BlueskyAgent.CreateBuilder();
 finalizedBuilder.ConfigureHttpJsonOptions(options => options.JsonSerializerOptions.WriteIndented = true);
 finalizedBuilder.JsonOptions!.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, LateBoundSourceGenerationContext.Default);
 using BlueskyAgent customBuiltBlueskyAgent = finalizedBuilder.Build();
@@ -527,7 +527,9 @@ if (handler.RequestCount != 3)
     throw new InvalidOperationException($"Expected three offline requests, but received {handler.RequestCount}.");
 }
 
+#pragma warning disable CA1303 // The smoke test emits a fixed diagnostic message, not localized application UI.
 Console.WriteLine("Offline trimming and Native AOT smoke test passed.");
+#pragma warning restore CA1303
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
 [JsonDerivedType(typeof(LateBoundRecord), "smoke.container")]

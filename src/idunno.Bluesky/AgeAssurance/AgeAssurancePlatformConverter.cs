@@ -32,13 +32,7 @@ internal sealed class AgeAssurancePlatformConverter : JsonConverter<AgeAssurance
             AgeAssurancePlatform.Ios => "ios",
             AgeAssurancePlatform.Android => "android",
             _ => null
-        };
-
-        if (serialized is null)
-        {
-            throw new JsonException($"The {nameof(AgeAssurancePlatform)} value '{value}' is not supported.");
-        }
-
+        } ?? throw new JsonException($"The {nameof(AgeAssurancePlatform)} value '{value}' is not supported.");
         writer.WriteStringValue(serialized);
     }
 }

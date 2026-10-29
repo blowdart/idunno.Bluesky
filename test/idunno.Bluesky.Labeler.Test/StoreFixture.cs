@@ -21,7 +21,7 @@ namespace idunno.Bluesky.Labeler.Test;
 
 internal sealed class StoreFixture : IAsyncDisposable
 {
-    internal static readonly Did Issuer = new("did:plc:label-issuer");
+    internal static readonly Did s_issuer = new("did:plc:label-issuer");
     private readonly string _database = "label_test_" + Guid.NewGuid().ToString("N");
     private readonly List<ServiceProvider> _providers = [];
     private string _admin = string.Empty;
@@ -82,7 +82,7 @@ internal sealed class StoreFixture : IAsyncDisposable
         {
             if (initialize)
             {
-                await fixture.Store.InitializeAsync(Issuer);
+                await fixture.Store.InitializeAsync(s_issuer);
             }
 
             return fixture;

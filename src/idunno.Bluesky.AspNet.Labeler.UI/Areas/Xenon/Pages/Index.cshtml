@@ -1,0 +1,32 @@
+@page
+@model idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.IndexModel
+@{
+    ViewData["Title"] = "Moderation";
+}
+<h1>Xenon moderation</h1>
+<div class="grid">
+    <section class="panel">
+        <h2>Casework</h2>
+        <p>Review reports, work queues, case history and appeal decisions.</p>
+        <p><a asp-area="Xenon" asp-page="/Cases/Index">Open moderation cases</a> · <a asp-area="Xenon" asp-page="/Appeals/Index">Review appeals</a></p>
+    </section>
+    <section class="panel">
+        <h2>Manual labels</h2>
+        <p>Issue or negate an account label or a record label independently of a report or case.</p>
+        <p><a asp-area="Xenon" asp-page="/Labels/Index">Open manual labeling</a></p>
+    </section>
+    <section class="panel">
+        <h2>Administration</h2>
+        <p>Review the audit history and inspect policy, team membership and lifecycle state.</p>
+        <p><a asp-area="Xenon" asp-page="/Audit/Index">Audit</a></p>
+        @if (Model.Role == "Administrator")
+        {
+            <p><a asp-area="Xenon" asp-page="/Policy/Index">Policy</a> · <a asp-area="Xenon" asp-page="/Team/Index">Team</a> · <a asp-area="Xenon" asp-page="/Lifecycle/Index">Lifecycle</a></p>
+        }
+    </section>
+</div>
+<section class="panel">
+    <h2>Moderation through labels</h2>
+    <p>Xenon is a moderation tool for reviewing reports, managing appeals, and applying labels to accounts and content.</p>
+    <p>Labels help people decide what they want to see. They don&rsquo;t delete posts or suspend accounts - each app decides how to display or filter labeled content.</p>
+</section>

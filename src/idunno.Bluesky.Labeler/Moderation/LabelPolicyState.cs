@@ -15,7 +15,9 @@ public enum LabelPolicyPhase
     /// <summary>The selected declaration was independently verified; freshness still applies.</summary>
     VerifiedActive,
     /// <summary>Observed declaration drift requires explicit administrator reconciliation.</summary>
-    Conflict
+    Conflict,
+    /// <summary>Removed label values are being negated in durable batches before declaration publication is permitted.</summary>
+    Withdrawing
 }
 
 /// <summary>Describes a durable policy selection and its latest verification observation.</summary>
@@ -34,7 +36,8 @@ public sealed class LabelPolicyState
         DateTimeOffset? verifiedUntil,
         TimeSpan verificationFreshness,
         DateTimeOffset databaseTime,
-        string? publicationOperationId)
+        string? publicationOperationId,
+        LabelPolicyWithdrawalProgress? withdrawal = null)
     {
         Issuer = issuer;
         Revision = revision;
@@ -46,6 +49,7 @@ public sealed class LabelPolicyState
         VerificationFreshness = verificationFreshness;
         DatabaseTime = databaseTime;
         PublicationOperationId = publicationOperationId;
+        Withdrawal = withdrawal;
     }
 
     /// <summary>Gets the issuer bound to this policy store.</summary>
@@ -77,9 +81,12 @@ public sealed class LabelPolicyState
     /// <value>The exclusive deadline, or <see langword="null"/> while unverified.</value>
     public DateTimeOffset? VerifiedUntil { get; }
     /// <summary>Gets the configured maximum observation freshness.</summary>
-    /// <value>The bounded freshness interval, initially 60 seconds.</value>
+    /// <value>The bounded freshness interval, initially 30 minutes.</value>
     public TimeSpan VerificationFreshness { get; }
     /// <summary>Gets the database clock sampled while reading this snapshot.</summary>
     /// <value>The verification-start instant to retain across an independent network lookup.</value>
     public DateTimeOffset DatabaseTime { get; }
+
+    /// <summary>Gets bounded withdrawal progress independently of retained authorization evidence.</summary>
+    internal LabelPolicyWithdrawalProgress? Withdrawal { get; }
 }

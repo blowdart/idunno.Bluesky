@@ -5,6 +5,7 @@ using System.Text;
 
 using idunno.AtProto.Benchmarks;
 using idunno.AtProto.Jetstream;
+
 using ZstdSharp;
 
 namespace idunno.AtProto.Test;

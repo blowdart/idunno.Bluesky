@@ -12,7 +12,7 @@ public sealed class LabelCaseLabelAction
     /// <param name="kind">The issue or negate action.</param>
     /// <param name="value">The nonblank label value.</param>
     /// <param name="expiresAt">The optional absolute issuance expiry.</param>
-    /// <param name="expectedLabelSequence">The optional exact current label to fence, including for appeals.</param>
+    /// <param name="expectedLabelSequence">The optional exact current label to fence, including for appeals; zero requires absent history.</param>
     /// <exception cref="ArgumentException">A value is invalid, or a withdrawal specifies an expiry.</exception>
     /// <exception cref="ArgumentOutOfRangeException">The action, value length or expected sequence is invalid.</exception>
     public LabelCaseLabelAction(
@@ -31,7 +31,7 @@ public sealed class LabelCaseLabelAction
             throw new ArgumentException("A withdrawal cannot specify an expiry.", nameof(expiresAt));
         }
 
-        if (expectedLabelSequence is <= 0)
+        if (expectedLabelSequence is < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(expectedLabelSequence));
         }
@@ -52,6 +52,6 @@ public sealed class LabelCaseLabelAction
     /// <value>The UTC expiry, or <see langword="null"/> for no expiry.</value>
     public DateTimeOffset? ExpiresAt { get; }
     /// <summary>Gets the exact current label required by this action.</summary>
-    /// <value>The retained sequence, or <see langword="null"/> for ordinary current-state reconciliation.</value>
+    /// <value>The retained sequence, zero for absent history, or <see langword="null"/> for ordinary current-state reconciliation.</value>
     public long? ExpectedLabelSequence { get; }
 }

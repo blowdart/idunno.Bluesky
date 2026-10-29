@@ -1,0 +1,47 @@
+@using System.Text.Json
+@model JsonElement
+@{
+    string? pauseReason = Model.TryGetProperty("pauseReason", out JsonElement pause) && pause.ValueKind == JsonValueKind.String
+        ? pause.GetString() : null;
+    bool scanned = Model.GetProperty("scannedThrough").GetInt64() == Model.GetProperty("upperBound").GetInt64() &&
+        Model.GetProperty("negatedThrough").GetInt64() == Model.GetProperty("upperBound").GetInt64();
+    bool hasActivity = Model.TryGetProperty("lastActivityAt", out JsonElement activity) && activity.ValueKind == JsonValueKind.String;
+    bool hasProgress = Model.TryGetProperty("lastProgressAt", out JsonElement progress) && progress.ValueKind == JsonValueKind.String;
+    bool published = Model.TryGetProperty("publishedThrough", out JsonElement publishedThrough) &&
+        publishedThrough.ValueKind == JsonValueKind.Number &&
+        publishedThrough.GetInt64() >= Model.GetProperty("negationSequence").GetInt64();
+    string status = (pauseReason, scanned, published, hasActivity) switch
+    {
+        (not null, _, _, _) => "Paused",
+        (_, true, true, _) => "Waiting for withdrawal completion",
+        (_, true, false, _) => "Waiting for label publication",
+        (_, _, _, true) => "Withdrawal in progress",
+        _ => "Waiting for worker activity"
+    };
+}
+<p><span class="fa-icon @(pauseReason is null ? "fa-globe" : "fa-circle-pause")" aria-hidden="true"></span> <strong>@status</strong>
+@if (pauseReason is not null)
+{
+    <br /><span class="muted">@pauseReason</span>
+}
+</p>
+<p>Last worker activity:
+@if (hasActivity)
+{
+    <time datetime="@activity.GetDateTimeOffset().ToString("O")">@activity.GetDateTimeOffset().ToUniversalTime().ToString("u")</time>
+}
+else
+{
+    <span>Not yet recorded</span>
+}
+<br />Last progress:
+@if (hasProgress)
+{
+    <time datetime="@progress.GetDateTimeOffset().ToString("O")">@progress.GetDateTimeOffset().ToUniversalTime().ToString("u")</time>
+}
+else
+{
+    <span>No progress recorded yet</span>
+}
+</p>
+<p class="muted">Activity records a worker attempt, not proof that a worker is still running. Progress records an advanced scan checkpoint, published labels or completed withdrawal. These timestamps survive restarts; refresh this page to see the latest values.</p>

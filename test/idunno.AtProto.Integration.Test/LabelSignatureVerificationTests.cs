@@ -176,9 +176,10 @@ public class LabelSignatureVerificationTests
         LabelEventDecoder.DecodeLabel(FirehoseCbor.ReadFields(Encode(data), LabelEventDecoder.LabelFields)).Verify(document);
 
         JsonObject json = ToJson(data);
+        JsonSerializerOptions webOptions = new(JsonSerializerDefaults.Web);
         json[field] = null;
         Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<Label>(json.ToJsonString(), AtProtoServer.AtProtoJsonSerializerOptions));
-        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<Label>(json.ToJsonString(), new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<Label>(json.ToJsonString(), webOptions));
         data[field] = null;
         Assert.Throws<InvalidDataException>(() => LabelEventDecoder.DecodeLabel(FirehoseCbor.ReadFields(Encode(data), LabelEventDecoder.LabelFields)));
     }

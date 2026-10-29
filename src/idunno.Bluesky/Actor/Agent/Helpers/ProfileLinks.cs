@@ -163,7 +163,7 @@ public partial class BlueskyAgent
 
         Profile profile = profileResponse.Result.Value;
         StrongReference[] links = profile.Links?.ToArray() ?? [];
-        StrongReference[] matchingLinks = links.Where(existing => existing.Uri == uri).ToArray();
+        StrongReference[] matchingLinks = [.. links.Where(existing => existing.Uri == uri)];
         if (matchingLinks.Length == 0)
         {
             throw new ArgumentException("The link is not present on the current user's profile.", nameof(link));
@@ -175,7 +175,7 @@ public partial class BlueskyAgent
         }
 
         StrongReference profileLink = matchingLinks[0];
-        profile.Links = links.Where(existing => existing.Uri != uri).ToArray();
+        profile.Links = [.. links.Where(existing => existing.Uri != uri)];
         AtProtoHttpResult<PutRecordResult> updateResponse =
             await UpdateProfile(profileResponse.Result, cancellationToken).ConfigureAwait(false);
         if (!updateResponse.Succeeded)

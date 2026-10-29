@@ -14,7 +14,9 @@ using idunno.AtProto.Jetstream.Archive;
 
 using Microsoft.Data.Sqlite;
 
+#pragma warning disable IDE0130 // Preserve the established namespace independently of folder layout.
 namespace idunno.Bluesky.BotSdk.DataProviders;
+#pragma warning restore IDE0130
 
 /// <summary>Persists durable bot state in a shared local SQLite file with immediate write transactions.</summary>
 /// <param name="connectionString">The connection string identifying a persistent local file.</param>

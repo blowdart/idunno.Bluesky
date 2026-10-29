@@ -1,8 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Net;
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Text.Json;
 
 using idunno.AtProto;
@@ -45,7 +45,7 @@ public class RecordKeyCreationTests
         };
 
     private static TestServer CreateRecordServer(
-        ICollection<JsonElement> requests,
+        List<JsonElement> requests,
         HttpStatusCode statusCode = HttpStatusCode.OK)
     {
         return TestServerBuilder.CreateServer(
@@ -83,7 +83,7 @@ public class RecordKeyCreationTests
             });
     }
 
-    private static TestServer CreateApplyWritesServer(ICollection<JsonElement> requests)
+    private static TestServer CreateApplyWritesServer(List<JsonElement> requests)
     {
         return TestServerBuilder.CreateServer(
             TestServerBuilder.DefaultUri,
@@ -125,54 +125,54 @@ public class RecordKeyCreationTests
     [InlineData(" \t\r\n ")]
     public async Task PostingOverloadsPreserveEmptyAndWhitespaceText(string text)
     {
-            List<JsonElement> requests = [];
-            using TestServer testServer = CreateRecordServer(requests);
-            using BlueskyAgent agent = CreateAgent(testServer);
+        List<JsonElement> requests = [];
+        using TestServer testServer = CreateRecordServer(requests);
+        using BlueskyAgent agent = CreateAgent(testServer);
 
-            Blob blob = new(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpeg", 1024);
-            EmbeddedImage image = new(blob, "alt text");
-            EmbeddedVideo video = new(blob, altText: "video");
-            EmbeddedExternal externalCard = new("https://example.com", "Example", "An example card");
-            RecordKey key = TimestampIdentifier.Next();
-            CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        Blob blob = new(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpeg", 1024);
+        EmbeddedImage image = new(blob, "alt text");
+        EmbeddedVideo video = new(blob, altText: "video");
+        EmbeddedExternal externalCard = new("https://example.com", "Example", "An example card");
+        RecordKey key = TimestampIdentifier.Next();
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
-            Assert.True((await agent.Post(text, cancellationToken: cancellationToken)).Succeeded);
-            Assert.True((await agent.Post(key, text, cancellationToken: cancellationToken)).Succeeded);
-            Assert.True((await agent.Post(text, "en", cancellationToken: cancellationToken)).Succeeded);
-            Assert.True((await agent.Post(key, text, "en", cancellationToken: cancellationToken)).Succeeded);
-            Assert.True((await agent.Post(text, image, cancellationToken: cancellationToken)).Succeeded);
-            Assert.True((await agent.Post(key, text, image, cancellationToken: cancellationToken)).Succeeded);
-            Assert.True((await agent.Post(text, new[] { image }, cancellationToken: cancellationToken)).Succeeded);
-            Assert.True((await agent.Post(key, text, new[] { image }, cancellationToken: cancellationToken)).Succeeded);
-            Assert.True((await agent.Post(text, video, cancellationToken: cancellationToken)).Succeeded);
-            Assert.True((await agent.Post(key, text, video, cancellationToken: cancellationToken)).Succeeded);
-            Assert.True((await agent.Post(text, externalCard, cancellationToken: cancellationToken)).Succeeded);
-            Assert.True((await agent.Post(key, text, externalCard, cancellationToken: cancellationToken)).Succeeded);
-            Assert.True((await agent.Post(new Post(text), cancellationToken: cancellationToken)).Succeeded);
-            Assert.True((await agent.Post(key, new Post(text), cancellationToken: cancellationToken)).Succeeded);
-            Assert.True((await agent.Post(new PostBuilder(text), cancellationToken)).Succeeded);
-            Assert.True((await agent.Post(key, new PostBuilder(text), cancellationToken)).Succeeded);
-            PostBuilder builder = new();
-            builder.WithText(text);
-            builder.WithEmbed(externalCard);
-            Assert.True((await agent.Post(builder, cancellationToken)).Succeeded);
-            Assert.True((await agent.Post(key, builder, cancellationToken)).Succeeded);
+        Assert.True((await agent.Post(text, cancellationToken: cancellationToken)).Succeeded);
+        Assert.True((await agent.Post(key, text, cancellationToken: cancellationToken)).Succeeded);
+        Assert.True((await agent.Post(text, "en", cancellationToken: cancellationToken)).Succeeded);
+        Assert.True((await agent.Post(key, text, "en", cancellationToken: cancellationToken)).Succeeded);
+        Assert.True((await agent.Post(text, image, cancellationToken: cancellationToken)).Succeeded);
+        Assert.True((await agent.Post(key, text, image, cancellationToken: cancellationToken)).Succeeded);
+        Assert.True((await agent.Post(text, images: [image], cancellationToken: cancellationToken)).Succeeded);
+        Assert.True((await agent.Post(key, text, images: [image], cancellationToken: cancellationToken)).Succeeded);
+        Assert.True((await agent.Post(text, video, cancellationToken: cancellationToken)).Succeeded);
+        Assert.True((await agent.Post(key, text, video, cancellationToken: cancellationToken)).Succeeded);
+        Assert.True((await agent.Post(text, externalCard, cancellationToken: cancellationToken)).Succeeded);
+        Assert.True((await agent.Post(key, text, externalCard, cancellationToken: cancellationToken)).Succeeded);
+        Assert.True((await agent.Post(new Post(text), cancellationToken: cancellationToken)).Succeeded);
+        Assert.True((await agent.Post(key, new Post(text), cancellationToken: cancellationToken)).Succeeded);
+        Assert.True((await agent.Post(new PostBuilder(text), cancellationToken)).Succeeded);
+        Assert.True((await agent.Post(key, new PostBuilder(text), cancellationToken)).Succeeded);
+        PostBuilder builder = new();
+        builder.WithText(text);
+        builder.WithEmbed(externalCard);
+        Assert.True((await agent.Post(builder, cancellationToken)).Succeeded);
+        Assert.True((await agent.Post(key, builder, cancellationToken)).Succeeded);
 
-            Assert.Equal(18, requests.Count);
-            for (int index = 0; index < requests.Count; index++)
+        Assert.Equal(18, requests.Count);
+        for (int index = 0; index < requests.Count; index++)
+        {
+            JsonElement request = requests[index];
+            Assert.Equal("app.bsky.feed.post", request.GetProperty("collection").GetString());
+            JsonElement record = request.GetProperty("record");
+            Assert.Equal("app.bsky.feed.post", record.GetProperty("$type").GetString());
+            Assert.Equal(text, record.GetProperty("text").GetString());
+            Assert.Equal(index is >= 4 and <= 11 or >= 16, record.TryGetProperty("embed", out _));
+
+            if (index % 2 == 1)
             {
-                JsonElement request = requests[index];
-                Assert.Equal("app.bsky.feed.post", request.GetProperty("collection").GetString());
-                JsonElement record = request.GetProperty("record");
-                Assert.Equal("app.bsky.feed.post", record.GetProperty("$type").GetString());
-                Assert.Equal(text, record.GetProperty("text").GetString());
-                Assert.Equal(index is >= 4 and <= 11 or >= 16, record.TryGetProperty("embed", out _));
-
-                if (index % 2 == 1)
-                {
-                    Assert.Equal(key.Value, request.GetProperty("rkey").GetString());
-                }
+                Assert.Equal(key.Value, request.GetProperty("rkey").GetString());
             }
+        }
     }
 
     [Fact]
@@ -196,8 +196,8 @@ public class RecordKeyCreationTests
         Assert.True((await agent.Post(key, text, "en", cancellationToken: cancellationToken)).Succeeded);
         Assert.True((await agent.Post(text, image, cancellationToken: cancellationToken)).Succeeded);
         Assert.True((await agent.Post(key, text, image, cancellationToken: cancellationToken)).Succeeded);
-        Assert.True((await agent.Post(text, new[] { image }, cancellationToken: cancellationToken)).Succeeded);
-        Assert.True((await agent.Post(key, text, new[] { image }, cancellationToken: cancellationToken)).Succeeded);
+        Assert.True((await agent.Post(text, images: [image], cancellationToken: cancellationToken)).Succeeded);
+        Assert.True((await agent.Post(key, text, images: [image], cancellationToken: cancellationToken)).Succeeded);
         Assert.True((await agent.Post(text, video, cancellationToken: cancellationToken)).Succeeded);
         Assert.True((await agent.Post(key, text, video, cancellationToken: cancellationToken)).Succeeded);
         Assert.True((await agent.Post(text, externalCard, cancellationToken: cancellationToken)).Succeeded);
@@ -266,20 +266,20 @@ public class RecordKeyCreationTests
     [Fact]
     public async Task TextPostingOverloadsStillRejectNullText()
     {
-            List<JsonElement> requests = [];
-            using TestServer testServer = CreateRecordServer(requests);
-            using BlueskyAgent agent = CreateAgent(testServer);
-            RecordKey key = TimestampIdentifier.Next();
-            Blob blob = new(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpeg", 1024);
-            EmbeddedImage image = new(blob, "alt text");
-            CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        List<JsonElement> requests = [];
+        using TestServer testServer = CreateRecordServer(requests);
+        using BlueskyAgent agent = CreateAgent(testServer);
+        RecordKey key = TimestampIdentifier.Next();
+        Blob blob = new(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpeg", 1024);
+        EmbeddedImage image = new(blob, "alt text");
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
-            await Assert.ThrowsAsync<ArgumentNullException>(() => agent.Post((string)null!, cancellationToken: cancellationToken));
-            await Assert.ThrowsAsync<ArgumentNullException>(() => agent.Post(key, (string)null!, cancellationToken: cancellationToken));
-            await Assert.ThrowsAsync<ArgumentNullException>(() => agent.Post((string)null!, image, cancellationToken: cancellationToken));
-            await Assert.ThrowsAsync<ArgumentNullException>(() => agent.Post(key, (string)null!, image, cancellationToken: cancellationToken));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => agent.Post((string)null!, cancellationToken: cancellationToken));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => agent.Post(key, (string)null!, cancellationToken: cancellationToken));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => agent.Post((string)null!, image, cancellationToken: cancellationToken));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => agent.Post(key, (string)null!, image, cancellationToken: cancellationToken));
 
-            Assert.Empty(requests);
+        Assert.Empty(requests);
     }
 
     [Theory]
@@ -287,23 +287,23 @@ public class RecordKeyCreationTests
     [InlineData(true)]
     public async Task PostingStillEnforcesTextLengthLimits(bool testBytes)
     {
-            List<JsonElement> requests = [];
-            using TestServer testServer = CreateRecordServer(requests);
-            using BlueskyAgent agent = CreateAgent(testServer);
-            RecordKey key = TimestampIdentifier.Next();
-            string atLimit = testBytes
-                ? "a" + new string('\u0301', (Maximum.PostLengthInBytes - 2) / 2) + "b"
-                : new string(' ', Maximum.PostLengthInGraphemes);
-            string overLimit = atLimit + (testBytes ? "c" : " ");
-            CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        List<JsonElement> requests = [];
+        using TestServer testServer = CreateRecordServer(requests);
+        using BlueskyAgent agent = CreateAgent(testServer);
+        RecordKey key = TimestampIdentifier.Next();
+        string atLimit = testBytes
+            ? "a" + new string('\u0301', (Maximum.PostLengthInBytes - 2) / 2) + "b"
+            : new string(' ', Maximum.PostLengthInGraphemes);
+        string overLimit = atLimit + (testBytes ? "c" : " ");
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
-            Assert.True((await agent.Post(atLimit, cancellationToken: cancellationToken)).Succeeded);
-            Assert.True((await agent.Post(key, atLimit, cancellationToken: cancellationToken)).Succeeded);
-            Assert.True((await agent.Post(new PostBuilder(atLimit), cancellationToken)).Succeeded);
-            await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => agent.Post(overLimit, cancellationToken: cancellationToken));
-            await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => agent.Post(key, overLimit, cancellationToken: cancellationToken));
-            Assert.Throws<ArgumentOutOfRangeException>(() => new PostBuilder(overLimit));
-            Assert.Equal(3, requests.Count);
+        Assert.True((await agent.Post(atLimit, cancellationToken: cancellationToken)).Succeeded);
+        Assert.True((await agent.Post(key, atLimit, cancellationToken: cancellationToken)).Succeeded);
+        Assert.True((await agent.Post(new PostBuilder(atLimit), cancellationToken)).Succeeded);
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => agent.Post(overLimit, cancellationToken: cancellationToken));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => agent.Post(key, overLimit, cancellationToken: cancellationToken));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new PostBuilder(overLimit));
+        Assert.Equal(3, requests.Count);
     }
 
     [Fact]
@@ -413,16 +413,16 @@ public class RecordKeyCreationTests
         EmbeddedVideo video = new(blob, altText: "video");
         EmbeddedExternal externalCard = new("https://example.com", "Example", "An example card");
         StrongReference quoteReference = new(s_postUri, s_cid);
-        RecordKey[] keys = Enumerable.Range(0, 8).Select(_ => (RecordKey)TimestampIdentifier.Next()).ToArray();
+        RecordKey[] keys = [.. Enumerable.Range(0, 8).Select(_ => (RecordKey)TimestampIdentifier.Next())];
 
         Assert.True((await agent.Post(keys[0], "language post", "en", extractFacets: false, cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
         Assert.True((await agent.Post(keys[1], "image post", image, extractFacets: false, cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
-        Assert.True((await agent.Post(keys[2], "images post", new[] { image }, extractFacets: false, cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
+        Assert.True((await agent.Post(keys[2], "images post", images: [image], extractFacets: false, cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
         Assert.True((await agent.Post(keys[3], "video post", video, extractFacets: false, cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
         Assert.True((await agent.Post(keys[4], "card post", externalCard, extractFacets: false, cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
         Assert.True((await agent.Quote(keys[5], quoteReference, "quoted text", cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
         Assert.True((await agent.Quote(keys[6], quoteReference, "quoted image", image, cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
-        Assert.True((await agent.Quote(keys[7], quoteReference, "quoted images", new[] { image }, cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
+        Assert.True((await agent.Quote(keys[7], quoteReference, "quoted images", images: [image], cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
 
         Assert.Equal(keys.Length, requests.Count);
         for (int index = 0; index < keys.Length; index++)
@@ -578,8 +578,8 @@ public class RecordKeyCreationTests
 
         Assert.True((await agent.Follow(s_did, TestContext.Current.CancellationToken)).Succeeded);
 
-        Assert.Single(requests);
-        Assert.False(requests[0].TryGetProperty("rkey", out _));
+        JsonElement item = Assert.Single(requests);
+        Assert.False(item.TryGetProperty("rkey", out _));
     }
 
     [Fact]
@@ -598,8 +598,8 @@ public class RecordKeyCreationTests
         Assert.False(result.Succeeded);
         Assert.Equal(HttpStatusCode.BadRequest, result.StatusCode);
         Assert.Equal("RecordAlreadyExists", result.AtErrorDetail?.Error);
-        Assert.Single(requests);
-        Assert.Equal(key.Value, requests[0].GetProperty("rkey").GetString());
+        JsonElement item = Assert.Single(requests);
+        Assert.Equal(key.Value, item.GetProperty("rkey").GetString());
     }
 
     [Fact]
@@ -798,7 +798,7 @@ public class RecordKeyCreationTests
             () => agent.Post(postBuilder: builder, cancellationToken: cancellationToken));
     }
     public static TheoryData<int, bool, int> ReplyFacetCases =>
-        new(QuoteFacetCases.Where(testCase => testCase.Data.Item1 < 3));
+        [.. QuoteFacetCases.Where(testCase => testCase.Data.Item1 < 3)];
 
     public static TheoryData<int, bool, int> QuoteFacetCases
     {

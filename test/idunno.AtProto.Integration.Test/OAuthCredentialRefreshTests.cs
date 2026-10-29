@@ -1196,8 +1196,8 @@ public class OAuthCredentialRefreshTests
         Assert.True(agent.IsAuthenticated);
     }
 
-    private static AtProtoAgent CreateAgent(OAuthTestServer server, OAuthOptions? oAuthOptions = null) =>
-        new OAuthTestAgent(server)
+    private static OAuthTestAgent CreateAgent(OAuthTestServer server, OAuthOptions? oAuthOptions = null) =>
+        new(server)
         {
             Options = new AtProtoAgentOptions
             {

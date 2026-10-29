@@ -1,0 +1,14 @@
+@model TableSortHeader
+@{
+    string? headingClass = (Model.Numeric, Model.Sort, Model.Label) switch
+    {
+        (true, _, _) => "numeric",
+        (_, LabelTableSort.Status, "Status") => "workflow-status-heading",
+        _ => null
+    };
+}
+<th scope="col" class="@headingClass" aria-sort="@Model.Table.SortState(Model.Sort)">
+    <a href="@Model.Table.SortUrl(Model.Sort)" aria-label="Sort by @Model.Label, @Model.Table.NextDirection(Model.Sort)">
+        @Model.Label <span aria-hidden="true">@Model.Table.SortArrow(Model.Sort)</span>
+    </a>
+</th>

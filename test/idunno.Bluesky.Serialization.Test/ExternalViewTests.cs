@@ -139,7 +139,7 @@ public class ExternalViewTests
 
         string serialized = JsonSerializer.Serialize(gallery, galleryTypeInfo);
         using JsonDocument document = JsonDocument.Parse(serialized);
-        JsonElement[] items = document.RootElement.GetProperty("items").EnumerateArray().ToArray();
+        JsonElement[] items = [.. document.RootElement.GetProperty("items").EnumerateArray()];
         Assert.Equal("app.bsky.embed.external#futureGalleryItem", items[1].GetProperty("$type").GetString());
         Assert.True(items[1].GetProperty("value").GetProperty("kept").GetBoolean());
         Assert.True(items[0].GetProperty("futureImageField").GetProperty("retained").GetBoolean());
@@ -247,39 +247,39 @@ public class ExternalViewTests
         Assert.Throws<JsonException>(() => JsonSerializer.Deserialize(json, GetTypeInfo<GalleryView>()));
     }
 
-    public static IEnumerable<object[]> NullCollectionEntries()
+    public static IEnumerable<TheoryDataRow<string, string>> NullCollectionEntries()
     {
         foreach (string property in new[] { "labels", "associatedRefs", "associatedProfiles", "likers" })
         {
-            yield return ["article", property];
-            yield return ["gallery", property];
+            yield return new("article", property);
+            yield return new("gallery", property);
         }
 
         foreach (string property in new[] { "labels", "associatedRefs", "associatedProfiles", "subscribers" })
         {
-            yield return ["publication", property];
+            yield return new("publication", property);
         }
 
         foreach (string property in new[] { "labels", "associatedRefs", "associatedProfiles" })
         {
-            yield return ["livestream", property];
+            yield return new("livestream", property);
         }
     }
 
-    public static IEnumerable<object[]> NullRequiredFields()
+    public static IEnumerable<TheoryDataRow<string, string>> NullRequiredFields()
     {
         foreach (string type in new[] { "article", "publication", "gallery", "livestream" })
         {
-            yield return [type, "uri"];
-            yield return [type, "title"];
-            yield return [type, "description"];
+            yield return new(type, "uri");
+            yield return new(type, "title");
+            yield return new(type, "description");
         }
 
-        yield return ["galleryImage", "thumbnail"];
-        yield return ["galleryImage", "fullsize"];
+        yield return new("galleryImage", "thumbnail");
+        yield return new("galleryImage", "fullsize");
     }
 
-    public static IEnumerable<object[]> IdentityUris()
+    public static IEnumerable<TheoryDataRow<string, string>> IdentityUris()
     {
         string[] types = ["article", "publication", "gallery", "livestream"];
         string[] uris = ["at://did:plc:7rkdalcyovirwkpzgzk74cje/social.grain.gallery/3mwvtii4k5ddt", "https://example.com/item"];
@@ -288,7 +288,7 @@ public class ExternalViewTests
         {
             foreach (string uri in uris)
             {
-                yield return [type, uri];
+                yield return new(type, uri);
             }
         }
     }

@@ -38,7 +38,7 @@ public sealed class LabelReportScope
         if (subjectCollections is not null)
         {
             ArgumentOutOfRangeException.ThrowIfGreaterThan(subjectCollections.Count, 1000);
-            Nsid[] collections = subjectCollections.ToArray();
+            Nsid[] collections = [.. subjectCollections];
             HashSet<string> unique = new(StringComparer.Ordinal);
             foreach (Nsid? collection in collections)
             {

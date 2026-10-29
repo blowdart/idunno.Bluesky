@@ -10,4 +10,9 @@ namespace idunno.Bluesky.Labeler.Administration;
 /// <param name="Role">The assigned role.</param>
 /// <param name="Active">Whether the member can currently act.</param>
 /// <param name="Removed">Whether this entry is a removal tombstone.</param>
-public sealed record LabelTeamMember(Did Did, LabelTeamRole Role, bool Active, bool Removed);
+public sealed record LabelTeamMember(Did Did, LabelTeamRole Role, bool Active, bool Removed)
+{
+    /// <summary>Gets the registered policy-alert email, when the caller can manage the team.</summary>
+    /// <value>The address visible to team managers, or <see langword="null" />.</value>
+    public string? NotificationEmail { get; init; }
+}

@@ -89,15 +89,15 @@ public class DirectoryTests
         Assert.Equal(new Did(knownDid), result.Result.Id);
 
         IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = totalRequestsCollector.GetMeasurementSnapshot();
-        Assert.Single(requestMeasurements);
-        Assert.True(requestMeasurements[0]!.ContainsTags("did.type"));
+        CollectedMeasurement<long> item = Assert.Single(requestMeasurements);
+        Assert.True(item!.ContainsTags("did.type"));
         Assert.Equal(
             "plc",
             requestMeasurements[0]!.Tags["did.type"]);
 
         IReadOnlyList<CollectedMeasurement<long>> succeededMeasurements = totalSucceededRequestsCollector.GetMeasurementSnapshot();
-        Assert.Single(succeededMeasurements);
-        Assert.True(succeededMeasurements[0]!.ContainsTags("did.type"));
+        CollectedMeasurement<long> item_2 = Assert.Single(succeededMeasurements);
+        Assert.True(item_2!.ContainsTags("did.type"));
         Assert.Equal(
             "plc",
             succeededMeasurements[0]!.Tags["did.type"]);
@@ -309,15 +309,15 @@ public class DirectoryTests
         Assert.Equal(new Did(knownDid), result.Result.Id);
 
         IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = totalRequestsCollector.GetMeasurementSnapshot();
-        Assert.Single(requestMeasurements);
-        Assert.True(requestMeasurements[0]!.ContainsTags("did.type"));
+        CollectedMeasurement<long> item = Assert.Single(requestMeasurements);
+        Assert.True(item!.ContainsTags("did.type"));
         Assert.Equal(
             "web",
             requestMeasurements[0]!.Tags["did.type"]);
 
         IReadOnlyList<CollectedMeasurement<long>> succeededMeasurements = totalSucceededRequestsCollector.GetMeasurementSnapshot();
-        Assert.Single(succeededMeasurements);
-        Assert.True(succeededMeasurements[0]!.ContainsTags("did.type"));
+        CollectedMeasurement<long> item_2 = Assert.Single(succeededMeasurements);
+        Assert.True(item_2!.ContainsTags("did.type"));
         Assert.Equal(
             "web",
             succeededMeasurements[0]!.Tags["did.type"]);
@@ -391,8 +391,8 @@ public class DirectoryTests
         });
 
         IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = totalRequestsCollector.GetMeasurementSnapshot();
-        Assert.Single(requestMeasurements);
-        Assert.True(requestMeasurements[0]!.ContainsTags("did.type"));
+        CollectedMeasurement<long> item = Assert.Single(requestMeasurements);
+        Assert.True(item!.ContainsTags("did.type"));
         Assert.Equal(
             "unknown",
             requestMeasurements[0]!.Tags["did.type"]);
@@ -401,8 +401,8 @@ public class DirectoryTests
         Assert.Empty(succeededMeasurements);
 
         IReadOnlyList<CollectedMeasurement<long>> failedMeasurements = totalFailedRequestsCollector.GetMeasurementSnapshot();
-        Assert.Single(failedMeasurements);
-        Assert.True(failedMeasurements[0]!.ContainsTags("did.type"));
+        CollectedMeasurement<long> item_2 = Assert.Single(failedMeasurements);
+        Assert.True(item_2!.ContainsTags("did.type"));
         Assert.Equal(
             "unknown",
             failedMeasurements[0]!.Tags["did.type"]);
@@ -474,8 +474,8 @@ public class DirectoryTests
         Assert.Equal(HttpStatusCode.NotFound, result.StatusCode);
 
         IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = totalRequestsCollector.GetMeasurementSnapshot();
-        Assert.Single(requestMeasurements);
-        Assert.True(requestMeasurements[0]!.ContainsTags("did.type"));
+        CollectedMeasurement<long> item = Assert.Single(requestMeasurements);
+        Assert.True(item!.ContainsTags("did.type"));
         Assert.Equal(
             "plc",
             requestMeasurements[0]!.Tags["did.type"]);
@@ -484,8 +484,8 @@ public class DirectoryTests
         Assert.Empty(succeededMeasurements);
 
         IReadOnlyList<CollectedMeasurement<long>> failedMeasurements = totalFailedRequestsCollector.GetMeasurementSnapshot();
-        Assert.Single(failedMeasurements);
-        Assert.True(failedMeasurements[0]!.ContainsTags("did.type"));
+        CollectedMeasurement<long> item_2 = Assert.Single(failedMeasurements);
+        Assert.True(item_2!.ContainsTags("did.type"));
         Assert.Equal(
             "plc",
             failedMeasurements[0]!.Tags["did.type"]);
@@ -545,8 +545,8 @@ public class DirectoryTests
         Assert.Equal(HttpStatusCode.NotFound, result.StatusCode);
 
         IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = totalRequestsCollector.GetMeasurementSnapshot();
-        Assert.Single(requestMeasurements);
-        Assert.True(requestMeasurements[0]!.ContainsTags("did.type"));
+        CollectedMeasurement<long> item = Assert.Single(requestMeasurements);
+        Assert.True(item!.ContainsTags("did.type"));
         Assert.Equal(
             "web",
             requestMeasurements[0]!.Tags["did.type"]);
@@ -555,8 +555,8 @@ public class DirectoryTests
         Assert.Empty(succeededMeasurements);
 
         IReadOnlyList<CollectedMeasurement<long>> failedMeasurements = totalFailedRequestsCollector.GetMeasurementSnapshot();
-        Assert.Single(failedMeasurements);
-        Assert.True(failedMeasurements[0]!.ContainsTags("did.type"));
+        CollectedMeasurement<long> item_2 = Assert.Single(failedMeasurements);
+        Assert.True(item_2!.ContainsTags("did.type"));
         Assert.Equal(
             "web",
             failedMeasurements[0]!.Tags["did.type"]);
@@ -636,15 +636,15 @@ public class DirectoryTests
             Assert.Equal(new Did(knownDid), result.Result.Id);
 
             IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = totalRequestsCollector.GetMeasurementSnapshot();
-            Assert.Single(requestMeasurements);
-            Assert.True(requestMeasurements[0]!.ContainsTags("did.type"));
+            CollectedMeasurement<long> item = Assert.Single(requestMeasurements);
+            Assert.True(item!.ContainsTags("did.type"));
             Assert.Equal(
                 "plc",
                 requestMeasurements[0]!.Tags["did.type"]);
 
             IReadOnlyList<CollectedMeasurement<long>> succeededMeasurements = totalSucceededRequestsCollector.GetMeasurementSnapshot();
-            Assert.Single(succeededMeasurements);
-            Assert.True(succeededMeasurements[0]!.ContainsTags("did.type"));
+            CollectedMeasurement<long> item_2 = Assert.Single(succeededMeasurements);
+            Assert.True(item_2!.ContainsTags("did.type"));
             Assert.Equal(
                 "plc",
                 succeededMeasurements[0]!.Tags["did.type"]);
@@ -722,15 +722,15 @@ public class DirectoryTests
             Assert.True(result.Succeeded);
 
             IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = totalRequestsCollector.GetMeasurementSnapshot();
-            Assert.Single(requestMeasurements);
-            Assert.True(requestMeasurements[0]!.ContainsTags("did.type"));
+            CollectedMeasurement<long> item = Assert.Single(requestMeasurements);
+            Assert.True(item!.ContainsTags("did.type"));
             Assert.Equal(
                 "web",
                 requestMeasurements[0]!.Tags["did.type"]);
 
             IReadOnlyList<CollectedMeasurement<long>> succeededMeasurements = totalSucceededRequestsCollector.GetMeasurementSnapshot();
-            Assert.Single(succeededMeasurements);
-            Assert.True(succeededMeasurements[0]!.ContainsTags("did.type"));
+            CollectedMeasurement<long> item_2 = Assert.Single(succeededMeasurements);
+            Assert.True(item_2!.ContainsTags("did.type"));
             Assert.Equal(
                 "web",
                 succeededMeasurements[0]!.Tags["did.type"]);
@@ -810,8 +810,8 @@ public class DirectoryTests
             });
 
             IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = totalRequestsCollector.GetMeasurementSnapshot();
-            Assert.Single(requestMeasurements);
-            Assert.True(requestMeasurements[0]!.ContainsTags("did.type"));
+            CollectedMeasurement<long> item = Assert.Single(requestMeasurements);
+            Assert.True(item!.ContainsTags("did.type"));
             Assert.Equal(
                 "unknown",
                 requestMeasurements[0]!.Tags["did.type"]);
@@ -820,8 +820,8 @@ public class DirectoryTests
             Assert.Empty(succeededMeasurements);
 
             IReadOnlyList<CollectedMeasurement<long>> failedMeasurements = totalFailedRequestsCollector.GetMeasurementSnapshot();
-            Assert.Single(failedMeasurements);
-            Assert.True(failedMeasurements[0]!.ContainsTags("did.type"));
+            CollectedMeasurement<long> item_2 = Assert.Single(failedMeasurements);
+            Assert.True(item_2!.ContainsTags("did.type"));
             Assert.Equal(
                 "unknown",
                 failedMeasurements[0]!.Tags["did.type"]);
@@ -898,8 +898,8 @@ public class DirectoryTests
             Assert.Equal(HttpStatusCode.NotFound, result.StatusCode);
 
             IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = totalRequestsCollector.GetMeasurementSnapshot();
-            Assert.Single(requestMeasurements);
-            Assert.True(requestMeasurements[0]!.ContainsTags("did.type"));
+            CollectedMeasurement<long> item = Assert.Single(requestMeasurements);
+            Assert.True(item!.ContainsTags("did.type"));
             Assert.Equal(
                 "plc",
                 requestMeasurements[0]!.Tags["did.type"]);
@@ -908,8 +908,8 @@ public class DirectoryTests
             Assert.Empty(succeededMeasurements);
 
             IReadOnlyList<CollectedMeasurement<long>> failedMeasurements = totalFailedRequestsCollector.GetMeasurementSnapshot();
-            Assert.Single(failedMeasurements);
-            Assert.True(failedMeasurements[0]!.ContainsTags("did.type"));
+            CollectedMeasurement<long> item_2 = Assert.Single(failedMeasurements);
+            Assert.True(item_2!.ContainsTags("did.type"));
             Assert.Equal(
                 "plc",
                 failedMeasurements[0]!.Tags["did.type"]);
@@ -973,8 +973,8 @@ public class DirectoryTests
             Assert.Equal(HttpStatusCode.NotFound, result.StatusCode);
 
             IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = totalRequestsCollector.GetMeasurementSnapshot();
-            Assert.Single(requestMeasurements);
-            Assert.True(requestMeasurements[0]!.ContainsTags("did.type"));
+            CollectedMeasurement<long> item = Assert.Single(requestMeasurements);
+            Assert.True(item!.ContainsTags("did.type"));
             Assert.Equal(
                 "web",
                 requestMeasurements[0]!.Tags["did.type"]);
@@ -983,8 +983,8 @@ public class DirectoryTests
             Assert.Empty(succeededMeasurements);
 
             IReadOnlyList<CollectedMeasurement<long>> failedMeasurements = totalFailedRequestsCollector.GetMeasurementSnapshot();
-            Assert.Single(failedMeasurements);
-            Assert.True(failedMeasurements[0]!.ContainsTags("did.type"));
+            CollectedMeasurement<long> item_2 = Assert.Single(failedMeasurements);
+            Assert.True(item_2!.ContainsTags("did.type"));
             Assert.Equal(
                 "web",
                 failedMeasurements[0]!.Tags["did.type"]);

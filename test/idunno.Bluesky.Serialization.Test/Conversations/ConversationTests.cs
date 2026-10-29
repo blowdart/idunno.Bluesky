@@ -1087,22 +1087,22 @@ public class ConversationTests
         Assert.Equal(DateTimeOffset.Parse("2024-11-26T15:39:59.145Z"), conversationMemberProfileView.CreatedAt);
         Assert.False(conversationMemberProfileView.ChatDisabled);
 
-        Assert.IsType<GroupConversationMember>(conversationMemberProfileView.Kind);
-        GroupConversationMember? memberKind = conversationMemberProfileView.Kind as GroupConversationMember;
+        GroupConversationMember typed = Assert.IsType<GroupConversationMember>(conversationMemberProfileView.Kind);
+        GroupConversationMember? memberKind = typed;
         Assert.Equal(Chat.Actor.MemberRole.Owner, memberKind!.Role);
 
         conversationMemberProfileView = conversationView.Members.ElementAt(1);
 
-        Assert.IsType<GroupConversationMember>(conversationMemberProfileView.Kind);
-        memberKind = conversationMemberProfileView.Kind as GroupConversationMember;
+        GroupConversationMember typed_2 = Assert.IsType<GroupConversationMember>(conversationMemberProfileView.Kind);
+        memberKind = typed_2;
         Assert.Equal(Chat.Actor.MemberRole.Standard, memberKind!.Role);
         Assert.NotNull(memberKind.AddedBy);
         Assert.Equal(new Did("did:plc:mvgsfujvam5iekxlk3howidu"), memberKind.AddedBy.Did);
 
         Assert.NotNull(conversationView.LastMessage);
 
-        Assert.IsType<MessageView>(conversationView.LastMessage);
-        var lastmessage = conversationView.LastMessage as MessageView;
+        MessageView typed_3 = Assert.IsType<MessageView>(conversationView.LastMessage);
+        MessageView lastmessage = typed_3;
         Assert.Equal("3moh3aswtrx2h", lastmessage!.Id);
         Assert.Equal("2222224rdcznj", lastmessage!.Revision);
         Assert.Equal("did:plc:mvgsfujvam5iekxlk3howidu", lastmessage!.Sender.Did);
@@ -1114,8 +1114,8 @@ public class ConversationTests
         Assert.Equal(ConversationStatus.Requested, conversationView.Status);
         Assert.False(conversationView.Muted);
 
-        Assert.IsType<GroupConversation>(conversationView.Kind);
-        var groupConversation = conversationView.Kind as GroupConversation;
+        GroupConversation typed_4 = Assert.IsType<GroupConversation>(conversationView.Kind);
+        GroupConversation groupConversation = typed_4;
         Assert.Equal("Test Group Chat", groupConversation!.Name);
         Assert.NotNull(groupConversation.JoinLink);
 

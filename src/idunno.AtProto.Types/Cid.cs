@@ -30,8 +30,6 @@ public sealed class Cid : IEquatable<Cid>, IParsable<Cid>
     // The hash is never handed out directly, so a Cid cannot be changed after it is created and the values derived
     // from it below can be cached.
     private readonly byte[] _hash;
-
-    private IReadOnlyList<byte>? _hashView;
     private string? _value;
     private int _hashCode;
     private bool _hashCodeCalculated;
@@ -205,7 +203,7 @@ public sealed class Cid : IEquatable<Cid>, IParsable<Cid>
     /// Gets the hash(es).
     /// </summary>
     [JsonIgnore]
-    public IReadOnlyList<byte> Hash => _hashView ??= Array.AsReadOnly(_hash);
+    public IReadOnlyList<byte> Hash { get => field ??= Array.AsReadOnly(_hash); }
 
     /// <summary>
     /// Gets the value of the Content Identifier.

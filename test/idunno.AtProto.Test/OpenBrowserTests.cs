@@ -30,6 +30,6 @@ public class OpenBrowserTests
     [InlineData("search-ms:query=x")]
     public void OpenBrowserThrowsOnANonHttpScheme(string uri)
     {
-        Assert.Throws<ArgumentException>("uri", () => OAuthClient.OpenBrowser(new Uri(uri, UriKind.Absolute)));
+        Assert.Throws<ArgumentException>(nameof(uri), () => OAuthClient.OpenBrowser(new Uri(uri, UriKind.Absolute)));
     }
 }

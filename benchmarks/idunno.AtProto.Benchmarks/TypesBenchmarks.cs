@@ -288,6 +288,7 @@ public class TypesBenchmarks
 
     [Benchmark(OperationsPerInvoke = Count)]
     [BenchmarkCategory("TidNext")]
+#pragma warning disable CA1822 // Keep the benchmark instance invocation shape consistent with the other benchmarks.
     public int TidNext()
     {
         int length = 0;
@@ -311,6 +312,7 @@ public class TypesBenchmarks
 
         return length;
     }
+#pragma warning restore CA1822
 
     [Benchmark(OperationsPerInvoke = Count)]
     [BenchmarkCategory("TidToString")]

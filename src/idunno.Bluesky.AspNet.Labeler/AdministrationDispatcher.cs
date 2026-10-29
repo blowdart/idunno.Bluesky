@@ -31,14 +31,14 @@ internal sealed partial class AdministrationDispatcher(
     // Bounded POST bodies keep confidential moderation filters out of URLs on both adapters.
     internal static readonly string[] s_moderationMethods =
     [
-        "getCase", "getCases", "getCaseHistory", "getCaseOperation", "changeCase", "decideCase", "getCaseDecision",
+        "getCase", "getCaseLabels", "getManualLabelChoices", "getModerationOverview", "getCaseActivity", "searchModeration", "getCases", "getCaseHistory", "getCaseOperation", "changeCase", "decideCase", "getCaseDecision",
         "getAppeal", "getAppeals", "getAppealReports", "getCaseQueue",
         "getPolicyVersion", "getPolicyVersions", "getPolicyHistory", "getPolicyOperation",
-        "getReport", "getReports", "getPolicy", "savePolicy", "beginPolicyPublication", "abandonPolicyPublication", "verifyPolicy"
+        "getReport", "getReports", "getPolicy", "savePolicy", "deletePolicyDraft", "beginPolicyPublication", "resumePolicyPublication", "abandonPolicyPublication", "verifyPolicy"
     ];
     internal static readonly string[] s_methods =
     [
-        "getTeam", "getAudit", "changeTeam", "enroll", "issueLabel", "negateLabel",
+        "getTeam", "getAudit", "changeTeam", "setTeamNotificationEmail", "enroll", "issueLabel", "negateLabel",
         "getOperation", "getPublicationState", "getMaintenanceState", "authorizeMaintenance",
         "beginRetirement", "advanceRetirement", "beginGracePeriod", "completeRetirement",
         "purgeRetiredData", "beginRotation", "confirmHostStopped", "captureRotationBoundary",
@@ -51,7 +51,7 @@ internal sealed partial class AdministrationDispatcher(
     ];
     internal static readonly string[] s_postMethods =
     [
-        "changeTeam", "enroll", "issueLabel", "negateLabel", "authorizeMaintenance",
+        "changeTeam", "setTeamNotificationEmail", "enroll", "issueLabel", "negateLabel", "authorizeMaintenance",
         "beginRetirement", "advanceRetirement", "beginGracePeriod", "completeRetirement", "purgeRetiredData",
         "beginRotation", "confirmHostStopped", "captureRotationBoundary", "verifyRotationKeyPublication",
         "resignRotationBatch", "completeRotation",
@@ -131,7 +131,7 @@ internal sealed partial class AdministrationDispatcher(
                     LabelServiceResult<IReadOnlyList<LabelTeamMember>> result = await administration.GetTeamAsync(caller, token).ConfigureAwait(false);
                     return result.Succeeded
                         ? new(true, Members: [.. result.Result.Select(member => new AdministrationMemberView(
-                            member.Did.Value, member.Role, member.Active, member.Removed))])
+                            member.Did.Value, member.Role, member.Active, member.Removed, member.NotificationEmail))])
                         : Failure(result.Error);
                 }
             case "getAudit":
@@ -160,6 +160,33 @@ internal sealed partial class AdministrationDispatcher(
                         change: new(
                             operationId: command.OperationId, action: command.Action.Value, target: did,
                             reason: command.Reason, role: command.Role, credential: command.Credential),
+                        cancellationToken: token).ConfigureAwait(false);
+                    return result.Succeeded ? new(true, Sequence: result.Result.Sequence, OperationId: result.Result.OperationId) : Failure(result.Error);
+                }
+            case "setTeamNotificationEmail":
+                {
+                    if (!Did.TryParse(command.Target, out Did? did))
+                    {
+                        return new(false, "InvalidRequest", "Supply the active administrator's DID.");
+                    }
+
+                    LabelTeamNotificationEmailChange change;
+                    try
+                    {
+                        change = new(
+                            operationId: command.OperationId,
+                            target: did,
+                            notificationEmail: command.NotificationEmail,
+                            reason: command.Reason);
+                    }
+                    catch (ArgumentException)
+                    {
+                        return new(false, "InvalidRequest", "Supply a valid email address and an audit reason without email addresses.");
+                    }
+
+                    LabelServiceResult<LabelAdministrationReceipt> result = await administration.SetTeamNotificationEmailAsync(
+                        caller: caller,
+                        change: change,
                         cancellationToken: token).ConfigureAwait(false);
                     return result.Succeeded ? new(true, Sequence: result.Result.Sequence, OperationId: result.Result.OperationId) : Failure(result.Error);
                 }
@@ -201,7 +228,9 @@ internal sealed partial class AdministrationDispatcher(
                             context: context, expiresAt: command.ExpiresAt)
                         : LabelOperationRequest.Negate(
                             operationId: command.OperationId, target: target, value: command.Value, context: context);
-                    LabelServiceResult<LabelOperationReceipt> result = await issuance.ExecuteAsync(request, token).ConfigureAwait(false);
+                    LabelServiceResult<LabelOperationReceipt> result = command.ExpectedLabelSequence is { } sequence
+                        ? await issuance.ExecuteObservedAsync(request, sequence, token).ConfigureAwait(false)
+                        : await issuance.ExecuteAsync(request, token).ConfigureAwait(false);
                     return result.Succeeded ? Receipt(result.Result) : Failure(result.Error);
                 }
             case "getOperation":
@@ -410,12 +439,7 @@ internal sealed partial class AdministrationDispatcher(
         DidDocument? document = await IdentityResolution.ResolveDidDocumentAsync(
             did: caller.Issuer,
             httpClient: httpClient,
-            cancellationToken: token).ConfigureAwait(false);
-        if (document is null)
-        {
-            throw new InvalidDataException("The labeler's public DID document could not be resolved.");
-        }
-
+            cancellationToken: token).ConfigureAwait(false) ?? throw new InvalidDataException("The labeler's public DID document could not be resolved.");
         LabelerIdentityDocument.VerifyPublication(
             didDocument: document,
             did: caller.Issuer,
@@ -758,7 +782,15 @@ internal sealed partial class AdministrationDispatcher(
 
     /// <summary>Projects a durable audit event into its wire representation.</summary>
     private static AdministrationAuditView AuditView(LabelAdministrationReceipt receipt) =>
-        new(receipt.Sequence, receipt.OperationId, receipt.Actor?.Value, receipt.LocalIdentity, receipt.Action, receipt.Reason, receipt.Succeeded);
+        new(
+            Sequence: receipt.Sequence,
+            OperationId: receipt.OperationId,
+            Actor: receipt.Actor?.Value,
+            LocalIdentity: receipt.LocalIdentity,
+            Action: receipt.Action,
+            Reason: receipt.Reason,
+            Succeeded: receipt.Succeeded,
+            CreatedAt: receipt.CreatedAt);
 
     /// <summary>Surfaces only classified operational errors at the transport boundary.</summary>
     private static AdministrationResponse Failure(LabelServiceError error) =>
@@ -783,7 +815,9 @@ internal sealed record AdministrationCommand(
     int GracePeriodDays = 0,
     bool Confirmed = false,
     string? ReplacementKeyId = null,
-    ModerationCommand? Moderation = null)
+    ModerationCommand? Moderation = null,
+    long? ExpectedLabelSequence = null,
+    string? NotificationEmail = null)
 {
     internal const int MaximumAuditPageSize = 16;
 
@@ -809,12 +843,24 @@ internal sealed record AdministrationResponse(
     AdministrationAuditView[]? Audit = null,
     AdministrationPublicationView? State = null,
     AdministrationMaintenanceView? Maintenance = null,
-    ModerationResponse? Moderation = null);
+    ModerationResponse? Moderation = null,
+    long? TotalCount = null,
+    long? PageNumber = null,
+    AdministrationAuthorSummaryView[]? AuthorSummaries = null,
+    string? Target = null);
+
+/// <summary>Contains all-time issuer-local report counts for the authors on one authorized case page.</summary>
+internal sealed record AdministrationAuthorSummaryView(string Did, long Reports, long Records, IReadOnlyDictionary<string, long> ReportKinds);
 
 /// <summary>Contains public team inspection fields.</summary>
-internal sealed record AdministrationMemberView(string Did, LabelTeamRole Role, bool Active, bool Removed);
+internal sealed record AdministrationMemberView(
+    string Did,
+    LabelTeamRole Role,
+    bool Active,
+    bool Removed,
+    string? NotificationEmail = null);
 /// <summary>Contains authorized audit inspection fields.</summary>
-internal sealed record AdministrationAuditView(long Sequence, string OperationId, string? Actor, string? LocalIdentity, string Action, string Reason, bool Succeeded);
+internal sealed record AdministrationAuditView(long Sequence, string OperationId, string? Actor, string? LocalIdentity, string Action, string Reason, bool Succeeded, DateTimeOffset? CreatedAt = null);
 /// <summary>Contains authorized publication and lifecycle checkpoints.</summary>
 internal sealed record AdministrationPublicationView(
     Guid StreamId,
@@ -854,6 +900,7 @@ internal sealed record AdministrationMaintenanceHostView(
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
 [JsonSerializable(typeof(AdministrationCommand))]
 [JsonSerializable(typeof(AdministrationResponse))]
+[JsonSerializable(typeof(AdministrationAuditView))]
 internal sealed partial class AdministrationJsonContext : JsonSerializerContext;
 
 /// <summary>Bounds messages independently from untrusted content-length values.</summary>

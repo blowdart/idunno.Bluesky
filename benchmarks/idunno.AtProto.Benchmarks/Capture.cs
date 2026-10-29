@@ -3,11 +3,11 @@
 
 using System.Net.WebSockets;
 
-using ZstdSharp;
-
 using idunno.AtProto.Jetstream;
 using idunno.Bluesky;
 using idunno.Bluesky.Feed;
+
+using ZstdSharp;
 
 namespace idunno.AtProto.Benchmarks;
 

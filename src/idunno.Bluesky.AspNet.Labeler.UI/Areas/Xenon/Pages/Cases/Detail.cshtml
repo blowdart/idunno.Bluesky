@@ -1,0 +1,180 @@
+@page "{id:long}"
+@model idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Cases.DetailModel
+@using System.Text.Json
+@{
+    ViewData["Title"] = $"Case {Model.Id}";
+    JsonElement? caseData = Model.Data.ValueKind == JsonValueKind.Object &&
+        Model.Data.TryGetProperty("moderation", out JsonElement moderation) &&
+        moderation.TryGetProperty("case", out JsonElement value) ? value : null;
+}
+<p><a asp-area="Xenon" asp-page="/Cases/Index">Back to cases</a></p>
+<h1>Case #@Model.Id</h1>
+<div class="moderation-review">
+<div class="moderation-workspace">
+@if (caseData is { ValueKind: JsonValueKind.Object } item)
+{
+    JsonElement subject = item.GetProperty("subject");
+    string target = subject.TryGetProperty("uri", out JsonElement uri) ? uri.GetString()! : subject.GetProperty("did").GetString()!;
+    (string subjectIcon, string _, string subjectKind) = new IdentityDisplayModel(target).SubjectDescription;
+    <section class="panel">
+        <h2>Subject</h2>
+        <p>@await Html.PartialAsync("_Identity", new IdentityDisplayModel(target, Subject: true))</p>
+        <partial name="_SubjectIdentifiers" model="subject" />
+        @if (Model.Preview is { } preview)
+        {
+            @await Html.PartialAsync("_SubjectPreview", preview)
+        }
+        @if (Model.LabelsAvailable)
+        {
+            @await Html.PartialAsync("_ReviewLabels", new ReviewLabelDisplay(
+                subject.TryGetProperty("uri", out _), Model.AccountLabels, Model.LabelChoices.Where(label => label.Applied).Select(label => label.Value).ToArray()))
+        }
+        else
+        {
+            <p role="status">Active labels could not be loaded. Reload before reviewing this subject.</p>
+        }
+        <p class="case-status"><span>Status:</span> @await Html.PartialAsync("_WorkflowStatus", Model.Appeals.Length > 0 ? "Appealed" : item.GetProperty("status").GetString()!)</p>
+        <p>Assignee: @if (item.TryGetProperty("assignee", out JsonElement assignee) && assignee.GetString() is string assigned)
+            {
+                @await Html.PartialAsync("_Identity", new IdentityDisplayModel(assigned))
+            }
+            else
+            {
+                <span>Unassigned</span>
+            }</p>
+    </section>
+    @if ((ViewData["CurrentRole"] as LabelTeamRole?) >= LabelTeamRole.Administrator && Model.Assignees.Count > 1)
+    {
+        <section class="panel">
+            <h2>Assignment</h2>
+            <form method="post" asp-page-handler="Assign">
+                <input type="hidden" name="caseId" value="@item.GetProperty("id").GetInt64()" />
+                <input type="hidden" name="revision" value="@item.GetProperty("revision").GetInt64()" />
+                <input type="hidden" name="operationId" value="@(ViewData["OperationId"] ?? Guid.NewGuid().ToString("N"))" />
+                <label class="field" for="case-assignee">Assignee
+                    <select id="case-assignee" name="assignee">
+                        <option value="">Unassigned</option>
+                        @foreach (AssigneeOption option in Model.Assignees)
+                        {
+                            <option value="@option.Did" selected="@(item.TryGetProperty("assignee", out JsonElement currentAssignee) && currentAssignee.GetString() == option.Did)">@option.Label</option>
+                        }
+                    </select>
+                </label>
+                <label class="field">Reason (optional)<input name="reason" maxlength="4096" aria-describedby="assignment-reason-help" /></label>
+                <p id="assignment-reason-help">If left blank, the audit history records &ldquo;No reason provided.&rdquo;</p>
+                <label><input type="checkbox" name="confirmed" value="true" required /> Confirm this assignment change</label>
+                <div class="form-actions"><button type="submit">Save assignment</button></div>
+            </form>
+        </section>
+    }
+    <section class="panel">
+        <h2>Reports</h2>
+        @if (Model.CurrentReport is not null)
+        {
+            <p>Reviewing report <a asp-area="Xenon" asp-page="/Reports/Detail" asp-route-id="@Model.ReportId">#@Model.ReportId</a>.</p>
+        }
+        else
+        {
+            <p>Reviewing the case as a whole. Select a report below to review an individual submission.</p>
+        }
+        <ul>
+            @foreach (ModerationReportView report in Model.Reports)
+            {
+                <li><a asp-page="/Cases/Detail" asp-route-id="@Model.Id" asp-route-ReportId="@report.Report.Id">Report #@report.Report.Id</a>
+                    — @(report.DecisionOperationId is null ? "Open" : "Handled")
+                    <a asp-area="Xenon" asp-page="/Reports/Detail" asp-route-id="@report.Report.Id">Submission details</a></li>
+            }
+        </ul>
+        @if (Model.Reports.Length == 16)
+        {
+            <p>Showing the first sixteen reports. Other reports remain accessible from the reports list.</p>
+        }
+    </section>
+    @if ((ViewData["CurrentRole"] as LabelTeamRole?) >= LabelTeamRole.Moderator &&
+        (item.GetProperty("status").GetString() != "Resolved" || Model.RetryFields is not null) && Model.DecisionState is not null)
+    {
+        <section class="panel">
+            <h2>Review labels</h2>
+            @if (Model.Preview?.Verified == true)
+            {
+                @await Html.PartialAsync("_VerificationWarning")
+            }
+            <form method="post" asp-page-handler="Decide">
+                <input type="hidden" name="decisionState" value="@Model.DecisionState" />
+                @if (Model.RetryFields is { } retryFields)
+                {
+                    @foreach (KeyValuePair<string, string> field in retryFields)
+                    {
+                        <input type="hidden" name="@field.Key" value="@field.Value" />
+                    }
+                    <p>The original labels, report selection, handling choice and reason will be retried unchanged.</p>
+                    <div class="form-actions"><button type="submit">Retry unchanged decision</button></div>
+                }
+                else
+                {
+                <fieldset class="label-choices">
+                    <legend><span class="subject-icon fa-@subjectIcon" aria-hidden="true"></span> Labels for this @subjectKind</legend>
+                    @foreach (ModerationLabelChoiceView label in Model.LabelChoices)
+                    {
+                        string labelStatus = (label.OtherVersion, label.Applied) switch
+                        {
+                            (true, _) => "Applied to a different record version",
+                            (_, true) => "Currently applied",
+                            _ => "Not applied"
+                        };
+                        <label class="label-chip" data-applied="@(label.Applied ? "true" : "false")">
+                            <input type="checkbox" name="selectedLabels" value="@label.Value" checked="@(Model.SubmittedDecision is { } submitted ? submitted["selectedLabels"].Contains(label.Value) : label.Applied)" disabled="@label.OtherVersion" />
+                            <span>@label.Value <small class="label-baseline">@labelStatus</small><small class="label-add">Will be added</small><small class="label-remove">Will be removed</small></span>
+                        </label>
+                    }
+                </fieldset>
+                @if (Model.Appeals.Length > 0)
+                {
+                    <div class="grid">
+                        <label class="field">Appeal reviewed
+                            <select name="appealId"><option value="">No appeal reviewed</option>
+                                @foreach (long appealId in Model.Appeals.Select(appeal => appeal.Id))
+                                {
+                                    <option value="@appealId" selected="@(Model.SubmittedDecision is { } submittedAppeal ? submittedAppeal["appealId"].ToString() == appealId.ToString(System.Globalization.CultureInfo.InvariantCulture) : Model.AppealId == appealId)">Appeal #@appealId</option>
+                                }
+                            </select>
+                        </label>
+                        <label class="field">Appeal outcome
+                            <select name="appealOutcome">
+                                <option value="">Choose an outcome</option>
+                                @foreach ((string outcome, string title) in new[]
+                                {
+                                    ("Upheld", "Keep the existing decision"), ("Replaced", "Replace labels"),
+                                    ("Withdrawn", "Remove labels"), ("Superseded", "Acknowledge a superseded decision")
+                                })
+                                {
+                                    <option value="@outcome" selected="@(Model.SubmittedDecision?["appealOutcome"].ToString() == outcome)">@title</option>
+                                }
+                            </select>
+                        </label>
+                    </div>
+                    <p>Other appeals will close automatically when the labels they challenged are no longer in effect.</p>
+                }
+                <label class="field">Reason (optional)<textarea name="reason" maxlength="4096" aria-describedby="decision-reason-help">@Model.SubmittedDecision?["reason"]</textarea></label>
+                <p id="decision-reason-help">If left blank, the audit history records &ldquo;No reason provided.&rdquo;</p>
+                <label class="field-check"><input type="checkbox" name="handleOtherReports" value="true" checked="@(Model.SubmittedDecision is null || Model.SubmittedDecision["handleOtherReports"] == "true")" />
+                    Mark other open reports for this exact subject and CID as handled.</label>
+                <p>@(Model.ReportId is null ? "Without this option, a case-level decision does not mark reports as handled." : $"Report #{Model.ReportId} is handled by this decision even when this option is unchecked.") Reports are handled by this decision, not dismissed as unfounded.</p>
+                <div class="form-actions"><button type="submit">Submit</button></div>
+                }
+            </form>
+        </section>
+    }
+}
+else if (ViewData["Error"] is null)
+{
+    <p class="panel">The case could not be loaded.</p>
+}
+</div>
+@if (caseData is not null)
+{
+    <aside class="moderation-history" aria-label="Case and report history">
+        @await Html.PartialAsync("_ReviewHistory", new ReviewHistoryDisplay(Model.History, Model.Id, Model.Id, Model.ReportId))
+    </aside>
+}
+</div>

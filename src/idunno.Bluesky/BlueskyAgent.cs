@@ -351,7 +351,9 @@ public partial class BlueskyAgent : AtProtoAgent
     {
         if (options is null || options.DraftMediaRoots.Count == 0)
         {
+#pragma warning disable IDE0301 // ReadOnlyCollection has no collection builder on net8.0 or net9.0.
             return ReadOnlyCollection<string>.Empty;
+#pragma warning restore IDE0301
         }
 
         List<string> normalisedRoots = [];

@@ -77,7 +77,7 @@ public class LabelIssuanceCommitRecoveryTests
         using HttpClient httpClient = new(new TargetResolutionHandler());
         TestLabelIssuanceAuthorizer authorizer = new();
         LabelIssuanceService service = new(
-            issuer: StoreFixture.Issuer,
+            issuer: StoreFixture.s_issuer,
             signingKey: key,
             store: fixture.Store,
             authorizer: authorizer,
@@ -139,7 +139,7 @@ public class LabelIssuanceCommitRecoveryTests
         LabelSigningKey key,
         HttpClient httpClient) =>
         new(
-            issuer: StoreFixture.Issuer,
+            issuer: StoreFixture.s_issuer,
             signingKey: key,
             store: store,
             authorizer: new TestLabelIssuanceAuthorizer(),

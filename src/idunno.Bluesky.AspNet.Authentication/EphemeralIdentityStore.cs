@@ -50,9 +50,6 @@ public class EphemeralIdentityStore : IIdentityStore, IDisposable
 
     private static volatile bool s_warned;
     private static volatile bool s_capacityWarned;
-
-    private readonly MemoryCache _cache;
-    private readonly MemoryCache _refreshCache;
     private readonly int _sizeLimit;
     private readonly BlueskyAuthenticationMetrics _metrics;
     private readonly TimeProvider _timeProvider;
@@ -108,8 +105,8 @@ public class EphemeralIdentityStore : IIdentityStore, IDisposable
         Logger = loggerFactory.CreateLogger<EphemeralIdentityStore>();
 
         _sizeLimit = sizeLimit ?? DefaultSizeLimit;
-        _cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = _sizeLimit, Clock = new TimeProviderSystemClock(timeProvider) });
-        _refreshCache = new MemoryCache(new MemoryCacheOptions { SizeLimit = _sizeLimit, Clock = new TimeProviderSystemClock(timeProvider) });
+        Cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = _sizeLimit, Clock = new TimeProviderSystemClock(timeProvider) });
+        RefreshCache = new MemoryCache(new MemoryCacheOptions { SizeLimit = _sizeLimit, Clock = new TimeProviderSystemClock(timeProvider) });
 
         _metrics = new BlueskyAuthenticationMetrics(meterFactory);
 
@@ -142,9 +139,9 @@ public class EphemeralIdentityStore : IIdentityStore, IDisposable
         }
     }
 
-    private MemoryCache Cache => _cache;
+    private MemoryCache Cache { get; }
 
-    private MemoryCache RefreshCache => _refreshCache;
+    private MemoryCache RefreshCache { get; }
 
     private MemoryCacheEntryOptions TokenCacheMemoryOptions { get; set; }
 
@@ -473,8 +470,8 @@ public class EphemeralIdentityStore : IIdentityStore, IDisposable
 
         if (disposing)
         {
-            _cache.Dispose();
-            _refreshCache.Dispose();
+            Cache.Dispose();
+            RefreshCache.Dispose();
         }
     }
 

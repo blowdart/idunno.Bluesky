@@ -1,0 +1,104 @@
+@page
+@model idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Audit.IndexModel
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Audit";
+    ViewData["WideLayout"] = true;
+    JsonElement? events = Model.Data.ValueKind == JsonValueKind.Object &&
+        Model.Data.TryGetProperty("audit", out JsonElement values) ? values : null;
+}
+<div class="audit-page-heading">
+    <h1>Administrative audit</h1>
+    @if (Model.Table is not null && ViewData["Error"] is null)
+    {
+        <form method="post" asp-page-handler="Download"
+              asp-route-Actor="@Request.Query["Actor"]" asp-route-Outcome="@Request.Query["Outcome"]"
+              asp-route-From="@Request.Query["From"]" asp-route-To="@Request.Query["To"]"
+              asp-route-TimeBasis="@Request.Query["TimeBasis"]" asp-route-TimeZone="@Request.Query["TimeZone"]">
+            <button type="submit" aria-label="Download matching audit events as JSON" title="Download matching audit events as JSON"><span class="fa-icon fa-download" aria-hidden="true"></span></button>
+        </form>
+    }
+</div>
+<p>Downloads are recorded in this log.</p>
+<form method="get" class="panel" data-audit-filters>
+    <input type="hidden" name="Sort" value="@(Model.Table?.Query.Sort ?? LabelTableSort.Received)" />
+    <input type="hidden" name="Ascending" value="@((Model.Table?.Query.Ascending ?? false).ToString())" />
+    <label for="actor">Actor DID or handle</label>
+    <input id="actor" name="Actor" value="@Request.Query["Actor"]" maxlength="2048" placeholder="DID or handle" />
+    <label for="outcome">Outcome</label>
+    <select id="outcome" name="Outcome">
+        <option value="">All</option>
+        <option value="Succeeded" selected="@(Request.Query["Outcome"] == "Succeeded")">Succeeded</option>
+        <option value="Failed" selected="@(Request.Query["Outcome"] == "Failed")">Denied/failed</option>
+    </select>
+    <div class="audit-date-limits">
+        <div>
+            <label for="from">From (inclusive)</label>
+            <input id="from" type="datetime-local" name="From" value="@Request.Query["From"]" step="any" aria-describedby="audit-time-help" />
+        </div>
+        <div>
+            <label for="to">To (inclusive)</label>
+            <input id="to" type="datetime-local" name="To" value="@Request.Query["To"]" step="any" aria-describedby="audit-time-help" />
+        </div>
+        <fieldset class="audit-filter-zone">
+            <legend class="sr-only">Date/time filter zone</legend>
+            <label><input type="radio" name="TimeBasis" value="UTC" checked="@(Request.Query["TimeBasis"] != "Local")" /> UTC</label>
+            <label><input type="radio" name="TimeBasis" value="Local" checked="@(Request.Query["TimeBasis"] == "Local")" data-audit-local disabled="@(string.IsNullOrEmpty(Request.Query["TimeZone"]))" /> <span class="identity" tabindex="0" aria-describedby="audit-zone-tooltip" data-audit-zone-name title="@Request.Query["TimeZone"]">Local<span id="audit-zone-tooltip" class="identity-tooltip" role="tooltip" data-audit-zone-tooltip>@Request.Query["TimeZone"]</span></span></label>
+            <input type="hidden" name="TimeZone" value="@Request.Query["TimeZone"]" data-audit-zone />
+        </fieldset>
+    </div>
+    <p id="audit-time-help" class="muted">Dates use the selected filter zone, independently of the display time zone. Events without a timestamp are excluded when either date is set. For repeated daylight-saving hours, use UTC.</p>
+    <noscript><p>Local-time filtering requires JavaScript to identify your browser's time zone. UTC filtering remains available.</p></noscript>
+    <button type="submit" aria-label="Filter audit events" title="Filter audit events"><span class="fa-icon fa-filter" aria-hidden="true"></span></button>
+    <a asp-area="Xenon" asp-page="/Audit/Index">Clear filters</a>
+</form>
+@if (events is { ValueKind: JsonValueKind.Array } list && list.GetArrayLength() > 0)
+{
+    <section class="panel">
+        <table class="audit-table">
+            <caption>@Model.Table!.Total audit events</caption>
+            <thead><tr>
+                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Received, "Time"))
+                <th scope="col">Operation</th>
+                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Actor, "Actor"))
+                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Action, "Action"))
+                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Outcome, "Outcome"))
+                <th scope="col">Reason</th>
+            </tr></thead>
+            <tbody>
+                @foreach (JsonElement entry in list.EnumerateArray())
+                {
+                    <tr>
+                        <td>
+                            @if (entry.TryGetProperty("createdAt", out JsonElement createdAt) && createdAt.ValueKind == JsonValueKind.String)
+                            {
+                                <time data-relative-time datetime="@createdAt.GetDateTimeOffset().ToString("O")">@createdAt.GetDateTimeOffset().ToString("u")</time>
+                            }
+                            else
+                            {
+                                <span class="muted">Time unavailable</span>
+                            }
+                        </td>
+                        <td class="audit-operation"><code>@entry.GetProperty("operationId").GetString()</code></td>
+                        <td class="audit-actor">
+                            @await Html.PartialAsync("_Identity", new IdentityDisplayModel(entry.TryGetProperty("actor", out JsonElement actor) ? actor.GetString() : null))
+                            @if (entry.TryGetProperty("localIdentity", out JsonElement identity) &&
+                                identity.GetString()?.StartsWith("system:", StringComparison.Ordinal) == true)
+                            {
+                                <span class="muted">Automatic</span>
+                            }
+                        </td>
+                        <td>@entry.GetProperty("action").GetString()</td>
+                        <td>@(entry.GetProperty("succeeded").GetBoolean() ? "Succeeded" : "Denied/failed")</td>
+                        <td>@entry.GetProperty("reason").GetString()</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @await Html.PartialAsync("_Pagination", Model.Table)
+    </section>
+}
+else if (ViewData["Error"] is null)
+{
+    <p class="panel">No audit events match these filters.</p>
+}

@@ -7,7 +7,11 @@ namespace idunno.Bluesky.AspNet.Authentication.Test;
 
 internal sealed class TimeProviderDistributedCache(TimeProvider timeProvider) : IDistributedCache
 {
+#if NET9_0_OR_GREATER
+    private readonly Lock _lock = new();
+#else
     private readonly object _lock = new();
+#endif
     private readonly Dictionary<string, CacheEntry> _entries = [];
 
     public byte[]? Get(string key)
@@ -31,7 +35,7 @@ internal sealed class TimeProviderDistributedCache(TimeProvider timeProvider) : 
 
             entry.LastAccessed = now;
 
-            return entry.Value.ToArray();
+            return [.. entry.Value];
         }
     }
 
@@ -92,7 +96,7 @@ internal sealed class TimeProviderDistributedCache(TimeProvider timeProvider) : 
         lock (_lock)
         {
             _entries[key] = new CacheEntry(
-                value.ToArray(),
+                [.. value],
                 absoluteExpiration,
                 options.SlidingExpiration,
                 now);

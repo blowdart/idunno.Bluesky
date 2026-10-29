@@ -135,6 +135,8 @@ items:
             href: labeller/administration.md
           - name: Optional Xenon moderation
             href: labeller/moderation.md
+          - name: Xenon moderation web UI
+            href: labeller/ui.md
           - name: Standalone deployment and updates
             href: labeller/deployment.md
 

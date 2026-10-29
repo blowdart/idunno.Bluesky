@@ -1,0 +1,69 @@
+@page "{id:long}"
+@model idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Reports.DetailModel
+@using System.Text.Json
+@{
+    ViewData["Title"] = $"Report {Model.Id}";
+}
+<p><a asp-area="Xenon" asp-page="/Reports/Index">Back to reports</a></p>
+<h1>Report #@Model.Id</h1>
+@if (Model.Data.ValueKind == JsonValueKind.Object &&
+    Model.Data.TryGetProperty("moderation", out JsonElement moderation) &&
+    moderation.TryGetProperty("reports", out JsonElement reports) &&
+    reports.ValueKind == JsonValueKind.Array && reports.GetArrayLength() == 1)
+{
+    JsonElement details = reports[0];
+    JsonElement report = details.GetProperty("report");
+    JsonElement subject = report.GetProperty("subject");
+    string target = subject.TryGetProperty("uri", out JsonElement uri) ? uri.GetString()! : subject.GetProperty("did").GetString()!;
+    <div class="moderation-review">
+    <div class="moderation-workspace">
+    <section class="panel">
+        <h2>Reported subject</h2>
+        <p>@await Html.PartialAsync("_Identity", new IdentityDisplayModel(target, Subject: true))</p>
+        <partial name="_SubjectIdentifiers" model="subject" />
+        @if (Model.Preview is { } preview)
+        {
+            @await Html.PartialAsync("_SubjectPreview", preview)
+        }
+        @if (Model.Labels is { } labels)
+        {
+            @await Html.PartialAsync("_ReviewLabels", labels)
+        }
+        else
+        {
+            <p role="status">Active labels could not be loaded. Reload before reviewing this subject.</p>
+        }
+    </section>
+    <section class="panel">
+        <h2>Submission</h2>
+        @if (Model.Preview?.Verified == true)
+        {
+            @await Html.PartialAsync("_VerificationWarning")
+        }
+        <dl class="report-details">
+            <dt>Case</dt>
+            <dd><a asp-area="Xenon" asp-page="/Cases/Detail" asp-route-id="@details.GetProperty("caseId").GetInt64()" asp-route-ReportId="@Model.Id">Review report #@Model.Id in case #@details.GetProperty("caseId").GetInt64()</a></dd>
+            <dt>Status</dt>
+            <dd>@(details.TryGetProperty("decisionOperationId", out JsonElement decision) ? $"Handled by operation {decision.GetString()}" : "Open")</dd>
+            @if (details.TryGetProperty("resolutionReason", out JsonElement resolution))
+            {
+                <dt>Resolution reason</dt><dd>@resolution.GetString()</dd>
+            }
+            <dt>Reporter</dt>
+            <dd>@await Html.PartialAsync("_Identity", new IdentityDisplayModel(report.GetProperty("reportedBy").GetString(), Detailed: true))</dd>
+            <dt>Received (UTC)</dt>
+            <dd><time datetime="@report.GetProperty("createdAt").GetDateTimeOffset().ToString("O")">@report.GetProperty("createdAt").GetDateTimeOffset().ToUniversalTime().ToString("u")</time></dd>
+            <dt>Reason type</dt><dd>@report.GetProperty("reasonType").GetString()</dd>
+            <dt>Reason</dt><dd class="preview-text">@report.GetProperty("reason").GetString()</dd>
+        </dl>
+    </section>
+    </div>
+    <aside class="moderation-history" aria-label="Case and report history">
+        @await Html.PartialAsync("_ReviewHistory", new ReviewHistoryDisplay(Model.History, details.GetProperty("caseId").GetInt64(), Model.Id, null))
+    </aside>
+    </div>
+}
+else if (ViewData["Error"] is null)
+{
+    <p class="panel">The report could not be loaded.</p>
+}

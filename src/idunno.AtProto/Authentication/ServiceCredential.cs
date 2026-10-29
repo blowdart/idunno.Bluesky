@@ -21,8 +21,6 @@ public class ServiceCredential : AtProtoCredential, IAccessCredential
 #endif
 
     private string _accessToken;
-    private DateTimeOffset _expiresOn;
-    private Did _did;
 
     /// <summary>
     /// Creates a new instance of <see cref="AccessCredentials"/> with the specified <paramref name="accessJwt"/>.
@@ -36,7 +34,7 @@ public class ServiceCredential : AtProtoCredential, IAccessCredential
         ArgumentNullException.ThrowIfNull(service);
         ArgumentException.ThrowIfNullOrWhiteSpace(accessJwt);
 
-        (_did, _expiresOn) = ExtractJwtProperties(accessJwt);
+        (Did, ExpiresOn) = ExtractJwtProperties(accessJwt);
         _accessToken = accessJwt;
     }
 
@@ -69,8 +67,8 @@ public class ServiceCredential : AtProtoCredential, IAccessCredential
             lock (_serviceCredentialLock)
             {
                 _accessToken = value;
-                _did = did;
-                _expiresOn = expiresOn;
+                Did = did;
+                ExpiresOn = expiresOn;
             }
         }
     }
@@ -94,9 +92,11 @@ public class ServiceCredential : AtProtoCredential, IAccessCredential
         {
             lock (_serviceCredentialLock)
             {
-                return _expiresOn;
+                return field;
             }
         }
+
+        private set;
     }
 
     /// <summary>
@@ -117,9 +117,11 @@ public class ServiceCredential : AtProtoCredential, IAccessCredential
         {
             lock (_serviceCredentialLock)
             {
-                return _did;
+                return field;
             }
         }
+
+        private set;
     }
 
     /// <summary>

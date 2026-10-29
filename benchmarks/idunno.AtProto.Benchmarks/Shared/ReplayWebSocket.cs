@@ -3,7 +3,9 @@
 
 using System.Net.WebSockets;
 
+#pragma warning disable IDE0130 // Preserve the established namespace independently of folder layout.
 namespace idunno.AtProto.Benchmarks;
+#pragma warning restore IDE0130
 
 /// <summary>
 /// A <see cref="WebSocket"/> which replays a captured message as fragments no larger than the caller's buffer or

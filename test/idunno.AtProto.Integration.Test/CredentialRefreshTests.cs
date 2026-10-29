@@ -41,7 +41,7 @@ public class CredentialRefreshTests
         {
             await Login(agent);
 
-            ITimer initialTimer = Assert.IsAssignableFrom<ITimer>(GetRefreshTimer(agent));
+            ITimer initialTimer = Assert.IsType<ITimer>(GetRefreshTimer(agent), exactMatch: false);
 
             for (int i = 0; i < 4; i++)
             {

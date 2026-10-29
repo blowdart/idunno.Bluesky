@@ -3,6 +3,7 @@
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
+using idunno.AtProto.Repo;
 using idunno.Bluesky.Actor;
 
 using Microsoft.AspNetCore.Http;
@@ -80,7 +81,7 @@ public class LinkRecordResponseTests
 
         if (paged)
         {
-            var result = await agent.ListBlueskyRecords<Link>(
+            AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRepositoryRecord<Link>>> result = await agent.ListBlueskyRecords<Link>(
                 new Did("did:plc:test"),
                 new Nsid("app.bsky.actor.link"),
                 service: TestServerBuilder.DefaultUri,
@@ -94,7 +95,7 @@ public class LinkRecordResponseTests
         }
         else
         {
-            var result = await agent.GetBlueskyRecord<Link>(
+            AtProtoHttpResult<AtProtoRepositoryRecord<Link>> result = await agent.GetBlueskyRecord<Link>(
                 new AtUri("at://did:plc:test/app.bsky.actor.link/invalid"),
                 cancellationToken: TestContext.Current.CancellationToken);
 

@@ -1,0 +1,68 @@
+@page
+@model idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Lifecycle.IndexModel
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Lifecycle";
+    JsonElement? maintenance = Model.Maintenance.ValueKind == JsonValueKind.Object &&
+        Model.Maintenance.TryGetProperty("maintenance", out JsonElement maintenanceValue) ? maintenanceValue : null;
+    JsonElement? publication = Model.Publication.ValueKind == JsonValueKind.Object &&
+        Model.Publication.TryGetProperty("state", out JsonElement publicationValue) ? publicationValue : null;
+}
+<h1>Labeler lifecycle</h1>
+<p>Lifecycle progress is persisted and resumes from shared storage after a process restart. This UI exposes retirement; signing-key rotation remains a coordinated operator workflow through the administration CLI.</p>
+<div class="grid">
+    @if (maintenance is { ValueKind: JsonValueKind.Object } maintenanceState)
+    {
+        <section class="panel">
+            <h2>Maintenance coordination</h2>
+            <p>Phase: <strong>@maintenanceState.GetProperty("phase").GetString()</strong></p>
+            @if (maintenanceState.TryGetProperty("operationId", out JsonElement maintenanceOperation))
+            {
+                <p>Operation: <code>@maintenanceOperation.GetString()</code></p>
+            }
+            <p>Connected host acknowledgements and drain state are shown only when maintenance is active.</p>
+        </section>
+    }
+    @if (publication is { ValueKind: JsonValueKind.Object } publicationState)
+    {
+        <section class="panel">
+            <h2>Durable publication and retirement checkpoint</h2>
+            <dl>
+                <dt>Lifecycle phase</dt><dd>@publicationState.GetProperty("phase").GetString()</dd>
+                <dt>Published through</dt><dd>@publicationState.GetProperty("publishedThrough").GetInt64()</dd>
+                <dt>Retirement upper bound</dt><dd>@publicationState.GetProperty("retirementUpperBound").GetInt64()</dd>
+                <dt>Retirement progress</dt><dd>@publicationState.GetProperty("retirementThrough").GetInt64()</dd>
+                <dt>Grace deadline</dt>
+                <dd>@if (publicationState.TryGetProperty("graceDeadline", out JsonElement grace))
+                    {
+                        <time datetime="@grace.GetDateTimeOffset().ToString("O")">@grace.GetDateTimeOffset().ToUniversalTime().ToString("u")</time>
+                    }
+                    else
+                    {
+                        <span>Not started</span>
+                    }</dd>
+            </dl>
+        </section>
+    }
+</div>
+<section class="panel">
+    <h2>Advance retirement</h2>
+    <p>Retirement signs and publishes negations in bounded resumable steps. Completion starts or observes the distribution grace period; purge is a separate confirmed local data operation and cannot erase labels from downstream systems.</p>
+    <form method="post">
+        <input type="hidden" name="operationId" value="@(ViewData["OperationId"] ?? Guid.NewGuid().ToString("N"))" />
+        <label class="field">Operation
+            <select name="method" required>
+                <option value="beginRetirement">Begin retirement</option>
+                <option value="advanceRetirement">Advance one retirement batch</option>
+                <option value="beginGracePeriod">Begin grace period</option>
+                <option value="completeRetirement">Complete retirement</option>
+                <option value="purgeRetiredData">Purge retired local history</option>
+            </select>
+        </label>
+        <label class="field">Grace period days (for grace period transition)<input type="number" name="graceDays" min="1" max="365" value="30" /></label>
+        <label class="field">Purge batch size (for purge only)<input type="number" name="limit" min="1" max="1000" value="100" /></label>
+        <label class="field">Reason<input name="reason" required maxlength="4096" /></label>
+        <label><input type="checkbox" name="confirmed" value="true" required /> I understand this action changes durable labeler lifecycle state</label>
+        <p class="form-actions"><button type="submit">Submit lifecycle step</button></p>
+    </form>
+</section>

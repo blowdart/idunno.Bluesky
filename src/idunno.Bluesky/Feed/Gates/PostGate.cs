@@ -91,8 +91,8 @@ public partial record PostGate : BlueskyRecord
     [JsonPropertyName("embeddingRules")]
     public ICollection<PostGateRule>? Rules
     {
-        get => _rules;
-        init => _rules = value is null ? null : new List<PostGateRule>(value).AsReadOnly();
+        get;
+        init => field = value is null ? null : new List<PostGateRule>(value).AsReadOnly();
     }
 
     /// <summary>
@@ -101,11 +101,7 @@ public partial record PostGate : BlueskyRecord
     [JsonInclude]
     public ICollection<AtUri>? DetachedEmbeddingUris
     {
-        get => _detachedEmbeddingUris;
-        init => _detachedEmbeddingUris = value is null ? null : new List<AtUri>(value).AsReadOnly();
+        get;
+        init => field = value is null ? null : new List<AtUri>(value).AsReadOnly();
     }
-
-    private readonly ICollection<PostGateRule>? _rules;
-
-    private readonly ICollection<AtUri>? _detachedEmbeddingUris;
 }

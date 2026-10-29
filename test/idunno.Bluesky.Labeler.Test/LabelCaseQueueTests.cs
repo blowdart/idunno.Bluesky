@@ -21,6 +21,15 @@ public class LabelCaseQueueTests
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
+        Success(await ((ILabelAdministrationStore)fixture.Store).ChangeTeamAsync(
+            caller,
+            new(
+                operationId: "second-moderator",
+                action: LabelTeamAction.Enroll,
+                target: new("did:plc:another-moderator"),
+                reason: "Exercise manual routing with multiple eligible moderators.",
+                role: LabelTeamRole.Moderator),
+            token));
         LabelPolicyState policy = await LabelPolicyStoreTests.ActivateAsync((ILabelPolicyStore)fixture.Store, caller, token);
         ILabelModerationStore cases = (ILabelModerationStore)fixture.Store;
         ILabelReportStore reports = (ILabelReportStore)fixture.Store;
@@ -113,7 +122,7 @@ public class LabelCaseQueueTests
         ILabelModerationStore restarted = (ILabelModerationStore)fixture.NewStore();
         LabelCasePage rest = Success(await restarted.GetCaseQueueAsync(
             caller: caller, query: query, cursor: first.Cursor, limit: 100, cancellationToken: token));
-        Assert.Equal(new long[] { 2, 3 }, rest.Cases.Select(item => item.Id));
+        Assert.Equal<long>([2, 3], rest.Cases.Select(item => item.Id));
         Assert.Null(rest.Cursor);
         LabelCaseQuery[] changes =
         [

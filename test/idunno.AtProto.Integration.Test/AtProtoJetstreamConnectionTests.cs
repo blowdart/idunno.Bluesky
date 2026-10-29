@@ -407,7 +407,7 @@ public class AtProtoJetstreamConnectionTests
 
         using var provider = new RecordingLoggerProvider();
 
-        using var loggerFactory = LoggerFactory.Create(builder =>
+        using ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
         {
             builder.AddProvider(provider);
             builder.SetMinimumLevel(LogLevel.Trace);
@@ -848,7 +848,7 @@ public class AtProtoJetstreamConnectionTests
             return Task.CompletedTask;
         });
         using var provider = new FakeLoggerProvider();
-        using var loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(provider).SetMinimumLevel(LogLevel.Trace));
+        using ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(provider).SetMinimumLevel(LogLevel.Trace));
         using var jetstream = new AtProtoJetstream(uri: server.Uri, options: new JetstreamOptions
         {
             ProtocolVersion = JetstreamProtocolVersion.V1,

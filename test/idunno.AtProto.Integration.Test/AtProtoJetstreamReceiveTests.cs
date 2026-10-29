@@ -104,9 +104,9 @@ public class AtProtoJetstreamReceiveTests
 
         // Records are parsed on the task factory, so which one is parsed first is a race. What is not a race is
         // whether the over-large message was decompressed at all, which is what MessageReceived reports.
-        Assert.Single(messages);
+        string item = Assert.Single(messages);
         Assert.True(
-            messages.Single().Length <= maximumMessageSize,
+            item.Length <= maximumMessageSize,
             $"A message of {messages.Single().Length} bytes was decompressed, over the {maximumMessageSize} byte limit.");
     }
 

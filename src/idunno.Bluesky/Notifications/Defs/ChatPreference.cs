@@ -4,7 +4,9 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
+#pragma warning disable IDE0130 // Preserve the established namespace independently of folder layout.
 namespace idunno.Bluesky.Notifications.PreferenceTypes;
+#pragma warning restore IDE0130
 
 /// <summary>
 /// Encapsulates notification preferences for chats

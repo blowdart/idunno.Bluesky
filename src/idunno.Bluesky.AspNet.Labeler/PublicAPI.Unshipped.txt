@@ -6,10 +6,28 @@ idunno.Bluesky.AspNet.Labeler.LabelerModerationOptions.MaximumConcurrentReports.
 idunno.Bluesky.AspNet.Labeler.LabelerModerationOptions.MaximumConcurrentReports.init -> void
 idunno.Bluesky.AspNet.Labeler.LabelerModerationOptions.ReportsPerMinute.get -> int
 idunno.Bluesky.AspNet.Labeler.LabelerModerationOptions.ReportsPerMinute.init -> void
+idunno.Bluesky.AspNet.Labeler.LabelerModerationOptions.MaximumPendingReports.get -> int
+idunno.Bluesky.AspNet.Labeler.LabelerModerationOptions.MaximumPendingReports.init -> void
 idunno.Bluesky.AspNet.Labeler.LabelerModerationOptions.VerificationFreshness.get -> System.TimeSpan
 idunno.Bluesky.AspNet.Labeler.LabelerModerationOptions.VerificationFreshness.init -> void
 idunno.Bluesky.AspNet.Labeler.LabelerModerationOptions.MaximumServiceTokenLifetime.get -> System.TimeSpan
 idunno.Bluesky.AspNet.Labeler.LabelerModerationOptions.MaximumServiceTokenLifetime.init -> void
+idunno.Bluesky.AspNet.Labeler.LabelerModerationOptions.PolicyEmail.get -> idunno.Bluesky.AspNet.Labeler.LabelerPolicyEmailOptions!
+idunno.Bluesky.AspNet.Labeler.LabelerModerationOptions.PolicyEmail.init -> void
+idunno.Bluesky.AspNet.Labeler.LabelerPolicyEmailOptions
+idunno.Bluesky.AspNet.Labeler.LabelerPolicyEmailOptions.Enabled.get -> bool
+idunno.Bluesky.AspNet.Labeler.LabelerPolicyEmailOptions.Enabled.init -> void
+idunno.Bluesky.AspNet.Labeler.LabelerPolicyEmailOptions.FromAddress.get -> string?
+idunno.Bluesky.AspNet.Labeler.LabelerPolicyEmailOptions.FromAddress.init -> void
+idunno.Bluesky.AspNet.Labeler.LabelerPolicyEmailOptions.LabelerPolicyEmailOptions() -> void
+idunno.Bluesky.AspNet.Labeler.LabelerPolicyEmailOptions.Password.get -> string?
+idunno.Bluesky.AspNet.Labeler.LabelerPolicyEmailOptions.Password.init -> void
+idunno.Bluesky.AspNet.Labeler.LabelerPolicyEmailOptions.Port.get -> int
+idunno.Bluesky.AspNet.Labeler.LabelerPolicyEmailOptions.Port.init -> void
+idunno.Bluesky.AspNet.Labeler.LabelerPolicyEmailOptions.Server.get -> string?
+idunno.Bluesky.AspNet.Labeler.LabelerPolicyEmailOptions.Server.init -> void
+idunno.Bluesky.AspNet.Labeler.LabelerPolicyEmailOptions.UserName.get -> string?
+idunno.Bluesky.AspNet.Labeler.LabelerPolicyEmailOptions.UserName.init -> void
 static idunno.Bluesky.AspNet.Labeler.LabelerModerationExtensions.AddLabelerModeration(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, idunno.AtProto.Did! issuer, System.Net.Http.HttpClient! httpClient, idunno.Bluesky.AspNet.Labeler.LabelerModerationOptions? options = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static idunno.Bluesky.AspNet.Labeler.LabelerModerationExtensions.MapLabelerModeration(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints) -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
 OpenTelemetry.Metrics.LabelerMetricsExtensions

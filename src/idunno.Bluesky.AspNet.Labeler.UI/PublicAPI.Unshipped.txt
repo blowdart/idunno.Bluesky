@@ -1,0 +1,92 @@
+#nullable enable
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.ClientMetadataModel
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.ClientMetadataModel.ClientMetadataModel() -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.ClientMetadataModel.OnGet() -> Microsoft.AspNetCore.Mvc.IActionResult!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.PublishCallbackModel
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.PublishCallbackModel.PublishCallbackModel() -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.PublishCallbackModel.OnGetAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.IndexModel.OnPostSignInAndPublishAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Audit.IndexModel.OnPostDownloadAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Team.IndexModel.OnPostNotificationEmailAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.MediaModel
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.MediaModel.MediaModel() -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.MediaModel.OnGetAsync(string? token) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.SearchModel
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.SearchModel.SearchModel() -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.SearchModel.OnGetAsync() -> System.Threading.Tasks.Task!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.SearchModel.Q.get -> string?
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.SearchModel.Q.set -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.SearchModel.PageNumber.get -> long
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.SearchModel.PageNumber.set -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Cases.DetailModel.HistoryPage.get -> long
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Cases.DetailModel.HistoryPage.set -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Reports.DetailModel.HistoryPage.get -> long
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Reports.DetailModel.HistoryPage.set -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Cases.DetailModel.ReportId.get -> long?
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Cases.DetailModel.ReportId.set -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Appeals.IndexModel
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Appeals.IndexModel.AfterId.get -> long
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Appeals.IndexModel.AfterId.set -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Appeals.IndexModel.IndexModel() -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Appeals.IndexModel.OnGetAsync() -> System.Threading.Tasks.Task!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Appeals.IndexModel.Status.get -> idunno.Bluesky.Labeler.Moderation.LabelAppealStatus?
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Appeals.IndexModel.Status.set -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Audit.IndexModel
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Audit.IndexModel.AfterSequence.get -> long
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Audit.IndexModel.AfterSequence.set -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Audit.IndexModel.IndexModel() -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Audit.IndexModel.OnGetAsync() -> System.Threading.Tasks.Task!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Cases.DetailModel
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Cases.DetailModel.AppealId.get -> long?
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Cases.DetailModel.AppealId.set -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Cases.DetailModel.DetailModel() -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Cases.DetailModel.Id.get -> long
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Cases.DetailModel.Id.set -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Cases.DetailModel.OnGetAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Cases.DetailModel.OnPostAssignAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Cases.DetailModel.OnPostDecideAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Cases.IndexModel
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Cases.IndexModel.Cursor.get -> string?
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Cases.IndexModel.Cursor.set -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Cases.IndexModel.IndexModel() -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Cases.IndexModel.OnGetAsync() -> System.Threading.Tasks.Task!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Cases.IndexModel.Queue.get -> idunno.Bluesky.Labeler.Moderation.LabelCaseWorkflow
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Cases.IndexModel.Queue.set -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.IndexModel
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.IndexModel.IndexModel() -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Labels.IndexModel
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Labels.IndexModel.IndexModel() -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Labels.IndexModel.OnGetAsync() -> System.Threading.Tasks.Task!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Labels.IndexModel.OnPostLookupAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Labels.IndexModel.OnPostAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Lifecycle.IndexModel
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Lifecycle.IndexModel.IndexModel() -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Lifecycle.IndexModel.OnGetAsync() -> System.Threading.Tasks.Task!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Lifecycle.IndexModel.OnPostAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.IndexModel
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.IndexModel.IndexModel() -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.IndexModel.OnGetAsync() -> System.Threading.Tasks.Task!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.IndexModel.OnPostDeleteRequestAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.IndexModel.OnPostDeleteAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.IndexModel.OnPostPublishAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.IndexModel.OnPostSaveAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.IndexModel.OnPostVerifyAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Reports.IndexModel
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Reports.DetailModel
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Reports.DetailModel.DetailModel() -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Reports.DetailModel.Id.get -> long
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Reports.DetailModel.Id.set -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Reports.DetailModel.OnGetAsync() -> System.Threading.Tasks.Task!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Reports.IndexModel.AfterId.get -> long
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Reports.IndexModel.AfterId.set -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Reports.IndexModel.IndexModel() -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Reports.IndexModel.OnGetAsync() -> System.Threading.Tasks.Task!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Reports.IndexModel.Status.get -> string?
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Reports.IndexModel.Status.set -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Team.IndexModel
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Team.IndexModel.IndexModel() -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Team.IndexModel.OnGetAsync() -> System.Threading.Tasks.Task!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Team.IndexModel.OnPostChangeAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Team.IndexModel.OnPostEnrollAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
+Microsoft.Extensions.DependencyInjection.LabelerUIExtensions
+static Microsoft.Extensions.DependencyInjection.LabelerUIExtensions.AddLabelerUI(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

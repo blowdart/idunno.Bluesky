@@ -33,7 +33,11 @@ internal sealed class FakePds : IAsyncDisposable
     private readonly IHost _host;
     private readonly List<string> _requests = [];
     private readonly List<string> _revokedTokenTypeHints = [];
+#if NET9_0_OR_GREATER
+    private readonly Lock _lock = new();
+#else
     private readonly object _lock = new();
+#endif
 
     private FakePds(IHost host) => _host = host;
 

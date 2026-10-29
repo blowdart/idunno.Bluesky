@@ -70,7 +70,7 @@ public class ChatRequestTests
         using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
         {
             Assert.Equal("/xrpc/chat.bsky.convo.listConvos", context.Request.Path);
-            foreach (string name in new[] { "cursor", "readState", "status", "kind", "lockStatus" })
+            foreach (string name in s_queryParameterNames)
             {
                 Assert.True(context.Request.Query.ContainsKey(name));
                 Assert.Equal(value, context.Request.Query[name]);
@@ -102,6 +102,7 @@ public class ChatRequestTests
     }
 
     private static readonly Did s_did = "did:plc:test";
+    private static readonly string[] s_queryParameterNames = ["cursor", "readState", "status", "kind", "lockStatus"];
 
     private static AccessCredentials CreateCredentials()
     {

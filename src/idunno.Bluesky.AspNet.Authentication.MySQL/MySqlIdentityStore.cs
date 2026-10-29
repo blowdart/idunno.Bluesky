@@ -330,14 +330,8 @@ public class MySqlIdentityStore : IIdentityStore
         string paramName,
         CancellationToken cancellationToken)
     {
-        string? didAsString = claimsIdentity.Claims.FirstOrDefault(
-            claim => claim.Type.Equals(AtProtoClaims.Did, StringComparison.Ordinal))?.Value;
-
-        if (didAsString is null)
-        {
-            throw new ArgumentException("No DID claim found.", paramName);
-        }
-
+        string? didAsString = (claimsIdentity.Claims.FirstOrDefault(
+            claim => claim.Type.Equals(AtProtoClaims.Did, StringComparison.Ordinal))?.Value) ?? throw new ArgumentException("No DID claim found.", paramName);
         if (!Did.TryParse(didAsString, out Did? did))
         {
             throw new ArgumentException("DID claim was not a valid DID.", paramName);

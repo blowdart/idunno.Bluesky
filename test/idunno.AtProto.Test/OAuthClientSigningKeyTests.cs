@@ -142,8 +142,8 @@ public class OAuthClientSigningKeyTests
         using ECDsa p384 = ECDsa.Create(ECCurve.NamedCurves.nistP384);
         using RSA rsa = RSA.Create(2048);
 
-        return new TheoryData<string>
-        {
+        return
+        [
             p256.ExportSubjectPublicKeyInfoPem(),
             p384.ExportPkcs8PrivateKeyPem(),
             rsa.ExportPkcs8PrivateKeyPem(),
@@ -152,7 +152,7 @@ public class OAuthClientSigningKeyTests
                 new PbeParameters(PbeEncryptionAlgorithm.Aes256Cbc, HashAlgorithmName.SHA256, 1000)),
             "not a pem",
             " "
-        };
+        ];
     }
 
     [Theory]

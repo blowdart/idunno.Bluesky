@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 using Npgsql;
+
 using NpgsqlTypes;
 
 namespace idunno.Bluesky.AspNet.Authentication.PostgreSQL;
@@ -212,9 +213,8 @@ public class PostgreSqlIdentityStore : IIdentityStore
         command.Parameters.Add("@refreshLockMicroseconds", NpgsqlDbType.Bigint).Value = refreshLockMicroseconds;
 
         object? result = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
-        string? acquiredToken = result as string;
 
-        if (acquiredToken is null)
+        if (result is not string)
         {
             _logger.StartRefreshDenied(did);
             return null;
@@ -316,14 +316,8 @@ public class PostgreSqlIdentityStore : IIdentityStore
         string paramName,
         CancellationToken cancellationToken)
     {
-        string? didAsString = claimsIdentity.Claims.FirstOrDefault(
-            claim => claim.Type.Equals(AtProtoClaims.Did, StringComparison.Ordinal))?.Value;
-
-        if (didAsString is null)
-        {
-            throw new ArgumentException("No DID claim found.", paramName);
-        }
-
+        string? didAsString = (claimsIdentity.Claims.FirstOrDefault(
+            claim => claim.Type.Equals(AtProtoClaims.Did, StringComparison.Ordinal))?.Value) ?? throw new ArgumentException("No DID claim found.", paramName);
         if (!Did.TryParse(didAsString, out Did? did))
         {
             throw new ArgumentException("DID claim was not a valid DID.", paramName);

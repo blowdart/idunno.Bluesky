@@ -20,7 +20,7 @@ public class LabelIssuanceTimeTests
         second: 0,
         offset: TimeSpan.Zero);
     private static readonly LabelTarget s_target = LabelTarget.Account(TargetResolutionHandler.SubjectDid);
-    private static readonly LabelOperationContext s_context = new(StoreFixture.Issuer, "Clock boundary");
+    private static readonly LabelOperationContext s_context = new(StoreFixture.s_issuer, "Clock boundary");
 
     [Theory]
     [InlineData("sqlite")]
@@ -160,7 +160,7 @@ public class LabelIssuanceTimeTests
         HttpClient client,
         FakeTimeProvider clock) =>
         new(
-            issuer: StoreFixture.Issuer,
+            issuer: StoreFixture.s_issuer,
             signingKey: key,
             store: fixture.NewStore(),
             authorizer: new TestLabelIssuanceAuthorizer(),

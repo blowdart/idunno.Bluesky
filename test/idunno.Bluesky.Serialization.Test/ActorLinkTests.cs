@@ -173,9 +173,9 @@ public class ActorLinkTests
     [InlineData(11)]
     public void ProfileLinksEnforceMaximumAndRetainOrder(int count)
     {
-        StrongReference[] links = Enumerable.Range(0, count).Select(index => new StrongReference(
+        StrongReference[] links = [.. Enumerable.Range(0, count).Select(index => new StrongReference(
             new AtUri($"at://did:plc:ewvi7nxzyoun6zhxrhs64oiz/app.bsky.actor.link/{index}"),
-            new Cid("bafyreihszwqbe7nxh2mv4o2wk365yanh3p3zimbunfrjdtq7gcmmzohx6i"))).ToArray();
+            new Cid("bafyreihszwqbe7nxh2mv4o2wk365yanh3p3zimbunfrjdtq7gcmmzohx6i")))];
         Profile profile = new();
         if (count > 10)
         {
@@ -200,7 +200,8 @@ public class ActorLinkTests
     public void ProfileLinksRejectNullEntries()
     {
         Profile profile = new();
-        Assert.Throws<ArgumentNullException>(() => profile.Links = new StrongReference[] { null! });
+        StrongReference[] invalidLinks = [null!];
+        Assert.Throws<ArgumentNullException>(() => profile.Links = invalidLinks);
     }
 
     [Theory]

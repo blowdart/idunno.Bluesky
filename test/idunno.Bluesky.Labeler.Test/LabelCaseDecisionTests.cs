@@ -19,6 +19,144 @@ public class LabelCaseDecisionTests
     private static readonly LabelReportSubject s_subject = LabelReportSubject.Account(new(TargetResolutionHandler.SubjectDid));
 
     [Theory]
+    [InlineData("sqlite", false)]
+    [InlineData("sqlite", true)]
+    [InlineData("postgresql", false)]
+    [InlineData("postgresql", true)]
+    [InlineData("mysql", false)]
+    [InlineData("mysql", true)]
+    public async Task DecisionsHandleTheSelectedReportOrAllExactVersionReportsAndRecoverAfterRestart(string engine, bool handleOthers)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient http = new(new TargetResolutionHandler());
+        LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
+        LabelPolicyState active = await LabelPolicyStoreTests.ActivateAsync((ILabelPolicyStore)fixture.Store, caller, token);
+        LabelIssuanceService service = Service(fixture, caller, active, key, http);
+        ILabelReportStore reports = (ILabelReportStore)fixture.Store;
+        ILabelModerationStore cases = (ILabelModerationStore)fixture.Store;
+        AtUri uri = new($"at://{s_subject.Repository}/app.bsky.feed.post/example");
+        LabelReportSubject target = LabelReportSubject.Record(uri, new(TargetResolutionHandler.RecordCid));
+        LabelReportSubject otherVersion = LabelReportSubject.Record(uri, new("bafyreif2pall7yry6b3sh5rttgeczzmhnnemy6rtbwwsvxeceebzxtpfwu"));
+        List<LabelModerationReport> accepted = [];
+        for (int index = 0; index < 130; index++)
+        {
+            accepted.Add(await SubmitAsync(target, "matching-" + index));
+        }
+
+        LabelModerationReport differentCid = await SubmitAsync(otherVersion, "other-cid");
+        LabelModerationReport account = await SubmitAsync(s_subject, "account");
+        LabelModerationCase current = Success(await cases.GetCaseAsync(caller, accepted[0].CaseId, token));
+        LabelCaseDecision decision = new(
+            operationId: "handle-reports",
+            caseId: current.Id,
+            expectedRevision: current.Revision,
+            policyVersion: "v1",
+            reason: "Review a selected submission rather than the oldest report.",
+            actions: [],
+            reportId: accepted[1].Id,
+            handleOtherReports: handleOthers);
+        LabelCaseDecisionReceipt receipt = Success(await service.ExecuteCaseDecisionAsync(caller, decision, token));
+        Assert.Equal(handleOthers ? LabelCaseStatus.Resolved : LabelCaseStatus.InReview, receipt.CaseEvent.Case.Status);
+        ILabelReportStore restarted = (ILabelReportStore)fixture.NewStore();
+        foreach (LabelModerationReport original in accepted)
+        {
+            LabelModerationReport reread = Success(await restarted.GetReportAsync(caller, original.Id, token));
+            bool handled = handleOthers || original.Id == accepted[1].Id;
+            Assert.Equal(handled ? decision.OperationId : null, reread.DecisionOperationId);
+            Assert.Equal(handled ? receipt.CaseEvent.CreatedAt : (DateTimeOffset?)null, reread.HandledAt);
+            Assert.Equal(original.CreatedAt, reread.CreatedAt);
+            Assert.Equal(original.ReportedBy, reread.ReportedBy);
+            Assert.Equal(original.Submission.Reason, reread.Submission.Reason);
+        }
+
+        foreach (long id in new[] { differentCid.Id, account.Id })
+        {
+            Assert.Null(Success(await restarted.GetReportAsync(caller, id, token)).DecisionOperationId);
+        }
+
+        ILabelTableStore tables = (ILabelTableStore)fixture.NewStore();
+        LabelNavigationCounts counts = Success(await tables.ReadNavigationCountsAsync(caller, token));
+        Assert.Equal(handleOthers ? 2 : 131, counts.Reports);
+        Assert.Equal(handleOthers ? 2 : 3, counts.Cases);
+        LabelTablePage sorted = Success(await tables.ReadTableAsync(
+            caller, new(Kind: LabelTableKind.Reports, Sort: LabelTableSort.Status, Ascending: true), token));
+        Assert.All(sorted.Reports!.Take(handleOthers ? 2 : 16), report => Assert.Null(report.DecisionOperationId));
+        Assert.All(sorted.Reports!.Skip(handleOthers ? 2 : 16), report => Assert.Equal(decision.OperationId, report.DecisionOperationId));
+        LabelCaseDecisionReceipt recovered = Success(await service.ExecuteCaseDecisionAsync(caller, decision, token));
+        Assert.Equal(receipt.CaseEvent.Sequence, recovered.CaseEvent.Sequence);
+        Assert.Equal(counts, Success(await tables.ReadNavigationCountsAsync(caller, token)));
+        LabelModerationReport later = await SubmitAsync(target, "arrived-after-decision");
+        Success(await service.ExecuteCaseDecisionAsync(caller, decision, token));
+        Assert.Null(Success(await reports.GetReportAsync(caller, later.Id, token)).DecisionOperationId);
+        Assert.Equal(LabelServiceErrorCode.IdempotencyConflict, (await service.ExecuteCaseDecisionAsync(
+            caller,
+            new(
+                operationId: decision.OperationId,
+                caseId: current.Id,
+                expectedRevision: current.Revision,
+                policyVersion: "v1",
+                reason: decision.Reason,
+                actions: [],
+                reportId: accepted[1].Id,
+                handleOtherReports: !handleOthers),
+            token)).Error!.Code);
+
+        async Task<LabelModerationReport> SubmitAsync(LabelReportSubject subject, string identity)
+        {
+            ModerationReportAuthenticationResult authentication = await ReportTestAuthentication.CreateAsync(
+                new("did:plc:reporter"), active.DatabaseTime, identity);
+            return Success(await reports.SubmitReportAsync(
+                authentication,
+                new(subject, "tools.ozone.report.defs#reasonMisleadingSpam", identity),
+                active.Revision,
+                token));
+        }
+    }
+
+    [Theory]
+    [InlineData("sqlite", false)]
+    [InlineData("sqlite", true)]
+    [InlineData("postgresql", false)]
+    [InlineData("postgresql", true)]
+    [InlineData("mysql", false)]
+    [InlineData("mysql", true)]
+    public async Task ZeroSequenceRequiresAbsentLabelHistoryRatherThanOverwritingAManualDecision(string engine, bool manualFirst)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient http = new(new TargetResolutionHandler());
+        LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
+        LabelPolicyState active = await LabelPolicyStoreTests.ActivateAsync((ILabelPolicyStore)fixture.Store, caller, token);
+        LabelIssuanceService service = Service(fixture, caller, active, key, http);
+        LabelModerationCase current = await OpenAsync(fixture.Store, caller);
+        if (manualFirst)
+        {
+            Success(await service.ExecuteAsync(LabelOperationRequest.Issue(
+                operationId: "concurrent-manual",
+                target: LabelTarget.Account(s_subject.Repository),
+                value: "spam",
+                context: new(caller.Actor, "Concurrent account label.")), token));
+        }
+
+        LabelServiceResult<LabelCaseDecisionReceipt> result = await service.ExecuteCaseDecisionAsync(
+            caller, Decision(current, [new(LabelOperationKind.Issue, "spam", expectedLabelSequence: 0)]), token);
+        if (manualFirst)
+        {
+            Assert.Equal(LabelServiceErrorCode.StaleDecision, result.Error!.Code);
+            Assert.Equal(current.Revision, Success(await ((ILabelModerationStore)fixture.Store).GetCaseAsync(caller, current.Id, token)).Revision);
+        }
+        else
+        {
+            Assert.Single(Success(result).Labels);
+        }
+
+        Assert.Single(Success(await ((ILabelTableStore)fixture.Store).ReadSubjectLabelsAsync(caller, s_subject, token)));
+    }
+
+    [Theory]
     [InlineData("sqlite", 0)]
     [InlineData("sqlite", 2)]
     [InlineData("postgresql", 0)]
@@ -257,7 +395,7 @@ public class LabelCaseDecisionTests
             actions: [new(LabelOperationKind.Issue, "spam"), new(LabelOperationKind.Negate, "spam")]));
         Assert.Throws<ArgumentOutOfRangeException>(() => new LabelCaseDecision(
             operationId: "decision", caseId: 1, expectedRevision: 1, policyVersion: "v1", reason: "Review.",
-            actions: Enumerable.Range(0, 17).Select(index => new LabelCaseLabelAction(LabelOperationKind.Issue, "value-" + index)).ToArray()));
+            actions: [.. Enumerable.Range(0, 17).Select(index => new LabelCaseLabelAction(LabelOperationKind.Issue, "value-" + index))]));
     }
 
     [Fact]
@@ -272,7 +410,25 @@ public class LabelCaseDecisionTests
         Assert.Throws<ArgumentOutOfRangeException>(() => new LabelCaseDecision(
             operationId: "review", caseId: 1, expectedRevision: 1, policyVersion: "v1",
             reason: "Explicit review.", actions: [],
-            appealIds: Enumerable.Range(1, 17).Select(id => (long)id).ToArray(), appealOutcome: LabelAppealStatus.Upheld));
+            appealIds: [.. Enumerable.Range(1, 17).Select(id => (long)id)], appealOutcome: LabelAppealStatus.Upheld));
+    }
+
+    [Theory]
+    [InlineData(LabelOperationKind.Negate)]
+    [InlineData(LabelOperationKind.Issue)]
+    public void ReplacementAppealsAcceptPartialRemovalOrAddition(LabelOperationKind kind)
+    {
+        LabelCaseDecision decision = new(
+            operationId: "replace-selection",
+            caseId: 1,
+            expectedRevision: 1,
+            policyVersion: "v1",
+            reason: "Change the current label selection.",
+            actions: [new(kind, "spam")],
+            appealIds: [1],
+            appealOutcome: LabelAppealStatus.Replaced);
+        Assert.Equal(kind, Assert.Single(decision.Actions).Kind);
+        Assert.Equal(LabelAppealStatus.Replaced, decision.AppealOutcome);
     }
 
     [Theory]
@@ -300,7 +456,7 @@ public class LabelCaseDecisionTests
         LabelSigningKey key,
         HttpClient http,
         TestLabelIssuancePolicyProvider? policy = null) => new(
-            issuer: StoreFixture.Issuer,
+            issuer: StoreFixture.s_issuer,
             signingKey: key,
             store: fixture.Store,
             authorizer: new LabelTeamAuthorizer((ILabelAdministrationStore)fixture.Store, caller),

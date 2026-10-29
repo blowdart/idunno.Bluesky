@@ -47,8 +47,8 @@ public sealed record PostInteractionSettingsPreferences : Preference
     [JsonPropertyName("threadgateAllowRules")]
     public ICollection<ThreadGateRule>? ThreadGateAllowRules
     {
-        get => _threadGateAllowRules;
-        init => _threadGateAllowRules = value is null ? null : new List<ThreadGateRule>(value).AsReadOnly();
+        get;
+        init => field = value is null ? null : new List<ThreadGateRule>(value).AsReadOnly();
     }
 
     /// <summary>
@@ -58,11 +58,7 @@ public sealed record PostInteractionSettingsPreferences : Preference
     [JsonPropertyName("postgateEmbeddingRules")]
     public ICollection<PostGateRule>? PostGateEmbeddingRules
     {
-        get => _postGateEmbeddingRules;
-        init => _postGateEmbeddingRules = value is null ? null : new List<PostGateRule>(value).AsReadOnly();
+        get;
+        init => field = value is null ? null : new List<PostGateRule>(value).AsReadOnly();
     }
-
-    private readonly ICollection<ThreadGateRule>? _threadGateAllowRules;
-
-    private readonly ICollection<PostGateRule>? _postGateEmbeddingRules;
 }

@@ -12,7 +12,7 @@ internal sealed class OAuthCallbackRouter(TimeProvider? timeProvider = null)
     internal const string ClientId = "https://bluesky.idunno.dev/windows-oauth-client.json";
     internal const string RedirectUri = "dev.idunno.bluesky:/callback";
     internal const string ProfileScope = "rpc:app.bsky.actor.getProfile?aud=did:web:api.bsky.app%23bsky_appview";
-    internal static readonly TimeSpan LoginLifetime = TimeSpan.FromMinutes(5);
+    internal static readonly TimeSpan s_loginLifetime = TimeSpan.FromMinutes(5);
 
     private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
     private OAuthLoginState? _pending;
@@ -32,7 +32,7 @@ internal sealed class OAuthCallbackRouter(TimeProvider? timeProvider = null)
         }
 
         _pending = state;
-        _expires = _timeProvider.GetUtcNow() + LoginLifetime;
+        _expires = _timeProvider.GetUtcNow() + s_loginLifetime;
     }
 
     internal void Clear()

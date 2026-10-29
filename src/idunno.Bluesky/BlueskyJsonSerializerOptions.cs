@@ -25,7 +25,6 @@ namespace idunno.Bluesky;
 [UnconditionalSuppressMessage("AOT", "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.", Justification = "All the AtProto Types are captured in source gen")]
 public static class BlueskyJsonSerializerOptions
 {
-    private static readonly JsonSerializerOptions s_default = AtProto.Json.TolerantPolymorphicConverter.FinalizeOptions(CreateMutableOptions());
 
     /// <summary>
     /// Creates read-only JSON options for Bluesky types after applying caller configuration.
@@ -117,12 +116,12 @@ public static class BlueskyJsonSerializerOptions
     /// <para>The instance caches the type metadata it resolves, so it is cheaper than <see cref="Options"/> when serializing
     /// or deserializing repeatedly. It cannot be changed; use <see cref="Options"/> to get a copy which can.</para>
     /// </remarks>
-    public static JsonSerializerOptions Default => s_default;
+    public static JsonSerializerOptions Default { get; } = AtProto.Json.TolerantPolymorphicConverter.FinalizeOptions(CreateMutableOptions());
 
     /// <summary>
     /// Gets the default <see cref="IJsonTypeInfoResolver"/> for Bluesky types.
     /// </summary>
-    public static IJsonTypeInfoResolver TypeInfoResolver => s_default.TypeInfoResolver!;
+    public static IJsonTypeInfoResolver TypeInfoResolver => Default.TypeInfoResolver!;
 
     private static JsonSerializerOptions CreateMutableOptions()
     {

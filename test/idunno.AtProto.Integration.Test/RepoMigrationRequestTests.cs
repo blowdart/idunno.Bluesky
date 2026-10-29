@@ -32,7 +32,7 @@ public class RepoMigrationRequestTests
     public void RepositoryEndpointSerializerPreservesEveryReachableType()
     {
         JsonSerializerOptions options = AtProtoServer.AtProtoJsonSerializerOptions;
-        Assert.IsAssignableFrom<JsonSerializerContext>(TypeResolver.JsonTypeInfoResolver);
+        Assert.IsType<JsonSerializerContext>(TypeResolver.JsonTypeInfoResolver, exactMatch: false);
         JsonSerializerOptions contracts = new(options) { TypeInfoResolver = TypeResolver.JsonTypeInfoResolver };
         contracts.Converters.Clear();
         HashSet<Type> visited = [];

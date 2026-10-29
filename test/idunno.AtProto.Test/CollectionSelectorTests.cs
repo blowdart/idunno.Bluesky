@@ -102,10 +102,13 @@ public class CollectionSelectorTests
     public void ASelectorIsNotEqualToNull()
     {
         CollectionSelector selector = new("app.bsky.feed.post");
+        CollectionSelector? nullSelector = null;
 
         Assert.False(selector.Equals(null));
-        Assert.False(selector == null);
-        Assert.True(selector != null);
+        Assert.False(selector == nullSelector);
+        Assert.True(selector != nullSelector);
+        Assert.False(nullSelector == selector);
+        Assert.True(nullSelector != selector);
         Assert.False(selector.Equals((object)42));
     }
 

@@ -10,7 +10,11 @@ namespace idunno.Bluesky.BotSdk;
 /// <param name="inner">The underlying provider responsible for real timestamps and timer execution.</param>
 internal sealed class ReplayClock(TimeProvider inner) : TimeProvider
 {
+#if NET9_0_OR_GREATER
+    private readonly Lock _gate = new();
+#else
     private readonly object _gate = new();
+#endif
     private readonly Dictionary<long, DateTimeOffset> _waits = [];
     private DateTimeOffset _resumeDeadline;
     private long _nextId;

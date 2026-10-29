@@ -26,7 +26,7 @@ public class SessionIdentityStoreTests
         const string accessToken = "eyJhbGciOiJub25lIn0.eyJzdWIiOiJkaWQ6cGxjOmV3dmk3bnh6eW91bjZ6aHhyaHM2NG9peiIsImV4cCI6NDEwMjQ0NDgwMH0.";
         var credentials = new DPoPAccessCredentials(new Uri("https://pds.example"), accessToken,
             "refresh", JsonWebKeys.CreateRsaJson(), "nonce");
-        var original = IIdentityStore.BuildClaimsIdentity(credentials);
+        ClaimsIdentity original = IIdentityStore.BuildClaimsIdentity(credentials);
         var newer = new ClaimsIdentity(original);
         newer.RemoveClaim(newer.FindFirst(AtProtoClaims.DPoPProof)!);
         newer.AddClaim(new(AtProtoClaims.DPoPProof, JsonWebKeys.CreateRsaJson()));
@@ -55,7 +55,7 @@ public class SessionIdentityStoreTests
             await mutation;
         }
 
-        var current = await store.GetIdentity(new Did(did), TestContext.Current.CancellationToken);
+        ClaimsIdentity? current = await store.GetIdentity(new Did(did), TestContext.Current.CancellationToken);
         Assert.Equal(replacement ? newer.FindFirst(AtProtoClaims.DPoPProof)!.Value : null,
             current?.FindFirst(AtProtoClaims.DPoPProof)?.Value);
     }

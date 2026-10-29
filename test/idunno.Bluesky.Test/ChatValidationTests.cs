@@ -15,7 +15,7 @@ public class ChatValidationTests
     public void MessageInputRejectsNullFacetsDuringConstructionAndInitialization()
     {
         Assert.Throws<ArgumentException>(() => new MessageInput("", [null!]));
-        Assert.Throws<ArgumentException>(() => new MessageInput("") { Facets = new List<Facet> { null! } });
+        Assert.Throws<ArgumentException>(() => new MessageInput("") { Facets = [null!] });
     }
 
     private static readonly Uri s_service = new("https://test.internal");
@@ -34,7 +34,7 @@ public class ChatValidationTests
     [InlineData(true)]
     public async Task GetJoinGroupLinkPreviewsRejectsInvalidCountsInAgentAndServer(bool aboveMaximum)
     {
-        string[] codes = Enumerable.Repeat(string.Empty, aboveMaximum ? Maximum.JoinLinkPreviewCodes + 1 : 0).ToArray();
+        string[] codes = [.. Enumerable.Repeat(string.Empty, aboveMaximum ? Maximum.JoinLinkPreviewCodes + 1 : 0)];
         using BlueskyAgent agent = new();
         using HttpClient httpClient = new();
 
@@ -126,7 +126,8 @@ public class ChatValidationTests
             embed: null,
             reactions: null,
             sender: new MessageViewSender(new Did("did:plc:sender")),
-            sentAt: DateTimeOffset.UtcNow) { Facets = facets, Reactions = reactions };
+            sentAt: DateTimeOffset.UtcNow)
+        { Facets = facets, Reactions = reactions };
 
         facets.Add(new Facet(new ByteSlice(6, 11), [new TagFacetFeature("other")]));
         reactions.Add(new ReactionView("\U0001F44E", new ReactionViewSender(new Did("did:plc:sender")), DateTimeOffset.UtcNow));
@@ -169,7 +170,8 @@ public class ChatValidationTests
             muted: false,
             unreadCount: 0,
             status: null,
-            kind: null) { Members = members };
+            kind: null)
+        { Members = members };
 
         members.Add(new Chat.Actor.ProfileViewBasic(new Did("did:plc:other"), new Handle("other.test"), null, null, null, null, null, null, null, null));
 
@@ -399,9 +401,15 @@ public class ChatValidationTests
         Assert.IsNotType<ArgumentOutOfRangeException>(exception);
     }
 
-    public static TheoryData<string, Func<Uri, AccessCredentials, HttpClient, CancellationToken, Task>> GroupServerCalls()
+    public static IEnumerable<TheoryDataRow<string>> GroupServerMethods() =>
+        GroupServerCalls().Keys.Select(name => new TheoryDataRow<string>(name));
+
+    /// <summary>
+    /// Builds the group endpoint calls selected by the serializable theory method names.
+    /// </summary>
+    private static Dictionary<string, Func<Uri, AccessCredentials, HttpClient, CancellationToken, Task>> GroupServerCalls()
     {
-        return new TheoryData<string, Func<Uri, AccessCredentials, HttpClient, CancellationToken, Task>>
+        return new Dictionary<string, Func<Uri, AccessCredentials, HttpClient, CancellationToken, Task>>
         {
             {
                 nameof(BlueskyServer.AddMembersToGroup),
@@ -482,37 +490,37 @@ public class ChatValidationTests
     }
 
     [Theory]
-    [MemberData(nameof(GroupServerCalls))]
-    public async Task GroupServerMethodsThrowWhenTheServiceIsNull(string name, Func<Uri, AccessCredentials, HttpClient, CancellationToken, Task> call)
+    [MemberData(nameof(GroupServerMethods))]
+    public async Task GroupServerMethodsThrowWhenTheServiceIsNull(string name)
     {
         using HttpClient httpClient = new();
 
         ArgumentNullException exception = await Assert.ThrowsAsync<ArgumentNullException>(
-            () => call(null!, CreateCredentials(), httpClient, TestContext.Current.CancellationToken));
+            () => GroupServerCalls()[name](null!, CreateCredentials(), httpClient, TestContext.Current.CancellationToken));
 
         Assert.Equal("service", exception.ParamName);
         Assert.NotEmpty(name);
     }
 
     [Theory]
-    [MemberData(nameof(GroupServerCalls))]
-    public async Task GroupServerMethodsThrowWhenTheCredentialsAreNull(string name, Func<Uri, AccessCredentials, HttpClient, CancellationToken, Task> call)
+    [MemberData(nameof(GroupServerMethods))]
+    public async Task GroupServerMethodsThrowWhenTheCredentialsAreNull(string name)
     {
         using HttpClient httpClient = new();
 
         ArgumentNullException exception = await Assert.ThrowsAsync<ArgumentNullException>(
-            () => call(s_service, null!, httpClient, TestContext.Current.CancellationToken));
+            () => GroupServerCalls()[name](s_service, null!, httpClient, TestContext.Current.CancellationToken));
 
         Assert.Equal("accessCredentials", exception.ParamName);
         Assert.NotEmpty(name);
     }
 
     [Theory]
-    [MemberData(nameof(GroupServerCalls))]
-    public async Task GroupServerMethodsThrowWhenTheHttpClientIsNull(string name, Func<Uri, AccessCredentials, HttpClient, CancellationToken, Task> call)
+    [MemberData(nameof(GroupServerMethods))]
+    public async Task GroupServerMethodsThrowWhenTheHttpClientIsNull(string name)
     {
         ArgumentNullException exception = await Assert.ThrowsAsync<ArgumentNullException>(
-            () => call(s_service, CreateCredentials(), null!, TestContext.Current.CancellationToken));
+            () => GroupServerCalls()[name](s_service, CreateCredentials(), null!, TestContext.Current.CancellationToken));
 
         Assert.Equal("httpClient", exception.ParamName);
         Assert.NotEmpty(name);

@@ -121,6 +121,12 @@ CREATE TABLE IF NOT EXISTS label_reports (
 );
 CREATE INDEX IF NOT EXISTS label_reports_case ON label_reports(case_id, report_id);
 CREATE INDEX IF NOT EXISTS label_reports_reason ON label_reports(reason_hash, case_id);
+CREATE TABLE IF NOT EXISTS label_pending_reports (
+    report_id INTEGER PRIMARY KEY CHECK(report_id>0),
+    pending INTEGER NOT NULL CHECK(pending IN (0,1)),
+    payload BLOB NOT NULL
+);
+CREATE INDEX IF NOT EXISTS label_pending_reports_status ON label_pending_reports(pending, report_id);
 CREATE TABLE IF NOT EXISTS label_report_tokens (
     replay_hash BLOB PRIMARY KEY CHECK(length(replay_hash)=32),
     replay_key BLOB NOT NULL,
@@ -174,4 +180,20 @@ CREATE TABLE IF NOT EXISTS label_case_decisions (
     intent BLOB NOT NULL,
     payload BLOB NOT NULL
 );
-INSERT OR IGNORE INTO label_schema(id, version) VALUES(1, 9);
+CREATE TABLE IF NOT EXISTS label_search_handles (
+    subject_hash BLOB PRIMARY KEY CHECK(length(subject_hash)=32),
+    subject_key BLOB NOT NULL,
+    handle TEXT NULL,
+    checked_ms INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS label_search_text (
+    kind INTEGER NOT NULL CHECK(kind IN (0,1)),
+    source_id INTEGER NOT NULL,
+    content TEXT NOT NULL COLLATE BINARY,
+    PRIMARY KEY(kind,source_id)
+);
+CREATE TABLE IF NOT EXISTS label_post_review_checks (
+    case_id INTEGER PRIMARY KEY REFERENCES label_cases(case_id),
+    checked_ms INTEGER NOT NULL
+);
+INSERT OR IGNORE INTO label_schema(id, version) VALUES(1, 11);

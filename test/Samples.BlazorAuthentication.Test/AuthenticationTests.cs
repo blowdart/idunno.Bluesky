@@ -3,8 +3,8 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Net;
-using System.Security.Claims;
 using System.Security.Authentication;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -12,24 +12,28 @@ using System.Text.RegularExpressions;
 
 using Duende.IdentityModel.OidcClient.DPoP;
 
+using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.Bluesky;
 using idunno.Bluesky.AspNet.Authentication;
 using idunno.Bluesky.Authentication;
+using idunno.Bluesky.Feed;
 
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Components.Web.HtmlRendering;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
 using Microsoft.JSInterop;
 
 namespace Samples.BlazorAuthentication.Test;
@@ -50,8 +54,8 @@ public partial class AuthenticationTests
     public async Task AnonymousPagesAndLocalAssetsAreAvailable(string path)
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
-        using var response = await browser.GetAsync(path, TestContext.Current.CancellationToken);
+        using HttpClient browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        using HttpResponseMessage response = await browser.GetAsync(path, TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         if (response.Content.Headers.ContentType?.MediaType == "text/html")
         {
@@ -68,8 +72,8 @@ public partial class AuthenticationTests
     public async Task ProtectedPagesChallengeAnonymousRequests(string path)
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
-        using var response = await browser.GetAsync(path, TestContext.Current.CancellationToken);
+        using HttpClient browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        using HttpResponseMessage response = await browser.GetAsync(path, TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.Equal("/Bluesky/Login", response.Headers.Location?.AbsolutePath);
         Assert.Equal(path, QueryHelpers.ParseQuery(response.Headers.Location!.Query)["ReturnUrl"].ToString());
@@ -79,13 +83,13 @@ public partial class AuthenticationTests
     public void ConfigurationMatchesDeclaredLocalhostPermissions()
     {
         using var factory = new SampleFactory();
-        var oauth = factory.Services.GetRequiredService<IOptions<BlueskyAgentOptions>>().Value.OAuthOptions!;
-        Assert.Equal(new[] { "atproto", BlueskyOAuthPermissionSets.FullApp.ToString() }, oauth.GetRequestedScopes());
-        var query = QueryHelpers.ParseQuery(new Uri(oauth.ClientId).Query);
+        OAuthOptions oauth = factory.Services.GetRequiredService<IOptions<BlueskyAgentOptions>>().Value.OAuthOptions!;
+        Assert.Equal<string>(["atproto", BlueskyOAuthPermissionSets.FullApp.ToString()], oauth.GetRequestedScopes());
+        Dictionary<string, StringValues> query = QueryHelpers.ParseQuery(new Uri(oauth.ClientId).Query);
         Assert.Equal(string.Join(' ', oauth.GetRequestedScopes()), query["scope"].ToString());
         Assert.NotNull(oauth.ReturnUri);
         Assert.Equal(oauth.ReturnUri.ToString(), query["redirect_uri"].ToString());
-        var options = factory.Services.GetRequiredService<IOptionsMonitor<BlueskyAuthenticationOptions>>()
+        BlueskyAuthenticationOptions options = factory.Services.GetRequiredService<IOptionsMonitor<BlueskyAuthenticationOptions>>()
             .Get(BlueskyAuthenticationDefaults.AuthenticationScheme);
         Assert.Equal(".AspNetCore.Bluesky.Blazor", options.Cookie.Name);
         Assert.Equal(".AspNetCore.Bluesky.Blazor.Correlation", options.CorrelationCookie.Name);
@@ -100,7 +104,7 @@ public partial class AuthenticationTests
     {
         await using var factory = new SampleFactory();
         factory.Pds.Avatar = avatar;
-        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        using HttpClient browser = factory.CreateClient(new() { AllowAutoRedirect = false });
         await Login(browser);
         string timeline = await browser.GetStringAsync("/", TestContext.Current.CancellationToken);
         Assert.Contains("Hello from the timeline", timeline, StringComparison.Ordinal);
@@ -146,8 +150,8 @@ public partial class AuthenticationTests
     public async Task InteractiveServerTransportIsRegistered()
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient();
-        using var response = await browser.PostAsync("/_blazor/negotiate?negotiateVersion=1", null, TestContext.Current.CancellationToken);
+        using HttpClient browser = factory.CreateClient();
+        using HttpResponseMessage response = await browser.PostAsync("/_blazor/negotiate?negotiateVersion=1", null, TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         Assert.Contains(json.RootElement.GetProperty("availableTransports").EnumerateArray(),
@@ -159,17 +163,17 @@ public partial class AuthenticationTests
     {
         var clock = new SessionClock();
         await using var factory = new SampleFactory(clock);
-        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        using HttpClient browser = factory.CreateClient(new() { AllowAutoRedirect = false });
         await Login(browser);
         string token = await RenewalToken(browser);
-        using var scope = await CreateCircuit(factory, browser);
-        await using var editor = CreateEditor(scope);
+        using IServiceScope scope = await CreateCircuit(factory, browser);
+        await using ProfileRenderer editor = CreateEditor(scope);
         await editor.RenderAsync();
         editor.Input.DisplayName = "Unsaved edit";
         var provider = (CircuitAuthenticationStateProvider)scope.ServiceProvider.GetRequiredService<AuthenticationStateProvider>();
 
         clock.Advance(TimeSpan.FromMinutes(6));
-        using var renewed = await RenewSession(browser, token);
+        using HttpResponseMessage renewed = await RenewSession(browser, token);
         Assert.Equal(HttpStatusCode.OK, renewed.StatusCode);
         Assert.Contains(renewed.Headers.GetValues("Set-Cookie"), value => value.StartsWith(".AspNetCore.Bluesky.Blazor=", StringComparison.Ordinal));
         string receipt = await renewed.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
@@ -180,7 +184,7 @@ public partial class AuthenticationTests
         clock.Advance(TimeSpan.FromMinutes(5));
         Assert.True(await provider.IsCurrentAsync((await provider.GetAuthenticationStateAsync()).User, TestContext.Current.CancellationToken));
         Assert.Equal("Unsaved edit", editor.Input.DisplayName);
-        using var claims = await browser.GetAsync("/Claims", TestContext.Current.CancellationToken);
+        using HttpResponseMessage claims = await browser.GetAsync("/Claims", TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, claims.StatusCode);
         await editor.SubmitAsync();
         Assert.Equal(1, factory.Pds.Writes);
@@ -194,15 +198,15 @@ public partial class AuthenticationTests
     {
         var clock = new SessionClock();
         await using var factory = new SampleFactory(clock, sliding, allowRefresh);
-        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        using HttpClient browser = factory.CreateClient(new() { AllowAutoRedirect = false });
         await Login(browser);
         string token = await RenewalToken(browser);
-        using var scope = await CreateCircuit(factory, browser);
+        using IServiceScope scope = await CreateCircuit(factory, browser);
         var provider = (CircuitAuthenticationStateProvider)scope.ServiceProvider.GetRequiredService<AuthenticationStateProvider>();
         if (!sliding || !allowRefresh)
         {
             clock.Advance(TimeSpan.FromMinutes(6));
-            using var response = await RenewSession(browser, token);
+            using HttpResponseMessage response = await RenewSession(browser, token);
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.False(response.Headers.Contains("Set-Cookie"));
             await provider.AcceptRenewalAsync(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
@@ -214,10 +218,10 @@ public partial class AuthenticationTests
         }
 
         Assert.False(await provider.IsCurrentAsync((await provider.GetAuthenticationStateAsync()).User, TestContext.Current.CancellationToken));
-        using var renewal = await RenewSession(browser, token);
+        using HttpResponseMessage renewal = await RenewSession(browser, token);
         Assert.False(renewal.IsSuccessStatusCode);
         Assert.False(renewal.Headers.Contains("Set-Cookie"));
-        using var protectedPage = await browser.GetAsync("/Claims", TestContext.Current.CancellationToken);
+        using HttpResponseMessage protectedPage = await browser.GetAsync("/Claims", TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Redirect, protectedPage.StatusCode);
     }
 
@@ -226,21 +230,21 @@ public partial class AuthenticationTests
     {
         var clock = new SessionClock();
         await using var factory = new SampleFactory(clock);
-        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        using HttpClient browser = factory.CreateClient(new() { AllowAutoRedirect = false });
         await Login(browser);
         string token = await RenewalToken(browser);
         clock.Advance(TimeSpan.FromMinutes(6));
-        var store = GetStore(factory);
-        var original = (await store.GetIdentity(new(Did), TestContext.Current.CancellationToken))!;
+        IIdentityStore store = GetStore(factory);
+        ClaimsIdentity original = (await store.GetIdentity(new(Did), TestContext.Current.CancellationToken))!;
         var did = new idunno.AtProto.Did(Did);
         string? refreshLock = await store.StartRefresh(did, TestContext.Current.CancellationToken);
         Assert.NotNull(refreshLock);
         try
         {
-            using var response = await RenewSession(browser, token);
+            using HttpResponseMessage response = await RenewSession(browser, token);
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.True(await store.IsRefreshing(did, TestContext.Current.CancellationToken));
-            var current = (await store.GetIdentity(did, TestContext.Current.CancellationToken))!;
+            ClaimsIdentity current = (await store.GetIdentity(did, TestContext.Current.CancellationToken))!;
             Assert.Equal(original.FindFirst(AtProtoClaims.AccessToken)?.Value, current.FindFirst(AtProtoClaims.AccessToken)?.Value);
             Assert.Equal(original.FindFirst(AtProtoClaims.DPoPProof)?.Value, current.FindFirst(AtProtoClaims.DPoPProof)?.Value);
         }
@@ -249,7 +253,7 @@ public partial class AuthenticationTests
             Assert.True(await store.EndRefresh(did, refreshLock, TestContext.Current.CancellationToken));
         }
 
-        using var retry = await RenewSession(browser, token);
+        using HttpResponseMessage retry = await RenewSession(browser, token);
         Assert.Equal(HttpStatusCode.OK, retry.StatusCode);
     }
 
@@ -261,14 +265,14 @@ public partial class AuthenticationTests
     public async Task RenewalDoesNotAuthorizeInvalidOrDifferentSessions(string reason)
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        using HttpClient browser = factory.CreateClient(new() { AllowAutoRedirect = false });
         await Login(browser);
         string token = await RenewalToken(browser);
-        using var scope = await CreateCircuit(factory, browser);
+        using IServiceScope scope = await CreateCircuit(factory, browser);
         var provider = (CircuitAuthenticationStateProvider)scope.ServiceProvider.GetRequiredService<AuthenticationStateProvider>();
         if (reason == "antiforgery")
         {
-            using var rejected = await RenewSession(browser, "invalid-token");
+            using HttpResponseMessage rejected = await RenewSession(browser, "invalid-token");
             Assert.Equal(HttpStatusCode.BadRequest, rejected.StatusCode);
             return;
         }
@@ -279,13 +283,13 @@ public partial class AuthenticationTests
             token = await RenewalToken(browser);
         }
 
-        using var renewal = await RenewSession(browser, token);
+        using HttpResponseMessage renewal = await RenewSession(browser, token);
         Assert.Equal(HttpStatusCode.OK, renewal.StatusCode);
         string receipt = await renewal.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         if (reason == "logout")
         {
             await GetStore(factory).Remove(new(Did), TestContext.Current.CancellationToken);
-            using var rejected = await RenewSession(browser, token);
+            using HttpResponseMessage rejected = await RenewSession(browser, token);
             Assert.False(rejected.IsSuccessStatusCode);
         }
         else if (reason == "tampered")
@@ -299,7 +303,7 @@ public partial class AuthenticationTests
     private static async Task<string> RenewalToken(HttpClient browser)
     {
         string html = await browser.GetStringAsync("/", TestContext.Current.CancellationToken);
-        var match = Regex.Match(html, "<meta name=\"session-antiforgery\" content=\"([^\"]+)\"");
+        Match match = MyRegex().Match(html);
         Assert.True(match.Success);
 
         return WebUtility.HtmlDecode(match.Groups[1].Value);
@@ -312,12 +316,12 @@ public partial class AuthenticationTests
     {
         var clock = new SessionClock();
         await using var factory = new SampleFactory(clock);
-        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        using HttpClient browser = factory.CreateClient(new() { AllowAutoRedirect = false });
         await Login(browser);
         string token = await RenewalToken(browser);
-        using var scope = await CreateCircuit(factory, browser);
+        using IServiceScope scope = await CreateCircuit(factory, browser);
         var provider = (CircuitAuthenticationStateProvider)scope.ServiceProvider.GetRequiredService<AuthenticationStateProvider>();
-        var store = GetStore(factory);
+        IIdentityStore store = GetStore(factory);
         ClaimsIdentity? newIdentity = null;
         factory.BeforeRenewalValidation = async currentStore =>
         {
@@ -335,16 +339,16 @@ public partial class AuthenticationTests
         };
 
         clock.Advance(TimeSpan.FromMinutes(6));
-        using var response = await RenewSession(browser, token);
+        using HttpResponseMessage response = await RenewSession(browser, token);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var stored = await store.GetIdentity(new(Did), TestContext.Current.CancellationToken);
+        ClaimsIdentity? stored = await store.GetIdentity(new(Did), TestContext.Current.CancellationToken);
         Assert.Equal(newIdentity?.FindFirst(AtProtoClaims.DPoPProof)?.Value, stored?.FindFirst(AtProtoClaims.DPoPProof)?.Value);
         Assert.False(await provider.IsCurrentAsync((await provider.GetAuthenticationStateAsync()).User, TestContext.Current.CancellationToken));
         string receipt = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         await Assert.ThrowsAsync<AuthenticationException>(() => provider.AcceptRenewalAsync(receipt));
         if (!replacement)
         {
-            using var claims = await browser.GetAsync("/Claims", TestContext.Current.CancellationToken);
+            using HttpResponseMessage claims = await browser.GetAsync("/Claims", TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.Redirect, claims.StatusCode);
         }
     }
@@ -364,18 +368,18 @@ public partial class AuthenticationTests
     public async Task CircuitOperationsRejectInvalidSessions(string reason)
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient();
+        using HttpClient browser = factory.CreateClient();
         await Login(browser);
-        using var scope = await CreateCircuit(factory, browser,
+        using IServiceScope scope = await CreateCircuit(factory, browser,
             reason == "expired" ? DateTimeOffset.UtcNow.AddMinutes(-1) : null);
-        var store = GetStore(factory);
+        IIdentityStore store = GetStore(factory);
         if (reason == "removed")
         {
             await store.Remove(new(Did), TestContext.Current.CancellationToken);
         }
         else if (reason == "replaced")
         {
-            var identity = (await store.GetIdentity(new(Did), TestContext.Current.CancellationToken))!;
+            ClaimsIdentity identity = (await store.GetIdentity(new(Did), TestContext.Current.CancellationToken))!;
             identity.RemoveClaim(identity.FindFirst(AtProtoClaims.DPoPProof)!);
             identity.AddClaim(new(AtProtoClaims.DPoPProof, JsonWebKeys.CreateRsaJson()));
             await store.Add(identity, TestContext.Current.CancellationToken);
@@ -383,7 +387,7 @@ public partial class AuthenticationTests
 
         var provider = (CircuitAuthenticationStateProvider)scope.ServiceProvider.GetRequiredService<AuthenticationStateProvider>();
         Assert.False(await provider.IsCurrentAsync((await provider.GetAuthenticationStateAsync()).User, TestContext.Current.CancellationToken));
-        var client = scope.ServiceProvider.GetRequiredService<CircuitBlueskyClient>();
+        CircuitBlueskyClient client = scope.ServiceProvider.GetRequiredService<CircuitBlueskyClient>();
         await Assert.ThrowsAsync<AuthenticationException>(() => client.ExecuteAsync(
             (agent, cancellationToken) => agent.GetTimeline(cancellationToken: cancellationToken), TestContext.Current.CancellationToken));
         Assert.Equal(0, factory.Pds.TimelineRequests);
@@ -393,16 +397,16 @@ public partial class AuthenticationTests
     public async Task CircuitOperationsReadCurrentStoredCredentialsAndReleaseLocksOnFailure()
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient();
+        using HttpClient browser = factory.CreateClient();
         await Login(browser);
-        using var scope = await CreateCircuit(factory, browser);
-        var store = GetStore(factory);
-        var identity = (await store.GetIdentity(new(Did), TestContext.Current.CancellationToken))!;
+        using IServiceScope scope = await CreateCircuit(factory, browser);
+        IIdentityStore store = GetStore(factory);
+        ClaimsIdentity identity = (await store.GetIdentity(new(Did), TestContext.Current.CancellationToken))!;
         string token = AccessToken(DateTimeOffset.UtcNow.AddHours(1));
         identity.RemoveClaim(identity.FindFirst(AtProtoClaims.AccessToken)!);
         identity.AddClaim(new(AtProtoClaims.AccessToken, token, ClaimValueTypes.String, "https://pds.example/"));
         await store.Update(identity, TestContext.Current.CancellationToken);
-        var client = scope.ServiceProvider.GetRequiredService<CircuitBlueskyClient>();
+        CircuitBlueskyClient client = scope.ServiceProvider.GetRequiredService<CircuitBlueskyClient>();
         string currentToken = await client.ExecuteAsync((agent, _) => Task.FromResult(agent.Credentials!.AccessJwt), TestContext.Current.CancellationToken);
         Assert.Equal(token, currentToken);
         await Assert.ThrowsAsync<InvalidOperationException>(() => client.ExecuteAsync<bool>(
@@ -416,12 +420,12 @@ public partial class AuthenticationTests
     public async Task CircuitRefreshPersistsCredentialsAndDoesNotRunOperationsOnFailure(bool fails)
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient();
+        using HttpClient browser = factory.CreateClient();
         await Login(browser);
-        using var scope = await CreateCircuit(factory, browser);
-        var store = GetStore(factory);
-        var identity = (await store.GetIdentity(new(Did), TestContext.Current.CancellationToken))!;
-        await using var oauthServer = await factory.Pds.StartOAuthServer();
+        using IServiceScope scope = await CreateCircuit(factory, browser);
+        IIdentityStore store = GetStore(factory);
+        ClaimsIdentity identity = (await store.GetIdentity(new(Did), TestContext.Current.CancellationToken))!;
+        await using WebApplication oauthServer = await factory.Pds.StartOAuthServer();
         identity.RemoveClaim(identity.FindFirst(AtProtoClaims.Did)!);
         identity.AddClaim(new(AtProtoClaims.Did, Did, ClaimValueTypes.String, factory.Pds.Authority));
         identity.RemoveClaim(identity.FindFirst(AtProtoClaims.AccessToken)!);
@@ -429,7 +433,7 @@ public partial class AuthenticationTests
             ClaimValueTypes.String, factory.Pds.Authority));
         await store.Update(identity, TestContext.Current.CancellationToken);
         factory.Pds.Failure = fails ? "refresh" : null;
-        var client = scope.ServiceProvider.GetRequiredService<CircuitBlueskyClient>();
+        CircuitBlueskyClient client = scope.ServiceProvider.GetRequiredService<CircuitBlueskyClient>();
         if (fails)
         {
             await Assert.ThrowsAsync<AuthenticationException>(() => client.ExecuteAsync(
@@ -438,9 +442,9 @@ public partial class AuthenticationTests
         }
         else
         {
-            var result = await client.ExecuteAsync((agent, cancellationToken) => agent.GetTimeline(cancellationToken: cancellationToken), TestContext.Current.CancellationToken);
+            AtProtoHttpResult<Timeline> result = await client.ExecuteAsync((agent, cancellationToken) => agent.GetTimeline(cancellationToken: cancellationToken), TestContext.Current.CancellationToken);
             Assert.True(result.Succeeded);
-            var refreshed = (await store.GetIdentity(new(Did), TestContext.Current.CancellationToken))!;
+            ClaimsIdentity refreshed = (await store.GetIdentity(new(Did), TestContext.Current.CancellationToken))!;
             Assert.Equal("rotated-refresh-token", refreshed.FindFirst(AtProtoClaims.RefreshToken)?.Value);
             Assert.Equal(factory.Pds.RefreshedAccessToken, refreshed.FindFirst(AtProtoClaims.AccessToken)?.Value);
             await client.ExecuteAsync((agent, cancellationToken) => agent.GetTimeline(cancellationToken: cancellationToken), TestContext.Current.CancellationToken);
@@ -460,17 +464,17 @@ public partial class AuthenticationTests
     public async Task CircuitNonceUpdatesPersistOnlyWhileTheSessionExists(bool logoutDuringRequest)
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient();
+        using HttpClient browser = factory.CreateClient();
         await Login(browser);
-        using var scope = await CreateCircuit(factory, browser);
-        var store = GetStore(factory);
+        using IServiceScope scope = await CreateCircuit(factory, browser);
+        IIdentityStore store = GetStore(factory);
         factory.Pds.NonceChallenge = true;
         if (logoutDuringRequest)
         {
             factory.Pds.BeforeNonceChallenge = () => store.Remove(new(Did), TestContext.Current.CancellationToken);
         }
 
-        var client = scope.ServiceProvider.GetRequiredService<CircuitBlueskyClient>();
+        CircuitBlueskyClient client = scope.ServiceProvider.GetRequiredService<CircuitBlueskyClient>();
         if (logoutDuringRequest)
         {
             await Assert.ThrowsAsync<AuthenticationException>(() => client.ExecuteAsync(
@@ -479,10 +483,10 @@ public partial class AuthenticationTests
         }
         else
         {
-            var result = await client.ExecuteAsync(
+            AtProtoHttpResult<Timeline> result = await client.ExecuteAsync(
                 (agent, cancellationToken) => agent.GetTimeline(cancellationToken: cancellationToken), TestContext.Current.CancellationToken);
             Assert.True(result.Succeeded);
-            var identity = await store.GetIdentity(new(Did), TestContext.Current.CancellationToken);
+            ClaimsIdentity? identity = await store.GetIdentity(new(Did), TestContext.Current.CancellationToken);
             Assert.Equal("rotated-nonce", identity?.FindFirst(AtProtoClaims.DPoPNonce)?.Value);
             Assert.Equal(2, factory.Pds.TimelineRequests);
         }
@@ -531,7 +535,7 @@ public partial class AuthenticationTests
                 """,
             _ => null
         };
-        using var browser = factory.CreateClient();
+        using HttpClient browser = factory.CreateClient();
         await Login(browser);
         string html = await browser.GetStringAsync("/", TestContext.Current.CancellationToken);
         Assert.Contains(expected, html, StringComparison.Ordinal);
@@ -573,7 +577,7 @@ public partial class AuthenticationTests
         factory.Pds.EmbedJson = $$$"""
             {"$type":"app.bsky.embed.external#view","external":{"uri":"https://media.tenor.com/animation/tenor.GIF?hh=100&ww=100","title":"GIF title","description":"{{{description}}}","thumb":"https://images.example/still.jpg"}}
             """;
-        using var browser = factory.CreateClient();
+        using HttpClient browser = factory.CreateClient();
         await Login(browser);
         string html = await browser.GetStringAsync("/", TestContext.Current.CancellationToken);
         Assert.Contains("class=\"post-image post-gif\" src=\"https://media.tenor.com/animation/tenor.GIF?hh=100&amp;ww=100\"", html, StringComparison.Ordinal);
@@ -591,7 +595,7 @@ public partial class AuthenticationTests
     {
         await using var factory = new SampleFactory();
         factory.Pds.Failure = failure;
-        using var browser = factory.CreateClient();
+        using HttpClient browser = factory.CreateClient();
         await Login(browser);
         string html = await browser.GetStringAsync("/", TestContext.Current.CancellationToken);
         Assert.Contains("Could not load", html, StringComparison.Ordinal);
@@ -602,10 +606,10 @@ public partial class AuthenticationTests
     public async Task InteractiveProfileSavesConditionallyAndPreservesOtherFields()
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        using HttpClient browser = factory.CreateClient(new() { AllowAutoRedirect = false });
         await Login(browser);
-        using var scope = await CreateCircuit(factory, browser);
-        await using var editor = CreateEditor(scope);
+        using IServiceScope scope = await CreateCircuit(factory, browser);
+        await using ProfileRenderer editor = CreateEditor(scope);
         await editor.RenderAsync();
         Assert.Equal("Original name", editor.Input.DisplayName);
         await PostEdit(editor);
@@ -613,7 +617,7 @@ public partial class AuthenticationTests
         using var write = JsonDocument.Parse(factory.Pds.LastWrite!);
         Assert.Equal(ProfileCid, write.RootElement.GetProperty("swapRecord").GetString());
         Assert.Equal(Did, write.RootElement.GetProperty("repo").GetString());
-        var record = write.RootElement.GetProperty("record");
+        JsonElement record = write.RootElement.GetProperty("record");
         Assert.Equal("Edited name", record.GetProperty("displayName").GetString());
         Assert.Equal("Edited description", record.GetProperty("description").GetString());
         Assert.Equal("they/them", record.GetProperty("pronouns").GetString());
@@ -633,10 +637,10 @@ public partial class AuthenticationTests
     public async Task InvalidFormValuesDoNotWrite(string field, string value)
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient();
+        using HttpClient browser = factory.CreateClient();
         await Login(browser);
-        using var scope = await CreateCircuit(factory, browser);
-        await using var editor = CreateEditor(scope);
+        using IServiceScope scope = await CreateCircuit(factory, browser);
+        await using ProfileRenderer editor = CreateEditor(scope);
         await editor.RenderAsync();
         await PostEdit(editor, field, value);
         Assert.NotEmpty(editor.ValidationErrors);
@@ -648,10 +652,10 @@ public partial class AuthenticationTests
     public async Task EmptyProfileFieldsCanBeCleared()
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        using HttpClient browser = factory.CreateClient(new() { AllowAutoRedirect = false });
         await Login(browser);
-        using var scope = await CreateCircuit(factory, browser);
-        await using var editor = CreateEditor(scope);
+        using IServiceScope scope = await CreateCircuit(factory, browser);
+        await using ProfileRenderer editor = CreateEditor(scope);
         await editor.RenderAsync();
         await PostEdit(editor, "Input.Pronouns", "");
         Assert.Contains("Your profile was saved", editor.Text, StringComparison.Ordinal);
@@ -666,10 +670,10 @@ public partial class AuthenticationTests
     public async Task FailedSavesRetainEditsAndDoNotClaimSuccess(string failure, string message, int writes)
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        using HttpClient browser = factory.CreateClient(new() { AllowAutoRedirect = false });
         await Login(browser);
-        using var scope = await CreateCircuit(factory, browser);
-        await using var editor = CreateEditor(scope);
+        using IServiceScope scope = await CreateCircuit(factory, browser);
+        await using ProfileRenderer editor = CreateEditor(scope);
         await editor.RenderAsync();
         factory.Pds.Failure = failure;
         await PostEdit(editor);
@@ -685,9 +689,9 @@ public partial class AuthenticationTests
     public async Task StateChangingPostsRequireAntiforgery(string path)
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        using HttpClient browser = factory.CreateClient(new() { AllowAutoRedirect = false });
         await Login(browser);
-        using var response = await browser.PostAsync(path, new FormUrlEncodedContent(new Dictionary<string, string>
+        using HttpResponseMessage response = await browser.PostAsync(path, new FormUrlEncodedContent(new Dictionary<string, string>
         {
             ["_handler"] = "profile",
             ["Input.Cid"] = ProfileCid,
@@ -701,17 +705,17 @@ public partial class AuthenticationTests
     public async Task LogoutRequiresPostAndRemovesAccessToProtectedPages()
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        using HttpClient browser = factory.CreateClient(new() { AllowAutoRedirect = false });
         await Login(browser);
         string logout = await browser.GetStringAsync("/Bluesky/Logout", TestContext.Current.CancellationToken);
-        using var stillSignedIn = await browser.GetAsync("/Claims", TestContext.Current.CancellationToken);
+        using HttpResponseMessage stillSignedIn = await browser.GetAsync("/Claims", TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, stillSignedIn.StatusCode);
-        using var posted = await browser.PostAsync("/Bluesky/Logout?returnUrl=%2F", new FormUrlEncodedContent(new Dictionary<string, string>
+        using HttpResponseMessage posted = await browser.PostAsync("/Bluesky/Logout?returnUrl=%2F", new FormUrlEncodedContent(new Dictionary<string, string>
         {
             ["__RequestVerificationToken"] = HiddenValue(logout, "__RequestVerificationToken")
         }), TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Redirect, posted.StatusCode);
-        using var signedOut = await browser.GetAsync("/Claims", TestContext.Current.CancellationToken);
+        using HttpResponseMessage signedOut = await browser.GetAsync("/Claims", TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Redirect, signedOut.StatusCode);
     }
 
@@ -735,7 +739,7 @@ public partial class AuthenticationTests
 
     private static async Task Login(HttpClient browser)
     {
-        using var response = await browser.GetAsync("/test/login", TestContext.Current.CancellationToken);
+        using HttpResponseMessage response = await browser.GetAsync("/test/login", TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
@@ -763,15 +767,15 @@ public partial class AuthenticationTests
     public async Task RestoredDraftRequiresExplicitSaveAndRetainsItsOriginalVersion(bool conflict)
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient();
+        using HttpClient browser = factory.CreateClient();
         await Login(browser);
-        using var scope = await CreateCircuit(factory, browser);
+        using IServiceScope scope = await CreateCircuit(factory, browser);
         if (conflict)
         {
             factory.Pds.CurrentProfileCid = ChangedCid;
         }
 
-        await using var editor = CreateEditor(scope);
+        await using ProfileRenderer editor = CreateEditor(scope);
         await editor.RenderAsync();
         await editor.RestoreAsync(ProfileCid, "Restored name", "Restored description", "they/them");
         Assert.Equal(0, factory.Pds.Writes);
@@ -791,10 +795,10 @@ public partial class AuthenticationTests
     public async Task DiscardedDraftIsNotAvailableAfterFailedReload(bool reloadFails)
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient();
+        using HttpClient browser = factory.CreateClient();
         await Login(browser);
-        using var scope = await CreateCircuit(factory, browser);
-        await using var editor = CreateEditor(scope);
+        using IServiceScope scope = await CreateCircuit(factory, browser);
+        await using ProfileRenderer editor = CreateEditor(scope);
         await editor.RenderAsync();
         await editor.RestoreAsync(ProfileCid, "Discarded name", "Discarded description", "they/them");
         factory.Pds.Failure = reloadFails ? "profile" : null;
@@ -819,9 +823,9 @@ public partial class AuthenticationTests
     public async Task HeartbeatSessionRecoveryPreservesCurrentRoute(string route, string encoded)
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient();
+        using HttpClient browser = factory.CreateClient();
         await Login(browser);
-        using var scope = await CreateCircuit(factory, browser);
+        using IServiceScope scope = await CreateCircuit(factory, browser);
         var navigation = new TestNavigation();
         navigation.NavigateTo(route);
         await using var renderer = new ProfileRenderer(new NavigationServices(scope.ServiceProvider, navigation),
@@ -835,9 +839,9 @@ public partial class AuthenticationTests
     public async Task UnauthorizedInteractiveRoutesPreserveTheirReturnUrl(string route, string encoded)
     {
         await using var factory = new SampleFactory();
-        using var browser = factory.CreateClient();
+        using HttpClient browser = factory.CreateClient();
         await Login(browser);
-        using var scope = await CreateCircuit(factory, browser);
+        using IServiceScope scope = await CreateCircuit(factory, browser);
         var provider = (IHostEnvironmentAuthenticationStateProvider)scope.ServiceProvider.GetRequiredService<AuthenticationStateProvider>();
         provider.SetAuthenticationState(Task.FromResult(new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()))));
         var navigation = new TestNavigation();
@@ -846,7 +850,7 @@ public partial class AuthenticationTests
             scope.ServiceProvider.GetRequiredService<ILoggerFactory>());
         string html = await renderer.Dispatcher.InvokeAsync(async () =>
         {
-            var component = await renderer.RenderComponentAsync<Samples.BlazorAuthentication.Components.Routes>();
+            HtmlRootComponent component = await renderer.RenderComponentAsync<Samples.BlazorAuthentication.Components.Routes>();
             return component.ToHtmlString();
         });
         Assert.Contains($"href=\"/Bluesky/Login?returnUrl={encoded}\"", html, StringComparison.Ordinal);
@@ -855,10 +859,10 @@ public partial class AuthenticationTests
     private static async Task<IServiceScope> CreateCircuit(SampleFactory factory, HttpClient browser, DateTimeOffset? expiresUtc = null)
     {
         string cookie = await browser.GetStringAsync("/test/cookie", TestContext.Current.CancellationToken);
-        var scope = factory.Services.CreateScope();
+        IServiceScope scope = factory.Services.CreateScope();
         var context = new DefaultHttpContext { RequestServices = scope.ServiceProvider };
         context.Request.Headers.Cookie = cookie;
-        var result = await context.AuthenticateAsync();
+        AuthenticateResult result = await context.AuthenticateAsync();
         Assert.True(result.Succeeded);
         if (expiresUtc is not null)
         {
@@ -866,7 +870,7 @@ public partial class AuthenticationTests
         }
         context.Features.Set<IAuthenticateResultFeature>(new TicketFeature { AuthenticateResult = result });
         scope.ServiceProvider.GetRequiredService<IHttpContextAccessor>().HttpContext = context;
-        var provider = scope.ServiceProvider.GetRequiredService<AuthenticationStateProvider>();
+        AuthenticationStateProvider provider = scope.ServiceProvider.GetRequiredService<AuthenticationStateProvider>();
         ((IHostEnvironmentAuthenticationStateProvider)provider).SetAuthenticationState(Task.FromResult(new AuthenticationState(result.Principal!)));
         scope.ServiceProvider.GetRequiredService<IHttpContextAccessor>().HttpContext = null;
 
@@ -982,7 +986,7 @@ public partial class AuthenticationTests
                         $$"""{"sub":"{{Did}}","exp":4102444800,"scope":"{{scope}}"}"""));
                     DPoPAccessCredentials credentials = new(new Uri("https://pds.example"), "eyJhbGciOiJub25lIn0." + payload + ".",
                         "secret-refresh-token", JsonWebKeys.CreateRsaJson(), "secret-nonce");
-                    var identity = IIdentityStore.BuildClaimsIdentity(credentials);
+                    ClaimsIdentity identity = IIdentityStore.BuildClaimsIdentity(credentials);
                     await context.SignInAsync(BlueskyAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
                     context.Response.StatusCode = StatusCodes.Status200OK;
                     return;
@@ -1020,15 +1024,15 @@ public partial class AuthenticationTests
 
         internal async Task<WebApplication> StartOAuthServer()
         {
-            var builder = WebApplication.CreateBuilder();
+            WebApplicationBuilder builder = WebApplication.CreateBuilder();
             builder.WebHost.UseUrls("http://127.0.0.1:0");
-            var app = builder.Build();
+            WebApplication app = builder.Build();
             app.Run(async context =>
             {
                 using var request = new HttpRequestMessage(new HttpMethod(context.Request.Method),
                     Authority + context.Request.Path.Value!.TrimStart('/'));
-                using var client = CreateClient(string.Empty);
-                using var response = await client.SendAsync(request, context.RequestAborted);
+                using HttpClient client = CreateClient(string.Empty);
+                using HttpResponseMessage response = await client.SendAsync(request, context.RequestAborted);
                 context.Response.StatusCode = (int)response.StatusCode;
                 context.Response.ContentType = "application/json";
                 await response.Content.CopyToAsync(context.Response.Body, context.RequestAborted);
@@ -1087,7 +1091,7 @@ public partial class AuthenticationTests
                                 await pds.BeforeNonceChallenge();
                             }
 
-                            var challenge = Json(HttpStatusCode.Unauthorized, """{"error":"use_dpop_nonce"}""");
+                            HttpResponseMessage challenge = Json(HttpStatusCode.Unauthorized, """{"error":"use_dpop_nonce"}""");
                             challenge.Headers.Add("DPoP-Nonce", "rotated-nonce");
                             return challenge;
                         }
@@ -1140,8 +1144,8 @@ public partial class AuthenticationTests
             {
                 if (mediaOnly)
                 {
-                    var document = JsonNode.Parse(json)!;
-                    var post = document["feed"]![0]!["post"]!;
+                    JsonNode document = JsonNode.Parse(json)!;
+                    JsonNode post = document["feed"]![0]!["post"]!;
                     post["record"]!["text"] = "";
                     post["record"]!["embed"] = JsonNode.Parse("""
                         {"$type":"app.bsky.embed.external","external":{"uri":"https://media.example/post","title":"Media","description":""}}
@@ -1158,4 +1162,7 @@ public partial class AuthenticationTests
             }
         }
     }
+
+    [GeneratedRegex("<meta name=\"session-antiforgery\" content=\"([^\"]+)\"")]
+    private static partial Regex MyRegex();
 }

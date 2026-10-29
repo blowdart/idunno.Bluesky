@@ -1,7 +1,9 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+#pragma warning disable IDE0130 // Preserve the established namespace independently of folder layout.
 namespace idunno.AtProto.Benchmarks;
+#pragma warning restore IDE0130
 
 internal static class CaptureContent
 {
@@ -15,12 +17,7 @@ internal static class CaptureContent
     /// <exception cref="InvalidDataException">The response exceeds the capture limit.</exception>
     internal static async Task<byte[]> ReadAsync(HttpContent content, int maximumLength, CancellationToken cancellationToken)
     {
-        using PooledContent? body = await HttpContentReader.ReadAsPooledBytes(content, maximumLength, cancellationToken).ConfigureAwait(false);
-        if (body is null)
-        {
-            throw new InvalidDataException($"The capture response exceeds the maximum of {maximumLength} bytes.");
-        }
-
+        using PooledContent? body = await HttpContentReader.ReadAsPooledBytes(content, maximumLength, cancellationToken).ConfigureAwait(false) ?? throw new InvalidDataException($"The capture response exceeds the maximum of {maximumLength} bytes.");
         return body.Span.ToArray();
     }
 }

@@ -20,9 +20,6 @@ public sealed class AccessTokenCredential : AtProtoCredential, IAccessCredential
 #endif
 
     private string _accessJwt;
-    private DateTimeOffset _expiresOn;
-    private Did _did;
-
     private static readonly Uri s_invalidServiceUri = new("https://invalid.invalid");
 
     /// <summary>
@@ -53,7 +50,7 @@ public sealed class AccessTokenCredential : AtProtoCredential, IAccessCredential
         ArgumentNullException.ThrowIfNull(service);
         ArgumentException.ThrowIfNullOrWhiteSpace(jwt);
 
-        (_did, _expiresOn) = ExtractJwtProperties(jwt);
+        (Did, ExpiresOn) = ExtractJwtProperties(jwt);
         _accessJwt = jwt;
     }
 
@@ -89,8 +86,8 @@ public sealed class AccessTokenCredential : AtProtoCredential, IAccessCredential
             lock (_accessTokenCredentialLock)
             {
                 _accessJwt = value;
-                _did = did;
-                _expiresOn = expiresOn;
+                Did = did;
+                ExpiresOn = expiresOn;
             }
         }
     }
@@ -114,9 +111,11 @@ public sealed class AccessTokenCredential : AtProtoCredential, IAccessCredential
         {
             lock (_accessTokenCredentialLock)
             {
-                return _expiresOn;
+                return field;
             }
         }
+
+        private set;
     }
 
     /// <summary>
@@ -136,9 +135,11 @@ public sealed class AccessTokenCredential : AtProtoCredential, IAccessCredential
         {
             lock (_accessTokenCredentialLock)
             {
-                return _did;
+                return field;
             }
         }
+
+        private set;
     }
 
     /// <summary>

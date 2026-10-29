@@ -232,8 +232,8 @@ internal abstract partial class RelationalLabelStore
                     throw new InvalidOperationException("Another maintenance operation is active or the labeler lifecycle is closed.");
                 }
 
-                if ((await ReadPolicyGateAsync(connection, transaction, cancellationToken).ConfigureAwait(false))?.Phase ==
-                    Moderation.LabelPolicyPhase.Publishing)
+                if ((await ReadPolicyGateAsync(connection, transaction, cancellationToken).ConfigureAwait(false))?.Phase is
+                    Moderation.LabelPolicyPhase.Publishing or Moderation.LabelPolicyPhase.Withdrawing)
                 {
                     throw new InvalidOperationException("Recover the pending policy publication before beginning rotation.");
                 }
@@ -368,18 +368,13 @@ internal abstract partial class RelationalLabelStore
                 }
 
                 string hostId = instanceId.ToString("N");
-                object? participant = await ScalarAsync(
+                _ = await ScalarAsync(
                     connection: connection,
                     transaction: transaction,
                     sql: "SELECT acknowledged FROM label_maintenance_hosts WHERE operation_id=@operation AND host_id=@host",
                     token: cancellationToken,
                     ("@operation", operationId),
-                    ("@host", hostId)).ConfigureAwait(false);
-                if (participant is null)
-                {
-                    throw new InvalidOperationException("The host is not a participant in this maintenance operation.");
-                }
-
+                    ("@host", hostId)).ConfigureAwait(false) ?? throw new InvalidOperationException("The host is not a participant in this maintenance operation.");
                 if (confirmedStopped)
                 {
                     await ExecuteAsync(

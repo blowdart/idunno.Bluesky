@@ -245,7 +245,7 @@ public class AtProtoJetstreamBuilderTests
     [InlineData(-1)]
     public void SetReadBufferSizeRejectsSizesWhichAreNotPositive(int readBufferSize) =>
         Assert.Throws<ArgumentOutOfRangeException>(
-            "readBufferSize",
+            nameof(readBufferSize),
             () => AtProtoJetstreamBuilder.Create().SetReadBufferSize(readBufferSize));
 
     [Theory]
@@ -253,7 +253,7 @@ public class AtProtoJetstreamBuilderTests
     [InlineData(-1)]
     public void SetMaximumTotalMessageSizeRejectsSizesWhichAreNotPositive(int maximumTotalMessageSize) =>
         Assert.Throws<ArgumentOutOfRangeException>(
-            "maximumTotalMessageSize",
+            nameof(maximumTotalMessageSize),
             () => AtProtoJetstreamBuilder.Create().SetMaximumTotalMessageSize(maximumTotalMessageSize));
 
     [Fact]
@@ -269,51 +269,67 @@ public class AtProtoJetstreamBuilderTests
             () => AtProtoJetstreamBuilder.Create().ConfigureHttpClientOptions(null!));
 
     [Theory]
-    [MemberData(nameof(NullRejectingProperties))]
-    public void SettingAPropertyToNullThrows(Action<AtProtoJetstreamBuilder> set) =>
-        Assert.Throws<ArgumentNullException>(() => set(AtProtoJetstreamBuilder.Create()));
-
-    [Theory]
-    [MemberData(nameof(OutOfRangeProperties))]
-    public void SettingAPropertyOutOfRangeThrows(Action<AtProtoJetstreamBuilder> set) =>
-        Assert.Throws<ArgumentOutOfRangeException>(() => set(AtProtoJetstreamBuilder.Create()));
-
-    /// <summary>
-    /// The properties whose fluent counterparts reject <see langword="null"/>.
-    /// </summary>
-    /// <remarks>
-    /// <para>Setting one of these directly used to be accepted where the fluent method rejected it, so which of the two
-    /// ways of configuring a builder was used decided whether a mistake was caught.</para>
-    /// </remarks>
-    public static TheoryData<Action<AtProtoJetstreamBuilder>> NullRejectingProperties()
+    [InlineData(nameof(AtProtoJetstreamBuilder.Service))]
+    [InlineData(nameof(AtProtoJetstreamBuilder.LoggerFactory))]
+    [InlineData(nameof(AtProtoJetstreamBuilder.CompressionDictionary))]
+    [InlineData(nameof(AtProtoJetstreamBuilder.TaskFactory))]
+    public void SettingAPropertyToNullThrows(string property)
     {
-        TheoryData<Action<AtProtoJetstreamBuilder>> data = [];
-
-        data.Add(builder => builder.Service = null!);
-        data.Add(builder => builder.LoggerFactory = null!);
-        data.Add(builder => builder.CompressionDictionary = null!);
-        data.Add(builder => builder.TaskFactory = null!);
-
-        return data;
+        AtProtoJetstreamBuilder builder = AtProtoJetstreamBuilder.Create();
+        Assert.Throws<ArgumentNullException>(() =>
+        {
+            switch (property)
+            {
+                case nameof(AtProtoJetstreamBuilder.Service):
+                    builder.Service = null!;
+                    break;
+                case nameof(AtProtoJetstreamBuilder.LoggerFactory):
+                    builder.LoggerFactory = null!;
+                    break;
+                case nameof(AtProtoJetstreamBuilder.CompressionDictionary):
+                    builder.CompressionDictionary = null!;
+                    break;
+                case nameof(AtProtoJetstreamBuilder.TaskFactory):
+                    builder.TaskFactory = null!;
+                    break;
+                default:
+                    throw new InvalidOperationException($"Unknown property {property}.");
+            }
+        });
     }
 
-    /// <summary>
-    /// The properties whose fluent counterparts reject values which are equal to, or less than, zero.
-    /// </summary>
-    public static TheoryData<Action<AtProtoJetstreamBuilder>> OutOfRangeProperties()
+    [Theory]
+    [InlineData(nameof(AtProtoJetstreamBuilder.ReadBufferSize), 0)]
+    [InlineData(nameof(AtProtoJetstreamBuilder.ReadBufferSize), -1)]
+    [InlineData(nameof(AtProtoJetstreamBuilder.MaximumTotalMessageSize), 0)]
+    [InlineData(nameof(AtProtoJetstreamBuilder.MaximumTotalMessageSize), -1)]
+    [InlineData(nameof(AtProtoJetstreamBuilder.MaximumConcurrentMessageParsers), 0)]
+    [InlineData(nameof(AtProtoJetstreamBuilder.MaximumConcurrentMessageParsers), -1)]
+    [InlineData(nameof(AtProtoJetstreamBuilder.CloseTimeout), 0)]
+    [InlineData(nameof(AtProtoJetstreamBuilder.CloseTimeout), -1)]
+    public void SettingAPropertyOutOfRangeThrows(string property, int value)
     {
-        TheoryData<Action<AtProtoJetstreamBuilder>> data = [];
-
-        data.Add(builder => builder.ReadBufferSize = 0);
-        data.Add(builder => builder.ReadBufferSize = -1);
-        data.Add(builder => builder.MaximumTotalMessageSize = 0);
-        data.Add(builder => builder.MaximumTotalMessageSize = -1);
-        data.Add(builder => builder.MaximumConcurrentMessageParsers = 0);
-        data.Add(builder => builder.MaximumConcurrentMessageParsers = -1);
-        data.Add(builder => builder.CloseTimeout = TimeSpan.Zero);
-        data.Add(builder => builder.CloseTimeout = TimeSpan.FromSeconds(-1));
-
-        return data;
+        AtProtoJetstreamBuilder builder = AtProtoJetstreamBuilder.Create();
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+        {
+            switch (property)
+            {
+                case nameof(AtProtoJetstreamBuilder.ReadBufferSize):
+                    builder.ReadBufferSize = value;
+                    break;
+                case nameof(AtProtoJetstreamBuilder.MaximumTotalMessageSize):
+                    builder.MaximumTotalMessageSize = value;
+                    break;
+                case nameof(AtProtoJetstreamBuilder.MaximumConcurrentMessageParsers):
+                    builder.MaximumConcurrentMessageParsers = value;
+                    break;
+                case nameof(AtProtoJetstreamBuilder.CloseTimeout):
+                    builder.CloseTimeout = TimeSpan.FromSeconds(value);
+                    break;
+                default:
+                    throw new InvalidOperationException($"Unknown property {property}.");
+            }
+        });
     }
 
     [Fact]

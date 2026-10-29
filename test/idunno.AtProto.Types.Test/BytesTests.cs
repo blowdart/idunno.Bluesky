@@ -114,7 +114,7 @@ public class BytesTests
     [InlineData("""{"$bytes":"v102dZsFvFw1oPjolcRtFl4QZ7oE/bY="}""")]
     public void PaddedAndUnpaddedBase64StringsShouldDeserializeIdentically(string json)
     {
-        var expected = new Bytes(new byte[] { 191, 93, 54, 117, 155, 5, 188, 92, 53, 160, 248, 232, 149, 196, 109, 22, 94, 16, 103, 186, 4, 253, 182 });
+        var expected = new Bytes([191, 93, 54, 117, 155, 5, 188, 92, 53, 160, 248, 232, 149, 196, 109, 22, 94, 16, 103, 186, 4, 253, 182]);
 
         Assert.Equal(expected, JsonSerializer.Deserialize<Bytes>(json));
     }
@@ -153,54 +153,54 @@ public class BytesTests
     [Fact]
     public void ShouldSerializeCorrectly()
     {
-        var expectedJson = """{"$bytes":"v102dZsFvFw1oPjolcRtFl4QZ7oE/bY="}""";
+        string expectedJson = """{"$bytes":"v102dZsFvFw1oPjolcRtFl4QZ7oE/bY="}""";
         var bytes = new Bytes("v102dZsFvFw1oPjolcRtFl4QZ7oE/bY=");
 
-        var actualJson = JsonSerializer.Serialize(bytes);
+        string actualJson = JsonSerializer.Serialize(bytes);
         Assert.Equal(expectedJson, actualJson);
     }
 
     [Fact]
     public void ShouldDeserializeCorrectly()
     {
-        var json = """{"$bytes":"v102dZsFvFw1oPjolcRtFl4QZ7oE/bY="}""";
+        string json = """{"$bytes":"v102dZsFvFw1oPjolcRtFl4QZ7oE/bY="}""";
         var expectedBytes = new Bytes("v102dZsFvFw1oPjolcRtFl4QZ7oE/bY=");
-        var actualBytes = JsonSerializer.Deserialize<Bytes>(json);
+        Bytes? actualBytes = JsonSerializer.Deserialize<Bytes>(json);
         Assert.Equal(expectedBytes, actualBytes);
     }
 
     [Fact]
     public void InvalidBase64StringShouldThrowDuringDeserialization()
     {
-        var json = """{"$bytes":"invalid_base64_string"}""";
+        string json = """{"$bytes":"invalid_base64_string"}""";
         Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<Bytes>(json));
     }
 
     [Fact]
     public void InvalidPropertyNameShouldThrowDuringDeserialization()
     {
-        var json = """{"invalid_property":"v102dZsFvFw1oPjolcRtFl4QZ7oE/bY="}""";
+        string json = """{"invalid_property":"v102dZsFvFw1oPjolcRtFl4QZ7oE/bY="}""";
         Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<Bytes>(json));
     }
 
     [Fact]
     public void EmptyValueShouldDeserialize()
     {
-        var json = """{"$bytes":""}""";
+        string json = """{"$bytes":""}""";
         Assert.Empty(JsonSerializer.Deserialize<Bytes>(json)!.Value);
     }
 
     [Fact]
     public void NullValueShouldThrowDuringDeserialization()
     {
-        var json = """{"$bytes":null}""";
+        string json = """{"$bytes":null}""";
         Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<Bytes>(json));
     }
 
     [Fact]
     public void IncorrectValueTypeShouldThrowDuringDeserialization()
     {
-        var json = """{"$bytes":123}""";
+        string json = """{"$bytes":123}""";
         Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<Bytes>(json));
     }
 }

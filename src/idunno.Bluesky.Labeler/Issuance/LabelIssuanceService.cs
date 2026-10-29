@@ -72,10 +72,23 @@ public sealed partial class LabelIssuanceService(
         return Report(result, request.Kind.ToString());
     }
 
+    /// <summary>Executes a manual edit only if its observed label sequence remains current; receipt recovery still precedes this fence.</summary>
+    internal async Task<LabelServiceResult<LabelOperationReceipt>> ExecuteObservedAsync(
+        LabelOperationRequest request,
+        long expectedSequence,
+        CancellationToken cancellationToken)
+    {
+        LabelServiceResult<LabelOperationReceipt> result = await ExecuteCoreAsync(request, cancellationToken, expectedSequence).ConfigureAwait(false);
+        return Report(result, request.Kind.ToString());
+    }
+
     /// <summary>Recovers prior intent or authorizes, resolves, reconciles and signs a new atomic decision.</summary>
     /// <remarks><para>Receipt recovery precedes network and policy work so a retry cannot change a
     /// committed target or signature. The provider rechecks the observed revision when committing.</para></remarks>
-    private async Task<LabelServiceResult<LabelOperationReceipt>> ExecuteCoreAsync(LabelOperationRequest request, CancellationToken token)
+    private async Task<LabelServiceResult<LabelOperationReceipt>> ExecuteCoreAsync(
+        LabelOperationRequest request,
+        CancellationToken token,
+        long? expectedSequence = null)
     {
         LabelAuthorizationAction action = request.Kind == LabelOperationKind.Issue
             ? LabelAuthorizationAction.Issue : LabelAuthorizationAction.Negate;
@@ -110,7 +123,7 @@ public sealed partial class LabelIssuanceService(
             return recovered;
         }
 
-        LabelServiceResult<LabelDecisionCommit> prepared = await PrepareDecisionAsync(request, token).ConfigureAwait(false);
+        LabelServiceResult<LabelDecisionCommit> prepared = await PrepareDecisionAsync(request, token, expectedSequence).ConfigureAwait(false);
         if (!prepared.Succeeded)
         {
             return LabelServiceResult<LabelOperationReceipt>.Failure(prepared.Error);
@@ -174,7 +187,10 @@ public sealed partial class LabelIssuanceService(
     /// <summary>Prepares one resolved, authorized and signed decision without writing labels or receipts.</summary>
     /// <remarks><para>The caller must perform coarse admission and same-intent receipt recovery first.
     /// Compound workflows reuse this preparation before submitting all actions in one provider transaction.</para></remarks>
-    internal async Task<LabelServiceResult<LabelDecisionCommit>> PrepareDecisionAsync(LabelOperationRequest request, CancellationToken token)
+    internal async Task<LabelServiceResult<LabelDecisionCommit>> PrepareDecisionAsync(
+        LabelOperationRequest request,
+        CancellationToken token,
+        long? expectedSequence = null)
     {
         LabelAuthorizationAction action = request.Kind == LabelOperationKind.Issue
             ? LabelAuthorizationAction.Issue : LabelAuthorizationAction.Negate;
@@ -257,6 +273,13 @@ public sealed partial class LabelIssuanceService(
         }
 
         StoredLabel? current = snapshot.Result.CurrentLabel;
+        if (expectedSequence is { } sequence && sequence != (current?.Sequence ?? 0))
+        {
+            return Failure<LabelDecisionCommit>(
+                LabelServiceErrorCode.StaleDecision,
+                "The label changed since it was loaded. Load the target's labels again before submitting new changes.");
+        }
+
         if (request.Kind == LabelOperationKind.Negate)
         {
             if (request.Target.Cid is not null && (current is null || request.Target.Cid != current.SignedLabel.Label.Cid))

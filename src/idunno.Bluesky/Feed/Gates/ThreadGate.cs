@@ -87,8 +87,8 @@ public partial record ThreadGate : BlueskyRecord
     [JsonPropertyName("allow")]
     public ICollection<ThreadGateRule>? Rules
     {
-        get => _rules;
-        init => _rules = value is null ? null : new List<ThreadGateRule>(value).AsReadOnly();
+        get;
+        init => field = value is null ? null : new List<ThreadGateRule>(value).AsReadOnly();
     }
 
     /// <summary>
@@ -98,13 +98,9 @@ public partial record ThreadGate : BlueskyRecord
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ICollection<AtUri>? HiddenReplies
     {
-        get => _hiddenReplies;
-        init => _hiddenReplies = value is null ? null : new List<AtUri>(value).AsReadOnly();
+        get;
+        init => field = value is null ? null : new List<AtUri>(value).AsReadOnly();
     }
-
-    private readonly ICollection<ThreadGateRule>? _rules;
-
-    private readonly ICollection<AtUri>? _hiddenReplies;
 
     /// <summary>
     /// Gets a configured instance of <see cref="ThreadGate"/> for the specified <paramref name="post"/> which doesn't allow any replies.
