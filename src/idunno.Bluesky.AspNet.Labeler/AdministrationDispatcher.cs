@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Data.Common;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -25,7 +26,8 @@ internal sealed partial class AdministrationDispatcher(
     ILabelIssuancePolicyProvider policy,
     Uri? publicEndpoint,
     TimeProvider clock,
-    LabelerHost? host)
+    LabelerHost? host,
+    RetirementWorker retirementWorker)
 {
     /// <summary>Requires a real installed key only for an operation that actually signs.</summary>
     private ILabelSigningKeyRing SigningKeys => signingKeyRing
@@ -265,20 +267,14 @@ internal sealed partial class AdministrationDispatcher(
                         return Failure(grant.Error);
                     }
 
-                    LabelServiceResult<LabelStoreState> result = LabelServiceResult<LabelStoreState>.Success(await store.GetStateAsync(token).ConfigureAwait(false));
-                    return result.Succeeded
-                        ? new(true, State: new(
-                            result.Result.StreamId,
-                            result.Result.Issuer,
-                            result.Result.IssuedThrough,
-                            result.Result.PublishedThrough,
-                            result.Result.Revision,
-                            result.Result.ReplayFloor,
-                            result.Result.Phase.ToString(),
-                            result.Result.RetirementUpperBound,
-                            result.Result.RetirementThrough,
-                            result.Result.GraceDeadline))
-                        : Failure(result.Error);
+                    try
+                    {
+                        return new(true, State: PublicationView(await store.GetStateAsync(token).ConfigureAwait(false)));
+                    }
+                    catch (DbException)
+                    {
+                        return new(false, "StorageUnavailable", "Publication state could not be read; restore database availability.");
+                    }
                 }
             case "getMaintenanceState":
                 {
@@ -589,7 +585,7 @@ internal sealed partial class AdministrationDispatcher(
                     return Failure(authority.Error);
                 }
 
-                LabelServiceError? error = await new LabelRetirementService(store, retirement, signingKeyRing).AdvanceAsync(token).ConfigureAwait(false);
+                LabelServiceError? error = await retirementWorker.AdvanceAsync(token).ConfigureAwait(false);
                 if (error is not null)
                 {
                     return Failure(error);
@@ -682,6 +678,10 @@ internal sealed partial class AdministrationDispatcher(
         catch (InvalidDataException)
         {
             return new(false, "StorageUnavailable", "Retirement history is inconsistent; preserve diagnostics and recover before resuming.");
+        }
+        catch (DbException)
+        {
+            return new(false, "StorageUnavailable", "Retirement state could not be read; restore database availability.");
         }
     }
 

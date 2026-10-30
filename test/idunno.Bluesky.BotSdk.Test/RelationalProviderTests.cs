@@ -330,7 +330,9 @@ public sealed partial class RelationalProviderTests
         Assert.Equal(cutoff, after.StartedAt);
         Assert.Null(after.CheckpointJson);
         Assert.Equal("app.bsky.feed.post", JsonSerializer.Deserialize(after.RequestJson!, BotJson.SnapshotRequest)!.Collections!.Single().ToString());
-        Assert.Equal("uncertain", (await store.Database.NextWorkAsync(CancellationToken.None))!.Status);
+        Assert.Equal(1, await store.CountAsync("reply_work"));
+        await store.SetRetryReadyAsync();
+        Assert.Equal("uncertain", Assert.IsType<BotAction>(await store.Database.NextWorkAsync(CancellationToken.None)).Status);
         Assert.Equal(100, await store.Database.OverrideLookbackAsync(cutoff.AddMinutes(1), new SnapshotRequest
         {
             AfterSeq = 50,
@@ -384,10 +386,11 @@ public sealed partial class RelationalProviderTests
         await store.Database.HandleAsync(11, [work], null, CancellationToken.None);
         string root = TestRecords.Post(work).Reply!.Root.Uri.ToString();
         await store.Database.HandleAsync(12, [], null, CancellationToken.None, root);
-        BotAction deleted = (await store.Database.NextWorkAsync(CancellationToken.None))!;
+        await store.SetRetryReadyAsync();
+        BotAction deleted = Assert.IsType<BotAction>(await store.Database.NextWorkAsync(CancellationToken.None));
         Assert.True(deleted.TargetDeleted);
         Assert.Equal(0, await store.Database.MarkAttemptAsync(deleted, CancellationToken.None));
-        Assert.Equal("pending", (await store.Database.NextWorkAsync(CancellationToken.None))!.Status);
+        Assert.Equal("pending", Assert.IsType<BotAction>(await store.Database.NextWorkAsync(CancellationToken.None)).Status);
     }
 
     /// <summary>Rejects replay state when the bot identity, mode, or Jetstream service changes.</summary>

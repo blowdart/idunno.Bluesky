@@ -14,6 +14,65 @@ namespace idunno.Bluesky.Labeler.Test;
 public class LabelRetirementTests
 {
     [Theory]
+    [InlineData("sqlite", false, false)]
+    [InlineData("sqlite", true, false)]
+    [InlineData("sqlite", false, true)]
+    [InlineData("sqlite", true, true)]
+    [InlineData("postgresql", false, false)]
+    [InlineData("postgresql", true, false)]
+    [InlineData("postgresql", false, true)]
+    [InlineData("postgresql", true, true)]
+    [InlineData("mysql", false, false)]
+    [InlineData("mysql", true, false)]
+    [InlineData("mysql", false, true)]
+    [InlineData("mysql", true, true)]
+    public async Task TiedPositiveObservationsRetainLongestLifetimeRegardlessOfInsertionOrder(string engine, bool reverse, bool unlimited)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        DateTimeOffset now = fixture.DatabaseClock!.GetUtcNow();
+        DateTimeOffset? expiry = unlimited ? null : now.AddDays(1);
+        SignedLabelSnapshot expired = new(key.CreateLabel(
+            source: StoreFixture.s_issuer,
+            uri: "did:plc:subject",
+            value: "spam",
+            creationTimestamp: now.AddDays(-2),
+            expiresAt: now.AddDays(-1)));
+        SignedLabelSnapshot active = new(key.CreateLabel(
+            source: StoreFixture.s_issuer,
+            uri: "did:plc:subject",
+            value: "spam",
+            creationTimestamp: now.AddDays(-2),
+            expiresAt: expiry));
+        await fixture.Store.AppendAsync("tied-history", reverse ? [active, expired] : [expired, active], cancellationToken: token);
+        await fixture.PublishThroughAsync();
+        ILabelRetirementStore retirement = (ILabelRetirementStore)fixture.Store;
+        await ConfirmAsync(retirement, caller, new(
+            Action: "beginRetirement",
+            OperationId: "retire-tied-history",
+            Reason: "Withdraw every applicable observation.",
+            VerifiedSigningPublicKey: key.ExportPublicKeyMultibase()), token);
+        LabelRetirementService service = new(fixture.Store, retirement, new RetirementKeyRing(key));
+        Assert.Null(await service.AdvanceAsync(token));
+        LabelRetirementBatch batch = Success(await retirement.ReadRetirementBatchAsync(token));
+        Assert.Equal(expiry, Assert.Single(batch.Labels).SignedLabel.Label.ExpiresAt);
+        LabelRetirementView view;
+        int steps = 0;
+        do
+        {
+            Assert.Null(await service.AdvanceAsync(token));
+            await fixture.PublishThroughAsync();
+            view = Success(await retirement.InspectRetirementAsync(caller, null, token));
+            Assert.True(++steps < 5);
+        }
+        while (view.Phase == "Retiring");
+        Assert.Equal(3, view.IssuedThrough);
+        Assert.Equal(view.IssuedThrough, view.PublishedThrough);
+    }
+
+    [Theory]
     [InlineData("sqlite", "read", false)]
     [InlineData("sqlite", "commit", false)]
     [InlineData("sqlite", "publication", false)]
@@ -327,7 +386,7 @@ public class LabelRetirementTests
             value: "spam",
             creationTimestamp: now)));
         await fixture.Store.AppendAsync("initial-history", history, cancellationToken: token);
-        await fixture.Store.PublishAsync(limit: 1000, cancellationToken: token);
+        await fixture.PublishThroughAsync();
         LabelRetirementCommand begin = new(
             Action: "beginRetirement",
             OperationId: "retire-history",
@@ -363,7 +422,7 @@ public class LabelRetirementTests
                 negations: negations,
                 signingPublicKey: negations.Count == 0 ? null : key.ExportPublicKeyMultibase(),
                 cancellationToken: token)).Error!.Code);
-            await fixture.Store.PublishAsync(limit: 1000, cancellationToken: token);
+            await fixture.PublishThroughAsync();
             Assert.True(++pages < 12, "Retirement must make bounded progress.");
         }
         while (state.Phase == "Retiring");

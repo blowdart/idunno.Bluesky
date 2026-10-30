@@ -52,6 +52,22 @@ issued/published boundaries, last activity and last actual checkpoint progress. 
 is not proof that a worker is alive, and local publication is not downstream acknowledgement.
 When `Distributing` has no publication backlog, an operator must explicitly begin grace.
 
+All new publication, including retirement negations, shares the default
+[Bluesky AppView label-service limits](https://github.com/bluesky-social/bsky-docs/blob/main/docs/advanced-guides/rate-limits.md#label-limits):
+5 labels per rolling second, 10,000 per rolling hour and 100,000 per rolling 24 hours.
+Committed excess remains pending; restarting, adding hosts or retrying does not reset the budget.
+The host continues polling without treating throttled backlog as a failure. Monitor the issued/published
+gap and allow enough time before beginning grace or draining hosts for a recovery rotation.
+Query and subscription replay of already-published history does not consume new-publication allowance;
+local pacing does not prove a downstream consumer received or accepted every label.
+
+Manual advancement and the background worker share execution and failure recovery. A failed operation
+retains its administrative checkpoint while the host retries only persistence of the pause, not the
+failed batch. Disconnecting the administration request does not discard that pending pause.
+Inspect the saved failure and explicitly resume after restoring storage or signing.
+When positive observations have identical creation timestamps, retirement retains the longest-lived
+one, including a label without expiry, so an expired duplicate cannot hide a still-applicable label.
+
 ```text
 labeler-admin retire pause --operation-id pause-1 --reason "Investigate the signing host" --yes --local-endpoint /run/bean-bureau/admin.sock
 labeler-admin retire resume --operation-id resume-1 --reason "Restored key and reviewed saved progress" --yes --local-endpoint /run/bean-bureau/admin.sock
@@ -110,6 +126,8 @@ indexes. It retains reports, cases, appeals, policy history, team, administrativ
 minimal lifecycle/operation records. Retained moderation or audit may still reference historical
 labels. This is not whole-database erasure. Purge can make old query/replay positions unavailable;
 sequence identities must not be reused.
+Recent publication accounting and its database-clock high-water mark are retained independently
+of label-history cleanup.
 The CLI still accepts the legacy `purge --limit` hint, but server-owned bounded worker batches
 replace the old one-invocation-per-batch loop. Repeating the same purge operation recovers its
 original command receipt; use `retire status` for current progress.

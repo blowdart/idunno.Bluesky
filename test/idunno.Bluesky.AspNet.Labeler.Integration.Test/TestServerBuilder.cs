@@ -46,6 +46,15 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
     internal bool RemoteAdministrationEnabled { get; set; }
     internal LabelerHost Host => _app.Services.GetRequiredService<LabelerHost>();
     internal SignalClock Clock { get; } = new();
+    /// <summary>Gets the separately controlled database clock for publication-budget tests.</summary>
+    internal FakeTimeProvider DatabaseClock { get; } = new(new DateTimeOffset(
+        year: 2026,
+        month: 1,
+        day: 2,
+        hour: 3,
+        minute: 4,
+        second: 5,
+        offset: TimeSpan.Zero));
     internal HttpClient Client { get; private set; } = null!;
     internal Uri Address { get; private set; } = null!;
     internal Uri SocketAddress => new UriBuilder(Address) { Scheme = "ws", Path = "/xrpc/com.atproto.label.subscribeLabels" }.Uri;
@@ -62,7 +71,8 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
         bool fallbackAuthorizationRequired = false,
         ILabelSigningKeyRing? signingKeyRing = null,
         bool moderation = false,
-        bool xenonUi = false)
+        bool xenonUi = false,
+        bool controlDatabaseTime = false)
     {
         TestServerBuilder fixture = new(database);
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
@@ -177,6 +187,10 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
             fixture._app.MapRazorPages();
         }
 
+        if (controlDatabaseTime)
+        {
+            ((SqliteLabelStore)fixture.Store).DatabaseClock = fixture.DatabaseClock;
+        }
         await fixture.Store.InitializeAsync(s_issuer);
         if (moderation)
         {
@@ -217,6 +231,19 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
 
     /// <summary>Stops publication and active requests without disposing metrics needed for assertions.</summary>
     internal Task StopAsync() => _app.StopAsync();
+
+    /// <summary>Publishes queued fixture history under the production limits without real-time waits.</summary>
+    internal async Task PublishAllAsync()
+    {
+        Assert.Same(DatabaseClock, ((SqliteLabelStore)Store).DatabaseClock);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        LabelStoreState state = await Store.GetStateAsync(token);
+        while (state.PublishedThrough < state.IssuedThrough)
+        {
+            DatabaseClock.Advance(TimeSpan.FromSeconds(1));
+            state = await Store.PublishAsync(cancellationToken: token);
+        }
+    }
 
     /// <summary>Creates a separate provider instance sharing only the durable database with the mapped application.</summary>
     internal ServiceProvider OtherProvider()

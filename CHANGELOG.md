@@ -8,6 +8,7 @@
 
 * Runs durable retirement and optional local-purge batches independently of administration-client lifetime, retaining public distribution during grace and after retirement; supports explicitly keyless administration only on terminal retired storage.
 * Recovers retirement command receipts before phase-dependent signing checks, dispatches stopped-host confirmations consistently, and durably pauses failed worker epochs across uncertain batch commits without overriding later administrator recovery.
+* Shares retirement failure recovery between manual commands and the background worker, retains pending pauses after request cancellation, returns classified storage failures during publication inspection, and rejects label-producing case decisions on keyless hosts without blocking non-label completion.
 
 * Checks the active public policy in the background every five minutes with a default 30-minute verification lifetime; moderation health reads stored freshness without remote requests. Failed lookups do not extend validity, and confirmed differences require administrator recovery.
 
@@ -190,6 +191,8 @@
 
 #### idunno.Bluesky.Labeler.SQLite / PostgreSQL / MySQL
 
+* Enforces Bluesky AppView label-service limits by default at the shared durable publication boundary: 5 labels per rolling second, 10,000 per rolling hour and 100,000 per rolling 24 hours, including negations. Schema thirteen persists accounting across hosts and restarts; excess remains pending rather than being discarded.
+* Preserves the longest-lived positive label when retirement encounters equal creation timestamps, regardless of insertion order.
 * Adds additive schema-twelve retirement state, exact-intent receipts, expiring confirmation challenges and bounded CID-slot selection across all three providers, preserving existing lifecycle checkpoints until explicitly adopted.
 
 * Automatically handles authenticated reports with disallowed reasons as Not Applicable, retaining original submissions and system audit provenance without changing labels or existing case workflow; subject scope, replay and appeal-ownership checks remain enforced.

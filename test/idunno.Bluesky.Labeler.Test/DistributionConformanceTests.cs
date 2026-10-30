@@ -80,7 +80,7 @@ public class DistributionConformanceTests
     public async Task MatchesReferenceSlotReplacementAndPreservesSnapshotAndRawHistory(string engine)
     {
         CancellationToken token = TestContext.Current.CancellationToken;
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         Cid cid = new("bafyreigh5fjr6an3qujvfbm6xmso6jyhido2dguixaeqp3jtcqft2gofba");
         SignedLabelSnapshot[] input =
@@ -131,7 +131,7 @@ public class DistributionConformanceTests
         await fixture.Store.AppendAsync("replacements", input[4..], cancellationToken: token);
         // A committed but unpublished replacement cannot hide a public slot.
         Assert.Equal([2L, 3L, 4L], (await ReadAllAsync(fixture.Store, initial)).Select(label => label.Sequence));
-        LabelStoreState published = await fixture.Store.PublishAsync(cancellationToken: token);
+        LabelStoreState published = await fixture.PublishThroughAsync();
         ILabelStore restarted = fixture.NewStore();
         await restarted.InitializeAsync(StoreFixture.s_issuer, token);
         List<StoredLabel> actual = await ReadAllAsync(restarted, published);
@@ -269,7 +269,7 @@ public class DistributionConformanceTests
     public async Task SupersededRowsConsumeTheExactScanBudget(string engine)
     {
         CancellationToken token = TestContext.Current.CancellationToken;
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         Assert.Same(fixture.Store, fixture.Services.GetRequiredService<ILabelDistributionStore>());
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         SignedLabelSnapshot signed = new(key.CreateLabel(
@@ -279,8 +279,7 @@ public class DistributionConformanceTests
             creationTimestamp: s_instant));
         await fixture.Store.AppendAsync("batch", [.. Enumerable.Repeat(signed, 1000)], cancellationToken: token);
         await fixture.Store.AppendAsync("replacement", [signed], cancellationToken: token);
-        await fixture.Store.PublishAsync(1000, token);
-        LabelStoreState state = await fixture.Store.PublishAsync(cancellationToken: token);
+        LabelStoreState state = await fixture.PublishThroughAsync();
         LabelDistributionPage first = await fixture.Store.ReadDistributionAsync(
             streamId: state.StreamId,
             after: 0,

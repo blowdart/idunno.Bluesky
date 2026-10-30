@@ -290,7 +290,9 @@ internal abstract partial class RelationalLabelStore
         }
 
         int order = previous is null ? 1 : LabelDecisionRules.CompareCreation(candidate.SignedLabel, previous.SignedLabel);
-        if (order < 0 || order == 0 && candidate.SignedLabel.Label.IsNegationLabel)
+        if (order < 0 || order == 0 && (candidate.SignedLabel.Label.IsNegationLabel ||
+            previous is not null && !previous.SignedLabel.Label.IsNegationLabel &&
+            LabelDecisionRules.CompareExpiry(candidate.SignedLabel, previous.SignedLabel) <= 0))
         {
             return;
         }

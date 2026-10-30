@@ -4,8 +4,10 @@
 namespace idunno.Bluesky.AspNet.Labeler;
 
 /// <summary>Configures bounded public label distribution and durable publication.</summary>
-/// <remarks><para>Limits apply per process, not across a cluster. Use trusted reverse-proxy and
-/// application rate limits for deployment-wide admission. Storage initialization is explicit.</para></remarks>
+/// <remarks><para>Admission and response limits apply per process, not across a cluster. Use trusted reverse-proxy and
+/// application rate limits for deployment-wide admission. The packaged storage providers separately enforce the
+/// <see href="https://github.com/bluesky-social/bsky-docs/blob/main/docs/advanced-guides/rate-limits.md#label-limits">Bluesky AppView publication limits</see>
+/// across all hosts sharing a database. Storage initialization is explicit.</para></remarks>
 public sealed record LabelerHostingOptions
 {
     /// <summary>Gets the maximum simultaneous subscriptions per process.</summary>
@@ -13,7 +15,7 @@ public sealed record LabelerHostingOptions
     public int MaximumSubscriptions { get; init; } = 100;
 
     /// <summary>Gets the maximum events read or published in one batch.</summary>
-    /// <value>The batch size, from 1 through 250. The default is 100.</value>
+    /// <value>The batch size, from 1 through 250. The default is 100. New publication is also bounded by the shared rolling budgets.</value>
     public int BatchSize { get; init; } = 100;
 
     /// <summary>Gets the interval between durable publication and live-read polls.</summary>

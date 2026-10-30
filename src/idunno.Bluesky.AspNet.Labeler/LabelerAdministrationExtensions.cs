@@ -161,18 +161,20 @@ public static class LabelerAdministrationExtensions
                 policy: provider.GetRequiredService<ILabelIssuancePolicyProvider>(),
                 publicEndpoint: provider.GetService<LabelerHostingOptions>()?.PublicEndpoint,
                 clock: provider.GetRequiredService<TimeProvider>(),
-                host: provider.GetService<LabelerHost>());
+                host: provider.GetService<LabelerHost>(),
+                retirementWorker: provider.GetRequiredService<RetirementWorker>());
         });
         services.AddHostedService(provider => new PolicyWithdrawalWorker(
             dispatcher: provider.GetRequiredService<AdministrationDispatcher>(),
             clock: provider.GetRequiredService<TimeProvider>(),
             logger: provider.GetRequiredService<ILogger<PolicyWithdrawalWorker>>()));
-        services.AddHostedService(provider => new RetirementWorker(
+        services.AddSingleton(provider => new RetirementWorker(
             store: provider.GetRequiredService<ILabelStore>(),
             keys: provider.GetService<ILabelSigningKeyRing>(),
             host: provider.GetService<LabelerHost>(),
             clock: provider.GetRequiredService<TimeProvider>(),
             logger: provider.GetRequiredService<ILogger<RetirementWorker>>()));
+        services.AddHostedService(provider => provider.GetRequiredService<RetirementWorker>());
         return services;
     }
 

@@ -1,4 +1,8 @@
 CREATE TABLE IF NOT EXISTS label_schema (id INTEGER PRIMARY KEY CHECK(id=1), version INTEGER NOT NULL CHECK(version>0));
+CREATE TABLE IF NOT EXISTS label_publication_clock (id INTEGER PRIMARY KEY CHECK(id=1), observed_at INTEGER NOT NULL);
+INSERT OR IGNORE INTO label_publication_clock(id,observed_at) VALUES(1,0);
+CREATE TABLE IF NOT EXISTS label_publication_batches (through_seq INTEGER PRIMARY KEY, published_at INTEGER NOT NULL, label_count INTEGER NOT NULL CHECK(label_count>0));
+CREATE INDEX IF NOT EXISTS label_publication_time ON label_publication_batches(published_at);
 CREATE TABLE IF NOT EXISTS label_state (
     id INTEGER PRIMARY KEY CHECK(id=1),
     stream_id TEXT NOT NULL,
@@ -202,4 +206,4 @@ CREATE TABLE IF NOT EXISTS label_post_review_checks (
     case_id INTEGER PRIMARY KEY REFERENCES label_cases(case_id),
     checked_ms INTEGER NOT NULL
 );
-INSERT OR IGNORE INTO label_schema(id, version) VALUES(1, 12);
+INSERT OR IGNORE INTO label_schema(id, version) VALUES(1, 13);

@@ -135,6 +135,22 @@ internal sealed class StoreFixture : IAsyncDisposable
 
     internal IMeterFactory MeterFactory => Services.GetRequiredService<IMeterFactory>();
 
+    /// <summary>Drains a known publication prefix using explicit database time and the production budgets.</summary>
+    internal async Task<LabelStoreState> PublishThroughAsync(long? through = null)
+    {
+        FakeTimeProvider clock = DatabaseClock ?? throw new InvalidOperationException("Publication draining requires a controlled database clock.");
+        CancellationToken token = TestContext.Current.CancellationToken;
+        LabelStoreState state = await Store.GetStateAsync(token);
+        long target = through ?? state.IssuedThrough;
+        while (state.PublishedThrough < target)
+        {
+            clock.Advance(TimeSpan.FromSeconds(1));
+            state = await Store.PublishAsync((int)Math.Min(250, target - state.PublishedThrough), token);
+        }
+
+        return state;
+    }
+
     internal void SetCommitHooks(
         Func<DbConnection, DbTransaction, CancellationToken, Task>? beforeCommit = null,
         Func<DbConnection, CancellationToken, Task>? afterCommit = null)

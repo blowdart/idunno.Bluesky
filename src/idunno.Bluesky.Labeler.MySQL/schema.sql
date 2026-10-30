@@ -1,4 +1,7 @@
 CREATE TABLE IF NOT EXISTS label_schema (id INTEGER PRIMARY KEY CHECK(id=1), version INTEGER NOT NULL CHECK(version>0)) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_publication_clock (id INTEGER PRIMARY KEY CHECK(id=1), observed_at BIGINT NOT NULL) ENGINE=InnoDB;
+INSERT INTO label_publication_clock(id,observed_at) VALUES(1,0) ON DUPLICATE KEY UPDATE id=id;
+CREATE TABLE IF NOT EXISTS label_publication_batches (through_seq BIGINT PRIMARY KEY, published_at BIGINT NOT NULL, label_count INTEGER NOT NULL CHECK(label_count>0), INDEX label_publication_time(published_at)) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS label_state (
     id INTEGER PRIMARY KEY CHECK(id=1),
     stream_id VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
@@ -223,4 +226,4 @@ CREATE TABLE IF NOT EXISTS label_post_review_checks (
     checked_ms BIGINT NOT NULL,
     FOREIGN KEY(case_id) REFERENCES label_cases(case_id)
 ) ENGINE=InnoDB;
-INSERT INTO label_schema(id, version) VALUES(1, 12) ON DUPLICATE KEY UPDATE id=id;
+INSERT INTO label_schema(id, version) VALUES(1, 13) ON DUPLICATE KEY UPDATE id=id;

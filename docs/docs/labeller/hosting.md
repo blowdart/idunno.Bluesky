@@ -58,6 +58,15 @@ another process is visible and restarting a host resumes pending publication. No
 notification queue is needed for correctness. Stopping the application cancels readers,
 subscribers and publication; publication failure stops admission and fails the hosted worker.
 
+New publication also obeys the
+[Bluesky AppView label-service limits](https://github.com/bluesky-social/bsky-docs/blob/main/docs/advanced-guides/rate-limits.md#label-limits)
+by default: 5 labels per rolling second, 10,000 per rolling hour and 100,000 per rolling 24 hours,
+including negations. These budgets are durable and shared across all hosts using the database, not
+configured by `BatchSize`. Excess labels remain pending, and the worker waits for the next poll
+instead of spinning or failing readiness. Existing published query/replay traffic is not charged again.
+See [publication and upgrades](persistence.md#make-saved-labels-available-to-readers) for clock,
+migration and backup considerations.
+
 ## Retained results and signatures
 
 Delivery follows the retained-content behavior of

@@ -141,10 +141,8 @@ internal sealed partial class LabelerHost(
 
                 _ready = true;
                 _initialPublication.TrySetResult();
-                if (state.PublishedThrough == state.IssuedThrough)
-                {
-                    await Task.Delay(options.PollInterval, clock, stoppingToken).ConfigureAwait(false);
-                }
+                // A durable publication budget can leave backlog without making the host unhealthy.
+                await Task.Delay(options.PollInterval, clock, stoppingToken).ConfigureAwait(false);
             }
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
