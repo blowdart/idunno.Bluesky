@@ -61,10 +61,13 @@ public sealed class ActionStorageTests
     public async Task SameEventDeletionMarksNewActions(string provider)
     {
         await using Store store = await Store.CreateAsync(provider);
-        await VerifySameEventDeletionAsync(store.Database);
+        await VerifySameEventDeletionAsync(store.Database, store.MakeRetriesDueAsync);
     }
 
-    internal static async Task VerifySameEventDeletionAsync(IDatabaseProvider database)
+    /// <summary>Checks deletion flags independently of retry scheduling and database clock changes.</summary>
+    /// <param name="database">The initialized provider with a usable ownership lease.</param>
+    /// <param name="makeRetriesDue">The fixture operation that makes enqueued work eligible for selection.</param>
+    internal static async Task VerifySameEventDeletionAsync(IDatabaseProvider database, Func<Task> makeRetriesDue)
     {
         BotAction original = TestRecords.Work();
         await database.HandleAsync(11, [original], null, CancellationToken.None);
@@ -89,6 +92,7 @@ public sealed class ActionStorageTests
         actions.AddRange([rootReply, rootCustom, unrelated]);
         Assert.Equal(9, await database.HandleAsync(12, actions, null, CancellationToken.None, original.SourceUri));
         Assert.Equal(12, (await database.LoadStateAsync(CancellationToken.None)).ProcessedThrough);
+        await makeRetriesDue();
 
         Dictionary<string, BotAction> remaining = actions.Append(uncertain).ToDictionary(action => action.RecordKey);
         while (remaining.Count > 0)
@@ -164,6 +168,7 @@ public sealed class ActionStorageTests
         await store.AddLegacyRecordKeyIndexAsync();
         await store.Database.InitializeAsync(CancellationToken.None);
         await store.Database.InitializeAsync(CancellationToken.None);
+        await store.MakeRetriesDueAsync();
         Assert.Equal(
             first,
             await store.Database.NextWorkAsync(CancellationToken.None));
@@ -188,9 +193,10 @@ public sealed class ActionStorageTests
             1,
             await store.Database.RetryAsync(
                 first,
-                DateTimeOffset.UtcNow.AddHours(1),
+                DateTimeOffset.MaxValue,
                 "one row only",
                 CancellationToken.None));
+        await store.SetPendingReadyAsync(ready: true);
         Assert.Equal(
             second,
             await store.Database.NextWorkAsync(CancellationToken.None));
@@ -360,7 +366,9 @@ public sealed class ActionStorageTests
         Assert.Equal(
             1,
             await store.CountAsync("1 = 1"));
-        Assert.False((await store.Database.NextWorkAsync(CancellationToken.None))!.TargetDeleted);
+        await store.MakeRetriesDueAsync();
+        BotAction durable = Assert.IsType<BotAction>(await store.Database.NextWorkAsync(CancellationToken.None));
+        Assert.False(durable.TargetDeleted);
         Assert.Equal(
             0,
             await store.ScalarAsync("SELECT count(*) FROM skipped_data"));
@@ -430,7 +438,8 @@ public sealed class ActionStorageTests
         await using Store store = await Store.CreateAsync(
             provider,
             legacy: true);
-        BotAction durable = (await store.Database.NextWorkAsync(CancellationToken.None))!;
+        await store.MakeRetriesDueAsync();
+        BotAction durable = Assert.IsType<BotAction>(await store.Database.NextWorkAsync(CancellationToken.None));
         Assert.Equal(
             Action(
                 "reply",
@@ -464,9 +473,11 @@ public sealed class ActionStorageTests
             null,
             "legacy target deleted",
             CancellationToken.None));
+        await store.MakeRetriesDueAsync();
+        BotAction next = Assert.IsType<BotAction>(await store.Database.NextWorkAsync(CancellationToken.None));
         Assert.Equal(
             "bookmark",
-            (await store.Database.NextWorkAsync(CancellationToken.None))!.ActionKind);
+            next.ActionKind);
     }
 
     private static BotAction Action(

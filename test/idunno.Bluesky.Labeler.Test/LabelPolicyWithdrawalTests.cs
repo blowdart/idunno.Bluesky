@@ -204,10 +204,7 @@ public class LabelPolicyWithdrawalTests
         Assert.Equal(503, signedCount);
         Assert.Equal(LabelPolicyPhase.Withdrawing, current.Phase);
         Assert.Equal(history.Count + signedCount, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
-        while (stream.PublishedThrough < stream.IssuedThrough || stream.IssuedThrough == history.Count)
-        {
-            stream = await fixture.Store.PublishAsync(limit: 250, cancellationToken: token);
-        }
+        stream = await fixture.PublishThroughAsync();
         ILabelPolicyWithdrawalStore final = (ILabelPolicyWithdrawalStore)fixture.NewStore();
         current = Success(await final.CommitPolicyWithdrawalBatchAsync(
             batch: Success(await final.ReadPolicyWithdrawalBatchAsync(token)),
@@ -550,7 +547,7 @@ public class LabelPolicyWithdrawalTests
                 negations: Sign(batch, key),
                 signingPublicKey: key.ExportPublicKeyMultibase(),
                 cancellationToken: token));
-            await fixture.Store.PublishAsync(limit: 250, cancellationToken: token);
+            await fixture.PublishThroughAsync();
             Assert.True(++batches < 10);
         }
         Assert.Equal(1, additional);

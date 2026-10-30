@@ -23,6 +23,20 @@ internal static class LabelDecisionRules
             rightRemainder: Fraction(right, "cts"),
             field: "cts");
 
+    /// <summary>Orders exact expiry instants, treating an absent expiry as an unlimited lifetime.</summary>
+    internal static int CompareExpiry(SignedLabelSnapshot left, SignedLabelSnapshot right) =>
+        (left.Label.ExpiresAt, right.Label.ExpiresAt) switch
+        {
+            (null, null) => 0,
+            (null, _) => 1,
+            (_, null) => -1,
+            (_, { } expiry) => CompareTimestamp(
+                left: left,
+                right: expiry,
+                rightRemainder: Fraction(right, "exp"),
+                field: "exp")
+        };
+
     /// <summary>Determines whether an existing label still applies at the supplied service time.</summary>
     internal static bool IsActive(SignedLabelSnapshot signed, DateTimeOffset now)
     {

@@ -112,6 +112,19 @@ operation IDs, and backend revision/conflict results. A failed or disconnected
 request can be retried using its operation ID; lifecycle work can be inspected and
 advanced again after a host restart because progress is stored by the backend.
 
+Lifecycle uses [action-specific retirement preflight](retirement.md) followed by a separate
+confirmation submission, not the former generic checkbox. It shows saved scan/negation/publication
+checkpoints, activity versus actual progress, pause reasons, maintenance blockers and recovery.
+Begin/resume authorize server-side background work independently of browser lifetime. Grace
+requires an explicit 1-365 day choice with no pre-filled value; completion records a nonblank
+availability attestation. Purge and key-removal request/attestation have separate previews and
+challenges. Purge retains moderation and administrative audit; key removal is operator-attested,
+not verified deletion. Neither action erases backups or downstream copies.
+Retired/Purged Lifecycle also offers a separately challenged stopped-process attestation for
+each exact registered host. Independently verify shutdown first; stale heartbeat or missing
+contact is not evidence. Recording it invalidates prior previews, so prepare a fresh key-removal
+attestation afterwards. This does not start rotation, stop a process or verify secret deletion.
+
 Identity displays use `DidHandleCache` to show bidirectionally verified handles.
 Lists expose the canonical DID (or exact record URI) on hover and keyboard focus;
 Escape dismisses the tooltip. Details show the handle followed by the canonical

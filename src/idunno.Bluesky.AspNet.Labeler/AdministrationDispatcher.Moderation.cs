@@ -335,9 +335,14 @@ internal sealed partial class AdministrationDispatcher
                     }
                     else
                     {
+                        if (signingKeyRing is null)
+                        {
+                            return new(false, "IssuanceClosed", "This retired host has no private signing keys.");
+                        }
+
                         LabelIssuanceService issuance = new(
                             issuer: caller.Issuer,
-                            signingKey: signingKeyRing.GetSigningKey(signingKeyRing.ActiveKeyId),
+                            signingKey: SigningKeys.GetSigningKey(SigningKeys.ActiveKeyId),
                             store: store,
                             authorizer: new LabelTeamAuthorizer(administration, caller),
                             policyProvider: policy,

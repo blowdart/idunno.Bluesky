@@ -12,6 +12,7 @@ using idunno.AtProto.Labels;
 using idunno.Bluesky.Labeler;
 using idunno.Bluesky.Labeler.Administration;
 using idunno.Bluesky.Labeler.Issuance;
+using idunno.Bluesky.Labeler.Maintenance;
 using idunno.Bluesky.Labeler.Moderation;
 using idunno.Bluesky.Labeler.Storage;
 
@@ -462,6 +463,7 @@ public class ModerationTests
         DeclarationHandler handler = new(key.ExportPublicKeyMultibase());
         using HttpClient identity = new(handler);
         await using TestServerBuilder fixture = await CreateAsync(key, identity);
+        await fixture.Clock.PolicyVerificationRegistrations.Reader.ReadAsync(TestContext.Current.CancellationToken);
         await VerifyPolicyAsync(fixture);
         using MetricCollector<long> metrics = new(
             fixture.Services.GetRequiredService<IMeterFactory>(), LabelerModerationHost.MeterName,
@@ -739,13 +741,19 @@ public class ModerationTests
     }
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(2)]
-    public async Task BothAdministrativeAdaptersConsumeTheSameCaseAndPolicyServices(int actions)
+    [InlineData(0, false, false)]
+    [InlineData(2, false, false)]
+    [InlineData(2, true, false)]
+    [InlineData(0, false, true)]
+    [InlineData(2, false, true)]
+    public async Task BothAdministrativeAdaptersConsumeTheSameCaseAndPolicyServices(int actions, bool concurrentPolicyRefresh, bool keyless)
     {
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
-        using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()));
+        DeclarationHandler handler = new(key.ExportPublicKeyMultibase()) { BlockSubjectResolution = concurrentPolicyRefresh };
+        using HttpClient identity = new(handler);
         await using TestServerBuilder fixture = await CreateAsync(key: key, identity: identity, remoteEnabled: true);
+        // A late startup verifier can otherwise refresh the policy between action preparation and commit.
+        await fixture.Clock.PolicyVerificationRegistrations.Reader.ReadAsync(TestContext.Current.CancellationToken);
         ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
         LabelAdministrationCaller administrator = (await team.AuthenticateLocalAsync("uid:0", TestContext.Current.CancellationToken)).Result!;
         AdministrationDispatcher dispatcher = fixture.Services.GetRequiredService<AdministrationDispatcher>();
@@ -782,6 +790,31 @@ public class ModerationTests
                 ExpectedRevision: local.Moderation.Event.Case.Revision,
                 PolicyVersion: "v1",
                 Actions: actions == 0 ? [] : [new(LabelOperationKind.Issue, "spam"), new(LabelOperationKind.Negate, "other")]));
+        if (keyless)
+        {
+            AdministrationDispatcher keylessDispatcher = new(
+                store: fixture.Store,
+                administration: team,
+                maintenance: fixture.Services.GetRequiredService<ILabelMaintenanceStore>(),
+                httpClient: identity,
+                signingKeyRing: null,
+                policy: fixture.Services.GetRequiredService<ILabelIssuancePolicyProvider>(),
+                publicEndpoint: null,
+                clock: fixture.Clock,
+                host: fixture.Host,
+                retirementWorker: fixture.Services.GetRequiredService<RetirementWorker>());
+            Assert.True((await keylessDispatcher.DispatchAsync(
+                administrator, new(Method: "getPublicationState"), TestContext.Current.CancellationToken)).Succeeded);
+            AdministrationResponse completed = await keylessDispatcher.DispatchAsync(
+                administrator, decision, TestContext.Current.CancellationToken);
+            Assert.Equal(actions == 0, completed.Succeeded);
+            if (actions != 0)
+            {
+                Assert.Equal("IssuanceClosed", completed.Error);
+            }
+            Assert.Equal(0, (await fixture.Store.GetStateAsync(TestContext.Current.CancellationToken)).IssuedThrough);
+            return;
+        }
         using HttpRequestMessage decide = new(HttpMethod.Post, "/xrpc/dev.idunno.labeler.admin.decideCase");
         decide.Content = new StringContent(
             JsonSerializer.Serialize(decision, AdministrationJsonContext.Default.AdministrationCommand),
@@ -790,8 +823,27 @@ public class ModerationTests
         AdministrationTests.AddTrustedProxyHeaders(decide);
         decide.Headers.Authorization = new("Bearer", AdministrationTests.Token(
             key: key, now: fixture.Clock.GetUtcNow(), method: "dev.idunno.labeler.admin.decideCase"));
-        using HttpResponseMessage decided = await fixture.Client.SendAsync(decide, TestContext.Current.CancellationToken);
-        Assert.Equal(HttpStatusCode.OK, decided.StatusCode);
+        Task<HttpResponseMessage> pendingDecision = fixture.Client.SendAsync(decide, TestContext.Current.CancellationToken);
+        if (concurrentPolicyRefresh)
+        {
+            await handler.SubjectRequested.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+            Assert.True((await fixture.Services.GetRequiredService<LabelPolicyService>().GetVerifiedStateAsync(
+                forceVerification: true,
+                cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
+            handler.ReleaseSubject.TrySetResult();
+        }
+        using HttpResponseMessage decided = await pendingDecision;
+        if (concurrentPolicyRefresh)
+        {
+            Assert.Equal(HttpStatusCode.BadRequest, decided.StatusCode);
+            using JsonDocument failure = JsonDocument.Parse(await decided.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken));
+            Assert.Equal("PolicyUnavailable", failure.RootElement.GetProperty("error").GetString());
+            Assert.Equal(0, (await fixture.Store.GetStateAsync(TestContext.Current.CancellationToken)).IssuedThrough);
+            return;
+        }
+        Assert.True(
+            decided.StatusCode == HttpStatusCode.OK,
+            await decided.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         AdministrationResponse recovered = await dispatcher.DispatchAsync(
             administrator, new(Method: "getCaseDecision", OperationId: "decision"), TestContext.Current.CancellationToken);
         Assert.True(recovered.Succeeded, recovered.Message);
@@ -1081,6 +1133,10 @@ public class ModerationTests
         internal int DeclarationReads { get; private set; }
         internal bool BlockDeclarationReads { get; set; }
         internal TaskCompletionSource DeclarationRequested { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        /// <summary>Gets or sets whether account resolution pauses after the case policy revision has been captured.</summary>
+        internal bool BlockSubjectResolution { get; set; }
+        internal TaskCompletionSource SubjectRequested { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal TaskCompletionSource ReleaseSubject { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         /// <inheritdoc/>
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -1090,6 +1146,11 @@ public class ModerationTests
             if (uri.Host == "plc.directory")
             {
                 string did = Uri.UnescapeDataString(uri.AbsolutePath.Trim('/'));
+                if (did == "did:plc:subject" && BlockSubjectResolution)
+                {
+                    SubjectRequested.TrySetResult();
+                    await ReleaseSubject.Task.WaitAsync(cancellationToken);
+                }
                 json = $$"""
                     {"id":"{{did}}","verificationMethod":[
                     {"id":"{{did}}#atproto","type":"Multikey","controller":"{{did}}","publicKeyMultibase":"{{publicKey}}"}],

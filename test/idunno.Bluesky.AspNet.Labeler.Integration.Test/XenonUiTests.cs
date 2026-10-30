@@ -10,6 +10,7 @@ using idunno.Bluesky.AspNet.Labeler;
 using idunno.Bluesky.Labeler;
 using idunno.Bluesky.Labeler.Administration;
 using idunno.Bluesky.Labeler.Issuance;
+using idunno.Bluesky.Labeler.Maintenance;
 using idunno.Bluesky.Labeler.Signing;
 using idunno.Bluesky.Labeler.Storage;
 
@@ -22,6 +23,166 @@ public class XenonUiTests
     private static readonly Did s_administrator = new("did:plc:xenon-admin");
     private static readonly Did s_member = new("did:plc:xenon-member");
     private static readonly AtProtoServiceReference s_audience = new(TestServerBuilder.s_issuer, "labeler_admin");
+
+    [Theory]
+    [InlineData("confirmed")]
+    [InlineData("generic-checkbox")]
+    [InlineData("changed-intent")]
+    [InlineData("missing-antiforgery")]
+    [InlineData("revoked")]
+    [InlineData("missing-grace")]
+    [InlineData("missing-host")]
+    public async Task LifecycleUsesSeparateActionBoundPreflightAndFreshAuthorization(string scenario)
+    {
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new RetirementIdentityHandler(key.ExportPublicKeyMultibase()));
+        LifecycleTests.TestKeyRing keyRing = new(key, key);
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
+            options: new() { PublicEndpoint = new Uri("https://labeler.example") },
+            configureAdministration: services =>
+            {
+                services.AddSingleton<ILabelIssuancePolicyProvider, UiPolicy>();
+                services.AddSingleton<IDidHandleResolver, TestHandles>();
+                services.AddLabelerAdministration(s_audience, keyRing, identity);
+            },
+            xenonUi: true);
+        await fixture.Services.GetRequiredService<ILabelSigningKeySelectionStore>().InitializeSigningKeySelectionAsync(
+            keyId: keyRing.ActiveKeyId,
+            publicKey: key.ExportPublicKeyMultibase(),
+            cancellationToken: TestContext.Current.CancellationToken);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        Assert.True((await team.BootstrapAsync(
+            s_administrator,
+            "uid:0",
+            "lifecycle-bootstrap",
+            TestContext.Current.CancellationToken)).Succeeded);
+        using HttpResponseMessage initial = await GetAsAsync(fixture, s_administrator, "/Xenon/Lifecycle");
+        Assert.Equal(HttpStatusCode.OK, initial.StatusCode);
+        string html = await initial.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        Assert.Contains("Preview beginRetirement", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Preview purgeRetiredData", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Preview requestKeyRemoval", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Preview stopped-host attestation", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("value=\"30\"", html, StringComparison.Ordinal);
+        (string token, string cookie) = await CsrfAsync(initial);
+        Dictionary<string, string> fields = new()
+        {
+            ["__RequestVerificationToken"] = token,
+            ["stage"] = "preview",
+            ["method"] = scenario switch
+            {
+                "missing-grace" => "beginGracePeriod",
+                "missing-host" => "confirmRetirementHostStopped",
+                _ => "beginRetirement"
+            },
+            ["operationId"] = "lifecycle-start",
+            ["reason"] = "Close the service."
+        };
+        using HttpRequestMessage preview = new(HttpMethod.Post, "/Xenon/Lifecycle")
+        {
+            Content = new FormUrlEncodedContent(fields)
+        };
+        preview.Headers.Add("X-Test-Did", s_administrator.Value);
+        preview.Headers.Add("Cookie", cookie);
+        using HttpResponseMessage prepared = await fixture.Client.SendAsync(preview, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, prepared.StatusCode);
+        ILabelStore store = fixture.Services.GetRequiredService<ILabelStore>();
+        Assert.Equal(LabelerLifecyclePhase.Active, (await store.GetStateAsync(TestContext.Current.CancellationToken)).Phase);
+        string preparedHtml = await prepared.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        if (scenario == "missing-host")
+        {
+            Assert.Contains("Choose the exact host registration independently verified as stopped.", preparedHtml, StringComparison.Ordinal);
+            Assert.DoesNotContain("name=\"confirmationText\"", preparedHtml, StringComparison.Ordinal);
+            return;
+        }
+
+        if (scenario == "missing-grace")
+        {
+            Assert.Contains("Choose a grace period from 1 to 365 days.", preparedHtml, StringComparison.Ordinal);
+            Assert.DoesNotContain("name=\"confirmationText\"", preparedHtml, StringComparison.Ordinal);
+            return;
+        }
+
+        Assert.Contains("Read-only preflight prepared.", preparedHtml, StringComparison.Ordinal);
+        Assert.Contains("name=\"confirmationText\"", preparedHtml, StringComparison.Ordinal);
+        Assert.Contains(key.ExportPublicKeyMultibase(), preparedHtml, StringComparison.Ordinal);
+        Assert.Contains("Registered hosts", preparedHtml, StringComparison.Ordinal);
+        const string proofPrefix = "name=\"confirmation\" value=\"";
+        int proofStart = preparedHtml.IndexOf(proofPrefix, StringComparison.Ordinal);
+        Assert.NotEqual(-1, proofStart);
+        string proof = WebUtility.HtmlDecode(preparedHtml[(proofStart + proofPrefix.Length)..].Split('"')[0]);
+        Assert.NotEmpty(proof);
+        fields["stage"] = "execute";
+        fields["confirmation"] = proof;
+        fields["confirmationText"] = "beginRetirement";
+        if (scenario == "generic-checkbox")
+        {
+            fields.Remove("confirmation");
+            fields.Remove("confirmationText");
+            fields["confirmed"] = "true";
+        }
+        if (scenario == "changed-intent")
+        {
+            fields["reason"] = "Changed after preview.";
+        }
+        if (scenario == "missing-antiforgery")
+        {
+            fields.Remove("__RequestVerificationToken");
+        }
+        if (scenario == "revoked")
+        {
+            LabelAdministrationCaller caller = (await team.AuthenticateLocalAsync("uid:0", TestContext.Current.CancellationToken)).Result!;
+            Assert.True((await team.ChangeTeamAsync(
+                caller,
+                new(
+                    operationId: "lifecycle-second-admin",
+                    action: LabelTeamAction.Enroll,
+                    target: s_member,
+                    reason: "Keep another administrator.",
+                    role: LabelTeamRole.Administrator),
+                TestContext.Current.CancellationToken)).Succeeded);
+            Assert.True((await team.ChangeTeamAsync(
+                caller,
+                new(
+                    operationId: "lifecycle-revoke",
+                    action: LabelTeamAction.Suspend,
+                    target: s_administrator,
+                    reason: "Revoke after preview."),
+                TestContext.Current.CancellationToken)).Succeeded);
+        }
+
+        using HttpRequestMessage execute = new(HttpMethod.Post, "/Xenon/Lifecycle")
+        {
+            Content = new FormUrlEncodedContent(fields)
+        };
+        execute.Headers.Add("X-Test-Did", s_administrator.Value);
+        execute.Headers.Add("Cookie", cookie);
+        using HttpResponseMessage executed = await fixture.Client.SendAsync(execute, TestContext.Current.CancellationToken);
+        HttpStatusCode expected = scenario switch
+        {
+            "confirmed" => HttpStatusCode.Redirect,
+            "revoked" => HttpStatusCode.Forbidden,
+            "missing-antiforgery" => HttpStatusCode.BadRequest,
+            _ => HttpStatusCode.OK
+        };
+        Assert.Equal(expected, executed.StatusCode);
+        LabelerLifecyclePhase phase = (await store.GetStateAsync(TestContext.Current.CancellationToken)).Phase;
+        Assert.Equal(scenario != "confirmed", phase == LabelerLifecyclePhase.Active);
+        if (scenario == "changed-intent")
+        {
+            string failedHtml = await executed.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+            Assert.Contains("retry preflight for the same immutable intent", failedHtml, StringComparison.Ordinal);
+        }
+        if (scenario == "confirmed")
+        {
+            using HttpResponseMessage gracePage = await GetAsAsync(fixture, s_administrator, "/Xenon/Lifecycle");
+            string graceHtml = await gracePage.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+            Assert.Contains("Preview beginGracePeriod", graceHtml, StringComparison.Ordinal);
+            Assert.DoesNotContain("Preview beginRetirement", graceHtml, StringComparison.Ordinal);
+            Assert.Matches("<input[^>]*name=\"graceDays\"[^>]*required", graceHtml);
+            Assert.DoesNotMatch("<input[^>]*name=\"graceDays\"[^>]*value=", graceHtml);
+        }
+    }
 
     [Fact]
     public async Task XenonPagesRequireAnAuthenticatedActiveMember()
@@ -228,6 +389,33 @@ public class XenonUiTests
         using HttpRequestMessage request = new(HttpMethod.Get, path);
         request.Headers.Add("X-Test-Did", actor.Value);
         return await fixture.Client.SendAsync(request, TestContext.Current.CancellationToken);
+    }
+
+    /// <summary>Publishes the selected label verification key and configured endpoint without external requests.</summary>
+    private sealed class RetirementIdentityHandler(string publicKey) : HttpMessageHandler
+    {
+        /// <inheritdoc/>
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            string did = TestServerBuilder.s_issuer.Value;
+            string document = $$"""
+                {
+                  "id":"{{did}}",
+                  "verificationMethod":[{
+                    "id":"{{did}}#atproto_label","type":"Multikey",
+                    "controller":"{{did}}","publicKeyMultibase":"{{publicKey}}"
+                  }],
+                  "service":[{
+                    "id":"{{did}}#atproto_labeler","type":"AtprotoLabeler",
+                    "serviceEndpoint":"https://labeler.example"
+                  }]
+                }
+                """;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(document, System.Text.Encoding.UTF8, "application/json")
+            });
+        }
     }
 
     private static async Task<(string Token, string Cookie)> CsrfAsync(HttpResponseMessage response)

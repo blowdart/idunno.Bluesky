@@ -57,6 +57,12 @@ internal abstract partial class RelationalLabelStore
             operation: "register-host",
             action: async (connection, transaction, _) =>
             {
+                if (requiresSigningKey &&
+                    (await ReadRetirementDataAsync(connection, transaction, cancellationToken).ConfigureAwait(false)) is { KeyRemoval: not "None" })
+                {
+                    throw new InvalidOperationException("Signing hosts cannot register after signing-key removal has begun.");
+                }
+
                 long now = await DatabaseNowAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
                 string hostId = instanceId.ToString("N");
                 object? existing = await ScalarAsync(
@@ -227,9 +233,14 @@ internal abstract partial class RelationalLabelStore
                     return current;
                 }
 
-                if (current.IsActive || state.Phase != LabelerLifecyclePhase.Active)
+                if (current.IsActive || state.Phase is LabelerLifecyclePhase.Purging or LabelerLifecyclePhase.Purged)
                 {
                     throw new InvalidOperationException("Another maintenance operation is active or the labeler lifecycle is closed.");
+                }
+
+                if ((await ReadRetirementDataAsync(connection, transaction, cancellationToken).ConfigureAwait(false)) is { KeyRemoval: not "None" })
+                {
+                    throw new InvalidOperationException("Signing-key removal has begun; recovery rotation is closed.");
                 }
 
                 if ((await ReadPolicyGateAsync(connection, transaction, cancellationToken).ConfigureAwait(false))?.Phase is
@@ -254,6 +265,7 @@ internal abstract partial class RelationalLabelStore
                     throw new InvalidOperationException("At least one registered host is required to coordinate maintenance.");
                 }
 
+                await InvalidateRetirementAvailabilityAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
                 await ExecuteAsync(
                     connection: connection,
                     transaction: transaction,
@@ -411,7 +423,10 @@ internal abstract partial class RelationalLabelStore
                     return current;
                 }
 
-                if (!current.AllHostsDrained || state.Phase != LabelerLifecyclePhase.Active || state.PublishedThrough != state.IssuedThrough)
+                if (!current.AllHostsDrained ||
+                    state.Phase is LabelerLifecyclePhase.Purging or LabelerLifecyclePhase.Purged ||
+                    state.PublishedThrough != state.IssuedThrough ||
+                    (await ReadRetirementDataAsync(connection, transaction, cancellationToken).ConfigureAwait(false)) is { KeyRemoval: not "None" })
                 {
                     throw new InvalidOperationException("Every host must drain and all issued labels must be published before fixing the rotation boundary.");
                 }

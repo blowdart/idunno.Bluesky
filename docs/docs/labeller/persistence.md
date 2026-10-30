@@ -167,6 +167,22 @@ in one transaction, without skipping an earlier label. If that transaction fails
 put and you can retry after a restart. There's no network work between claiming and completing publication,
 so there's no work lease to expire.
 
+Every packaged provider enforces the
+[Bluesky AppView label-service limits](https://github.com/bluesky-social/bsky-docs/blob/main/docs/advanced-guides/rate-limits.md#label-limits)
+by default: 5 labels per rolling second, 10,000 per rolling hour and 100,000 per rolling 24 hours.
+Each newly visible label counts, including negations, regardless of which service issued it.
+Allowance is persisted in the same locked transaction as the publication boundary, shared by
+all hosts using that issuer's database. Repeated calls can return unchanged progress with pending
+labels; wait before polling again rather than spinning. Signing and saving can run ahead, but excess
+labels stay pending. Monitor the issued/published gap.
+
+The budgets use database time with a durable high-water mark, so a backward clock step cannot
+replenish allowance. Restart, retry, key rotation and label-history cleanup do not reset accounting.
+Expired accounting is removed in bounded batches when publication resumes; it contains publication
+timestamps and counts, not signed label content. Replaying/querying published history and replacing
+its signatures do not count as new publication. These are local publication limits, not proof of
+downstream delivery or controls on a consumer's reconnect/catch-up traffic.
+
 Publication means durable local availability, **not** acknowledgement by all remote subscribers.
 Every label has one permanent subscription-event sequence. Read batching does not regroup or renumber
 events, and negations remain immutable history. There is no automatic expiry deletion or retention job.
@@ -197,6 +213,12 @@ When it's time to close the Bureau, there's more to do than switch off its host.
 You'll need to work through existing labels, publish any required withdrawals, and give consumers
 an opportunity to retrieve them. The store remembers your progress; it doesn't make those decisions
 or run the shutdown for you.
+
+For an actual deployment, use the authorized [retirement workflow](retirement.md), not raw store
+helpers. It couples immutable command receipts, action-specific challenges, live authority and audit,
+and runs bounded withdrawal/purge work in a durable server worker. It requires explicit 1-365 day grace
+selection and completion availability attestation. The following raw primitives describe storage
+mechanics only; they do not supply that operator authorization or confirmation.
 
 Start with `BeginRetirementAsync(expectedRevision)`. This stops ordinary issuance and fixes the last
 historical sequence your retirement service needs to inspect. That service works through the history
@@ -237,13 +259,21 @@ to read the server settings validated above. Run `InitializeAsync` separately wi
 Registration and ordinary operations do not run DDL.
 
 Version two adds `label_decisions` for immutable service receipts and audit, including no-ops.
-`InitializeAsync` upgrades supported earlier schemas to version eleven additively without changing signed history, legacy receipts,
+`InitializeAsync` upgrades supported earlier schemas to version thirteen additively without changing signed history, legacy receipts,
 stream identity or progress. `label_schema` records completion only after all creation steps.
 PostgreSQL setup takes an advisory lock and commits DDL transactionally; SQLite takes an immediate
 transaction. MySQL takes a connection-scoped schema lock and resumes repeatable creation steps after
 interruption, because its DDL commits independently. Run upgrades with services stopped/exclusive access,
 especially on MySQL; do not promise rollback of a partially applied MySQL migration.
 Repeated initialization preserves data. Unknown/newer versions fail rather than being downgraded.
+
+Version thirteen adds durable rolling publication accounting and a database-clock high-water mark.
+Older writers reject the new schema, preventing them from bypassing the shared budget.
+Accounting starts with publication after upgrade: historical publication times were not recorded and
+cannot be reconstructed from signed creation timestamps. Stop old writers before upgrading and allow
+a full 24 hours without publication before starting the upgraded publishers when prior activity might
+already have consumed an AppView quota. Restore all accounting tables with the rest of the database;
+restoring an older backup cannot undo labels already observed by downstream consumers.
 
 Version three adds `label_distribution` metadata for CID-scoped retained-slot delivery.
 Its backfill resumes missing entries and never rewrites signed JSON or canonical payload bytes.

@@ -22,6 +22,43 @@ public class LabelModerationStoreTests
     [InlineData("sqlite")]
     [InlineData("postgresql")]
     [InlineData("mysql")]
+    public async Task RetirementClosesNewCaseWorkButPreservesRecoveryInspectionAndNonLabelCompletion(string engine)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
+        ILabelModerationStore store = (ILabelModerationStore)fixture.Store;
+        LabelCaseReceipt created = Success(await store.ChangeCaseAsync(administrator, Open("before-retirement"), token));
+        LabelStoreState before = await fixture.Store.GetStateAsync(token);
+        await fixture.Store.BeginRetirementAsync(before.Revision, cancellationToken: token);
+
+        ILabelModerationStore restarted = (ILabelModerationStore)fixture.NewStore();
+        Assert.Equal(created.Sequence, Success(await restarted.ChangeCaseAsync(administrator, Open("before-retirement"), token)).Sequence);
+        Assert.Equal(LabelServiceErrorCode.IssuanceClosed,
+            (await restarted.ChangeCaseAsync(administrator, Open("new-case"), token)).Error!.Code);
+        Assert.Equal(LabelServiceErrorCode.IssuanceClosed, (await restarted.ChangeCaseAsync(
+            administrator,
+            new(
+                operationId: "new-appeal",
+                subject: s_subject,
+                action: LabelCaseAction.OpenAppeal,
+                reason: "New appeal is closed."),
+            token)).Error!.Code);
+        LabelModerationCase inspected = Success(await restarted.GetCaseAsync(administrator, created.Case.Id, token));
+        LabelModerationCase noted = Success(await restarted.ChangeCaseAsync(
+            administrator, Change(inspected, "retired-note", LabelCaseAction.Note), token)).Case;
+        LabelModerationCase resolved = Success(await restarted.ChangeCaseAsync(
+            administrator, Change(noted, "retired-resolve", LabelCaseAction.Resolve), token)).Case;
+        Assert.Equal(LabelCaseStatus.Resolved, resolved.Status);
+        Assert.Equal(LabelServiceErrorCode.IssuanceClosed, (await restarted.ChangeCaseAsync(
+            administrator, Change(resolved, "retired-reopen", LabelCaseAction.Reopen), token)).Error!.Code);
+        Assert.Equal(0, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
+    }
+
+    [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
     public async Task RegistrationUsesTheSameProviderAndCasesSurviveRecreation(string engine)
     {
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);

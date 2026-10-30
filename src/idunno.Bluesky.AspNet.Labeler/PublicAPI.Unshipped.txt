@@ -1,4 +1,5 @@
 #nullable enable
+static idunno.Bluesky.AspNet.Labeler.LabelerAdministrationExtensions.AddKeylessLabelerAdministration(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, idunno.AtProto.AtProtoServiceReference! audience, System.Net.Http.HttpClient! httpClient) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 idunno.Bluesky.AspNet.Labeler.LabelerModerationExtensions
 idunno.Bluesky.AspNet.Labeler.LabelerModerationOptions
 idunno.Bluesky.AspNet.Labeler.LabelerModerationOptions.LabelerModerationOptions() -> void

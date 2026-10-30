@@ -27,6 +27,35 @@ public class HostingTests
         second: 5,
         offset: TimeSpan.Zero);
 
+    [Fact]
+    public async Task PublicationBacklogWaitsForPollAndSharedBudgetWithoutLosingReadiness()
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
+            initialize: store => store.AppendAsync(
+                "backlog", [.. Enumerable.Repeat(Shapes(key)[0], 11)], cancellationToken: token),
+            controlDatabaseTime: true);
+        Assert.Equal(5, (await fixture.Store.GetStateAsync(token)).PublishedThrough);
+        // Startup has observed a real publisher timer registration; advancing only the poll clock
+        // must not replenish the separate database-time budget.
+        fixture.Clock.Advance(TimeSpan.FromSeconds(1));
+        await fixture.Clock.WaitForTimerAsync(TimeSpan.FromSeconds(1));
+        Assert.Equal(5, (await fixture.Store.GetStateAsync(token)).PublishedThrough);
+        using HttpResponseMessage ready = await fixture.Client.GetAsync("/health/labeler/ready", token);
+        Assert.Equal(HttpStatusCode.OK, ready.StatusCode);
+        fixture.DatabaseClock.Advance(TimeSpan.FromSeconds(1));
+        fixture.Clock.Advance(TimeSpan.FromSeconds(1));
+        await fixture.Clock.WaitForTimerAsync(TimeSpan.FromSeconds(1));
+        Assert.Equal(10, (await fixture.Store.GetStateAsync(token)).PublishedThrough);
+        fixture.DatabaseClock.Advance(TimeSpan.FromSeconds(1));
+        fixture.Clock.Advance(TimeSpan.FromSeconds(1));
+        await fixture.Clock.WaitForTimerAsync(TimeSpan.FromSeconds(1));
+        LabelStoreState complete = await fixture.Store.GetStateAsync(token);
+        Assert.Equal(11, complete.PublishedThrough);
+        Assert.Equal(complete.IssuedThrough, complete.PublishedThrough);
+    }
+
     [Theory]
     [InlineData("", 400)]
     [InlineData("?uriPatterns=*", 200)]

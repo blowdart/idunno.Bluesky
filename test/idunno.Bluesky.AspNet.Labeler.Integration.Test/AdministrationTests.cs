@@ -17,6 +17,7 @@ using idunno.Bluesky.Labeler;
 using idunno.Bluesky.Labeler.Administration;
 using idunno.Bluesky.Labeler.Issuance;
 using idunno.Bluesky.Labeler.Maintenance;
+using idunno.Bluesky.Labeler.Signing;
 using idunno.Bluesky.Labeler.Storage;
 
 using Microsoft.Data.Sqlite;
@@ -27,6 +28,328 @@ namespace idunno.Bluesky.AspNet.Labeler.Integration.Test;
 
 public class AdministrationTests
 {
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public void ExplicitKeylessRegistrationRejectsKeysBeforeOrAfterRegistration(bool before, bool resolveWorker)
+    {
+        using LabelSigningKey active = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using LabelSigningKey replacement = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(active.ExportPublicKeyMultibase()));
+        ServiceCollection services = new();
+        services.AddSqliteLabelStorage(new SqliteConnectionStringBuilder
+        {
+            DataSource = Path.Combine(Path.GetTempPath(), "keyless-registration-" + Guid.NewGuid().ToString("N") + ".db"),
+            Pooling = false
+        }.ConnectionString);
+        services.AddSingleton<ILabelIssuancePolicyProvider, Policy>();
+        ILabelSigningKeyRing keys = new LifecycleTests.TestKeyRing(active, replacement);
+        if (before)
+        {
+            services.AddSingleton(keys);
+        }
+        services.AddKeylessLabelerAdministration(s_audience, identity);
+        if (!before)
+        {
+            services.AddSingleton(keys);
+        }
+        using ServiceProvider provider = services.BuildServiceProvider();
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+        {
+            if (resolveWorker)
+            {
+                provider.GetRequiredService<RetirementWorker>();
+            }
+            else
+            {
+                provider.GetRequiredService<AdministrationDispatcher>();
+            }
+        });
+        Assert.Contains("keyless", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ExplicitKeylessRegistrationResolvesWithoutInstallingKeys()
+    {
+        using HttpClient identity = new();
+        ServiceCollection services = new();
+        services.AddSqliteLabelStorage(new SqliteConnectionStringBuilder
+        {
+            DataSource = Path.Combine(Path.GetTempPath(), "keyless-registration-" + Guid.NewGuid().ToString("N") + ".db"),
+            Pooling = false
+        }.ConnectionString);
+        services.AddSingleton<ILabelIssuancePolicyProvider, Policy>();
+        services.AddKeylessLabelerAdministration(s_audience, identity);
+        using ServiceProvider provider = services.BuildServiceProvider();
+        Assert.NotNull(provider.GetRequiredService<AdministrationDispatcher>());
+        Assert.NotNull(provider.GetRequiredService<RetirementWorker>());
+        Assert.Null(provider.GetService<ILabelSigningKeyRing>());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task KeylessReceiptInspectionReauthorizesAfterReadingRetainedReceipt(bool revoked)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(key, identity);
+        await fixture.Services.GetRequiredService<RetirementWorker>().InitialIteration.WaitAsync(token);
+        await fixture.Clock.WithdrawalRegistrations.Reader.ReadAsync(token);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        Assert.True((await team.BootstrapAsync(s_actor, "uid:0", "bootstrap", token)).Succeeded);
+        LabelAdministrationCaller caller = (await team.AuthenticateLocalAsync("uid:0", token)).Result!;
+        AdministrationResponse issued = await fixture.Services.GetRequiredService<AdministrationDispatcher>().DispatchAsync(
+            caller: caller,
+            command: new(Method: "issueLabel", OperationId: "retained", Target: s_actor.Value, Value: "spam", Reason: "Retain a receipt."),
+            token: token);
+        Assert.True(issued.Succeeded, issued.Message);
+        AdministrationDispatcher dispatcher = new(
+            store: fixture.Store,
+            administration: team,
+            maintenance: fixture.Services.GetRequiredService<ILabelMaintenanceStore>(),
+            httpClient: identity,
+            signingKeyRing: null,
+            policy: fixture.Services.GetRequiredService<ILabelIssuancePolicyProvider>(),
+            publicEndpoint: null,
+            clock: fixture.Clock,
+            host: fixture.Host,
+            retirementWorker: fixture.Services.GetRequiredService<RetirementWorker>());
+        SqliteLabelStore store = (SqliteLabelStore)fixture.Store;
+        int transaction = 0;
+        store.AfterCommitAsync = async (_, _) =>
+        {
+            if (++transaction == 2 && revoked)
+            {
+                store.AfterCommitAsync = null;
+                Assert.True((await team.ChangeTeamAsync(
+                    caller: caller,
+                    change: new(
+                        operationId: "revoke-during-lookup",
+                        action: LabelTeamAction.RevokeLocal,
+                        target: s_actor,
+                        reason: "Revoke after the retained read.",
+                        credential: "uid:0"),
+                    cancellationToken: token)).Succeeded);
+            }
+        };
+        AdministrationResponse inspected = await dispatcher.DispatchAsync(
+            caller, new(Method: "getOperation", OperationId: "retained"), token);
+        store.AfterCommitAsync = null;
+        Assert.Equal(!revoked, inspected.Succeeded);
+        if (revoked)
+        {
+            Assert.Equal("Unauthorized", inspected.Error);
+            Assert.Null(inspected.Sequence);
+            Assert.Null(inspected.OperationId);
+        }
+        else
+        {
+            Assert.Equal(issued.Sequence, inspected.Sequence);
+            Assert.True(transaction >= 3, "Successful lookup must be followed by a fresh authorization.");
+        }
+    }
+
+    [Theory]
+    [InlineData("read", false, false)]
+    [InlineData("read", true, false)]
+    [InlineData("commit", false, false)]
+    [InlineData("commit", true, false)]
+    [InlineData("publication", false, false)]
+    [InlineData("publication", true, false)]
+    [InlineData("publication", true, true)]
+    public async Task ManualRetirementFailuresRetainPauseUntilRecoveryEvenAfterRequestCancellation(string failure, bool retryPause, bool cancelRequest)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using CancellationTokenSource requestLifetime = CancellationTokenSource.CreateLinkedTokenSource(token);
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase(), labelPublication: true));
+        await using TestServerBuilder fixture = await CreateAsync(
+            key: key,
+            identity: identity,
+            publicEndpoint: new Uri("https://labeler.example"),
+            controlDatabaseTime: true);
+        RetirementWorker worker = fixture.Services.GetRequiredService<RetirementWorker>();
+        await worker.InitialIteration.WaitAsync(token);
+        await fixture.Clock.WithdrawalRegistrations.Reader.ReadAsync(token);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        Assert.True((await team.BootstrapAsync(s_actor, "uid:0", "bootstrap", token)).Succeeded);
+        LabelAdministrationCaller caller = (await team.AuthenticateLocalAsync("uid:0", token)).Result!;
+        await fixture.Store.AppendAsync("initial-label", [new(key.CreateLabel(
+            source: TestServerBuilder.s_issuer,
+            uri: "did:plc:subject",
+            value: "spam",
+            creationTimestamp: fixture.DatabaseClock.GetUtcNow()))], cancellationToken: token);
+        await fixture.Store.PublishAsync(cancellationToken: token);
+        AdministrationDispatcher dispatcher = fixture.Services.GetRequiredService<AdministrationDispatcher>();
+        AdministrationCommand begin = new(
+            Method: "beginRetirement",
+            OperationId: "start",
+            Reason: "Withdraw labels.");
+        AdministrationResponse preview = await dispatcher.DispatchAsync(
+            caller, begin with { Method = "prepareRetirement", Target = "beginRetirement" }, token);
+        Assert.True(preview.Succeeded, preview.Message);
+        using JsonDocument previewJson = JsonSerializer.SerializeToDocument(preview, AdministrationJsonContext.Default.AdministrationResponse);
+        AdministrationResponse started = await dispatcher.DispatchAsync(
+            caller, begin with { Confirmation = previewJson.RootElement.GetProperty("retirement").GetProperty("confirmation").GetString() }, token);
+        Assert.True(started.Succeeded, started.Message);
+        AdministrationResponse scanned = await dispatcher.DispatchAsync(
+            caller, new(Method: "advanceRetirement", Reason: "Scan retained history."), token);
+        Assert.True(scanned.Succeeded, scanned.Error + ": " + scanned.Message);
+        while (fixture.Clock.Registrations.Reader.TryRead(out _))
+        {
+        }
+
+        SqliteLabelStore store = (SqliteLabelStore)fixture.Store;
+        TaskCompletionSource pauseFailed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        int transaction = 0;
+        bool failed = false;
+        bool blockedPause = false;
+        store.BeforeCommitAsync = (_, _, _) =>
+        {
+            transaction++;
+            if (failure == "read" && transaction == 3 || failure == "publication" && transaction == 5)
+            {
+                failed = true;
+                throw new SqliteException("Injected retirement failure.", 10);
+            }
+            if (failed && retryPause && !blockedPause)
+            {
+                blockedPause = true;
+                pauseFailed.TrySetResult();
+                throw new SqliteException("Injected pause persistence failure.", 10);
+            }
+
+            return Task.CompletedTask;
+        };
+        store.AfterCommitAsync = (_, _) =>
+        {
+            if (failure == "commit" && transaction == 4)
+            {
+                failed = true;
+                throw new SqliteException("Injected lost retirement acknowledgement.", 10);
+            }
+
+            return Task.CompletedTask;
+        };
+        Task<AdministrationResponse> attempt = dispatcher.DispatchAsync(
+            caller, new(Method: "advanceRetirement", Reason: "Withdraw selected labels."), requestLifetime.Token);
+        if (retryPause)
+        {
+            await pauseFailed.Task.WaitAsync(TimeSpan.FromSeconds(30), token);
+            await fixture.Clock.WaitForTimerAsync(TimeSpan.FromSeconds(5));
+            Assert.False(attempt.IsCompleted);
+        }
+        if (cancelRequest)
+        {
+            await requestLifetime.CancelAsync();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => attempt);
+        }
+        else
+        {
+            if (retryPause)
+            {
+                fixture.Clock.Advance(TimeSpan.FromSeconds(5));
+            }
+            AdministrationResponse response = await attempt;
+            Assert.False(response.Succeeded);
+            Assert.Equal(failure == "commit" ? "OutcomeUnknown" : "StorageUnavailable", response.Error);
+        }
+        store.BeforeCommitAsync = null;
+        store.AfterCommitAsync = null;
+        // The next host iteration must persist any request-owned pending pause before reading more work.
+        Assert.Null(await worker.AdvanceAsync(token));
+        AdministrationResponse paused = await dispatcher.DispatchAsync(caller, new(Method: "getRetirementState"), token);
+        Assert.True(paused.Succeeded);
+        using JsonDocument pausedJson = JsonSerializer.SerializeToDocument(paused, AdministrationJsonContext.Default.AdministrationResponse);
+        JsonElement state = pausedJson.RootElement.GetProperty("retirement");
+        Assert.False(state.GetProperty("running").GetBoolean());
+        Assert.StartsWith("StorageUnavailable:", state.GetProperty("pauseReason").GetString());
+        Assert.Equal(failure == "read" ? 1 : 2, state.GetProperty("issuedThrough").GetInt64());
+    }
+
+    [Fact]
+    public async Task PublicationInspectionClassifiesStorageFailureAfterSuccessfulAuthorization()
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(key, identity);
+        await fixture.Services.GetRequiredService<RetirementWorker>().InitialIteration.WaitAsync(token);
+        await fixture.Clock.WithdrawalRegistrations.Reader.ReadAsync(token);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        Assert.True((await team.BootstrapAsync(s_actor, "uid:0", "bootstrap", token)).Succeeded);
+        LabelAdministrationCaller caller = (await team.AuthenticateLocalAsync("uid:0", token)).Result!;
+        SqliteLabelStore store = (SqliteLabelStore)fixture.Store;
+        int transaction = 0;
+        store.BeforeCommitAsync = (_, _, _) => ++transaction == 2
+            ? throw new SqliteException("Injected publication state read failure.", 10)
+            : Task.CompletedTask;
+        AdministrationResponse response = await fixture.Services.GetRequiredService<AdministrationDispatcher>().DispatchAsync(
+            caller, new(Method: "getPublicationState"), token);
+        store.BeforeCommitAsync = null;
+        Assert.False(response.Succeeded);
+        Assert.Equal("StorageUnavailable", response.Error);
+        Assert.True(transaction >= 3, "The classified failure must still pass through denial audit.");
+    }
+
+    [Fact]
+    public void EveryMappedAdministrativeMethodIsDispatchable()
+    {
+        Assert.All(AdministrationDispatcher.s_getMethods.Concat(AdministrationDispatcher.s_postMethods),
+            method => Assert.Contains(method, AdministrationDispatcher.s_methods));
+        Assert.Equal(AdministrationDispatcher.s_methods.Length, AdministrationDispatcher.s_methods.Distinct(StringComparer.Ordinal).Count());
+    }
+
+    [Fact]
+    public async Task RetirementHostStopReachesAuthorizedCommandValidation()
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(key, identity);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        Assert.True((await team.BootstrapAsync(s_actor, "uid:0", "bootstrap-host-stop", token)).Succeeded);
+        LabelAdministrationCaller caller = (await team.AuthenticateLocalAsync("uid:0", token)).Result!;
+        AdministrationResponse response = await fixture.Services.GetRequiredService<AdministrationDispatcher>().DispatchAsync(
+            caller: caller,
+            command: new(
+                Method: "confirmRetirementHostStopped",
+                OperationId: "host-stop",
+                Reason: "Confirm an independently stopped process.",
+                Attestation: "Verified exact process exit.",
+                HostInstanceId: Guid.NewGuid()),
+            token: token);
+        Assert.False(response.Succeeded);
+        Assert.Equal("StaleDecision", response.Error);
+    }
+
+    [Theory]
+    [InlineData("issueLabel")]
+    [InlineData("negateLabel")]
+    [InlineData("advanceRetirement")]
+    public async Task SigningAdministrationCannotBypassStoppedHostAdmission(string method)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(key, identity);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        Assert.True((await team.BootstrapAsync(s_actor, "uid:0", "bootstrap-admission", token)).Succeeded);
+        LabelAdministrationCaller caller = (await team.AuthenticateLocalAsync("uid:0", token)).Result!;
+        await fixture.Services.GetRequiredService<LabelerHost>().StopAsync(token);
+        AdministrationResponse response = await fixture.Services.GetRequiredService<AdministrationDispatcher>().DispatchAsync(
+            caller: caller,
+            command: new(Method: method, Reason: "Check stopped signing admission."),
+            token: token);
+        Assert.False(response.Succeeded);
+        Assert.Equal("MaintenanceActive", response.Error);
+        Assert.Equal(0, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
+    }
+
     private static readonly Did s_actor = new("did:plc:administration-actor");
     private static readonly AtProtoServiceReference s_audience = new(TestServerBuilder.s_issuer, "labeler_admin");
 
@@ -509,12 +832,17 @@ public class AdministrationTests
     public async Task LocalRetirementAdvancesWithSignedNegationsAndDurableCheckpoints(bool tiedCidTimestamps)
     {
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
-        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
+        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase(), labelPublication: true));
         string endpoint = LocalEndpoint();
-        await using TestServerBuilder fixture = await CreateAsync(key, identity, endpoint);
+        await using TestServerBuilder fixture = await CreateAsync(
+            key: key,
+            identity: identity,
+            endpoint: endpoint,
+            publicEndpoint: new Uri("https://labeler.example"),
+            controlDatabaseTime: true);
         Assert.True((await fixture.Services.BootstrapLocalAdministratorAsync(
             s_actor, "bootstrap", TestContext.Current.CancellationToken)).Succeeded);
-        DateTimeOffset now = await DatabaseNowAsync(fixture);
+        DateTimeOffset now = fixture.DatabaseClock.GetUtcNow();
         fixture.Clock.SetUtcNow(now);
         ILabelStore store = fixture.Services.GetRequiredService<ILabelStore>();
         await store.AppendAsync(
@@ -542,26 +870,52 @@ public class AdministrationTests
             cancellationToken: TestContext.Current.CancellationToken);
         await store.PublishAsync(cancellationToken: TestContext.Current.CancellationToken);
 
+        using JsonDocument preview = JsonDocument.Parse(await LabelerLocalAdministration.SendLocalCommandAsync(
+            endpoint,
+            """{"method":"prepareRetirement","target":"beginRetirement","operationId":"retirement-begin","reason":"Close issuance."}""",
+            TestContext.Current.CancellationToken));
+        Assert.True(preview.RootElement.GetProperty("succeeded").GetBoolean());
+        Assert.Equal(LabelerLifecyclePhase.Active, (await store.GetStateAsync(TestContext.Current.CancellationToken)).Phase);
+        string challenge = preview.RootElement.GetProperty("retirement").GetProperty("confirmation").GetString()!;
         using JsonDocument started = JsonDocument.Parse(await LabelerLocalAdministration.SendLocalCommandAsync(
             endpoint,
-            """{"method":"beginRetirement","operationId":"retirement-begin","reason":"Close issuance."}""",
+            $$"""{"method":"beginRetirement","operationId":"retirement-begin","reason":"Close issuance.","confirmation":"{{challenge}}"}""",
             TestContext.Current.CancellationToken));
         Assert.True(started.RootElement.GetProperty("succeeded").GetBoolean());
         Assert.Equal("Retiring", started.RootElement.GetProperty("state").GetProperty("phase").GetString());
-
-        using JsonDocument advanced = JsonDocument.Parse(await LabelerLocalAdministration.SendLocalCommandAsync(
+        const string resumeCommand = """{"method":"resumeRetirement","operationId":"retirement-resume","reason":"Recover retirement."}""";
+        using JsonDocument resumed = JsonDocument.Parse(await LabelerLocalAdministration.SendLocalCommandAsync(
             endpoint,
-            """{"method":"advanceRetirement","operationId":"retirement-advance","reason":"Negate retained active labels."}""",
+            resumeCommand,
             TestContext.Current.CancellationToken));
-        Assert.True(advanced.RootElement.GetProperty("succeeded").GetBoolean());
-        JsonElement state = advanced.RootElement.GetProperty("state");
-        Assert.Equal("Distributing", state.GetProperty("phase").GetString());
-        Assert.Equal(3, state.GetProperty("retirementThrough").GetInt64());
-        Assert.Equal(6, state.GetProperty("issuedThrough").GetInt64());
-        await store.PublishAsync(cancellationToken: TestContext.Current.CancellationToken);
+        Assert.True(resumed.RootElement.GetProperty("succeeded").GetBoolean());
+
+        LabelStoreState state = await store.GetStateAsync(TestContext.Current.CancellationToken);
+        for (int step = 0; step < 8 && (state.Phase != LabelerLifecyclePhase.Distributing || state.PublishedThrough != state.IssuedThrough); step++)
+        {
+            fixture.DatabaseClock.Advance(TimeSpan.FromSeconds(1));
+            using JsonDocument advanced = JsonDocument.Parse(await LabelerLocalAdministration.SendLocalCommandAsync(
+                endpoint,
+                $$"""{"method":"advanceRetirement","operationId":"retirement-advance-{{step}}","reason":"Negate retained active labels."}""",
+                TestContext.Current.CancellationToken));
+            Assert.True(advanced.RootElement.GetProperty("succeeded").GetBoolean());
+            state = await store.GetStateAsync(TestContext.Current.CancellationToken);
+        }
+        Assert.Equal(LabelerLifecyclePhase.Distributing, state.Phase);
+        Assert.Equal(3, state.RetirementThrough);
+        Assert.Equal(6, state.IssuedThrough);
+        Assert.Equal(6, state.PublishedThrough);
+        using JsonDocument recoveredResume = JsonDocument.Parse(await LabelerLocalAdministration.SendLocalCommandAsync(
+            endpoint,
+            resumeCommand,
+            TestContext.Current.CancellationToken));
+        Assert.True(recoveredResume.RootElement.GetProperty("succeeded").GetBoolean());
+        Assert.Equal(
+            resumed.RootElement.GetProperty("retirement").GetProperty("generation").GetInt64(),
+            recoveredResume.RootElement.GetProperty("retirement").GetProperty("generation").GetInt64());
 
         LabelPage page = await store.ReplayAsync(
-            streamId: Guid.Parse(state.GetProperty("streamId").GetString()!),
+            streamId: state.StreamId,
             after: 0,
             through: 6,
             limit: 10,
@@ -805,9 +1159,12 @@ public class AdministrationTests
         HttpClient identity,
         string? endpoint = null,
         TimeSpan? maximumServiceTokenLifetime = null,
-        bool remoteAdministrationEnabled = true)
+        bool remoteAdministrationEnabled = true,
+        Uri? publicEndpoint = null,
+        bool controlDatabaseTime = false)
     {
         TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
+            options: publicEndpoint is null ? null : new() { PublicEndpoint = publicEndpoint },
             configureAdministration: services =>
             {
                 services.AddSingleton<ILabelIssuancePolicyProvider, Policy>();
@@ -817,7 +1174,8 @@ public class AdministrationTests
                     services.AddLabelerLocalAdministration(endpoint);
                 }
             },
-            remoteAdministrationEnabled: remoteAdministrationEnabled);
+            remoteAdministrationEnabled: remoteAdministrationEnabled,
+            controlDatabaseTime: controlDatabaseTime);
         fixture.OwnedSocketDirectory = endpoint is not null && OperatingSystem.IsLinux() ? Path.GetDirectoryName(endpoint) : null;
         return fixture;
     }
@@ -911,7 +1269,7 @@ public class AdministrationTests
     }
 
     /// <summary>Serves matching account DID documents without external identity services.</summary>
-    private sealed class IdentityHandler(string multikey) : HttpMessageHandler
+    private sealed class IdentityHandler(string multikey, bool labelPublication = false) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
@@ -920,6 +1278,15 @@ public class AdministrationTests
                 {"id":"{{actor}}","verificationMethod":[{"id":"{{actor}}#atproto","type":"Multikey",
                 "controller":"{{actor}}","publicKeyMultibase":"{{multikey}}"}]}
                 """;
+            if (labelPublication)
+            {
+                document = $$"""
+                    {"id":"{{actor}}","verificationMethod":[
+                    {"id":"{{actor}}#atproto","type":"Multikey","controller":"{{actor}}","publicKeyMultibase":"{{multikey}}"},
+                    {"id":"{{actor}}#atproto_label","type":"Multikey","controller":"{{actor}}","publicKeyMultibase":"{{multikey}}"}],
+                    "service":[{"id":"{{actor}}#atproto_labeler","type":"AtprotoLabeler","serviceEndpoint":"https://labeler.example"}]}
+                    """;
+            }
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(document, Encoding.UTF8, "application/json")

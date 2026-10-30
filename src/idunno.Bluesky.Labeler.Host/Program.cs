@@ -52,8 +52,10 @@ internal static class Program
             (OperatingSystem.IsWindows() ? "idunno-labeler-admin" : "/run/labeler/admin.sock");
         AtProtoServiceReference audience = ParseAudience(Required(builder.Configuration, "Labeler:AdministrationAudience"));
 
-        using IDisposable keyRingLifetime = CreateSigningKeyRing(builder.Configuration);
-        ILabelSigningKeyRing keyRing = (ILabelSigningKeyRing)keyRingLifetime;
+        using IDisposable? keyRingLifetime = IsKeylessConfiguration(builder.Configuration)
+            ? null
+            : CreateSigningKeyRing(builder.Configuration);
+        ILabelSigningKeyRing? keyRing = (ILabelSigningKeyRing?)keyRingLifetime;
         using HttpClient identityClient = CreateIdentityClient();
         switch (provider)
         {
@@ -92,10 +94,17 @@ internal static class Program
         builder.Services.AddBlueskyLabeler(
             issuer,
             new LabelerHostingOptions { PublicEndpoint = publicEndpoint });
-        builder.Services.AddLabelerAdministration(
-            audience: audience,
-            signingKeyRing: keyRing,
-            httpClient: identityClient);
+        if (keyRing is null)
+        {
+            builder.Services.AddKeylessLabelerAdministration(audience, identityClient);
+        }
+        else
+        {
+            builder.Services.AddLabelerAdministration(
+                audience: audience,
+                signingKeyRing: keyRing,
+                httpClient: identityClient);
+        }
         builder.Services.Configure<LabelerAdministrationOptions>(
             builder.Configuration.GetSection("LabelerAdministration"));
         builder.Services.AddLabelerLocalAdministration(localAdministrationEndpoint);
@@ -107,9 +116,21 @@ internal static class Program
 
         WebApplication app = builder.Build();
         await using ConfiguredAsyncDisposable appDisposal = app.ConfigureAwait(false);
-        await app.Services.GetRequiredService<ILabelStore>()
-            .InitializeAsync(issuer, app.Lifetime.ApplicationStopping)
-            .ConfigureAwait(false);
+        if (keyRing is null)
+        {
+            await ValidateKeylessHostingAsync(
+                issuer: issuer,
+                store: app.Services.GetRequiredService<ILabelStore>(),
+                maintenance: app.Services.GetRequiredService<ILabelMaintenanceStore>(),
+                policies: app.Services.GetService<ILabelPolicyStore>(),
+                cancellationToken: app.Lifetime.ApplicationStopping).ConfigureAwait(false);
+        }
+        else
+        {
+            await app.Services.GetRequiredService<ILabelStore>()
+                .InitializeAsync(issuer, app.Lifetime.ApplicationStopping)
+                .ConfigureAwait(false);
+        }
         if (moderationEnabled)
         {
             await app.Services.GetRequiredService<ILabelPolicyStore>().InitializePolicyAsync(
@@ -241,6 +262,50 @@ internal static class Program
         };
     }
 
+    /// <summary>Requires an explicit keyless role without any simultaneously configured private-key source.</summary>
+    internal static bool IsKeylessConfiguration(IConfiguration configuration)
+    {
+        if (configuration["Labeler:SigningKeyProvider"] != "none")
+        {
+            return false;
+        }
+
+        if (configuration.GetSection("Labeler:SigningKeys").GetChildren().Any() ||
+            configuration["Labeler:SigningKeyDirectory"] is not null ||
+            configuration["Labeler:ActiveKeyPath"] is not null ||
+            configuration["Labeler:InitialSigningKeyId"] is not null)
+        {
+            throw new InvalidOperationException("Keyless hosting cannot configure private signing keys or key selection.");
+        }
+
+        return true;
+    }
+
+    /// <summary>Validates existing terminal storage without creating or migrating a keyless database.</summary>
+    internal static async Task ValidateKeylessHostingAsync(
+        Did issuer,
+        ILabelStore store,
+        ILabelMaintenanceStore maintenance,
+        ILabelPolicyStore? policies,
+        CancellationToken cancellationToken)
+    {
+        LabelStoreState state = await store.GetStateAsync(cancellationToken).ConfigureAwait(false);
+        if (state.Issuer != issuer.Value ||
+            state.Phase is not (LabelerLifecyclePhase.Retired or LabelerLifecyclePhase.Purging or LabelerLifecyclePhase.Purged) ||
+            state.RetirementThrough != state.RetirementUpperBound ||
+            state.PublishedThrough != state.IssuedThrough ||
+            (await maintenance.GetMaintenanceStateAsync(cancellationToken).ConfigureAwait(false)).IsActive)
+        {
+            throw new InvalidOperationException("Keyless hosting requires an initialized retired store with no pending signing, publication or rotation.");
+        }
+
+        if (policies is not null &&
+            (await policies.ReadPolicyStateAsync(cancellationToken).ConfigureAwait(false))?.Phase is LabelPolicyPhase.Publishing or LabelPolicyPhase.Withdrawing)
+        {
+            throw new InvalidOperationException("Recover the pending policy publication before starting a keyless retired host.");
+        }
+    }
+
     /// <summary>Requires a nonempty configuration value before starting the host.</summary>
     private static string Required(ConfigurationManager configuration, string key) =>
         !string.IsNullOrWhiteSpace(configuration[key])
@@ -295,6 +360,8 @@ internal static class Program
             "getTeam", "getAudit", "changeTeam", "enroll", "issueLabel", "negateLabel",
             "getOperation", "getPublicationState", "getMaintenanceState", "authorizeMaintenance",
             "beginRetirement", "advanceRetirement", "beginGracePeriod", "completeRetirement",
+            "getRetirementState", "prepareRetirement", "pauseRetirement", "resumeRetirement",
+            "extendGracePeriod", "requestKeyRemoval", "attestKeyRemoval", "confirmRetirementHostStopped",
             "purgeRetiredData", "beginRotation", "confirmHostStopped", "captureRotationBoundary",
             "verifyRotationKeyPublication", "resignRotationBatch", "completeRotation",
             "getCase", "getCases", "getCaseHistory", "getCaseOperation", "changeCase", "decideCase", "getCaseDecision",

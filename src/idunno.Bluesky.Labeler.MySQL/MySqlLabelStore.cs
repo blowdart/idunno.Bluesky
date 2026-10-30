@@ -75,7 +75,8 @@ internal sealed class MySqlLabelStore(string connectionString, ILogger<MySqlLabe
                     "'label_host_roles','label_maintenance_hosts','label_signing_selection','label_cases','label_case_events','label_case_decisions'," +
                     "'label_reports','label_report_tokens','label_policy_gate','label_policy_versions','label_policy_events','label_policy_history'," +
                     "'label_appeals','label_appeal_reports','label_subject_index','label_search_handles','label_search_text','label_post_review_checks'," +
-                    "'label_pending_reports') AND engine<>'InnoDB'",
+                    "'label_pending_reports','label_retirement','label_retirement_receipts','label_retirement_confirmations'," +
+                    "'label_retirement_slots','label_publication_clock','label_publication_batches') AND engine<>'InnoDB'",
                 token: token).ConfigureAwait(false),
             CultureInfo.InvariantCulture);
         if (invalid != 0)

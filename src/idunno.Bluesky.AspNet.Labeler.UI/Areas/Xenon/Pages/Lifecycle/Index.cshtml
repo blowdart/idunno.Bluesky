@@ -5,64 +5,209 @@
     ViewData["Title"] = "Lifecycle";
     JsonElement? maintenance = Model.Maintenance.ValueKind == JsonValueKind.Object &&
         Model.Maintenance.TryGetProperty("maintenance", out JsonElement maintenanceValue) ? maintenanceValue : null;
-    JsonElement? publication = Model.Publication.ValueKind == JsonValueKind.Object &&
-        Model.Publication.TryGetProperty("state", out JsonElement publicationValue) ? publicationValue : null;
+    JsonElement? retirement = Model.Retirement.ValueKind == JsonValueKind.Object &&
+        Model.Retirement.TryGetProperty("retirement", out JsonElement retirementValue) ? retirementValue : null;
 }
 <h1>Labeler lifecycle</h1>
-<p>Lifecycle progress is persisted and resumes from shared storage after a process restart. This UI exposes retirement; signing-key rotation remains a coordinated operator workflow through the administration CLI.</p>
-<div class="grid">
-    @if (maintenance is { ValueKind: JsonValueKind.Object } maintenanceState)
-    {
-        <section class="panel">
-            <h2>Maintenance coordination</h2>
-            <p>Phase: <strong>@maintenanceState.GetProperty("phase").GetString()</strong></p>
-            @if (maintenanceState.TryGetProperty("operationId", out JsonElement maintenanceOperation))
+@if (Model.LifecycleError is string lifecycleError)
+{
+    <p role="alert">@lifecycleError</p>
+}
+<p>Retirement is irreversible: issuance, new reports and appeals close permanently. Begin and resume authorize a durable server worker, independent of this browser. Pausing never reopens issuance. Reload to inspect saved progress.</p>
+<p>Distribution continues through retirement, grace and Retired. Local publication is not proof of downstream receipt or continuous public availability. Signing-key recovery rotation remains a coordinated CLI operation; review interruptions and extend grace when necessary.</p>
+@if (maintenance is { ValueKind: JsonValueKind.Object } maintenanceState)
+{
+    <section class="panel">
+        <h2>Maintenance and host coordination</h2>
+        <p>Rotation/drain phase: <strong>@maintenanceState.GetProperty("phase").GetString()</strong></p>
+        <details><summary>Host acknowledgements and blockers</summary><pre>@maintenanceState.ToString()</pre></details>
+        <p>Missing contact is not proof that a signing host stopped. Resolve maintenance blockers before retrying.</p>
+    </section>
+}
+@if (retirement is { ValueKind: JsonValueKind.Object } state)
+{
+    string phase = state.GetProperty("phase").GetString() ?? "";
+    string keyRemoval = state.GetProperty("keyRemoval").GetString() ?? "";
+    bool running = state.GetProperty("running").GetBoolean();
+    <section class="panel">
+        <h2>Durable retirement progress</h2>
+        <dl>
+            @if (state.TryGetProperty("issuer", out JsonElement issuer))
             {
-                <p>Operation: <code>@maintenanceOperation.GetString()</code></p>
+                <dt>Issuer</dt><dd><code>@issuer.GetString()</code></dd>
             }
-            <p>Connected host acknowledgements and drain state are shown only when maintenance is active.</p>
-        </section>
-    }
-    @if (publication is { ValueKind: JsonValueKind.Object } publicationState)
+            <dt>Phase / worker stage</dt><dd>@phase / @state.GetProperty("stage").GetString()</dd>
+            <dt>Worker authorized to run</dt><dd>@running</dd>
+            <dt>Saved workflow / generation</dt><dd>@(state.TryGetProperty("operationId", out JsonElement workflow) ? workflow.ToString() : "Not started") / @state.GetProperty("generation")</dd>
+            <dt>Frozen history boundary</dt><dd>@state.GetProperty("upperBound")</dd>
+            <dt>Timestamp scan checkpoint</dt><dd>@state.GetProperty("scannedThrough")</dd>
+            <dt>Negation checkpoint</dt><dd>@state.GetProperty("negatedThrough")</dd>
+            <dt>Issued / locally published</dt><dd>@state.GetProperty("issuedThrough") / @state.GetProperty("publishedThrough")</dd>
+            <dt>Publication backlog</dt><dd>@(state.GetProperty("issuedThrough").GetInt64() - state.GetProperty("publishedThrough").GetInt64())</dd>
+            <dt>Grace deadline (database time)</dt><dd>@(state.TryGetProperty("graceDeadline", out JsonElement deadline) ? deadline.ToString() : "Not started")</dd>
+            <dt>Last attempt/activity (not proof of liveness)</dt><dd>@(state.TryGetProperty("lastActivityAt", out JsonElement activity) ? activity.ToString() : "Not recorded")</dd>
+            <dt>Last checkpoint progress</dt><dd>@(state.TryGetProperty("lastProgressAt", out JsonElement progress) ? progress.ToString() : "Not recorded")</dd>
+            <dt>Key removal (operator attestation only)</dt><dd>@keyRemoval</dd>
+            <dt>Selected signing key ID</dt><dd>@(state.TryGetProperty("signingKeyId", out JsonElement keyId) ? keyId.GetString() : "Not reported")</dd>
+            <dt>Public signing fingerprint</dt><dd><code>@(state.TryGetProperty("signingPublicKey", out JsonElement publicKey) ? publicKey.GetString() : "Not reported")</code></dd>
+        </dl>
+        @if (state.TryGetProperty("hosts", out JsonElement hosts))
+        {
+            <details><summary>Registered hosts (last contact is not proof of stopped processes)</summary><pre>@hosts.ToString()</pre></details>
+        }
+        @if (state.TryGetProperty("pauseReason", out JsonElement pause) && pause.ValueKind == JsonValueKind.String)
+        {
+            <p role="alert">Paused: @pause.GetString(). Resolve the error or restore authority, then explicitly resume with a new command operation ID. The saved scope and checkpoints are retained.</p>
+        }
+        @if (state.TryGetProperty("blocker", out JsonElement blocker) && blocker.ValueKind == JsonValueKind.String)
+        {
+            <p role="alert">Preflight blocker: @blocker.GetString()</p>
+        }
+        @if (state.TryGetProperty("inventory", out JsonElement inventory))
+        {
+            <h3>Recorded key/copy inventory</h3><pre>@inventory.GetString()</pre>
+        }
+        @if (state.TryGetProperty("availabilityAttestation", out JsonElement availability))
+        {
+            <h3>Operator availability attestation</h3><pre>@availability.GetString()</pre>
+        }
+    </section>
+    @if (Model.Intent is { } intent)
     {
         <section class="panel">
-            <h2>Durable publication and retirement checkpoint</h2>
+            <h2>Review and confirm @intent.Method</h2>
+            <p>This read-only preflight has not executed the action. Its challenge is specific to this issuer, action, operation and immutable intent. Changed state, generation or expiry requires a fresh preview.</p>
             <dl>
-                <dt>Lifecycle phase</dt><dd>@publicationState.GetProperty("phase").GetString()</dd>
-                <dt>Published through</dt><dd>@publicationState.GetProperty("publishedThrough").GetInt64()</dd>
-                <dt>Retirement upper bound</dt><dd>@publicationState.GetProperty("retirementUpperBound").GetInt64()</dd>
-                <dt>Retirement progress</dt><dd>@publicationState.GetProperty("retirementThrough").GetInt64()</dd>
-                <dt>Grace deadline</dt>
-                <dd>@if (publicationState.TryGetProperty("graceDeadline", out JsonElement grace))
-                    {
-                        <time datetime="@grace.GetDateTimeOffset().ToString("O")">@grace.GetDateTimeOffset().ToUniversalTime().ToString("u")</time>
-                    }
-                    else
-                    {
-                        <span>Not started</span>
-                    }</dd>
+                <dt>Action</dt><dd><code>@intent.Method</code></dd>
+                <dt>Operation ID</dt><dd><code>@intent.OperationId</code></dd>
+                <dt>Reason</dt><dd>@intent.Reason</dd>
+                <dt>Explicit grace days</dt><dd>@intent.GracePeriodDays</dd>
+                <dt>Inventory</dt><dd>@intent.Inventory</dd>
+                <dt>Attestation</dt><dd>@intent.Attestation</dd>
+                <dt>Exact host registration</dt><dd><code>@intent.HostInstanceId</code></dd>
+                <dt>Challenge</dt><dd><code>@(state.TryGetProperty("confirmation", out JsonElement proof) ? proof.GetString() : "Not required for this action")</code></dd>
+                <dt>Challenge expires</dt><dd>@(state.TryGetProperty("confirmationExpiresAt", out JsonElement expires) ? expires.ToString() : "Not applicable")</dd>
             </dl>
+            @if (intent.Method == "purgeRetiredData")
+            {
+                <p><strong>Purge deletes only label history and label-operation receipts.</strong> Reports, cases, appeals, policy history, team, administrative audit, backups and downstream copies remain. This is not whole-database erasure.</p>
+            }
+            @if (intent.Method is "requestKeyRemoval" or "attestKeyRemoval")
+            {
+                <p><strong>Key removal is separate from purge.</strong> The request fences signing; the operator must remove external copies and stop/drain signing hosts. Attestation records the operator's evidence and outstanding copies; it does not verify deletion. Do not remove public verification keys, repository keys or OAuth keys.</p>
+            }
+            @if (intent.Method == "confirmRetirementHostStopped")
+            {
+                <p><strong>This records your independent stopped-process verification for this exact host registration.</strong> It does not stop or detect a process, erase in-memory keys or verify deletion. Stale heartbeat or missing contact is never stopped-process evidence. This change invalidates outstanding previews; fetch fresh key-removal confirmation afterwards.</p>
+            }
+            <form method="post">
+                <input type="hidden" name="stage" value="execute" />
+                <input type="hidden" name="method" value="@intent.Method" />
+                <input type="hidden" name="operationId" value="@intent.OperationId" />
+                <input type="hidden" name="reason" value="@intent.Reason" />
+                <input type="hidden" name="graceDays" value="@intent.GracePeriodDays" />
+                <input type="hidden" name="inventory" value="@intent.Inventory" />
+                <input type="hidden" name="attestation" value="@intent.Attestation" />
+                <input type="hidden" name="hostInstanceId" value="@intent.HostInstanceId" />
+                <input type="hidden" name="confirmation" value="@(state.TryGetProperty("confirmation", out JsonElement challenge) ? challenge.GetString() : "")" />
+                <label class="field">Type the exact action name <code>@intent.Method</code> to confirm
+                    <input name="confirmationText" required maxlength="32" autocomplete="off" />
+                </label>
+                <button type="submit">Confirm @intent.Method</button>
+                <a asp-page="./Index">Cancel / reload</a>
+            </form>
         </section>
     }
-</div>
-<section class="panel">
-    <h2>Advance retirement</h2>
-    <p>Retirement signs and publishes negations in bounded resumable steps. Completion starts or observes the distribution grace period; purge is a separate confirmed local data operation and cannot erase labels from downstream systems.</p>
-    <form method="post">
-        <input type="hidden" name="operationId" value="@(ViewData["OperationId"] ?? Guid.NewGuid().ToString("N"))" />
-        <label class="field">Operation
-            <select name="method" required>
-                <option value="beginRetirement">Begin retirement</option>
-                <option value="advanceRetirement">Advance one retirement batch</option>
-                <option value="beginGracePeriod">Begin grace period</option>
-                <option value="completeRetirement">Complete retirement</option>
-                <option value="purgeRetiredData">Purge retired local history</option>
-            </select>
-        </label>
-        <label class="field">Grace period days (for grace period transition)<input type="number" name="graceDays" min="1" max="365" value="30" /></label>
-        <label class="field">Purge batch size (for purge only)<input type="number" name="limit" min="1" max="1000" value="100" /></label>
-        <label class="field">Reason<input name="reason" required maxlength="4096" /></label>
-        <label><input type="checkbox" name="confirmed" value="true" required /> I understand this action changes durable labeler lifecycle state</label>
-        <p class="form-actions"><button type="submit">Submit lifecycle step</button></p>
-    </form>
-</section>
+    else
+    {
+        List<(string Method, string Title)> actions = [];
+        bool signing = phase is "Retiring" or "Distributing";
+        bool cleanup = phase is "Retired" or "Purged";
+        bool removalStarted = keyRemoval is not ("" or "None");
+        if (phase == "Active")
+        {
+            actions.Add(("beginRetirement", "Begin irreversible retirement"));
+        }
+        if (signing || phase == "Purging")
+        {
+            actions.Add(running ? ("pauseRetirement", "Pause the worker") : ("resumeRetirement", "Resume saved workflow with renewed authority"));
+        }
+        if (phase == "Distributing" && state.GetProperty("issuedThrough").GetInt64() == state.GetProperty("publishedThrough").GetInt64())
+        {
+            actions.Add(("beginGracePeriod", "Choose and begin grace"));
+        }
+        if (phase == "Grace")
+        {
+            actions.Add(("extendGracePeriod", "Extend grace after availability review"));
+            actions.Add(("completeRetirement", "Attest availability and complete after the deadline"));
+        }
+        if (phase == "Retired" && keyRemoval != "Requested")
+        {
+            actions.Add(("purgeRetiredData", "Optional label-history cleanup (not moderation/audit erasure)"));
+        }
+        if (cleanup && !removalStarted && state.GetProperty("issuedThrough").GetInt64() == state.GetProperty("publishedThrough").GetInt64())
+        {
+            actions.Add(("requestKeyRemoval", "Separately request external key removal"));
+        }
+        if (cleanup && removalStarted && keyRemoval != "Attested")
+        {
+            actions.Add(("attestKeyRemoval", "Separately attest operator-performed key removal"));
+        }
+        @if (cleanup && state.TryGetProperty("hosts", out JsonElement retirementHosts) && retirementHosts.ValueKind == JsonValueKind.Array)
+        {
+            @foreach (JsonElement host in retirementHosts.EnumerateArray())
+            {
+                <section class="panel">
+                    <h2>Attest stopped retirement host <code>@host.GetProperty("instanceId").GetString()</code></h2>
+                    <p>Independently verify that this exact process has stopped before submitting. Last contact (@host.GetProperty("lastSeen")) or an unreachable host is not evidence. This records operator attestation only; it does not stop a process or verify key deletion.</p>
+                    <form method="post">
+                        <input type="hidden" name="stage" value="preview" />
+                        <input type="hidden" name="method" value="confirmRetirementHostStopped" />
+                        <input type="hidden" name="hostInstanceId" value="@host.GetProperty("instanceId").GetString()" />
+                        <label class="field">Stable command operation ID<input name="operationId" value="@Guid.NewGuid().ToString("N")" required maxlength="256" /></label>
+                        <label class="field">Reason<input name="reason" required maxlength="4096" /></label>
+                        <label class="field">Independent stopped-process evidence<textarea name="attestation" required maxlength="4096"></textarea></label>
+                        <button type="submit">Preview stopped-host attestation</button>
+                    </form>
+                </section>
+            }
+        }
+        @foreach ((string method, string title) in actions)
+        {
+            <section class="panel">
+                <h2>@title</h2>
+                @if (method is "requestKeyRemoval" or "attestKeyRemoval")
+                {
+                    <p>This workflow records operator evidence, not verified deletion. Inventory every signing host, key fingerprint, external copy, secret-manager version and backup category. Never include secret contents.</p>
+                }
+                @if (method == "purgeRetiredData")
+                {
+                    <p>Deletes only label history and label-operation receipts. Moderation records, policy, team, administrative audit, backups and downstream copies remain. Distribution/replay of deleted history becomes unavailable.</p>
+                }
+                <form method="post">
+                    <input type="hidden" name="stage" value="preview" />
+                    <input type="hidden" name="method" value="@method" />
+                    <label class="field">Stable command operation ID<input name="operationId" value="@(ViewData["OperationId"] ?? Guid.NewGuid().ToString("N"))" required maxlength="256" /></label>
+                    <label class="field">Reason<input name="reason" required maxlength="4096" /></label>
+                    @if (method is "beginGracePeriod" or "extendGracePeriod")
+                    {
+                        <label class="field">Explicit grace days (1-365; no default)<input type="number" name="graceDays" min="1" max="365" required /></label>
+                    }
+                    @if (method is "requestKeyRemoval" or "attestKeyRemoval")
+                    {
+                        <label class="field">External key / host / copy inventory<textarea name="inventory" required maxlength="16384">@((state.TryGetProperty("inventory", out JsonElement savedInventory)) ? savedInventory.GetString() : "")</textarea></label>
+                    }
+                    @if (method is "completeRetirement" or "attestKeyRemoval")
+                    {
+                        <label class="field">@(method == "completeRetirement" ? "Availability attestation: checks, distribution outages and grace review (not downstream receipt)" : "External-removal attestation: stopped hosts, removed copies, partial progress and outstanding copies")<textarea name="attestation" required maxlength="4096"></textarea></label>
+                    }
+                    <button type="submit">Preview @method</button>
+                </form>
+            </section>
+        }
+    }
+}
+else
+{
+    <p role="alert">Retirement state is unavailable. No lifecycle actions are offered until current durable state can be inspected.</p>
+}

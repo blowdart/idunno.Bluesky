@@ -6,6 +6,7 @@ using System.Text.Json;
 using idunno.AtProto;
 using idunno.Bluesky.Labeler.Administration;
 using idunno.Bluesky.Labeler.Moderation;
+using idunno.Bluesky.Labeler.Storage;
 
 using Microsoft.Data.Sqlite;
 
@@ -17,6 +18,58 @@ public class LabelReportStoreTests
     private static readonly Did s_administrator = new("did:plc:administrator");
     private static readonly LabelReportSubject s_account = LabelReportSubject.Account(new("did:plc:subject"));
     private const string Reason = "tools.ozone.report.defs#reasonMisleadingSpam";
+
+    [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task RetirementClosesVerifiedAndPendingReportAndAppealIntakeWithoutProcessingBacklog(string engine)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        (LabelAdministrationCaller administrator, LabelPolicyState policy) = await ActivateAsync(fixture);
+        ILabelReportStore reports = (ILabelReportStore)fixture.Store;
+        ModerationReportAuthenticationResult queued = await ReportTestAuthentication.CreateAsync(
+            s_reporter, policy.DatabaseTime, "retained-pending");
+        LabelReportIntakeReceipt receipt = Success(await reports.AcceptReportAsync(
+            authentication: queued,
+            submission: new(s_account, Reason, "Retain the original evidence."),
+            expectedPolicyRevision: null,
+            maximumPendingReports: 10,
+            cancellationToken: token));
+        LabelStoreState before = await fixture.Store.GetStateAsync(token);
+        await fixture.Store.BeginRetirementAsync(before.Revision, cancellationToken: token);
+
+        ILabelReportStore restarted = (ILabelReportStore)fixture.NewStore();
+        foreach (string reason in new[] { Reason, "com.atproto.moderation.defs#reasonAppeal" })
+        {
+            ModerationReportAuthenticationResult authentication = await ReportTestAuthentication.CreateAsync(
+                s_account.Repository, policy.DatabaseTime, "closed-" + reason);
+            LabelReportSubmission submission = new(s_account, reason);
+            Assert.Equal(LabelServiceErrorCode.IssuanceClosed, (await restarted.SubmitReportAsync(
+                authentication, submission, policy.Revision, token)).Error!.Code);
+            foreach (long? revision in new long?[] { null, policy.Revision })
+            {
+                Assert.Equal(LabelServiceErrorCode.IssuanceClosed, (await restarted.AcceptReportAsync(
+                    authentication: authentication,
+                    submission: submission,
+                    expectedPolicyRevision: revision,
+                    maximumPendingReports: 10,
+                    cancellationToken: token)).Error!.Code);
+            }
+        }
+
+        Assert.Equal(LabelServiceErrorCode.IssuanceClosed,
+            (await restarted.ProcessPendingReportsAsync(policy.Revision, 10, token)).Error!.Code);
+        LabelTablePage pending = Success(await ((ILabelTableStore)fixture.NewStore()).ReadTableAsync(
+            administrator, new(LabelTableKind.PendingReports), token));
+        LabelPendingModerationReport retained = Assert.Single(pending.PendingReports!);
+        Assert.Equal(receipt.Id, retained.Id);
+        Assert.True(retained.PendingVerification);
+        Assert.Equal("Retain the original evidence.", retained.Submission.Reason);
+        Assert.Empty(Success(await restarted.GetReportsAsync(administrator, cancellationToken: token)));
+        Assert.Empty(Success(await ((ILabelModerationStore)fixture.Store).GetCasesAsync(administrator, cancellationToken: token)));
+    }
 
     [Theory]
     [InlineData("sqlite")]

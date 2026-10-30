@@ -9,6 +9,7 @@ using System.Text.Json;
 
 using idunno.AtProto;
 using idunno.Bluesky.Labeler.Administration;
+using idunno.Bluesky.Labeler.Maintenance;
 using idunno.Bluesky.Labeler.Moderation;
 
 namespace idunno.Bluesky.Labeler.Storage;
@@ -62,6 +63,14 @@ internal abstract partial class RelationalLabelStore
                         return LabelServiceResult<LabelCaseReceipt>.Success(
                             DecodeCaseEvent((byte[])receiptReader.GetValue(2)).ToReceipt());
                     }
+                }
+
+                if (change.Action is LabelCaseAction.Open or LabelCaseAction.OpenAppeal or LabelCaseAction.Reopen &&
+                    (await StateAsync(connection, transaction, cancellationToken).ConfigureAwait(false)).Phase != LabelerLifecyclePhase.Active)
+                {
+                    return CaseFailure<LabelCaseReceipt>(
+                        LabelServiceErrorCode.IssuanceClosed,
+                        "New moderation workflows are closed because the labeler is retiring.");
                 }
 
                 long now = await DatabaseTimeAsync(connection, transaction, cancellationToken).ConfigureAwait(false);

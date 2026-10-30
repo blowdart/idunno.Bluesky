@@ -20,8 +20,9 @@ namespace idunno.Bluesky.Labeler.Storage;
 /// Retirement is the permanent, orderly shutdown of label issuance: ordinary issuance closes, the caller enumerates
 /// existing history and signs any required negations, and those negations are published before a caller-selected
 /// distribution grace period begins. After that period, retirement can be completed and local history may be
-/// explicitly purged. The store persists progress but does not select labels to negate, sign them, serve subscribers,
-/// acknowledge downstream delivery, or run lifecycle operations automatically.
+/// explicitly purged. These low-level methods persist caller-supplied progress; they do not themselves sign labels,
+/// serve subscribers or acknowledge downstream delivery. Hosted administration uses a separate authorized, audited
+/// retirement workflow with confirmation challenges and provider-backed bounded selection and checkpoints.
 /// </para>
 /// <para>Decision commits keep receipts, audit outcomes and signed label appends transactionally consistent.
 /// Decision snapshots are observations, not locks; commits check the expected revision under the mutation lock.</para>
@@ -276,6 +277,12 @@ public interface ILabelStore : ILabelDistributionStore
     /// Publication is local durable visibility, not a network send or acknowledgement by a remote subscriber.
     /// This operation has no external work between claim and completion, so it needs no expiring work lease.
     /// </para>
+    /// <para>The packaged providers enforce the
+    /// <see href="https://github.com/bluesky-social/bsky-docs/blob/main/docs/advanced-guides/rate-limits.md#label-limits">Bluesky AppView label-service limits</see>:
+    /// at most 5 newly published labels per rolling second, 10,000 per rolling hour and 100,000 per rolling 24 hours.
+    /// All hosts and issuance paths share durable database-time accounting. An exhausted budget leaves labels pending
+    /// and may return unchanged progress even when backlog exists. Negations count; replay and signature replacement
+    /// do not consume new-publication allowance. Backward clock changes do not replenish allowance.</para>
     /// </remarks>
     Task<LabelStoreState> PublishAsync(int limit = 100, CancellationToken cancellationToken = default);
 

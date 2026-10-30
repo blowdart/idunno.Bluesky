@@ -20,11 +20,14 @@ public class QueryBoundaryTests
     {
         CancellationToken token = TestContext.Current.CancellationToken;
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
-        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(initialize: async store =>
-        {
-            SignedLabelSnapshot[] labels = [.. Enumerable.Range(0, 260).Select(index => Signed(key, $"did:plc:subject{index}"))];
-            await store.AppendAsync("boundary", labels, cancellationToken: token);
-        });
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
+            initialize: async store =>
+            {
+                SignedLabelSnapshot[] labels = [.. Enumerable.Range(0, 260).Select(index => Signed(key, $"did:plc:subject{index}"))];
+                await store.AppendAsync("boundary", labels, cancellationToken: token);
+            },
+            controlDatabaseTime: true);
+        await fixture.PublishAllAsync();
         string filters = "uriPatterns=did:plc:subject*&sources=did:plc:other&sources=did:plc:label-issuer";
         using HttpResponseMessage first = await fixture.Client.GetAsync("/xrpc/com.atproto.label.queryLabels?" + filters, token);
         using JsonDocument page = JsonDocument.Parse(await first.Content.ReadAsByteArrayAsync(token));
