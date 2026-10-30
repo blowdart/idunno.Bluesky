@@ -17,6 +17,7 @@ using idunno.Bluesky.Labeler;
 using idunno.Bluesky.Labeler.Administration;
 using idunno.Bluesky.Labeler.Issuance;
 using idunno.Bluesky.Labeler.Maintenance;
+using idunno.Bluesky.Labeler.Signing;
 using idunno.Bluesky.Labeler.Storage;
 
 using Microsoft.Data.Sqlite;
@@ -27,6 +28,131 @@ namespace idunno.Bluesky.AspNet.Labeler.Integration.Test;
 
 public class AdministrationTests
 {
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public void ExplicitKeylessRegistrationRejectsKeysBeforeOrAfterRegistration(bool before, bool resolveWorker)
+    {
+        using LabelSigningKey active = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using LabelSigningKey replacement = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(active.ExportPublicKeyMultibase()));
+        ServiceCollection services = new();
+        services.AddSqliteLabelStorage(new SqliteConnectionStringBuilder
+        {
+            DataSource = Path.Combine(Path.GetTempPath(), "keyless-registration-" + Guid.NewGuid().ToString("N") + ".db"),
+            Pooling = false
+        }.ConnectionString);
+        services.AddSingleton<ILabelIssuancePolicyProvider, Policy>();
+        ILabelSigningKeyRing keys = new LifecycleTests.TestKeyRing(active, replacement);
+        if (before)
+        {
+            services.AddSingleton(keys);
+        }
+        services.AddKeylessLabelerAdministration(s_audience, identity);
+        if (!before)
+        {
+            services.AddSingleton(keys);
+        }
+        using ServiceProvider provider = services.BuildServiceProvider();
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+        {
+            if (resolveWorker)
+            {
+                provider.GetRequiredService<RetirementWorker>();
+            }
+            else
+            {
+                provider.GetRequiredService<AdministrationDispatcher>();
+            }
+        });
+        Assert.Contains("keyless", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ExplicitKeylessRegistrationResolvesWithoutInstallingKeys()
+    {
+        using HttpClient identity = new();
+        ServiceCollection services = new();
+        services.AddSqliteLabelStorage(new SqliteConnectionStringBuilder
+        {
+            DataSource = Path.Combine(Path.GetTempPath(), "keyless-registration-" + Guid.NewGuid().ToString("N") + ".db"),
+            Pooling = false
+        }.ConnectionString);
+        services.AddSingleton<ILabelIssuancePolicyProvider, Policy>();
+        services.AddKeylessLabelerAdministration(s_audience, identity);
+        using ServiceProvider provider = services.BuildServiceProvider();
+        Assert.NotNull(provider.GetRequiredService<AdministrationDispatcher>());
+        Assert.NotNull(provider.GetRequiredService<RetirementWorker>());
+        Assert.Null(provider.GetService<ILabelSigningKeyRing>());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task KeylessReceiptInspectionReauthorizesAfterReadingRetainedReceipt(bool revoked)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(key, identity);
+        await fixture.Services.GetRequiredService<RetirementWorker>().InitialIteration.WaitAsync(token);
+        await fixture.Clock.WithdrawalRegistrations.Reader.ReadAsync(token);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        Assert.True((await team.BootstrapAsync(s_actor, "uid:0", "bootstrap", token)).Succeeded);
+        LabelAdministrationCaller caller = (await team.AuthenticateLocalAsync("uid:0", token)).Result!;
+        AdministrationResponse issued = await fixture.Services.GetRequiredService<AdministrationDispatcher>().DispatchAsync(
+            caller: caller,
+            command: new(Method: "issueLabel", OperationId: "retained", Target: s_actor.Value, Value: "spam", Reason: "Retain a receipt."),
+            token: token);
+        Assert.True(issued.Succeeded, issued.Message);
+        AdministrationDispatcher dispatcher = new(
+            store: fixture.Store,
+            administration: team,
+            maintenance: fixture.Services.GetRequiredService<ILabelMaintenanceStore>(),
+            httpClient: identity,
+            signingKeyRing: null,
+            policy: fixture.Services.GetRequiredService<ILabelIssuancePolicyProvider>(),
+            publicEndpoint: null,
+            clock: fixture.Clock,
+            host: fixture.Host,
+            retirementWorker: fixture.Services.GetRequiredService<RetirementWorker>());
+        SqliteLabelStore store = (SqliteLabelStore)fixture.Store;
+        int transaction = 0;
+        store.AfterCommitAsync = async (_, _) =>
+        {
+            if (++transaction == 2 && revoked)
+            {
+                store.AfterCommitAsync = null;
+                Assert.True((await team.ChangeTeamAsync(
+                    caller: caller,
+                    change: new(
+                        operationId: "revoke-during-lookup",
+                        action: LabelTeamAction.RevokeLocal,
+                        target: s_actor,
+                        reason: "Revoke after the retained read.",
+                        credential: "uid:0"),
+                    cancellationToken: token)).Succeeded);
+            }
+        };
+        AdministrationResponse inspected = await dispatcher.DispatchAsync(
+            caller, new(Method: "getOperation", OperationId: "retained"), token);
+        store.AfterCommitAsync = null;
+        Assert.Equal(!revoked, inspected.Succeeded);
+        if (revoked)
+        {
+            Assert.Equal("Unauthorized", inspected.Error);
+            Assert.Null(inspected.Sequence);
+            Assert.Null(inspected.OperationId);
+        }
+        else
+        {
+            Assert.Equal(issued.Sequence, inspected.Sequence);
+            Assert.True(transaction >= 3, "Successful lookup must be followed by a fresh authorization.");
+        }
+    }
+
     [Theory]
     [InlineData("read", false, false)]
     [InlineData("read", true, false)]

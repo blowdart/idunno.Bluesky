@@ -58,6 +58,8 @@ All new publication, including retirement negations, shares the default
 Committed excess remains pending; restarting, adding hosts or retrying does not reset the budget.
 The host continues polling without treating throttled backlog as a failure. Monitor the issued/published
 gap and allow enough time before beginning grace or draining hosts for a recovery rotation.
+Publication-only waiting does not advance the retirement generation or last-progress timestamp,
+or create repeated empty-batch audit events. Completion is checkpointed once the publication backlog clears.
 Query and subscription replay of already-published history does not consume new-publication allowance;
 local pacing does not prove a downstream consumer received or accepted every label.
 
@@ -181,6 +183,9 @@ Do not delete public DID verification material, repository keys, OAuth client ke
 database files as an incidental step. Private keys are unnecessary for serving already signed
 history; explicitly eligible keyless retired hosts can retain distribution and administration.
 Missing keys before an eligible retired state must fail closed, not fabricate a keyless role.
+Custom hosts selecting `AddKeylessLabelerAdministration` must not register an `ILabelSigningKeyRing`,
+before or after that call. Administration and retirement-worker construction reject the conflicting
+configuration rather than silently enabling signing.
 
 ## Recovery and backup checklist
 

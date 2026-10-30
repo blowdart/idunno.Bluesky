@@ -54,6 +54,28 @@ internal sealed class LabelRetirementService(
             return null;
         }
 
+        if (batch.Publishing)
+        {
+            LabelStoreState published = await store.PublishAsync(limit: 250, cancellationToken: token).ConfigureAwait(false);
+            if (published.PublishedThrough < published.IssuedThrough)
+            {
+                return null;
+            }
+
+            // Publication changes the stream revision, so finalization needs a fresh, epoch-fenced observation.
+            observed = await retirement.ReadRetirementBatchAsync(token, RecoveryCheckpoint).ConfigureAwait(false);
+            if (!observed.Succeeded)
+            {
+                return observed.Error;
+            }
+
+            batch = observed.Result;
+            if (!batch.Publishing)
+            {
+                return new(LabelServiceErrorCode.StaleDecision, "Retirement changed during publication; reload its checkpoint.");
+            }
+        }
+
         List<SignedLabelSnapshot> signed = new(batch.Labels.Count);
         string? publicKey = null;
         try

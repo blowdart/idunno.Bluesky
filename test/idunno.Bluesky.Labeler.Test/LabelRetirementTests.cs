@@ -14,6 +14,73 @@ namespace idunno.Bluesky.Labeler.Test;
 public class LabelRetirementTests
 {
     [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task PublicationOnlyWaitingDoesNotManufactureRetirementProgressOrAudit(string engine)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        SignedLabelSnapshot[] labels = [.. Enumerable.Range(0, 4).Select(index => new SignedLabelSnapshot(key.CreateLabel(
+            source: StoreFixture.s_issuer,
+            uri: $"did:plc:subject{index}",
+            value: "spam",
+            creationTimestamp: fixture.DatabaseClock!.GetUtcNow())))];
+        await fixture.Store.AppendAsync("initial-history", labels, cancellationToken: token);
+        await fixture.PublishThroughAsync();
+        ILabelRetirementStore retirement = (ILabelRetirementStore)fixture.Store;
+        ILabelAdministrationStore administration = (ILabelAdministrationStore)fixture.Store;
+        await ConfirmAsync(retirement, caller, new(
+            Action: "beginRetirement",
+            OperationId: "start",
+            Reason: "Withdraw labels.",
+            VerifiedSigningPublicKey: key.ExportPublicKeyMultibase()), token);
+        LabelRetirementService service = new(fixture.Store, retirement, new RetirementKeyRing(key));
+        Assert.Null(await service.AdvanceAsync(token));
+        Assert.Null(await service.AdvanceAsync(token));
+        LabelRetirementView before = Success(await retirement.InspectRetirementAsync(caller, null, token));
+        Assert.Equal("Distributing", before.Phase);
+        Assert.Equal(8, before.IssuedThrough);
+        Assert.Equal(5, before.PublishedThrough);
+        Assert.True(before.Running);
+        LabelStoreState stream = await fixture.Store.GetStateAsync(token);
+        int auditCount = Success(await administration.GetAdministrationAuditAsync(caller, cancellationToken: token))
+            .Count(receipt => receipt.Action != "retirement-inspection");
+        for (int attempt = 0; attempt < 3; attempt++)
+        {
+            fixture.DatabaseClock!.Advance(TimeSpan.FromMilliseconds(1));
+            Assert.Null(await service.AdvanceAsync(token));
+            // Direct provider callers must also leave publication-only waiting unchanged.
+            LabelRetirementBatch batch = Success(await retirement.ReadRetirementBatchAsync(token));
+            Assert.True(batch.Publishing);
+            Success(await retirement.CommitRetirementBatchAsync(
+                batch: batch,
+                negations: [],
+                signingPublicKey: null,
+                cancellationToken: token));
+            LabelRetirementView waiting = Success(await retirement.InspectRetirementAsync(caller, null, token));
+            Assert.Equal(before with { Hosts = null }, waiting with { Hosts = null });
+            Assert.Equal(stream, await fixture.Store.GetStateAsync(token));
+            Assert.Equal(auditCount, Success(await administration.GetAdministrationAuditAsync(caller, cancellationToken: token))
+                .Count(receipt => receipt.Action != "retirement-inspection"));
+        }
+
+        fixture.DatabaseClock!.Advance(TimeSpan.FromSeconds(1));
+        Assert.Null(await service.AdvanceAsync(token));
+        LabelRetirementView completed = Success(await retirement.InspectRetirementAsync(caller, null, token));
+        Assert.False(completed.Running);
+        Assert.Equal(8, completed.PublishedThrough);
+        Assert.Equal(before.Generation + 1, completed.Generation);
+        Assert.True(completed.LastProgressAt > before.LastProgressAt);
+        Assert.Equal(auditCount + 1, Success(await administration.GetAdministrationAuditAsync(caller, cancellationToken: token))
+            .Count(receipt => receipt.Action != "retirement-inspection"));
+        Assert.Null(await service.AdvanceAsync(token));
+        Assert.Equal(completed with { Hosts = null }, Success(await retirement.InspectRetirementAsync(caller, null, token)) with { Hosts = null });
+    }
+
+    [Theory]
     [InlineData("sqlite", false, false)]
     [InlineData("sqlite", true, false)]
     [InlineData("sqlite", false, true)]

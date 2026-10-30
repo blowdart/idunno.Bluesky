@@ -256,6 +256,16 @@ internal sealed partial class AdministrationDispatcher(
                     }
 
                     LabelServiceResult<LabelOperationReceipt> result = await store.GetOperationAsync(command.OperationId, token).ConfigureAwait(false);
+                    if (result.Succeeded)
+                    {
+                        grant = await administration.AuthorizeAsync(
+                            caller: caller, permission: LabelAdministrationPermission.Inspect, reason: command.Reason, cancellationToken: token).ConfigureAwait(false);
+                        if (!grant.Succeeded)
+                        {
+                            return Failure(grant.Error);
+                        }
+                    }
+
                     return result.Succeeded ? Receipt(result.Result) : Failure(result.Error);
                 }
             case "getPublicationState":

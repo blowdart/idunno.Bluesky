@@ -97,9 +97,10 @@ public static class LabelerAdministrationExtensions
     /// <param name="httpClient">The hardened identity-resolution client.</param>
     /// <returns>The service collection.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
-    /// <exception cref="InvalidOperationException">The provider registrations are missing or ambiguous.</exception>
+    /// <exception cref="InvalidOperationException">The provider registrations are missing or ambiguous, or signing keys are registered when the services are constructed.</exception>
     /// <remarks><para>The host must verify durable retirement and completed publication before starting.
-    /// This registration never supplies a dummy signing key or permits label issuance.</para></remarks>
+    /// This registration never supplies a dummy signing key or permits label issuance.
+    /// Registering an <see cref="ILabelSigningKeyRing"/> conflicts with this explicit role and is rejected at service construction.</para></remarks>
     public static IServiceCollection AddKeylessLabelerAdministration(
         this IServiceCollection services,
         AtProtoServiceReference audience,
@@ -157,7 +158,7 @@ public static class LabelerAdministrationExtensions
                 administration: administration,
                 maintenance: provider.GetRequiredService<ILabelMaintenanceStore>(),
                 httpClient: httpClient,
-                signingKeyRing: provider.GetService<ILabelSigningKeyRing>(),
+                signingKeyRing: ResolveSigningRole(provider, signingKeyRing),
                 policy: provider.GetRequiredService<ILabelIssuancePolicyProvider>(),
                 publicEndpoint: provider.GetService<LabelerHostingOptions>()?.PublicEndpoint,
                 clock: provider.GetRequiredService<TimeProvider>(),
@@ -170,12 +171,24 @@ public static class LabelerAdministrationExtensions
             logger: provider.GetRequiredService<ILogger<PolicyWithdrawalWorker>>()));
         services.AddSingleton(provider => new RetirementWorker(
             store: provider.GetRequiredService<ILabelStore>(),
-            keys: provider.GetService<ILabelSigningKeyRing>(),
+            keys: ResolveSigningRole(provider, signingKeyRing),
             host: provider.GetService<LabelerHost>(),
             clock: provider.GetRequiredService<TimeProvider>(),
             logger: provider.GetRequiredService<ILogger<RetirementWorker>>()));
         services.AddHostedService(provider => provider.GetRequiredService<RetirementWorker>());
         return services;
+    }
+
+    /// <summary>Preserves the explicitly selected role regardless of key registrations added before or after administration.</summary>
+    private static ILabelSigningKeyRing? ResolveSigningRole(IServiceProvider provider, ILabelSigningKeyRing? configured)
+    {
+        ILabelSigningKeyRing? registered = provider.GetService<ILabelSigningKeyRing>();
+        if (configured is null && registered is not null)
+        {
+            throw new InvalidOperationException("Explicitly keyless administration cannot be combined with a signing-key ring.");
+        }
+
+        return configured is null ? null : registered;
     }
 
     /// <summary>Provides a nonrotating adapter for the legacy single-key registration overload.</summary>

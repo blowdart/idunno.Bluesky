@@ -116,4 +116,5 @@ internal sealed record LabelRetirementBatch(
     long NegatedThrough,
     DateTimeOffset CreatedAt,
     IReadOnlyList<StoredLabel> Labels,
-    bool Scanning = false);
+    bool Scanning = false,
+    bool Publishing = false);

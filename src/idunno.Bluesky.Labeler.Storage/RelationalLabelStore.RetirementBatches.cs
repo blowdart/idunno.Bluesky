@@ -159,6 +159,19 @@ internal abstract partial class RelationalLabelStore
                 return LabelServiceResult<LabelRetirementBatch>.Success(new(null, 0, 0, 0, 0, default, []));
             }
 
+            if (state.Phase == LabelerLifecyclePhase.Distributing)
+            {
+                return LabelServiceResult<LabelRetirementBatch>.Success(new(
+                    OperationId: data.OperationId,
+                    Generation: data.Generation,
+                    StoreRevision: state.Revision,
+                    ScannedThrough: data.ScannedThrough,
+                    NegatedThrough: state.RetirementThrough,
+                    CreatedAt: data.CreatedAt,
+                    Labels: [],
+                    Publishing: true));
+            }
+
             if (state.PublishedThrough < state.RetirementUpperBound)
             {
                 // The publisher owns visibility; this worker never enumerates unpublished history.
@@ -351,7 +364,8 @@ internal abstract partial class RelationalLabelStore
                 return CaseFailure<LabelRetirementView>(LabelServiceErrorCode.StaleDecision, "Retirement signing is blocked during recovery rotation.");
             }
 
-            if (state.PublishedThrough < state.RetirementUpperBound)
+            if (state.PublishedThrough < state.RetirementUpperBound ||
+                state.Phase == LabelerLifecyclePhase.Distributing && state.PublishedThrough < state.IssuedThrough)
             {
                 return LabelServiceResult<LabelRetirementView>.Success(RetirementView(state, data));
             }

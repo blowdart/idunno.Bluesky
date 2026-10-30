@@ -9,6 +9,7 @@
 * Runs durable retirement and optional local-purge batches independently of administration-client lifetime, retaining public distribution during grace and after retirement; supports explicitly keyless administration only on terminal retired storage.
 * Recovers retirement command receipts before phase-dependent signing checks, dispatches stopped-host confirmations consistently, and durably pauses failed worker epochs across uncertain batch commits without overriding later administrator recovery.
 * Shares retirement failure recovery between manual commands and the background worker, retains pending pauses after request cancellation, returns classified storage failures during publication inspection, and rejects label-producing case decisions on keyless hosts without blocking non-label completion.
+* Reauthorizes retained receipt reads before returning them, rejects signing-key registrations that conflict with explicit keyless administration, and avoids recording empty retirement batches as progress while publication is throttled.
 
 * Checks the active public policy in the background every five minutes with a default 30-minute verification lifetime; moderation health reads stored freshness without remote requests. Failed lookups do not extend validity, and confirmed differences require administrator recovery.
 
