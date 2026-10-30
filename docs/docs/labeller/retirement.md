@@ -62,6 +62,11 @@ Errors, revoked/expired worker authority and missing keys require investigation 
 authorized resume. Resume uses a **new command operation ID** to renew authority for the existing
 saved workflow; it does not replace its original scope, history boundary or checkpoints.
 Retain the same resume command ID if its acknowledgement is uncertain.
+The original authorized receipt is recoverable even after the worker changes phase or the
+signing configuration changes. A failed batch read, uncertain batch commit or failed publication
+stops that worker from admitting more work until its pause is durably recorded. Recovery uses
+the administrative execution checkpoint, so a delayed fault cannot override a later explicit
+resume. Exhausted label timestamps are recorded as a durable pause, not retried as running work.
 `retire advance` remains a manual one-step compatibility command, not the normal execution loop.
 Inspect maintenance/rotation blockers rather than repeatedly advancing around them.
 

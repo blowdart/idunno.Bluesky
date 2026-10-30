@@ -45,7 +45,7 @@ internal sealed partial class AdministrationDispatcher(
         "getOperation", "getPublicationState", "getMaintenanceState", "authorizeMaintenance",
         "beginRetirement", "advanceRetirement", "beginGracePeriod", "completeRetirement",
         "purgeRetiredData", "getRetirementState", "prepareRetirement", "pauseRetirement", "resumeRetirement",
-        "extendGracePeriod", "requestKeyRemoval", "attestKeyRemoval", "beginRotation", "confirmHostStopped", "captureRotationBoundary",
+        "extendGracePeriod", "requestKeyRemoval", "attestKeyRemoval", "confirmRetirementHostStopped", "beginRotation", "confirmHostStopped", "captureRotationBoundary",
         "verifyRotationKeyPublication", "resignRotationBatch", "completeRotation",
         .. s_moderationMethods
     ];
@@ -597,6 +597,29 @@ internal sealed partial class AdministrationDispatcher(
             }
 
             string action = command.Method == "prepareRetirement" ? command.Target : command.Method;
+            LabelRetirementCommand request = new(
+                Action: action,
+                OperationId: command.OperationId,
+                Reason: command.Reason,
+                GracePeriodDays: command.GracePeriodDays,
+                Confirmation: command.Confirmation,
+                Attestation: command.Attestation,
+                Inventory: command.Inventory,
+                HostInstanceId: command.HostInstanceId);
+            if (command.Method is not ("prepareRetirement" or "getRetirementState" or "advanceRetirement"))
+            {
+                LabelServiceResult<LabelRetirementRecovery> recovered = await retirement.RecoverRetirementAsync(caller, request, token).ConfigureAwait(false);
+                if (!recovered.Succeeded)
+                {
+                    return Failure(recovered.Error);
+                }
+
+                if (recovered.Result.Receipt is { } receipt)
+                {
+                    return new(true, OperationId: command.OperationId, State: PublicationView(await store.GetStateAsync(token).ConfigureAwait(false)), Retirement: receipt);
+                }
+            }
+
             string? verifiedKey = null;
             bool needsSigning = action == "beginRetirement" ||
                 action == "resumeRetirement" && (await store.GetStateAsync(token).ConfigureAwait(false)).Phase == LabelerLifecyclePhase.Retiring;
@@ -641,16 +664,7 @@ internal sealed partial class AdministrationDispatcher(
                 }
             }
 
-            LabelRetirementCommand request = new(
-                Action: action,
-                OperationId: command.OperationId,
-                Reason: command.Reason,
-                GracePeriodDays: command.GracePeriodDays,
-                Confirmation: command.Confirmation,
-                Attestation: command.Attestation,
-                Inventory: command.Inventory,
-                VerifiedSigningPublicKey: verifiedKey,
-                HostInstanceId: command.HostInstanceId);
+            request = request with { VerifiedSigningPublicKey = verifiedKey };
             LabelServiceResult<LabelRetirementView> result = command.Method switch
             {
                 "getRetirementState" or "advanceRetirement" => await retirement.InspectRetirementAsync(caller, null, token).ConfigureAwait(false),

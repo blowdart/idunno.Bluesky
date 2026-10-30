@@ -9,6 +9,18 @@ namespace idunno.Bluesky.Labeler.Maintenance;
 /// <summary>Fences retirement commands and host-signed batches against durable progress and live authority.</summary>
 internal interface ILabelRetirementStore
 {
+    /// <summary>Recovers an authorized immutable receipt before consulting current signing configuration or phase.</summary>
+    Task<LabelServiceResult<LabelRetirementRecovery>> RecoverRetirementAsync(
+        LabelAdministrationCaller caller,
+        LabelRetirementCommand command,
+        CancellationToken cancellationToken);
+
+    /// <summary>Acquires a read-only recovery fence before admitting any batch read, signing or deletion.</summary>
+    Task<LabelServiceResult<LabelRetirementAdmission>> ReadRetirementCheckpointAsync(CancellationToken cancellationToken);
+
+    /// <summary>Recovers and pauses the same administrative execution epoch without advancing work.</summary>
+    Task PauseRetirementCheckpointAsync(LabelRetirementCheckpoint checkpoint, string error, CancellationToken cancellationToken);
+
     /// <summary>Inspects progress or prepares an action-specific, expiring confirmation.</summary>
     Task<LabelServiceResult<LabelRetirementView>> InspectRetirementAsync(
         LabelAdministrationCaller caller,
@@ -22,7 +34,9 @@ internal interface ILabelRetirementStore
         CancellationToken cancellationToken);
 
     /// <summary>Reads one bounded page under revocable saved worker authority.</summary>
-    Task<LabelServiceResult<LabelRetirementBatch>> ReadRetirementBatchAsync(CancellationToken cancellationToken);
+    Task<LabelServiceResult<LabelRetirementBatch>> ReadRetirementBatchAsync(
+        CancellationToken cancellationToken,
+        LabelRetirementCheckpoint? checkpoint = null);
 
     /// <summary>Revalidates and commits one signed page, checkpoint and audit atomically.</summary>
     Task<LabelServiceResult<LabelRetirementView>> CommitRetirementBatchAsync(
@@ -35,8 +49,17 @@ internal interface ILabelRetirementStore
     Task PauseRetirementAsync(long generation, string error, CancellationToken cancellationToken);
 
     /// <summary>Deletes one bounded confirmed local-history batch under saved live authority.</summary>
-    Task AdvanceRetirementPurgeAsync(CancellationToken cancellationToken);
+    Task AdvanceRetirementPurgeAsync(CancellationToken cancellationToken, LabelRetirementCheckpoint? checkpoint = null);
 }
+
+/// <summary>Fences failure recovery across uncertain batch commits but not across later administrative commands.</summary>
+internal sealed record LabelRetirementCheckpoint(long Generation, Guid ControlId);
+
+/// <summary>Distinguishes an authorized missing receipt from a failed recovery lookup.</summary>
+internal sealed record LabelRetirementRecovery(LabelRetirementView? Receipt);
+
+/// <summary>Distinguishes idle retirement from an unavailable worker-admission checkpoint.</summary>
+internal sealed record LabelRetirementAdmission(LabelRetirementCheckpoint? Checkpoint);
 
 /// <summary>Retains immutable administrative intent independently of transport flags.</summary>
 internal sealed record LabelRetirementCommand(

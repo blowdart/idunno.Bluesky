@@ -4,6 +4,7 @@
 using idunno.AtProto.Labels;
 using idunno.Bluesky.Labeler.Administration;
 using idunno.Bluesky.Labeler.Maintenance;
+using idunno.Bluesky.Labeler.Signing;
 using idunno.Bluesky.Labeler.Storage;
 
 using Microsoft.Data.Sqlite;
@@ -12,6 +13,142 @@ namespace idunno.Bluesky.Labeler.Test;
 
 public class LabelRetirementTests
 {
+    [Theory]
+    [InlineData("sqlite", "read", false)]
+    [InlineData("sqlite", "commit", false)]
+    [InlineData("sqlite", "publication", false)]
+    [InlineData("postgresql", "read", false)]
+    [InlineData("postgresql", "commit", false)]
+    [InlineData("postgresql", "publication", false)]
+    [InlineData("mysql", "read", false)]
+    [InlineData("mysql", "commit", false)]
+    [InlineData("mysql", "publication", false)]
+    [InlineData("sqlite", "read", true)]
+    [InlineData("sqlite", "commit", true)]
+    [InlineData("sqlite", "publication", true)]
+    [InlineData("postgresql", "read", true)]
+    [InlineData("postgresql", "commit", true)]
+    [InlineData("postgresql", "publication", true)]
+    [InlineData("mysql", "read", true)]
+    [InlineData("mysql", "commit", true)]
+    [InlineData("mysql", "publication", true)]
+    public async Task FailedWorkerEpochRecoversPauseAcrossUncertainProgressButNotAdministratorResume(string engine, string failure, bool signing)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        await fixture.Store.AppendAsync("initial-label", [new(key.CreateLabel(
+            source: StoreFixture.s_issuer,
+            uri: "did:plc:subject",
+            value: "spam",
+            creationTimestamp: fixture.DatabaseClock!.GetUtcNow()))], cancellationToken: token);
+        await fixture.Store.PublishAsync(cancellationToken: token);
+        ILabelRetirementStore retirement = (ILabelRetirementStore)fixture.Store;
+        await ConfirmAsync(retirement, caller, new(
+            Action: "beginRetirement",
+            OperationId: "start",
+            Reason: "Withdraw labels.",
+            VerifiedSigningPublicKey: key.ExportPublicKeyMultibase()), token);
+        LabelRetirementService service = new(fixture.Store, retirement, new RetirementKeyRing(key));
+        if (signing)
+        {
+            Assert.Null(await service.AdvanceAsync(token));
+        }
+
+        int transaction = 0;
+        fixture.SetCommitHooks(
+            beforeCommit: (_, _, _) =>
+            {
+                transaction++;
+                if (failure == "read" && transaction == 2 || failure == "publication" && transaction == 4)
+                {
+                    throw new SqliteException("Injected storage failure.", 10);
+                }
+
+                return Task.CompletedTask;
+            },
+            afterCommit: (_, _) => failure == "commit" && transaction == 3
+                ? throw new SqliteException("Injected lost batch acknowledgement.", 10)
+                : Task.CompletedTask);
+        if (failure == "publication")
+        {
+            await Assert.ThrowsAsync<SqliteException>(() => service.AdvanceAsync(token));
+        }
+        else
+        {
+            LabelServiceError? error = await service.AdvanceAsync(token);
+            Assert.Equal(failure == "read" ? LabelServiceErrorCode.StorageUnavailable : LabelServiceErrorCode.OutcomeUnknown, error?.Code);
+        }
+
+        fixture.SetCommitHooks();
+        LabelRetirementCheckpoint checkpoint = Assert.IsType<LabelRetirementCheckpoint>(service.RecoveryCheckpoint);
+        LabelRetirementView before = Success(await retirement.InspectRetirementAsync(caller, null, token));
+        Assert.Equal(failure == "read" ? checkpoint.Generation : checkpoint.Generation + 1, before.Generation);
+        Assert.Equal(signing && failure != "read" ? 2 : 1, before.IssuedThrough);
+        if (failure == "publication")
+        {
+            Assert.Equal(before.Generation, service.ObservedGeneration);
+        }
+
+        ILabelRetirementStore restarted = (ILabelRetirementStore)fixture.NewStore();
+        await restarted.PauseRetirementCheckpointAsync(checkpoint, "StorageUnavailable: explicit recovery required.", token);
+        LabelRetirementView paused = Success(await restarted.InspectRetirementAsync(caller, null, token));
+        Assert.False(paused.Running);
+        Assert.StartsWith("StorageUnavailable:", paused.PauseReason);
+        Assert.Null(Success(await restarted.ReadRetirementBatchAsync(token)).OperationId);
+        Success(await restarted.ExecuteRetirementAsync(caller, new("resumeRetirement", "resume", "Recover explicitly."), token));
+        await restarted.PauseRetirementCheckpointAsync(checkpoint, "A stale worker must not override recovery.", token);
+        Assert.True(Success(await restarted.InspectRetirementAsync(caller, null, token)).Running);
+        Assert.Equal(LabelServiceErrorCode.StaleDecision, (await restarted.ReadRetirementBatchAsync(token, checkpoint)).Error!.Code);
+    }
+
+    /// <summary>Exposes one fixture-owned key without secret-store I/O during failure-injection tests.</summary>
+    private sealed class RetirementKeyRing(LabelSigningKey key) : ILabelSigningKeyRing
+    {
+        public string ActiveKeyId => "active";
+        public LabelSigningKey GetSigningKey(string keyId) => keyId == ActiveKeyId ? key : throw new KeyNotFoundException();
+        public string GetPublicKeyMultibase(string keyId) => GetSigningKey(keyId).ExportPublicKeyMultibase();
+        public Task ActivateAsync(string keyId, CancellationToken cancellationToken = default)
+        {
+            GetSigningKey(keyId);
+            return Task.CompletedTask;
+        }
+    }
+
+    [Theory]
+    [InlineData("sqlite", 0)]
+    [InlineData("sqlite", 1)]
+    [InlineData("postgresql", 0)]
+    [InlineData("postgresql", 1)]
+    [InlineData("mysql", 0)]
+    [InlineData("mysql", 1)]
+    public async Task ExhaustedTimestampPreparationPausesBeforeReturningFailure(string engine, int ticksBeforeMaximum)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        await fixture.Store.AppendAsync("maximum-label", [new(key.CreateLabel(
+            source: StoreFixture.s_issuer,
+            uri: "did:plc:subject",
+            value: "spam",
+            creationTimestamp: DateTimeOffset.MaxValue.AddTicks(-ticksBeforeMaximum)))], cancellationToken: token);
+        await fixture.Store.PublishAsync(cancellationToken: token);
+        ILabelRetirementStore retirement = (ILabelRetirementStore)fixture.Store;
+        await ConfirmAsync(retirement, caller, new(
+            Action: "beginRetirement",
+            OperationId: "start",
+            Reason: "Withdraw labels.",
+            VerifiedSigningPublicKey: key.ExportPublicKeyMultibase()), token);
+        Assert.Equal(LabelServiceErrorCode.TimestampExhausted, (await retirement.ReadRetirementBatchAsync(token)).Error!.Code);
+        ILabelRetirementStore restarted = (ILabelRetirementStore)fixture.NewStore();
+        LabelRetirementView paused = Success(await restarted.InspectRetirementAsync(caller, null, token));
+        Assert.False(paused.Running);
+        Assert.StartsWith("TimestampExhausted:", paused.PauseReason);
+        Assert.Null(Success(await restarted.ReadRetirementBatchAsync(token)).OperationId);
+    }
+
     [Theory]
     [InlineData("sqlite")]
     [InlineData("postgresql")]
@@ -197,6 +334,12 @@ public class LabelRetirementTests
             Reason: "Withdraw applicable labels.",
             VerifiedSigningPublicKey: key.ExportPublicKeyMultibase());
         await ConfirmAsync((ILabelRetirementStore)fixture.Store, caller, begin, token);
+        LabelRetirementCommand resume = new(
+            Action: "resumeRetirement",
+            OperationId: "resume-before-distribution",
+            Reason: "Recover with verified signing evidence.",
+            VerifiedSigningPublicKey: key.ExportPublicKeyMultibase());
+        LabelRetirementView resumed = Success(await ((ILabelRetirementStore)fixture.Store).ExecuteRetirementAsync(caller, resume, token));
         int pages = 0;
         LabelRetirementView state;
         do
@@ -238,6 +381,12 @@ public class LabelRetirementTests
             limit: 250,
             cancellationToken: token);
         Assert.Equal(250, distribution.Labels.Count);
+        ILabelRetirementStore completed = (ILabelRetirementStore)fixture.NewStore();
+        LabelRetirementCommand retry = resume with { VerifiedSigningPublicKey = null };
+        Assert.Equal(resumed, Success(await completed.RecoverRetirementAsync(caller, retry, token)).Receipt);
+        Assert.Equal(resumed, Success(await completed.ExecuteRetirementAsync(caller, retry, token)));
+        Assert.Equal(LabelServiceErrorCode.IdempotencyConflict, (await completed.RecoverRetirementAsync(
+            caller, retry with { Reason = "Different intent." }, token)).Error!.Code);
         Assert.All(distribution.Labels, label =>
         {
             Assert.True(label.SignedLabel.Label.IsNegationLabel);

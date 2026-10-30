@@ -18,21 +18,39 @@ internal sealed class LabelRetirementService(
     /// <summary>Gets the exact durable generation observed by the current bounded operation, if any.</summary>
     internal long? ObservedGeneration { get; private set; }
 
+    /// <summary>Gets the administrative execution fence acquired before any bounded work starts.</summary>
+    internal LabelRetirementCheckpoint? RecoveryCheckpoint { get; private set; }
+
     /// <summary>Runs one bounded unit, always recovering durable observations before producing another signature.</summary>
     internal async Task<LabelServiceError?> AdvanceAsync(CancellationToken token)
     {
         ObservedGeneration = null;
-        LabelServiceResult<LabelRetirementBatch> observed = await retirement.ReadRetirementBatchAsync(token).ConfigureAwait(false);
+        RecoveryCheckpoint = null;
+        LabelServiceResult<LabelRetirementAdmission> checkpoint = await retirement.ReadRetirementCheckpointAsync(token).ConfigureAwait(false);
+        if (!checkpoint.Succeeded)
+        {
+            // No batch read, signing or deletion has been admitted, so only checkpoint acquisition may be retried.
+            return checkpoint.Error;
+        }
+
+        RecoveryCheckpoint = checkpoint.Result.Checkpoint;
+        ObservedGeneration = RecoveryCheckpoint?.Generation;
+        if (RecoveryCheckpoint is null)
+        {
+            return null;
+        }
+
+        LabelServiceResult<LabelRetirementBatch> observed = await retirement.ReadRetirementBatchAsync(token, RecoveryCheckpoint).ConfigureAwait(false);
         if (!observed.Succeeded)
         {
             return observed.Error;
         }
 
         LabelRetirementBatch batch = observed.Result;
-        ObservedGeneration = batch.Generation == 0 ? null : batch.Generation;
+        ObservedGeneration = batch.Generation == 0 ? ObservedGeneration : batch.Generation;
         if (batch.OperationId is null)
         {
-            await retirement.AdvanceRetirementPurgeAsync(token).ConfigureAwait(false);
+            await retirement.AdvanceRetirementPurgeAsync(token, RecoveryCheckpoint).ConfigureAwait(false);
             return null;
         }
 
@@ -80,6 +98,7 @@ internal sealed class LabelRetirementService(
             return committed.Error;
         }
 
+        ObservedGeneration = committed.Result.Generation;
         await store.PublishAsync(limit: 250, cancellationToken: token).ConfigureAwait(false);
         return null;
     }

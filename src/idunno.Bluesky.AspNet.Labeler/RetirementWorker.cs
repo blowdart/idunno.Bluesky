@@ -63,9 +63,9 @@ internal sealed partial class RetirementWorker(
                 if (error is not null && error.Code != LabelServiceErrorCode.StaleDecision)
                 {
                     RetirementPaused(logger, error.Code.ToString());
-                    if (service.ObservedGeneration is long generation)
+                    if (service.RecoveryCheckpoint is { } checkpoint)
                     {
-                        await retirement.PauseRetirementAsync(generation, error.Code + ": inspect progress and explicitly resume.", stoppingToken).ConfigureAwait(false);
+                        await PersistPauseAsync(retirement, checkpoint, stoppingToken).ConfigureAwait(false);
                     }
                 }
             }
@@ -73,9 +73,9 @@ internal sealed partial class RetirementWorker(
             {
                 RetirementFailed(logger, exception);
                 // Retry only persistence of the pause, never the failed signing or deletion operation.
-                if (service.ObservedGeneration is long generation)
+                if (service.RecoveryCheckpoint is { } checkpoint)
                 {
-                    await PersistPauseAsync(retirement, generation, stoppingToken).ConfigureAwait(false);
+                    await PersistPauseAsync(retirement, checkpoint, stoppingToken).ConfigureAwait(false);
                 }
             }
 
@@ -84,13 +84,13 @@ internal sealed partial class RetirementWorker(
     }
 
     /// <summary>Keeps this worker faulted until its pause is durably recorded, even through a database outage.</summary>
-    private async Task PersistPauseAsync(ILabelRetirementStore retirement, long generation, CancellationToken token)
+    private async Task PersistPauseAsync(ILabelRetirementStore retirement, LabelRetirementCheckpoint checkpoint, CancellationToken token)
     {
         while (!token.IsCancellationRequested)
         {
             try
             {
-                await retirement.PauseRetirementAsync(generation, "StorageUnavailable: worker interrupted; inspect durable progress and explicitly resume.", token).ConfigureAwait(false);
+                await retirement.PauseRetirementCheckpointAsync(checkpoint, "StorageUnavailable: worker interrupted; inspect durable progress and explicitly resume.", token).ConfigureAwait(false);
                 return;
             }
             catch (Exception exception) when (exception is DbException or InvalidOperationException or InvalidDataException)

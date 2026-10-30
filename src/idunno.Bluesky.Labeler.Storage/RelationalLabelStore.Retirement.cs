@@ -64,7 +64,7 @@ internal abstract partial class RelationalLabelStore : ILabelRetirementStore
             await SaveRetirementDataAsync(
                 connection: connection,
                 transaction: transaction,
-                data: data with { Generation = checked(data.Generation + 1), AvailabilityAttestation = null },
+                data: data with { Generation = checked(data.Generation + 1), ControlId = Guid.NewGuid(), AvailabilityAttestation = null },
                 token: token).ConfigureAwait(false);
         }
     }
@@ -102,8 +102,11 @@ internal abstract partial class RelationalLabelStore : ILabelRetirementStore
             command.GracePeriodDays.ToString(CultureInfo.InvariantCulture),
             command.Attestation ?? string.Empty,
             command.Inventory ?? string.Empty,
-            command.VerifiedSigningPublicKey ?? string.Empty,
             command.HostInstanceId?.ToString("N") ?? string.Empty)));
+
+    /// <summary>Binds confirmation to derived signing evidence without making it part of caller retry identity.</summary>
+    private static string RetirementConfirmationIntent(LabelAdministrationCaller caller, LabelRetirementCommand command) =>
+        Convert.ToHexString(SHA256.HashData(Intent(RetirementIntent(caller, command), command.VerifiedSigningPublicKey ?? string.Empty)));
 
     /// <summary>Binds previews to lifecycle, signing selection, hosts and maintenance, not publisher polling revisions.</summary>
     private async Task<string> RetirementFingerprintAsync(
@@ -303,7 +306,7 @@ internal abstract partial class RelationalLabelStore : ILabelRetirementStore
             long now = await DatabaseTimeAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             string challenge = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
             RetirementConfirmation confirmation = new(
-                RetirementIntent(caller, preview),
+                RetirementConfirmationIntent(caller, preview),
                 await RetirementFingerprintAsync(
                     connection: connection,
                     transaction: transaction,
@@ -342,6 +345,68 @@ internal abstract partial class RelationalLabelStore : ILabelRetirementStore
         }, cancellationToken);
     }
 
+    /// <summary>Recovers receipt identity independently of derived signing evidence and current lifecycle phase.</summary>
+    private static async Task<LabelServiceResult<LabelRetirementRecovery>> RecoverRetirementReceiptAsync(
+        DbConnection connection,
+        DbTransaction transaction,
+        LabelAdministrationCaller caller,
+        LabelRetirementCommand command,
+        CancellationToken token)
+    {
+        object? previous = await ScalarAsync(
+            connection: connection,
+            transaction: transaction,
+            sql: "SELECT payload FROM label_retirement_receipts WHERE operation_hash=@hash",
+            token: token,
+            ("@hash", OperationHash(command.OperationId))).ConfigureAwait(false);
+        if (previous is not byte[] receiptBytes)
+        {
+            return LabelServiceResult<LabelRetirementRecovery>.Success(new(null));
+        }
+
+        RetirementReceipt receipt = JsonSerializer.Deserialize(receiptBytes, RetirementJsonContext.Default.RetirementReceipt)
+            ?? throw new InvalidDataException("The retirement receipt is null.");
+        return receipt.OperationId == command.OperationId && receipt.Intent == RetirementIntent(caller, command)
+            ? LabelServiceResult<LabelRetirementRecovery>.Success(new(receipt.View))
+            : CaseFailure<LabelRetirementRecovery>(LabelServiceErrorCode.IdempotencyConflict, "The operation ID identifies different retirement intent.");
+    }
+
+    /// <summary>Checks current authority before returning an existing command outcome without executing new work.</summary>
+    Task<LabelServiceResult<LabelRetirementRecovery>> ILabelRetirementStore.RecoverRetirementAsync(
+        LabelAdministrationCaller caller,
+        LabelRetirementCommand command,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(caller);
+        ValidateRetirementCommand(command);
+        return AdministrationAsync(async (connection, transaction, state) =>
+        {
+            AdministrationState team = await ReadAdministrationAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+            if (!await HasPermissionAsync(
+                connection: connection,
+                transaction: transaction,
+                state: state,
+                administration: team,
+                caller: caller,
+                permission: LabelAdministrationPermission.Maintain,
+                token: cancellationToken).ConfigureAwait(false))
+            {
+                await AuditRetirementAsync(
+                    connection: connection, transaction: transaction, team: team, caller: caller,
+                    operationId: command.OperationId, action: command.Action, reason: command.Reason,
+                    succeeded: false, token: cancellationToken).ConfigureAwait(false);
+                return AdminFailure<LabelRetirementRecovery>("Current retirement authority is required.");
+            }
+
+            return await RecoverRetirementReceiptAsync(
+                connection: connection,
+                transaction: transaction,
+                caller: caller,
+                command: command,
+                token: cancellationToken).ConfigureAwait(false);
+        }, cancellationToken);
+    }
+
     /// <summary>Commits only current, authorized immutable intent, recovering an earlier result before confirmation checks.</summary>
     Task<LabelServiceResult<LabelRetirementView>> ILabelRetirementStore.ExecuteRetirementAsync(
         LabelAdministrationCaller caller,
@@ -370,19 +435,20 @@ internal abstract partial class RelationalLabelStore : ILabelRetirementStore
             }
 
             string intent = RetirementIntent(caller, command);
-            object? previous = await ScalarAsync(
+            LabelServiceResult<LabelRetirementRecovery> recovered = await RecoverRetirementReceiptAsync(
                 connection: connection,
                 transaction: transaction,
-                sql: "SELECT payload FROM label_retirement_receipts WHERE operation_hash=@hash",
-                token: cancellationToken,
-                ("@hash", OperationHash(command.OperationId))).ConfigureAwait(false);
-            if (previous is byte[] receiptBytes)
+                caller: caller,
+                command: command,
+                token: cancellationToken).ConfigureAwait(false);
+            if (!recovered.Succeeded)
             {
-                RetirementReceipt receipt = JsonSerializer.Deserialize(receiptBytes, RetirementJsonContext.Default.RetirementReceipt)
-                    ?? throw new InvalidDataException("The retirement receipt is null.");
-                return receipt.OperationId == command.OperationId && receipt.Intent == intent
-                    ? LabelServiceResult<LabelRetirementView>.Success(receipt.View)
-                    : CaseFailure<LabelRetirementView>(LabelServiceErrorCode.IdempotencyConflict, "The operation ID identifies different retirement intent.");
+                return LabelServiceResult<LabelRetirementView>.Failure(recovered.Error);
+            }
+
+            if (recovered.Result.Receipt is { } receipt)
+            {
+                return LabelServiceResult<LabelRetirementView>.Success(receipt);
             }
 
             RetirementData? data = await ReadRetirementDataAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
@@ -397,7 +463,7 @@ internal abstract partial class RelationalLabelStore : ILabelRetirementStore
                     ("@hash", SHA256.HashData(Encoding.UTF8.GetBytes(command.Confirmation)))).ConfigureAwait(false);
                 RetirementConfirmation? confirmation = confirmationBytes is byte[] bytes
                     ? JsonSerializer.Deserialize(bytes, RetirementJsonContext.Default.RetirementConfirmation) : null;
-                if (confirmation is null || confirmation.ExpiresAt <= now || confirmation.Intent != intent ||
+                if (confirmation is null || confirmation.ExpiresAt <= now || confirmation.Intent != RetirementConfirmationIntent(caller, command) ||
                     confirmation.Fingerprint != await RetirementFingerprintAsync(
                         connection: connection,
                         transaction: transaction,
@@ -603,6 +669,7 @@ internal abstract partial class RelationalLabelStore : ILabelRetirementStore
         next = next with
         {
             Generation = checked(next.Generation + 1),
+            ControlId = Guid.NewGuid(),
             LastActivityAt = timestamp,
             LastProgressAt = timestamp
         };

@@ -28,7 +28,8 @@ internal sealed record RetirementData(
     string? Inventory = null,
     string? AvailabilityAttestation = null,
     string? RemovalAttestation = null,
-    string? SigningPublicKey = null);
+    string? SigningPublicKey = null,
+    Guid ControlId = default);
 
 /// <summary>Binds a confirmation to immutable intent and the relevant observed state.</summary>
 internal sealed record RetirementConfirmation(string Intent, string Fingerprint, long ExpiresAt);

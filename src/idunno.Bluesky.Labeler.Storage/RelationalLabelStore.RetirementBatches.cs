@@ -14,6 +14,45 @@ namespace idunno.Bluesky.Labeler.Storage;
 
 internal abstract partial class RelationalLabelStore
 {
+    /// <summary>Captures the command epoch before any fallible batch preparation, signature or purge is admitted.</summary>
+    Task<LabelServiceResult<LabelRetirementAdmission>> ILabelRetirementStore.ReadRetirementCheckpointAsync(CancellationToken cancellationToken) =>
+        AdministrationAsync(async (connection, transaction, state) =>
+        {
+            RetirementData? data = await ReadRetirementDataAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+            return LabelServiceResult<LabelRetirementAdmission>.Success(new(
+                data is { Running: true } && state.Phase is
+                    LabelerLifecyclePhase.Retiring or LabelerLifecyclePhase.Distributing or LabelerLifecyclePhase.Purging
+                    ? new(data.Generation, data.ControlId) : null));
+        }, cancellationToken);
+
+    /// <summary>Pauses an interrupted epoch even if its batch committed without acknowledgement; a later command invalidates it.</summary>
+    Task ILabelRetirementStore.PauseRetirementCheckpointAsync(
+        LabelRetirementCheckpoint checkpoint,
+        string error,
+        CancellationToken cancellationToken) =>
+        RunAsync(
+            operation: "retirement-recover-pause",
+            action: async (connection, transaction, state) =>
+            {
+                RetirementData? data = await ReadRetirementDataAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+                if (data is not null && data.ControlId == checkpoint.ControlId && data.Generation >= checkpoint.Generation &&
+                    (checkpoint.ControlId != Guid.Empty || data.Generation == checkpoint.Generation) &&
+                    data.PauseReason is null && state.Phase is
+                        LabelerLifecyclePhase.Retiring or LabelerLifecyclePhase.Distributing or LabelerLifecyclePhase.Purging)
+                {
+                    await PauseRetirementCoreAsync(
+                        connection: connection,
+                        transaction: transaction,
+                        state: state,
+                        data: data,
+                        error: error,
+                        token: cancellationToken).ConfigureAwait(false);
+                }
+
+                return state;
+            },
+            token: cancellationToken);
+
     /// <summary>Reconstitutes only the revocable authority saved by a previously authorized command.</summary>
     private static LabelAdministrationCaller RetirementCaller(LabelStoreState state, RetirementData data) => new(
         issuer: new(state.Issuer),
@@ -88,10 +127,17 @@ internal abstract partial class RelationalLabelStore
     }
 
     /// <summary>Reads at most 250 immutable rows, including pages with no eligible labels.</summary>
-    Task<LabelServiceResult<LabelRetirementBatch>> ILabelRetirementStore.ReadRetirementBatchAsync(CancellationToken cancellationToken) =>
+    Task<LabelServiceResult<LabelRetirementBatch>> ILabelRetirementStore.ReadRetirementBatchAsync(
+        CancellationToken cancellationToken,
+        LabelRetirementCheckpoint? checkpoint) =>
         AdministrationAsync(async (connection, transaction, state) =>
         {
             RetirementData? data = await ReadRetirementDataAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+            if (checkpoint is not null && (data is null || data.ControlId != checkpoint.ControlId || data.Generation != checkpoint.Generation))
+            {
+                return CaseFailure<LabelRetirementBatch>(LabelServiceErrorCode.StaleDecision, "Retirement changed after worker admission; reload its recovery checkpoint.");
+            }
+
             if (data is null || !data.Running ||
                 state.Phase is not (LabelerLifecyclePhase.Retiring or LabelerLifecyclePhase.Distributing))
             {
@@ -171,6 +217,13 @@ internal abstract partial class RelationalLabelStore
                 {
                     if (row.SignedLabel.Label.CreationTimestamp == DateTimeOffset.MaxValue)
                     {
+                        await PauseRetirementCoreAsync(
+                            connection: connection,
+                            transaction: transaction,
+                            state: state,
+                            data: data,
+                            error: "TimestampExhausted: no timestamp can supersede retained history.",
+                            token: token).ConfigureAwait(false);
                         return CaseFailure<LabelRetirementBatch>(LabelServiceErrorCode.TimestampExhausted, "No timestamp can supersede retained history.");
                     }
 
@@ -187,6 +240,13 @@ internal abstract partial class RelationalLabelStore
 
         if (created.Ticks > DateTimeOffset.MaxValue.Ticks - candidates.Count)
         {
+            await PauseRetirementCoreAsync(
+                connection: connection,
+                transaction: transaction,
+                state: state,
+                data: data,
+                error: "TimestampExhausted: no timestamp range remains for a retirement batch.",
+                token: token).ConfigureAwait(false);
             return CaseFailure<LabelRetirementBatch>(LabelServiceErrorCode.TimestampExhausted, "No timestamp range remains for a retirement batch.");
         }
 
@@ -302,13 +362,6 @@ internal abstract partial class RelationalLabelStore
                 token: cancellationToken).ConfigureAwait(false);
             if (!prepared.Succeeded)
             {
-                await PauseRetirementCoreAsync(
-                    connection: connection,
-                    transaction: transaction,
-                    state: state,
-                    data: data,
-                    error: prepared.Error.Message,
-                    token: cancellationToken).ConfigureAwait(false);
                 return LabelServiceResult<LabelRetirementView>.Failure(prepared.Error);
             }
 
@@ -448,7 +501,7 @@ internal abstract partial class RelationalLabelStore
             token: cancellationToken);
 
     /// <summary>Continues optional confirmed deletion only while its saved administrative authority remains valid.</summary>
-    async Task ILabelRetirementStore.AdvanceRetirementPurgeAsync(CancellationToken cancellationToken)
+    async Task ILabelRetirementStore.AdvanceRetirementPurgeAsync(CancellationToken cancellationToken, LabelRetirementCheckpoint? checkpoint)
     {
         await RunAsync(
             operation: "retirement-purge",
@@ -456,6 +509,7 @@ internal abstract partial class RelationalLabelStore
             {
                 RetirementData? data = await ReadRetirementDataAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
                 if (data is not { Running: true } || state.Phase != LabelerLifecyclePhase.Purging ||
+                    checkpoint is not null && (data.ControlId != checkpoint.ControlId || data.Generation != checkpoint.Generation) ||
                     (await ReadMaintenanceAsync(connection, transaction, cancellationToken).ConfigureAwait(false)).IsActive)
                 {
                     return state;

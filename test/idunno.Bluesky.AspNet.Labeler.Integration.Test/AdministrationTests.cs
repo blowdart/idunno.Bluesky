@@ -27,6 +27,37 @@ namespace idunno.Bluesky.AspNet.Labeler.Integration.Test;
 
 public class AdministrationTests
 {
+    [Fact]
+    public void EveryMappedAdministrativeMethodIsDispatchable()
+    {
+        Assert.All(AdministrationDispatcher.s_getMethods.Concat(AdministrationDispatcher.s_postMethods),
+            method => Assert.Contains(method, AdministrationDispatcher.s_methods));
+        Assert.Equal(AdministrationDispatcher.s_methods.Length, AdministrationDispatcher.s_methods.Distinct(StringComparer.Ordinal).Count());
+    }
+
+    [Fact]
+    public async Task RetirementHostStopReachesAuthorizedCommandValidation()
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(key, identity);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        Assert.True((await team.BootstrapAsync(s_actor, "uid:0", "bootstrap-host-stop", token)).Succeeded);
+        LabelAdministrationCaller caller = (await team.AuthenticateLocalAsync("uid:0", token)).Result!;
+        AdministrationResponse response = await fixture.Services.GetRequiredService<AdministrationDispatcher>().DispatchAsync(
+            caller: caller,
+            command: new(
+                Method: "confirmRetirementHostStopped",
+                OperationId: "host-stop",
+                Reason: "Confirm an independently stopped process.",
+                Attestation: "Verified exact process exit.",
+                HostInstanceId: Guid.NewGuid()),
+            token: token);
+        Assert.False(response.Succeeded);
+        Assert.Equal("StaleDecision", response.Error);
+    }
+
     [Theory]
     [InlineData("issueLabel")]
     [InlineData("negateLabel")]
@@ -582,6 +613,12 @@ public class AdministrationTests
             TestContext.Current.CancellationToken));
         Assert.True(started.RootElement.GetProperty("succeeded").GetBoolean());
         Assert.Equal("Retiring", started.RootElement.GetProperty("state").GetProperty("phase").GetString());
+        const string resumeCommand = """{"method":"resumeRetirement","operationId":"retirement-resume","reason":"Recover retirement."}""";
+        using JsonDocument resumed = JsonDocument.Parse(await LabelerLocalAdministration.SendLocalCommandAsync(
+            endpoint,
+            resumeCommand,
+            TestContext.Current.CancellationToken));
+        Assert.True(resumed.RootElement.GetProperty("succeeded").GetBoolean());
 
         LabelStoreState state = await store.GetStateAsync(TestContext.Current.CancellationToken);
         for (int step = 0; step < 8 && (state.Phase != LabelerLifecyclePhase.Distributing || state.PublishedThrough != state.IssuedThrough); step++)
@@ -597,6 +634,14 @@ public class AdministrationTests
         Assert.Equal(3, state.RetirementThrough);
         Assert.Equal(6, state.IssuedThrough);
         Assert.Equal(6, state.PublishedThrough);
+        using JsonDocument recoveredResume = JsonDocument.Parse(await LabelerLocalAdministration.SendLocalCommandAsync(
+            endpoint,
+            resumeCommand,
+            TestContext.Current.CancellationToken));
+        Assert.True(recoveredResume.RootElement.GetProperty("succeeded").GetBoolean());
+        Assert.Equal(
+            resumed.RootElement.GetProperty("retirement").GetProperty("generation").GetInt64(),
+            recoveredResume.RootElement.GetProperty("retirement").GetProperty("generation").GetInt64());
 
         LabelPage page = await store.ReplayAsync(
             streamId: state.StreamId,
