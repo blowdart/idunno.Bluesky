@@ -3,11 +3,13 @@
 
 using System.Text.Json;
 
+using idunno.Bluesky.Labeler;
 using idunno.Bluesky.Labeler.Administration;
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Team;
 
@@ -32,9 +34,52 @@ public sealed class IndexModel : PageModel
     /// <summary>Gets the current administrator's registered policy-alert email.</summary>
     internal string? CurrentNotificationEmail { get; private set; }
 
+    /// <summary>Gets the configured remote-administration control mode.</summary>
+    internal RemoteAdministrationMode RemoteAdministrationControlMode { get; private set; }
+
+    /// <summary>Gets the currently effective remote-administration state, when available.</summary>
+    internal bool? RemoteAdministrationEnabled { get; private set; }
+
+    /// <summary>Gets whether the current browser identity is the bootstrap owner.</summary>
+    internal bool IsRemoteAdministrationOwner { get; private set; }
+
+    /// <summary>Gets whether the current owner can control the Xenon-managed switch.</summary>
+    internal bool CanControlRemoteAdministration { get; private set; }
+
     /// <summary>Loads active members and retained membership tombstones.</summary>
     public async Task OnGetAsync()
     {
+        IOptionsMonitor<LabelerAdministrationOptions>? administrationOptions =
+            HttpContext.RequestServices.GetService<IOptionsMonitor<LabelerAdministrationOptions>>();
+        LabelerAdministrationOptions currentOptions = administrationOptions?.CurrentValue ?? new();
+        RemoteAdministrationControlMode = currentOptions.RemoteMode ??
+            (currentOptions.RemoteEnabled ? RemoteAdministrationMode.Enabled : RemoteAdministrationMode.Disabled);
+        RemoteAdministrationEnabled = RemoteAdministrationControlMode switch
+        {
+            RemoteAdministrationMode.Disabled => false,
+            RemoteAdministrationMode.Enabled => true,
+            RemoteAdministrationMode.WebUiControlled => null,
+            _ => false
+        };
+        LabelServiceResult<LabelRemoteAdministrationStatus> remoteStatus = await HttpContext.RequestServices
+            .GetRequiredService<LabelerUiAdministration>()
+            .GetRemoteAdministrationStatusAsync(User, HttpContext.RequestAborted).ConfigureAwait(false);
+        if (remoteStatus.Succeeded)
+        {
+            IsRemoteAdministrationOwner = remoteStatus.Result.IsOwner;
+            if (RemoteAdministrationControlMode == RemoteAdministrationMode.WebUiControlled)
+            {
+                RemoteAdministrationEnabled = remoteStatus.Result.Enabled;
+            }
+            CanControlRemoteAdministration = IsRemoteAdministrationOwner &&
+                ViewData["CurrentRole"] is LabelTeamRole.Administrator &&
+                RemoteAdministrationControlMode == RemoteAdministrationMode.WebUiControlled;
+        }
+        else
+        {
+            ViewData["RemoteAdministrationError"] = remoteStatus.Error.Message;
+        }
+
         LabelerModerationOptions? moderationOptions = HttpContext.RequestServices.GetService<LabelerModerationOptions>();
         CanManagePolicyEmail = ViewData["CurrentRole"] is LabelTeamRole.Administrator &&
             moderationOptions?.PolicyEmail is { Enabled: true, Server: { Length: > 0 } };
@@ -199,6 +244,48 @@ public sealed class IndexModel : PageModel
             return RedirectToPage();
         }
 
+        await OnGetAsync().ConfigureAwait(false);
+        return Page();
+    }
+
+    /// <summary>Changes the web-managed remote-administration switch under durable owner authorization.</summary>
+    /// <returns>An action result that displays the outcome of the switch change.</returns>
+    public async Task<IActionResult> OnPostRemoteAdministrationAsync()
+    {
+        IOptionsMonitor<LabelerAdministrationOptions>? options =
+            HttpContext.RequestServices.GetService<IOptionsMonitor<LabelerAdministrationOptions>>();
+        LabelerAdministrationOptions currentOptions = options?.CurrentValue ?? new();
+        RemoteAdministrationMode mode = currentOptions.RemoteMode ??
+            (currentOptions.RemoteEnabled ? RemoteAdministrationMode.Enabled : RemoteAdministrationMode.Disabled);
+        string enabledText = await UiPageHelpers.FormValueAsync(this, "enabled", 5).ConfigureAwait(false);
+        string operationId = await UiPageHelpers.FormValueAsync(this, "operationId", 256).ConfigureAwait(false);
+        string reason = await UiPageHelpers.FormValueAsync(this, "reason", 4096).ConfigureAwait(false);
+        if (mode != RemoteAdministrationMode.WebUiControlled ||
+            ViewData["CurrentRole"] is not LabelTeamRole.Administrator ||
+            !bool.TryParse(enabledText, out bool enabled))
+        {
+            ViewData["Error"] = "Only the bootstrap owner can change the switch while WebUiControlled mode is configured.";
+            await OnGetAsync().ConfigureAwait(false);
+            return Page();
+        }
+
+        LabelServiceResult<LabelAdministrationReceipt> result = await HttpContext.RequestServices
+            .GetRequiredService<LabelerUiAdministration>()
+            .SetRemoteAdministrationEnabledAsync(
+                principal: User,
+                operationId: operationId,
+                enabled: enabled,
+                reason: reason,
+                cancellationToken: HttpContext.RequestAborted).ConfigureAwait(false);
+        if (result.Succeeded)
+        {
+            TempData["Status"] = enabled
+                ? "Remote CLI administration enabled."
+                : "Remote CLI administration disabled.";
+            return RedirectToPage();
+        }
+
+        ViewData["Error"] = result.Error.Message;
         await OnGetAsync().ConfigureAwait(false);
         return Page();
     }

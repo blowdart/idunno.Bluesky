@@ -23,6 +23,27 @@ public class AdministrationCliValidationTests
     }
 
     [Theory]
+    [InlineData("beginPolicyPublication")]
+    [InlineData("getPolicy")]
+    [InlineData("resumePolicyPublication")]
+    [InlineData("verifyPolicy")]
+    public void RemotePolicySignInsRequestOneMethodBoundRpcScope(string method)
+    {
+        Uri clientId = new("https://labeler.example/native-client-metadata.json");
+        AtProtoServiceReference audience = new(new Did("did:plc:labeler"), "labeler_admin");
+
+        AtProto.Authentication.OAuthOptions options = Program.CreateRemoteOAuthOptions(clientId, audience, method);
+
+        Assert.Equal(clientId.AbsoluteUri, options.ClientId);
+        Assert.Equal(
+            [
+                "atproto",
+                $"rpc:dev.idunno.labeler.admin.{method}?aud=did%3Aplc%3Alabeler%23labeler_admin"
+            ],
+            options.Scopes);
+    }
+
+    [Theory]
     [InlineData("https://labeler.example", true)]
     [InlineData("http://127.0.0.1:8080/health/labeler/ready", true)]
     [InlineData("not-a-uri", false)]
@@ -46,7 +67,7 @@ public class AdministrationCliValidationTests
     [InlineData(true)]
     public void MissingUriOptionsRespectRequiredness(bool required)
     {
-        Option<Uri?> option = Program.CreateUriOption("--admin-url", "The endpoint.", required);
+        Option<Uri?> option = Program.CreateUriOption("--labeler-url", "The endpoint.", required);
         RootCommand command = [];
         command.Options.Add(option);
         ParseResult parsed = command.Parse([]);
@@ -56,7 +77,7 @@ public class AdministrationCliValidationTests
             Assert.Null(parsed.GetValue(option));
         }
 
-        Assert.NotEmpty(command.Parse(["--admin-url"]).Errors);
+        Assert.NotEmpty(command.Parse(["--labeler-url"]).Errors);
     }
 
     [Theory]

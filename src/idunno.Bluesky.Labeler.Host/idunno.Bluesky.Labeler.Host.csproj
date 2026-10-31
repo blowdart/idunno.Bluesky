@@ -3,10 +3,14 @@
     <ProjectReference Include="..\idunno.Bluesky.AspNet.Labeler\idunno.Bluesky.AspNet.Labeler.csproj" />
     <ProjectReference Include="..\idunno.Bluesky.AspNet.Labeler.UI\idunno.Bluesky.AspNet.Labeler.UI.csproj" />
     <ProjectReference Include="..\idunno.Bluesky.AspNet.Authentication\idunno.Bluesky.AspNet.Authentication.csproj" />
+    <ProjectReference Include="..\idunno.Bluesky.AspNet.Authentication.PostgreSQL\idunno.Bluesky.AspNet.Authentication.PostgreSQL.csproj" />
     <ProjectReference Include="..\idunno.Bluesky.AspNet.Authentication.UI\idunno.Bluesky.AspNet.Authentication.UI.csproj" />
     <ProjectReference Include="..\idunno.Bluesky.Labeler.SQLite\idunno.Bluesky.Labeler.SQLite.csproj" />
     <ProjectReference Include="..\idunno.Bluesky.Labeler.PostgreSQL\idunno.Bluesky.Labeler.PostgreSQL.csproj" />
     <ProjectReference Include="..\idunno.Bluesky.Labeler.MySQL\idunno.Bluesky.Labeler.MySQL.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="..\idunno.Bluesky.AspNet.Authentication.PostgreSQL\schema.sql" LogicalName="Labeler.AuthenticationSchema.sql" />
   </ItemGroup>
   <PropertyGroup>
     <Description>The canonical standalone AT Protocol labeler host with public distribution and protected administration.</Description>

@@ -49,9 +49,13 @@
                                 {
                                     <p>Reviewed report #@reportId.</p>
                                 }
-                                @if (decision.HandleOtherReports)
+                                @if (decision.HandleReportsAcrossRecordVersions)
                                 {
-                                    <p>Other open reports for the exact subject and CID handled.</p>
+                                    <p>Reports for this record URI handled, with or without a submitted CID. Appeals still require review.</p>
+                                }
+                                else if (decision.HandleOtherReports)
+                                {
+                                    <p>Reports with the same submitted target handled.</p>
                                 }
                             }
                         </div>

@@ -27,6 +27,41 @@ namespace idunno.Bluesky.Labeler.Cli.Test;
 /// <summary>Exercises the standalone host's public native-client metadata and explicit proxy trust boundary.</summary>
 public class StandaloneHostTests
 {
+    [Fact]
+    public async Task RootRouteReturnsThePlainTextBanner()
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        WebApplicationBuilder builder = WebApplication.CreateBuilder();
+        builder.Logging.ClearProviders();
+        builder.WebHost.ConfigureKestrel(server => server.Listen(IPAddress.Loopback, 0));
+        await using WebApplication app = builder.Build();
+        HostProgram.MapRootRoute(app);
+        await app.StartAsync(token);
+        Uri address = new(app.Services.GetRequiredService<IServer>()
+            .Features.Get<IServerAddressesFeature>()!.Addresses.Single());
+        using HttpClient client = new() { BaseAddress = address };
+
+        using HttpResponseMessage response = await client.GetAsync("/", token);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("text/plain", response.Content.Headers.ContentType!.MediaType);
+        Assert.Equal("utf-8", response.Content.Headers.ContentType.CharSet);
+        string blankLine = new(' ', 31);
+        Assert.Equal(
+            string.Join(
+                '\n',
+                blankLine,
+                blankLine,
+                " _____ _____ ____   ___  ____  ",
+                "(___  ) ___ |  _ \\ / _ \\|  _ \\ ",
+                " / __/| ____| | | | |_| | | | |",
+                "(_____)_____)_| |_|\\___/|_| |_|",
+                blankLine) + '\n',
+            await response.Content.ReadAsStringAsync(token));
+
+        await app.StopAsync(token);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -162,7 +197,9 @@ public class StandaloneHostTests
         Assert.Contains("repo:app.bsky.labeler.service?action=create", scopes);
         Assert.Contains("repo:app.bsky.labeler.service?action=update", scopes);
         Assert.Contains("rpc:dev.idunno.labeler.admin.beginPolicyPublication?aud=did%3Aweb%3Alabeler.example%23labeler_admin", scopes);
+        Assert.Contains("rpc:dev.idunno.labeler.admin.resumePolicyPublication?aud=did%3Aweb%3Alabeler.example%23labeler_admin", scopes);
         Assert.Contains("rpc:dev.idunno.labeler.admin.getAppealReports?aud=did%3Aweb%3Alabeler.example%23labeler_admin", scopes);
+        Assert.Contains("rpc:dev.idunno.labeler.admin.getModerationOverview?aud=did%3Aweb%3Alabeler.example%23labeler_admin", scopes);
         Assert.Subset(scopes.ToHashSet(StringComparer.Ordinal),
             Program.CreatePlcOAuthOptions(new Uri("https://labeler.example/native-client-metadata.json")).Scopes.ToHashSet(StringComparer.Ordinal));
         Assert.Contains("rpc:dev.idunno.labeler.admin.issueLabel?aud=did%3Aweb%3Alabeler.example%23labeler_admin", scopes);

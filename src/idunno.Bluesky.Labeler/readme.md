@@ -27,12 +27,12 @@ Import the feature namespaces used by your application. Provider registration ex
 These namespace changes affect the unreleased labeler APIs; existing consumers must update their
 `using` directives and any fully qualified references.
 
-Start with the [labeller overview](https://bluesky.idunno.dev/docs/labeller/overview.html)
-and [issuance guide](https://bluesky.idunno.dev/docs/labeller/issuance.html), including error causes,
-retry rules and [administration setup](https://bluesky.idunno.dev/docs/labeller/administration.html)
+Start with the [labeller overview](https://bluesky.idunno.dev/docs/labeler/overview.html)
+and [issuance guide](https://bluesky.idunno.dev/docs/labeler/issuance.html), including error causes,
+retry rules and [administration setup](https://bluesky.idunno.dev/docs/labeler/administration.html)
 required before exposing administrative endpoints.
 
-[Optional Xenon moderation](https://bluesky.idunno.dev/docs/labeller/moderation.html)
+[Optional Xenon moderation](https://bluesky.idunno.dev/docs/labeler/moderation.html)
 shares provider authorization, issuance and audit rather than requiring Ozone or
 a second persistence system. Intake never automatically labels content. Explicit
 case decisions atomically commit bounded label actions and appeal outcomes; manual

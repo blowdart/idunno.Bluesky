@@ -11,6 +11,18 @@ namespace idunno.Bluesky.Labeler.Moderation;
 /// Report acceptance does not require team membership and never automatically emits labels.</para></remarks>
 public interface ILabelReportStore
 {
+    /// <summary>Audits a rejected appeal using verified reporter evidence and durable token replay protection.</summary>
+    /// <param name="authentication">The cryptographically verified reporter evidence.</param>
+    /// <param name="reason">The bounded diagnostic category, excluding credentials and appeal text.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The failed-action audit receipt, or an explicit authentication or storage failure.</returns>
+    /// <remarks><para>Consumes the reporting assertion through expiry plus clock skew. Reusing the same
+    /// assertion does not append another audit event. No report, case or appeal is created.</para></remarks>
+    Task<LabelServiceResult<LabelAdministrationReceipt>> AuditRejectedAppealAsync(
+        ModerationReportAuthenticationResult authentication,
+        string reason,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Accepts a protocol report, retaining it durably when independent policy verification is unavailable.</summary>
     /// <param name="authentication">The separate cryptographically verified reporter evidence.</param>
     /// <param name="submission">The bounded submitted intent.</param>
@@ -51,7 +63,8 @@ public interface ILabelReportStore
     /// <para>An authenticated, in-scope subject submitted with a disallowed reason is retained as handled
     /// with resolution reason <c>Not Applicable</c>. Automatic handling does not change labels or existing
     /// case workflow and is audited under the issuer with <c>system:report-reason</c> provenance.
-    /// Subject restrictions and ownership checks on appeals still apply.</para></remarks>
+    /// Owner appeals are exempt from report-reason filtering, including when promoted from the pending
+    /// queue. Subject restrictions and ownership checks on appeals still apply.</para></remarks>
     Task<LabelServiceResult<LabelModerationReport>> SubmitReportAsync(
         ModerationReportAuthenticationResult authentication,
         LabelReportSubmission submission,

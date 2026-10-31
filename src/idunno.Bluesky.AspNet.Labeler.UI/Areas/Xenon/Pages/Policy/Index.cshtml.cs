@@ -194,6 +194,46 @@ public sealed class IndexModel : PageModel
     internal static string FormatPhase(string value) => string.Concat(value.Select((letter, index) =>
         index > 0 && char.IsUpper(letter) && char.IsLower(value[index - 1]) ? $" {letter}" : letter.ToString()));
 
+    /// <summary>Describes whether the current policy is verified, expired, or in another publication phase.</summary>
+    internal static string DescribeVerificationStatus(
+        string phase,
+        DateTimeOffset? verifiedUntil,
+        DateTimeOffset databaseTime,
+        long freshnessMilliseconds)
+    {
+        if (phase == "VerifiedActive" && verifiedUntil is { } deadline && deadline <= databaseTime)
+        {
+            return "Policy verification has expired.";
+        }
+
+        if (IsVerificationCurrent(phase, verifiedUntil, databaseTime, freshnessMilliseconds))
+        {
+            return "The current policy is already verified.";
+        }
+
+        return phase == "VerifiedActive"
+            ? "The current policy verification is no longer current."
+            : $"The current policy is {FormatPhase(phase)}.";
+    }
+
+    /// <summary>Determines whether manual verification is unnecessary because the selected policy remains current.</summary>
+    internal static bool IsVerificationCurrent(
+        string phase,
+        DateTimeOffset? verifiedUntil,
+        DateTimeOffset databaseTime,
+        long freshnessMilliseconds) =>
+        phase == "VerifiedActive" &&
+        verifiedUntil is { } deadline &&
+        deadline > databaseTime &&
+        databaseTime >= deadline.AddMilliseconds(-freshnessMilliseconds);
+
+    /// <summary>Determines whether an unpublished draft is available to begin publication.</summary>
+    internal static bool CanBeginPublication(int draftCount) => draftCount > 0;
+
+    /// <summary>Describes the publication action or explains why it is unavailable.</summary>
+    internal static string PublicationButtonText(int draftCount) =>
+        CanBeginPublication(draftCount) ? "Begin publication" : "No drafts to publish";
+
     /// <summary>Shows an explicit server-rendered confirmation without deleting or changing policy state.</summary>
     /// <returns>The current page with a confirmation for an available unpublished draft.</returns>
     public async Task<IActionResult> OnPostDeleteRequestAsync()

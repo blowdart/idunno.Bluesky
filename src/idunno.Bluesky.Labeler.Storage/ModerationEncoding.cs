@@ -10,6 +10,26 @@ using idunno.Bluesky.Labeler.Moderation;
 
 namespace idunno.Bluesky.Labeler.Storage;
 
+/// <summary>Reconstructs validated stored subjects using their identity rather than treating an absent CID as an account.</summary>
+internal static class ModerationSubjectEncoding
+{
+    /// <summary>Preserves the distinction between an account, a URI-only record and a versioned record.</summary>
+    internal static LabelReportSubject Decode(string subject, string? cid)
+    {
+        if (subject.StartsWith("at://", StringComparison.Ordinal))
+        {
+            return LabelReportSubject.Record(new(subject), cid is null ? null : new(cid));
+        }
+
+        if (cid is not null)
+        {
+            throw new InvalidDataException("A stored account subject cannot have a record CID.");
+        }
+
+        return LabelReportSubject.Account(new(subject));
+    }
+}
+
 /// <summary>Retains primitive case state without reflection-based protocol serialization.</summary>
 internal sealed record ModerationCaseData(
     long Id,
@@ -29,9 +49,7 @@ internal sealed record ModerationCaseData(
             throw new InvalidDataException("The persisted case metadata is invalid.");
         }
 
-        LabelReportSubject subject = Cid is null
-            ? LabelReportSubject.Account(new(Subject))
-            : LabelReportSubject.Record(new(Subject), new(Cid));
+        LabelReportSubject subject = ModerationSubjectEncoding.Decode(Subject, Cid);
         return new(
             id: Id,
             revision: Revision,
@@ -217,7 +235,8 @@ internal sealed record ModerationDecisionIntent(
     long[] AppealIds,
     LabelAppealStatus? AppealOutcome,
     long? ReportId = null,
-    bool HandleOtherReports = false)
+    bool HandleOtherReports = false,
+    bool HandleReportsAcrossRecordVersions = false)
 {
     /// <summary>Copies immutable request intent before entering the provider transaction.</summary>
     internal static ModerationDecisionIntent FromDecision(Did actor, LabelCaseDecision decision) => new(
@@ -231,7 +250,8 @@ internal sealed record ModerationDecisionIntent(
         [.. decision.AppealIds],
         decision.AppealOutcome,
         decision.ReportId,
-        decision.HandleOtherReports);
+        decision.HandleOtherReports,
+        decision.HandleReportsAcrossRecordVersions);
 
     /// <summary>Revalidates retained semantic intent when recovering a historical receipt.</summary>
     internal LabelCaseDecision ToDecision(string operationId) => new(
@@ -248,7 +268,8 @@ internal sealed record ModerationDecisionIntent(
         appealIds: AppealIds,
         appealOutcome: AppealOutcome,
         reportId: ReportId,
-        handleOtherReports: HandleOtherReports);
+        handleOtherReports: HandleOtherReports,
+        handleReportsAcrossRecordVersions: HandleReportsAcrossRecordVersions);
 }
 
 /// <summary>Retains the atomic case event and original signed receipt encodings without reconstructing signatures.</summary>
@@ -290,7 +311,7 @@ internal sealed record ModerationAppealData(
         id: Id,
         caseId: CaseId,
         initiator: new(Initiator),
-        subject: Cid is null ? LabelReportSubject.Account(new(Subject)) : LabelReportSubject.Record(new(Subject), new(Cid)),
+        subject: ModerationSubjectEncoding.Decode(Subject, Cid),
         challenges: [.. Challenges.Select(challenge => new StoredLabel(challenge.Sequence, new(challenge.SignedJson)))],
         status: Status,
         createdAt: CreatedAt,
@@ -332,7 +353,7 @@ internal sealed record ModerationReportData(
             id: Id,
             caseId: CaseId,
             submission: new(
-                subject: Cid is null ? LabelReportSubject.Account(new(Subject)) : LabelReportSubject.Record(new(Subject), new(Cid)),
+                subject: ModerationSubjectEncoding.Decode(Subject, Cid),
                 reasonType: ReasonType,
                 reason: Reason,
                 modToolName: ToolName,
@@ -362,6 +383,7 @@ internal sealed record PendingModerationReportData(
     string TokenHash,
     DateTimeOffset ExpiresAt,
     ModerationAppealChallenge[]? AppealChallenges = null,
+    string? AppealLabelValue = null,
     bool PendingVerification = true,
     string? PolicyVersion = null,
     DateTimeOffset? ProcessedAt = null,
@@ -380,11 +402,12 @@ internal sealed record PendingModerationReportData(
         return new(
             Id: Id,
             Submission: new(
-                subject: Cid is null ? LabelReportSubject.Account(new(Subject)) : LabelReportSubject.Record(new(Subject), new(Cid)),
+                subject: ModerationSubjectEncoding.Decode(Subject, Cid),
                 reasonType: ReasonType,
                 reason: Reason,
                 modToolName: ToolName,
-                modToolMetadata: metadata),
+                modToolMetadata: metadata,
+                appealLabelValue: AppealLabelValue),
             ReportedBy: new(Reporter),
             CreatedAt: CreatedAt,
             PendingVerification: PendingVerification,

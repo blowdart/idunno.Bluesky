@@ -75,9 +75,10 @@ idunno.Bluesky.Labeler.Moderation.LabelCaseDecision
 idunno.Bluesky.Labeler.Moderation.LabelCaseDecision.Actions.get -> System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.Moderation.LabelCaseLabelAction!>!
 idunno.Bluesky.Labeler.Moderation.LabelCaseDecision.CaseId.get -> long
 idunno.Bluesky.Labeler.Moderation.LabelCaseDecision.ExpectedRevision.get -> long
-idunno.Bluesky.Labeler.Moderation.LabelCaseDecision.LabelCaseDecision(string! operationId, long caseId, long expectedRevision, string! policyVersion, string! reason, System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Labeler.Moderation.LabelCaseLabelAction!>! actions, System.Collections.Generic.IReadOnlyCollection<long>? appealIds = null, idunno.Bluesky.Labeler.Moderation.LabelAppealStatus? appealOutcome = null, long? reportId = null, bool handleOtherReports = false) -> void
+idunno.Bluesky.Labeler.Moderation.LabelCaseDecision.LabelCaseDecision(string! operationId, long caseId, long expectedRevision, string! policyVersion, string! reason, System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Labeler.Moderation.LabelCaseLabelAction!>! actions, System.Collections.Generic.IReadOnlyCollection<long>? appealIds = null, idunno.Bluesky.Labeler.Moderation.LabelAppealStatus? appealOutcome = null, long? reportId = null, bool handleOtherReports = false, bool handleReportsAcrossRecordVersions = false) -> void
 idunno.Bluesky.Labeler.Moderation.LabelCaseDecision.ReportId.get -> long?
 idunno.Bluesky.Labeler.Moderation.LabelCaseDecision.HandleOtherReports.get -> bool
+idunno.Bluesky.Labeler.Moderation.LabelCaseDecision.HandleReportsAcrossRecordVersions.get -> bool
 idunno.Bluesky.Labeler.Moderation.LabelModerationReport.DecisionOperationId.get -> string?
 idunno.Bluesky.Labeler.Moderation.LabelModerationReport.HandledAt.get -> System.DateTimeOffset?
 idunno.Bluesky.Labeler.Moderation.LabelCaseDecision.AppealIds.get -> System.Collections.Generic.IReadOnlyList<long>!
@@ -105,12 +106,14 @@ idunno.Bluesky.Labeler.Moderation.LabelCaseLabelAction.LabelCaseLabelAction(idun
 idunno.Bluesky.Labeler.Moderation.LabelCaseLabelAction.Value.get -> string!
 idunno.Bluesky.Labeler.Moderation.ILabelReportStore
 idunno.Bluesky.Labeler.Moderation.ILabelReportStore.AcceptReportAsync(idunno.AtProto.ModerationReportAuthenticationResult! authentication, idunno.Bluesky.Labeler.Moderation.LabelReportSubmission! submission, long? expectedPolicyRevision, int maximumPendingReports, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Moderation.LabelReportIntakeReceipt!>!>!
+idunno.Bluesky.Labeler.Moderation.ILabelReportStore.AuditRejectedAppealAsync(idunno.AtProto.ModerationReportAuthenticationResult! authentication, string! reason, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt!>!>!
 idunno.Bluesky.Labeler.Moderation.ILabelReportStore.ProcessPendingReportsAsync(long expectedPolicyRevision, int limit, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Moderation.LabelPendingReportBatchResult!>!>!
 idunno.Bluesky.Labeler.Moderation.ILabelReportStore.SubmitReportAsync(idunno.AtProto.ModerationReportAuthenticationResult! authentication, idunno.Bluesky.Labeler.Moderation.LabelReportSubmission! submission, long? expectedPolicyRevision, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Moderation.LabelModerationReport!>!>!
 idunno.Bluesky.Labeler.Moderation.ILabelReportStore.GetReportAsync(idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller! caller, long reportId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Moderation.LabelModerationReport!>!>!
 idunno.Bluesky.Labeler.Moderation.ILabelReportStore.GetReportsAsync(idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller! caller, long? caseId = null, long afterId = 0, int limit = 100, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.Moderation.LabelModerationReport!>!>!>!
 idunno.Bluesky.Labeler.Moderation.LabelReportSubmission
-idunno.Bluesky.Labeler.Moderation.LabelReportSubmission.LabelReportSubmission(idunno.Bluesky.Labeler.Moderation.LabelReportSubject! subject, string! reasonType, string? reason = null, string? modToolName = null, System.Text.Json.JsonElement? modToolMetadata = null) -> void
+idunno.Bluesky.Labeler.Moderation.LabelReportSubmission.AppealLabelValue.get -> string?
+idunno.Bluesky.Labeler.Moderation.LabelReportSubmission.LabelReportSubmission(idunno.Bluesky.Labeler.Moderation.LabelReportSubject! subject, string! reasonType, string? reason = null, string? modToolName = null, System.Text.Json.JsonElement? modToolMetadata = null, string? appealLabelValue = null) -> void
 idunno.Bluesky.Labeler.Moderation.LabelReportSubmission.Subject.get -> idunno.Bluesky.Labeler.Moderation.LabelReportSubject!
 idunno.Bluesky.Labeler.Moderation.LabelReportSubmission.ReasonType.get -> string!
 idunno.Bluesky.Labeler.Moderation.LabelReportSubmission.Reason.get -> string?
@@ -217,7 +220,7 @@ idunno.Bluesky.Labeler.Moderation.LabelReportSubject.Repository.get -> idunno.At
 idunno.Bluesky.Labeler.Moderation.LabelReportSubject.SubjectType.get -> string!
 idunno.Bluesky.Labeler.Moderation.LabelReportSubject.Subject.get -> string!
 static idunno.Bluesky.Labeler.Moderation.LabelReportSubject.Account(idunno.AtProto.Did! account) -> idunno.Bluesky.Labeler.Moderation.LabelReportSubject!
-static idunno.Bluesky.Labeler.Moderation.LabelReportSubject.Record(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid! cid) -> idunno.Bluesky.Labeler.Moderation.LabelReportSubject!
+static idunno.Bluesky.Labeler.Moderation.LabelReportSubject.Record(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid? cid = null) -> idunno.Bluesky.Labeler.Moderation.LabelReportSubject!
 idunno.Bluesky.Labeler.Moderation.LabelReportScope
 idunno.Bluesky.Labeler.Moderation.LabelReportScope.LabelReportScope(System.Collections.Generic.IReadOnlyCollection<string!>! subjectTypes, System.Collections.Generic.IReadOnlyCollection<string!>? reasonTypes = null, System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Nsid!>? subjectCollections = null) -> void
 idunno.Bluesky.Labeler.Moderation.LabelReportScope.Accepts(idunno.Bluesky.Labeler.Moderation.LabelReportSubject! subject, string! reasonType) -> bool
@@ -525,6 +528,7 @@ idunno.Bluesky.Labeler.Administration.ILabelAdministrationStore.AuthorizeAsync(i
 idunno.Bluesky.Labeler.Administration.ILabelAdministrationStore.BootstrapAsync(idunno.AtProto.Did! administrator, string! localIdentity, string! operationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt!>!>!
 idunno.Bluesky.Labeler.Administration.ILabelAdministrationStore.ChangeTeamAsync(idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller! caller, idunno.Bluesky.Labeler.Administration.LabelTeamChange! change, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt!>!>!
 idunno.Bluesky.Labeler.Administration.ILabelAdministrationStore.GetAdministrationAuditAsync(idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller! caller, long afterSequence = 0, int limit = 100, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt!>!>!>!
+idunno.Bluesky.Labeler.Administration.ILabelAdministrationStore.GetRemoteAdministrationStatusAsync(idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller! caller, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Administration.LabelRemoteAdministrationStatus!>!>!
 idunno.Bluesky.Labeler.Administration.ILabelAdministrationStore.GetTeamAsync(idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller! caller, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.Administration.LabelTeamMember!>!>!>!
 idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller
 idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller.Actor.get -> idunno.AtProto.Did!
@@ -536,6 +540,9 @@ idunno.Bluesky.Labeler.Administration.LabelAdministrationPermission.Maintain = 3
 idunno.Bluesky.Labeler.Administration.LabelAdministrationPermission.ManageTeam = 2 -> idunno.Bluesky.Labeler.Administration.LabelAdministrationPermission
 idunno.Bluesky.Labeler.Administration.LabelAdministrationPermission.Moderate = 1 -> idunno.Bluesky.Labeler.Administration.LabelAdministrationPermission
 idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt
+idunno.Bluesky.Labeler.Administration.LabelRemoteAdministrationStatus
+idunno.Bluesky.Labeler.Administration.LabelRemoteAdministrationStatus.Enabled.get -> bool
+idunno.Bluesky.Labeler.Administration.LabelRemoteAdministrationStatus.IsOwner.get -> bool
 idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.<Clone>$() -> idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt!
 idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.Action.get -> string!
 idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.Action.init -> void
@@ -705,6 +712,7 @@ idunno.Bluesky.Labeler.Moderation.LabelPolicyAlertDelivery.LeaseId.get -> string
 idunno.Bluesky.Labeler.Moderation.LabelPolicyAlertDelivery.OccurredAt.get -> System.DateTimeOffset
 idunno.Bluesky.Labeler.Moderation.LabelPolicyAlertDelivery.Recipients.get -> System.Collections.Generic.IReadOnlyList<string!>!
 idunno.Bluesky.Labeler.Administration.ILabelAdministrationStore.SetTeamNotificationEmailAsync(idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller! caller, idunno.Bluesky.Labeler.Administration.LabelTeamNotificationEmailChange! change, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt!>!>!
+idunno.Bluesky.Labeler.Administration.ILabelAdministrationStore.SetRemoteAdministrationEnabledAsync(idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller! caller, string! operationId, bool enabled, string! reason, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt!>!>!
 idunno.Bluesky.Labeler.Administration.LabelTeamMember.NotificationEmail.get -> string?
 idunno.Bluesky.Labeler.Administration.LabelTeamMember.NotificationEmail.init -> void
 idunno.Bluesky.Labeler.Administration.LabelTeamNotificationEmailChange

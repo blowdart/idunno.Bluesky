@@ -11,7 +11,9 @@ namespace idunno.Bluesky.Labeler.Storage;
 internal sealed class AdministrationState
 {
     public bool Bootstrapped { get; set; }
+    public string? OwnerDid { get; set; }
     public long Sequence { get; set; }
+    public bool RemoteAdministrationEnabled { get; set; }
     public Dictionary<string, AdministrationMember> Members { get; set; } = new(StringComparer.Ordinal);
     public Dictionary<string, AdministrationBinding> Bindings { get; set; } = new(StringComparer.Ordinal);
     public bool PolicyVerificationFailureActive { get; set; }

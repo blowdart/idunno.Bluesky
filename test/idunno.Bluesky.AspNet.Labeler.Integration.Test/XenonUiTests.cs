@@ -24,6 +24,42 @@ public class XenonUiTests
     private static readonly Did s_member = new("did:plc:xenon-member");
     private static readonly AtProtoServiceReference s_audience = new(TestServerBuilder.s_issuer, "labeler_admin");
 
+    [Fact]
+    public async Task WorkflowCountsRefreshUsesAuthorizedUncachedTotalsAndCountedPageTitles()
+    {
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new();
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
+            configureAdministration: services =>
+            {
+                services.AddLabelerModeration(issuer: TestServerBuilder.s_issuer, httpClient: identity);
+                services.AddSingleton<IDidHandleResolver, TestHandles>();
+                services.AddLabelerAdministration(s_audience, key, identity);
+            },
+            moderation: true,
+            xenonUi: true);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        Assert.True((await team.BootstrapAsync(
+            s_administrator,
+            "uid:0",
+            "counts-bootstrap",
+            TestContext.Current.CancellationToken)).Succeeded);
+        using HttpResponseMessage counts = await GetAsAsync(fixture, s_administrator, "/Xenon?handler=Counts");
+        Assert.Equal(HttpStatusCode.OK, counts.StatusCode);
+        Assert.Equal("application/json", counts.Content.Headers.ContentType?.MediaType);
+        Assert.True(counts.Headers.CacheControl?.NoStore);
+        Assert.Equal("""{"cases":0,"reports":0,"appeals":0}""", await counts.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        foreach (string path in new[] { "/Xenon", "/Xenon/Cases", "/Xenon/Reports", "/Xenon/Appeals", "/Xenon/Team" })
+        {
+            using HttpResponseMessage countedPage = await GetAsAsync(fixture, s_administrator, path);
+            Assert.Equal(HttpStatusCode.OK, countedPage.StatusCode);
+            string html = await countedPage.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+            Assert.Contains("<title>C:0 R:0 A:0", html, StringComparison.Ordinal);
+            Assert.Contains("data-counts-url=\"/Xenon?handler=Counts\"", html, StringComparison.Ordinal);
+            Assert.Contains("/Xenon/js/workflow-counts.js", html, StringComparison.Ordinal);
+        }
+    }
+
     [Theory]
     [InlineData("confirmed")]
     [InlineData("generic-checkbox")]
@@ -59,9 +95,11 @@ public class XenonUiTests
         using HttpResponseMessage initial = await GetAsAsync(fixture, s_administrator, "/Xenon/Lifecycle");
         Assert.Equal(HttpStatusCode.OK, initial.StatusCode);
         string html = await initial.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        Assert.Contains("Preview beginRetirement", html, StringComparison.Ordinal);
-        Assert.DoesNotContain("Preview purgeRetiredData", html, StringComparison.Ordinal);
-        Assert.DoesNotContain("Preview requestKeyRemoval", html, StringComparison.Ordinal);
+        Assert.Matches(
+            """(?s)<form method="post">\s*<input type="hidden" name="stage" value="preview" />\s*<input type="hidden" name="method" value="beginRetirement" />.*?<button type="submit">Preview: Begin irreversible retirement</button>""",
+            html);
+        Assert.DoesNotContain("name=\"method\" value=\"purgeRetiredData\"", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("name=\"method\" value=\"requestKeyRemoval\"", html, StringComparison.Ordinal);
         Assert.DoesNotContain("Preview stopped-host attestation", html, StringComparison.Ordinal);
         Assert.DoesNotContain("value=\"30\"", html, StringComparison.Ordinal);
         (string token, string cookie) = await CsrfAsync(initial);
@@ -177,7 +215,8 @@ public class XenonUiTests
         {
             using HttpResponseMessage gracePage = await GetAsAsync(fixture, s_administrator, "/Xenon/Lifecycle");
             string graceHtml = await gracePage.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-            Assert.Contains("Preview beginGracePeriod", graceHtml, StringComparison.Ordinal);
+            Assert.Contains("Preview: Choose and begin grace", graceHtml, StringComparison.Ordinal);
+            Assert.Contains("name=\"method\" value=\"beginGracePeriod\"", graceHtml, StringComparison.Ordinal);
             Assert.DoesNotContain("Preview beginRetirement", graceHtml, StringComparison.Ordinal);
             Assert.Matches("<input[^>]*name=\"graceDays\"[^>]*required", graceHtml);
             Assert.DoesNotMatch("<input[^>]*name=\"graceDays\"[^>]*value=", graceHtml);
@@ -201,6 +240,8 @@ public class XenonUiTests
 
         using HttpResponseMessage unauthenticated = await fixture.Client.GetAsync("/Xenon", TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Unauthorized, unauthenticated.StatusCode);
+        using HttpResponseMessage anonymousCounts = await fixture.Client.GetAsync("/Xenon?handler=Counts", TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Unauthorized, anonymousCounts.StatusCode);
 
         ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
         Assert.True((await team.BootstrapAsync(
@@ -214,6 +255,8 @@ public class XenonUiTests
 
         using HttpResponseMessage outsider = await GetAsAsync(fixture, new("did:plc:xenon-outsider"));
         Assert.Equal(HttpStatusCode.Forbidden, outsider.StatusCode);
+        using HttpResponseMessage outsiderCounts = await GetAsAsync(fixture, new("did:plc:xenon-outsider"), "/Xenon?handler=Counts");
+        Assert.Equal(HttpStatusCode.Forbidden, outsiderCounts.StatusCode);
         using HttpResponseMessage outsiderVideo = await GetAsAsync(fixture, new("did:plc:xenon-outsider"), "/Xenon/Media?token=invalid");
         Assert.Equal(HttpStatusCode.Forbidden, outsiderVideo.StatusCode);
         foreach (string notice in new[] { "/Xenon/Terms", "/Xenon/Privacy" })
@@ -235,6 +278,9 @@ public class XenonUiTests
             TestContext.Current.CancellationToken)).Succeeded);
         using HttpResponseMessage activeMember = await GetAsAsync(fixture, s_member);
         Assert.Equal(HttpStatusCode.OK, activeMember.StatusCode);
+        using HttpResponseMessage activeCounts = await GetAsAsync(fixture, s_member, "/Xenon?handler=Counts");
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, activeCounts.StatusCode);
+        Assert.True(activeCounts.Headers.CacheControl?.NoStore);
         using HttpResponseMessage invalidVideo = await GetAsAsync(fixture, s_member, "/Xenon/Media?token=invalid");
         Assert.Equal(HttpStatusCode.BadRequest, invalidVideo.StatusCode);
 
@@ -288,6 +334,8 @@ public class XenonUiTests
             TestContext.Current.CancellationToken)).Succeeded);
         using HttpResponseMessage suspendedMember = await GetAsAsync(fixture, s_member);
         Assert.Equal(HttpStatusCode.Forbidden, suspendedMember.StatusCode);
+        using HttpResponseMessage suspendedCounts = await GetAsAsync(fixture, s_member, "/Xenon?handler=Counts");
+        Assert.Equal(HttpStatusCode.Forbidden, suspendedCounts.StatusCode);
         using HttpResponseMessage suspendedVideo = await GetAsAsync(fixture, s_member, "/Xenon/Media?token=invalid");
         Assert.Equal(HttpStatusCode.Forbidden, suspendedVideo.StatusCode);
     }

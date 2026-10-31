@@ -156,7 +156,7 @@ jobs:
       shell: pwsh
       run: |
         $null = New-Item -ItemType Directory -Force -Path $env:BUILD_OUTPUT
-        $rids = @('win-x64', 'linux-x64', 'linux-arm64')
+        $rids = @('win-x64', 'win-arm64', 'linux-x64', 'linux-arm64')
         foreach ($rid in $rids) {
           $publishDirectory = Join-Path $env:RUNNER_TEMP "labeler-cli/$rid"
           dotnet publish src/idunno.Bluesky.Labeler.Cli/idunno.Bluesky.Labeler.Cli.csproj `
@@ -166,6 +166,9 @@ jobs:
             --self-contained true `
             --no-restore `
             --output $publishDirectory `
+            --property:PublishTrimmed=true `
+            --property:PublishSingleFile=true `
+            --property:BuildCommitId=$env:GITHUB_SHA `
             --property:PublicRelease=true
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Compress-Archive -Path (Join-Path $publishDirectory '*') `
@@ -260,6 +263,7 @@ jobs:
         docker buildx build \
           --platform linux/amd64 \
           --file src/idunno.Bluesky.Labeler.Host/Dockerfile \
+          --build-arg SOURCE_REVISION_ID="${GITHUB_SHA}" \
           --tag "${image}:${GITHUB_REF_NAME}" \
           --provenance=true \
           --sbom=true \

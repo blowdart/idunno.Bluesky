@@ -109,6 +109,8 @@ input, select, textarea { color: var(--text); background: var(--surface); border
 input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 textarea { min-height: 9rem; width: 100%; }
 button { background: var(--button); color: white; border: 0; border-radius: .25rem; cursor: pointer; }
+.policy-verified-button:disabled { background: #d7eee3; color: #174b35; border: 1px solid #78ad90; cursor: default; opacity: 1; }
+.policy-unavailable-button:disabled { background: var(--separator); color: var(--muted); border: 1px solid var(--border); cursor: not-allowed; opacity: 1; }
 .form-actions { display: flex; justify-content: flex-end; margin-top: 1rem; }
 .team-search { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .75rem 1rem; }
 .team-search .field { flex: 0 1 28rem; min-width: 0; max-width: 100%; margin: 0; }

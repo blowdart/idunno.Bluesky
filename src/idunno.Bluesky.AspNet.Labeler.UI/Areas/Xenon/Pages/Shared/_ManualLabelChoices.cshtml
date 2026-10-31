@@ -16,10 +16,11 @@ else
     <legend>Labels</legend>
     @foreach (ModerationLabelChoiceView label in Model.Choices)
     {
-        string status = (label.OtherVersion, label.Applied) switch
+        string status = (label.OtherVersion, label.Applied, label.UriWide) switch
         {
-            (true, _) => "Applied to a different record version",
-            (_, true) => "Currently applied",
+            (true, _, _) => "Applied to a different record version",
+            (_, true, true) => "Currently applied to all versions of this record; removal affects all versions",
+            (_, true, _) => "Currently applied",
             _ => "Not applied"
         };
         <label class="label-chip" data-applied="@(label.Applied ? "true" : "false")">

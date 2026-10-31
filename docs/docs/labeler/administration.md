@@ -1,5 +1,8 @@
 # Administrative authentication and teams
 
+For installation, access-control configuration, command options and worked examples,
+see the [labeler administration CLI reference](cli.md).
+
 The Bean Bureau's public label queries don't establish who may issue labels. Administration is a
 separate, opt-in boundary, shared by remote HTTPS and protected local IPC. Neither a successful
 Bluesky sign-in nor being on the labeller's machine grants a role.
@@ -72,7 +75,7 @@ builder.Services.AddLabelerAdministration(
 builder.Services.AddLabelerLocalAdministration(
     OperatingSystem.IsWindows() ? "bean-bureau-admin" : "/run/bean-bureau/admin.sock");
 
-// Remote administration is disabled by default and follows reloadable configuration.
+// Remote administration is disabled by default and follows the configured control mode.
 builder.Services.Configure<LabelerAdministrationOptions>(
     builder.Configuration.GetSection("Labeler:Administration"));
 
@@ -100,10 +103,36 @@ metadata does not grant anonymous access: missing or invalid service tokens are 
 
 `MapBlueskyLabeler()` remains independently registered, public and read-only. Administrative
 registration does not make public label distribution require sign-in.
-Remote administration is disabled unless `Labeler:Administration:RemoteEnabled` is true. Because
-the mapped routes read monitored options on each request, configuration reload can enable or disable
-them without restarting; disabled requests receive 404. This setting never affects protected local
-administration or team membership and does not bypass authentication or authorization.
+
+## Remote administration control modes
+
+The standalone host binds `LabelerAdministration:RemoteMode` (environment variable
+`LabelerAdministration__RemoteMode`) to select one of three host policies. The custom SDK host
+example above explicitly chooses its own `Labeler:Administration` section instead.
+
+| Value | Remote CLI access |
+|---|---|
+| `Disabled` | Always unavailable; this is the default. |
+| `Enabled` | Available after the existing HTTPS, method-bound service-token and live-team checks. |
+| `WebUiControlled` | Available only while the bootstrap owner has enabled the durable switch in Xenon. |
+
+When `RemoteMode` is configured, it takes precedence over the legacy
+`LabelerAdministration:RemoteEnabled` Boolean in the standalone host. If `RemoteMode` is absent, `RemoteEnabled`
+continues to work for compatibility: `true` enables remote administration and `false` leaves it
+disabled. This preserves explicitly enabled existing deployments without enabling deployments
+whose old setting was absent or false. Monitored mode changes take effect on subsequent requests.
+Invalid enum text fails configuration binding; an undefined numeric enum value is rejected by
+the request gate. Neither falls back to enabling access through the legacy Boolean.
+
+In `WebUiControlled` mode, the switch starts disabled and is changed from **Team and membership**
+in Xenon. The owner is the DID that completed the one-time OS-authorized local bootstrap, not the
+issuer DID by assumption and not every team member with the Administrator role. The store checks
+current Administrator authority and the owner DID inside the same transaction that changes the
+persisted setting and appends its audit receipt. Legacy installations recover the bootstrap DID
+from their first durable bootstrap audit event; if that evidence is missing, no owner is inferred
+and remote control fails closed. Other Administrators may inspect status but cannot change it.
+Protected local administration remains available in all three modes. Neither mode selection nor
+the Xenon switch bypasses HTTPS, service-token method binding, authentication or live authorization.
 
 Configure admission/rate limiting in the hosting application before administrative handlers.
 Verification and required denial audit consume outbound requests and durable transactions, so
@@ -121,10 +150,8 @@ Configure each trusted proxy to discard untrusted incoming forwarding headers an
 address/protocol pairs. See
 [Configure ASP.NET Core to work with proxy servers and load balancers](https://learn.microsoft.com/aspnet/core/host-and-deploy/proxy-load-balancer).
 
-Set `Labeler:Administration:RemoteEnabled` to `false` in host configuration to omit all remote
-administration routes at startup while leaving a configured local pipe/socket available. It defaults
-to `true` when the host explicitly maps administration, preserving the existing opt-in behavior.
-Changes take effect after restarting the host.
+Set `LabelerAdministration:RemoteMode` to `Disabled` in the standalone host to keep remote routes unavailable while
+leaving a configured local pipe/socket available. The effective default is disabled.
 
 ## Deliberate, browserless setup and local use
 
@@ -345,12 +372,13 @@ the [inspected reference getServiceAuth route](https://github.com/bluesky-social
 
 ## Administration CLI
 
-The self-contained `idunno.Bluesky.Labeler.Cli` executable is published for Windows x64, Linux x64
-and Linux arm64. Each invocation selects exactly one transport. Local mode uses the configured
-protected named pipe or Unix socket and must run under the OS identity explicitly bound to a live
-team member. Remote mode opens the user's browser for native OAuth, obtains a method-bound service
-token from the user's PDS, and calls the labeler's HTTPS administration endpoint. The CLI does not
-store OAuth credentials or accept a private label-signing key.
+The trimmed, self-contained single-file `idunno.Bluesky.Labeler.Cli` executable is published for
+Windows x64, Windows ARM64, Linux x64 and Linux arm64. Each invocation selects exactly one
+transport. Local mode uses the configured protected named pipe or Unix socket and must run under
+the OS identity explicitly bound to a live team member. Remote mode opens the user's browser for
+native OAuth, obtains a method-bound service token from the user's PDS, and calls the labeler's
+HTTPS administration endpoint. OAuth credentials are temporary unless `--remember-me` is
+explicitly supplied. The CLI never accepts a private label-signing key.
 
 Download the ZIP matching the operating system and architecture from the GitHub release, then verify
 its build provenance before extracting or running it:
@@ -369,10 +397,11 @@ restore that file manually if an interrupted helper leaves the installation unus
 labeler-admin update --tag v9.0.1
 ```
 
-The update requires a self-contained installation from the Windows x64, Linux x64 or Linux arm64
-release ZIP, GitHub CLI authentication/verification support, and write access to the executable's
-directory. It does not update a `dotnet tool`, package-manager installation or renamed launcher.
-The command asks for confirmation; `--yes` is only for an explicitly controlled script.
+The update requires a self-contained installation from a supported Windows x64, Windows ARM64,
+Linux x64 or Linux arm64 release ZIP, GitHub CLI authentication/verification support, and write
+access to the executable's directory. It does not update a `dotnet tool`, package-manager
+installation or renamed launcher. The command asks for confirmation; `--yes` is only for an
+explicitly controlled script.
 
 Examples below use the executable name `labeler-admin`; substitute the published executable path
 and the endpoint configured by the host.
@@ -390,14 +419,56 @@ The status response includes issuer and stream identity, revision, issued/publis
 boundaries, replay floor, lifecycle phase, retirement checkpoints, and the grace deadline when set.
 
 Use the configured Windows pipe name instead of the Unix socket path on Windows. Remote commands
-require the labeler's HTTPS origin, exact service reference, administrator handle, and the HTTPS
-URL of the registered native OAuth client metadata. Use a metadata document published by the
-labeler host; do not substitute a development client ID.
+require the labeler's HTTPS origin and administrator handle. The CLI discovers the exact service
+reference from the native OAuth metadata unless `--admin-service` is supplied as an override.
+The native OAuth metadata URL defaults to `/native-client-metadata.json` on that origin.
+Use `--oauth-client-id` to select another metadata document on the same origin; do not substitute
+a development client ID.
 
 ```text
-labeler-admin team --admin-url https://labeler.example --audience "did:web:labeler.example#labeler_admin" --handle admin.example --client-id https://labeler.example/native-client-metadata.json
-labeler-admin operation --operation-id label-op-123 --admin-url https://labeler.example --audience "did:web:labeler.example#labeler_admin" --handle admin.example --client-id https://labeler.example/native-client-metadata.json
+labeler-admin team --labeler-url https://labeler.example --admin-handle admin.example
+labeler-admin operation --operation-id label-op-123 --labeler-url https://labeler.example --admin-handle admin.example --remember-me
 ```
+
+PLC publication/recovery instead uses `--account-handle` because it signs in as the account whose
+identity will change, not a moderator. Those commands require `--oauth-client-id`.
+
+Before opening the browser, Xenon explains the account and purpose of the sign-in.
+Administrator sessions request just one method-bound permission each. Policy publication also
+requires a separate labeler-account session for the conditional repository write. Its
+`--labeler-oauth-client-id` overrides the metadata URL only for that
+account; otherwise it uses the administrator's metadata URL, or the default native metadata on
+`--labeler-url`. A local-transport publication must supply this URL explicitly because there is
+no remote origin from which to derive it.
+
+The loopback callback page is Xenon-branded, including its embedded logo, and does not claim
+that authentication or the requested mutation has completed merely because the browser returned.
+The logo is inlined so the callback does not load third-party resources. Callback-server logging
+is disabled so callback URLs and authorization codes are not written to the terminal.
+Denied or failed sign-ins, browser-wait timeouts and cancellation stop the workflow; already
+committed publication gates remain available for explicit recovery rather than being silently
+abandoned or retried.
+
+### Remembering sign-ins
+
+Supply `--remember-me` on each invocation that may load or save a remembered session. Without it,
+the CLI neither reads nor writes the cache. Credentials are stored beneath the current user's
+`~/.xenon` directory, separately bound to the actor DID, PDS, OAuth client ID and exact permission
+set. Administrator method sessions and labeler-account sessions are not interchangeable.
+Refreshed credentials, including rotating refresh tokens and DPoP state, are saved before the
+credential-update notification completes.
+
+On Windows, saved credentials are protected with current-user DPAPI. On macOS/Linux they are
+**unencrypted**: the CLI warns and requires affirmative interactive consent before using
+persistent credentials, creates a user-only directory (`0700`) and restricts credential files to
+user read/write (`0600`). `--yes` does not bypass this consent. Anyone able to read an unencrypted
+cache can act within its retained grants; do not place it on shared or synchronized storage.
+
+There is no promised retention period: credentials remain locally until removed, while the
+PDS controls token expiry, refresh eligibility and revocation. Removing the `.xenon` cache forgets
+local sessions but does not revoke grants at the PDS; use the account's connected-app controls
+to revoke them. Quit CLI invocations before removing cached files. An unreadable, invalid or
+unsafe cache is an explicit error, not a silent fallback to a fresh session.
 
 Issue a label for an account, profile record, post, list, or feed generator. A record URI is kept a
 record target; use `--cid` to pin the operation to one record version. Negation uses the same target
@@ -415,7 +486,11 @@ labeler-admin change-team did:plc:member --action BindLocal --credential uid:100
 Issue and negation, enrollment, and team changes require an interactive confirmation. Use `--yes`
 only in an explicitly controlled script; the operation ID makes a retry recoverable, not harmless
 when changed to a new ID. Mutation reasons are required and written to the shared audit trail.
-Responses are JSON on standard output. Exit codes are 0 for success, 2 for invalid input or declined
+Results use human-readable text by default, with success/failure confirmations on standard error.
+Add `--verbose` to print raw JSON responses on standard output instead, including failed responses.
+The option works before or after a subcommand. Use it when scripting or generating a JSON
+`rotation did-web` snippet. It does not enable HTTP or OAuth credential logging.
+A successful no-op is distinguished from a change. Exit codes are 0 for success, 2 for invalid input or declined
 confirmation, 3 for transport/setup errors, 4 for authentication or authorization failure, 5 for
 service failure, and 130 for cancellation.
 

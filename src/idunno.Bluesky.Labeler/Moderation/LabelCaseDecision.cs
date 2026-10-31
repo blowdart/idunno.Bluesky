@@ -3,9 +3,10 @@
 
 namespace idunno.Bluesky.Labeler.Moderation;
 
-/// <summary>Retains a bounded reasoned decision that updates one exact-subject case atomically.</summary>
+/// <summary>Retains a bounded reasoned case decision with explicit label and report-handling intent.</summary>
 /// <remarks><para>Zero actions represent an audited no-action decision. Each label value may occur
-/// once, because issuer, URI and value identify a label slot independently of record CID.</para></remarks>
+/// once, because issuer, URI and value identify a label slot independently of record CID.
+/// All-versions report handling is explicit and independent of the signed label scope.</para></remarks>
 public sealed class LabelCaseDecision
 {
     /// <summary>Initializes a new instance of the <see cref="LabelCaseDecision"/> class.</summary>
@@ -18,7 +19,8 @@ public sealed class LabelCaseDecision
     /// <param name="appealIds">The optional set of up to sixteen pending appeals explicitly reviewed.</param>
     /// <param name="appealOutcome">The explicit outcome applied to those appeals.</param>
     /// <param name="reportId">The optional current report explicitly reviewed by this decision.</param>
-    /// <param name="handleOtherReports"><see langword="true"/> to also handle other open reports for the exact subject and CID; otherwise, <see langword="false"/>.</param>
+    /// <param name="handleOtherReports"><see langword="true"/> to also handle other open reports with the same submitted subject, including whether a CID was supplied; otherwise, <see langword="false"/>.</param>
+    /// <param name="handleReportsAcrossRecordVersions"><see langword="true"/> to explicitly handle open reports for every version of the same record URI, independently of label scope; otherwise, <see langword="false"/>.</param>
     /// <exception cref="ArgumentNullException"><paramref name="actions"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Text, actions or explicit appeal resolution arguments are invalid.</exception>
     /// <exception cref="ArgumentOutOfRangeException">An identifier, revision, text, action count or appeal count exceeds its bounds.</exception>
@@ -34,7 +36,8 @@ public sealed class LabelCaseDecision
         IReadOnlyCollection<long>? appealIds = null,
         LabelAppealStatus? appealOutcome = null,
         long? reportId = null,
-        bool handleOtherReports = false)
+        bool handleOtherReports = false,
+        bool handleReportsAcrossRecordVersions = false)
     {
         ArgumentNullException.ThrowIfNull(actions);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(caseId);
@@ -76,6 +79,7 @@ public sealed class LabelCaseDecision
         AppealOutcome = appealOutcome;
         ReportId = reportId;
         HandleOtherReports = handleOtherReports;
+        HandleReportsAcrossRecordVersions = handleReportsAcrossRecordVersions;
     }
 
     /// <summary>Gets the stable retry identifier.</summary>
@@ -108,6 +112,11 @@ public sealed class LabelCaseDecision
     /// <summary>Gets whether other open reports for the exact target are handled by this decision.</summary>
     /// <value><see langword="true"/> to acknowledge matching reports without dismissing them as unfounded.</value>
     public bool HandleOtherReports { get; }
+    /// <summary>Gets whether report handling explicitly spans all versions of the same record URI.</summary>
+    /// <value><see langword="true"/> to handle matching record reports regardless of CID; otherwise, <see langword="false"/>. The default is <see langword="false"/>.</value>
+    /// <remarks><para>This option includes the reviewed version without requiring <see cref="HandleOtherReports"/>.
+    /// It does not resolve appeals or change label scope, and cannot be used for an account case.</para></remarks>
+    public bool HandleReportsAcrossRecordVersions { get; }
 
     /// <summary>Compares complete semantic intent without depending on signed-label regeneration.</summary>
     internal bool SemanticallyEquals(LabelCaseDecision other) =>
@@ -115,6 +124,7 @@ public sealed class LabelCaseDecision
         PolicyVersion == other.PolicyVersion && Reason == other.Reason &&
         AppealOutcome == other.AppealOutcome && AppealIds.SequenceEqual(other.AppealIds) &&
         ReportId == other.ReportId && HandleOtherReports == other.HandleOtherReports &&
+        HandleReportsAcrossRecordVersions == other.HandleReportsAcrossRecordVersions &&
         Actions.Count == other.Actions.Count && Actions.Zip(other.Actions).All(pair =>
             pair.First.Kind == pair.Second.Kind && pair.First.Value == pair.Second.Value &&
             pair.First.ExpiresAt == pair.Second.ExpiresAt && pair.First.ExpectedLabelSequence == pair.Second.ExpectedLabelSequence);

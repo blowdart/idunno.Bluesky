@@ -10,7 +10,6 @@ using System.Text.Json.Serialization;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
-using idunno.AtProto.OAuthCallback;
 using idunno.Bluesky.AspNet.Labeler;
 using idunno.Bluesky.Labeler.Administration;
 using idunno.Bluesky.Labeler.Identity;
@@ -21,15 +20,63 @@ internal static partial class Program
 {
     private const string DefaultPds = "https://bsky.social";
     private const string AdminMethodPrefix = "dev.idunno.labeler.admin.";
+    private static readonly TimeSpan s_remoteRequestTimeout = TimeSpan.FromSeconds(30);
+    private static readonly AsyncLocal<bool> s_verboseOutput = new();
 
     /// <summary>Builds the command tree and runs the requested labeler administration operation.</summary>
     /// <param name="args">The command-line arguments.</param>
     /// <returns>The process exit code.</returns>
-    private static Task<int> Main(string[] args)
+    private static async Task<int> Main(string[] args)
     {
-        RootCommand root = new("Administer a standalone AT Protocol labeler.");
+        try
+        {
+            Console.OutputEncoding = new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+            ParseResult parsed = CreateRootCommand().Parse(args);
+            s_verboseOutput.Value = parsed.GetValue<bool>("--verbose");
+            return await parsed.InvokeAsync(
+                new InvocationConfiguration { EnableDefaultExceptionHandler = false }).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            await Console.Error.WriteLineAsync("⚠   Operation cancelled. No further workflow steps will run.").ConfigureAwait(false);
+            return 130;
+        }
+        catch (OAuthException exception)
+        {
+            await Console.Error.WriteLineAsync($"✖   OAuth authentication failed ({ClassifyOAuthFailure(exception)}). No further workflow steps will run.").ConfigureAwait(false);
+            return 4;
+        }
+        catch (ArgumentException)
+        {
+            await Console.Error.WriteLineAsync("✖   Invalid command input. No further workflow steps will run.").ConfigureAwait(false);
+            return 2;
+        }
+        catch (Exception exception) when (exception is HttpRequestException or IOException or UnauthorizedAccessException or
+                                           InvalidDataException or JsonException or InvalidOperationException or
+                                           PlatformNotSupportedException or System.Security.Cryptography.CryptographicException)
+        {
+            await Console.Error.WriteLineAsync($"✖   Command failed ({exception.GetType().Name}). No further workflow steps will run.").ConfigureAwait(false);
+            return 3;
+        }
+        finally
+        {
+            s_verboseOutput.Value = false;
+        }
+    }
+
+    /// <summary>Creates independently parseable commands with the same options used by the executable.</summary>
+    internal static RootCommand CreateRootCommand()
+    {
+        RootCommand root = new(
+            "Administer a standalone AT Protocol labeler. Remote OAuth credentials are temporary by default; use --remember-me on a remote command to opt into account- and permission-scoped saving. Windows uses current-user DPAPI; other platforms require separate consent to save credentials unencrypted.");
+        root.Options.Add(new Option<bool>("--verbose")
+        {
+            Description = "Include raw JSON responses instead of human-readable result details.",
+            Recursive = true
+        });
         root.Subcommands.Add(CreateTeamCommand());
         root.Subcommands.Add(CreateStatusCommand());
+        root.Subcommands.Add(CreateCountsCommand());
         root.Subcommands.Add(CreateOperationCommand());
         root.Subcommands.Add(CreateAuditCommand());
         root.Subcommands.Add(CreateIssueCommand(negate: false));
@@ -41,7 +88,27 @@ internal static partial class Program
         root.Subcommands.Add(CreateCliUpdateCommand());
         root.Subcommands.Add(CreateServiceUpdateCommand());
         root.Subcommands.Add(CreatePolicyCommand());
-        return root.Parse(args).InvokeAsync();
+        root.Subcommands.Add(CreateForgetMeCommand());
+        return root;
+    }
+
+    /// <summary>Creates a command that removes every locally remembered OAuth credential.</summary>
+    private static Command CreateForgetMeCommand()
+    {
+        Command command = new("forget-me", "Delete all saved OAuth credentials from ~/.xenon.");
+        command.SetAction(async (_, cancellationToken) =>
+        {
+            int deleted = await CliCredentialCache.DeleteAllAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+            string message = deleted switch
+            {
+                0 => "ℹ   No saved OAuth credentials were found.",
+                1 => "✔   Deleted 1 saved OAuth credential.",
+                _ => $"✔   Deleted {deleted} saved OAuth credentials."
+            };
+            await Console.Error.WriteLineAsync(message).ConfigureAwait(false);
+            return 0;
+        });
+        return command;
     }
 
     /// <summary>Creates a team-inspection command.</summary>
@@ -76,7 +143,7 @@ internal static partial class Program
             string? operation = parseResult.GetValue(operationId);
             if (string.IsNullOrWhiteSpace(operation))
             {
-                await Console.Error.WriteLineAsync("Supply a non-empty operation ID.").ConfigureAwait(false);
+                await Console.Error.WriteLineAsync("✖   Supply a non-empty operation ID.").ConfigureAwait(false);
                 return 2;
             }
 
@@ -107,6 +174,20 @@ internal static partial class Program
         return command;
     }
 
+    /// <summary>Creates a command that displays unresolved moderation work counts.</summary>
+    private static Command CreateCountsCommand()
+    {
+        Command command = new("counts", "Show the number of unresolved cases, reports, and appeals.");
+        TransportOptions transport = AddTransportOptions(command);
+        command.SetAction((parseResult, cancellationToken) => ExecuteAsync(
+            method: "getModerationOverview",
+            request: new(Method: "getModerationOverview", Reason: "Administrative inspection."),
+            transport: transport,
+            parseResult: parseResult,
+            cancellationToken: cancellationToken));
+        return command;
+    }
+
     /// <summary>Creates an audit-feed inspection command.</summary>
     private static Command CreateAuditCommand()
     {
@@ -130,7 +211,7 @@ internal static partial class Program
             int pageSize = parseResult.GetValue(limit);
             if (sequence < 0 || pageSize is < 1 or > 16)
             {
-                await Console.Error.WriteLineAsync("Audit sequence must be nonnegative and limit must be from 1 through 16.").ConfigureAwait(false);
+                await Console.Error.WriteLineAsync("✖   Audit sequence must be nonnegative and limit must be from 1 through 16.").ConfigureAwait(false);
                 return 2;
             }
 
@@ -185,7 +266,7 @@ internal static partial class Program
                 string.IsNullOrWhiteSpace(operation) ||
                 string.IsNullOrWhiteSpace(auditReason))
             {
-                await Console.Error.WriteLineAsync("Supply a valid target, declared label value, operation ID, and audit reason.").ConfigureAwait(false);
+                await Console.Error.WriteLineAsync("✖   Supply a valid target, declared label value, operation ID, and audit reason.").ConfigureAwait(false);
                 return 2;
             }
 
@@ -237,7 +318,7 @@ internal static partial class Program
                 !AtIdentifier.TryParse(member, out _) ||
                 !TryParseRole(parseResult.GetValue(role), out LabelTeamRole parsedRole))
             {
-                await Console.Error.WriteLineAsync("Supply a valid DID/handle, operation ID, audit reason, and role: Viewer, Moderator, or Administrator.").ConfigureAwait(false);
+                await Console.Error.WriteLineAsync("✖   Supply a valid DID/handle, operation ID, audit reason, and role: Viewer, Moderator, or Administrator.").ConfigureAwait(false);
                 return 2;
             }
 
@@ -295,7 +376,7 @@ internal static partial class Program
                 !Did.TryParse(member, out Did? did) ||
                 !TryParseAction(parseResult.GetValue(action), out LabelTeamAction parsedAction))
             {
-                await Console.Error.WriteLineAsync("Supply a member DID, operation ID, audit reason, and supported team action.").ConfigureAwait(false);
+                await Console.Error.WriteLineAsync("✖   Supply a member DID, operation ID, audit reason, and supported team action.").ConfigureAwait(false);
                 return 2;
             }
 
@@ -304,7 +385,7 @@ internal static partial class Program
             string? credentialText = parseResult.GetValue(credential);
             if (!HasValidTeamChangeOptions(parsedAction, roleText is not null, credentialText is not null))
             {
-                await Console.Error.WriteLineAsync("SetRole requires --role; BindLocal and RevokeLocal require --credential. These options are not valid for other actions.").ConfigureAwait(false);
+                await Console.Error.WriteLineAsync("✖   SetRole requires --role; BindLocal and RevokeLocal require --credential. These options are not valid for other actions.").ConfigureAwait(false);
                 return 2;
             }
 
@@ -312,7 +393,7 @@ internal static partial class Program
             {
                 if (!TryParseRole(roleText, out LabelTeamRole result))
                 {
-                    await Console.Error.WriteLineAsync("Role must be Viewer, Moderator, or Administrator.").ConfigureAwait(false);
+                    await Console.Error.WriteLineAsync("✖   Role must be Viewer, Moderator, or Administrator.").ConfigureAwait(false);
                     return 2;
                 }
 
@@ -441,7 +522,7 @@ internal static partial class Program
             {
                 if (!Guid.TryParse(hostText, out Guid parsedHost) || parsedHost == Guid.Empty)
                 {
-                    await Console.Error.WriteLineAsync("Supply the exact non-empty host registration GUID for --host-id.").ConfigureAwait(false);
+                    await Console.Error.WriteLineAsync("✖   Supply the exact non-empty host registration GUID for --host-id.").ConfigureAwait(false);
                     return 2;
                 }
 
@@ -462,7 +543,7 @@ internal static partial class Program
             if (!HasValidRetirementIntent(request, preview) || purgeLimit is < 1 or > 1000)
             {
                 await Console.Error.WriteLineAsync(
-                    "Supply a supported action, stable operation ID and reason, explicit 1-365 grace days where applicable, " +
+                    "✖   Supply a supported action, stable operation ID and reason, explicit 1-365 grace days where applicable, " +
                     "and required inventory/attestation/host ID. Irreversible actions and stopped-host attestation require --confirmation from " +
                     "retire preflight with the SAME action, operation ID, reason, days, inventory, attestation and host ID. --yes is insufficient.").ConfigureAwait(false);
                 return 2;
@@ -621,7 +702,7 @@ internal static partial class Program
                 includeHost && !Guid.TryParse(participantId, out _) ||
                 includeBatchLimit && batchLimit is < 1 or > 1000)
             {
-                await Console.Error.WriteLineAsync("Supply valid operation, audit, key, host and batch values for this rotation step.").ConfigureAwait(false);
+                await Console.Error.WriteLineAsync("✖   Supply valid operation, audit, key, host and batch values for this rotation step.").ConfigureAwait(false);
                 return 2;
             }
 
@@ -671,18 +752,19 @@ internal static partial class Program
             Uri? publicEndpoint = parseResult.GetValue(endpoint);
             if (text is null || !Did.TryParse(text, out Did? did) || key is null || publicEndpoint is null)
             {
-                await Console.Error.WriteLineAsync("Supply a did:web identifier, public multibase key, and HTTPS endpoint.").ConfigureAwait(false);
+                await Console.Error.WriteLineAsync("✖   Supply a did:web identifier, public multibase key, and HTTPS endpoint.").ConfigureAwait(false);
                 return 2;
             }
 
             try
             {
-                await Console.Out.WriteLineAsync(LabelerIdentityDocument.CreateDidWebSnippet(did, key, publicEndpoint)).ConfigureAwait(false);
+                await WriteStructuredOutputAsync(LabelerIdentityDocument.CreateDidWebSnippet(did, key, publicEndpoint)).ConfigureAwait(false);
+                await Console.Error.WriteLineAsync("✔   DID document snippet generated. Nothing was published.").ConfigureAwait(false);
                 return 0;
             }
             catch (ArgumentException exception)
             {
-                await Console.Error.WriteLineAsync($"Invalid identity publication input ({exception.GetType().Name}).").ConfigureAwait(false);
+                await Console.Error.WriteLineAsync($"✖   Invalid identity publication input ({exception.GetType().Name}).").ConfigureAwait(false);
                 return 2;
             }
         });
@@ -693,8 +775,8 @@ internal static partial class Program
     private static Command CreatePlcPublicationCommand()
     {
         Command command = new("publish-plc", "Publish the replacement public key in the signed-in account's PLC DID document.");
-        Option<string> handle = new("--handle") { Description = "The administrator's Bluesky handle.", Required = true };
-        Option<string> clientId = new("--client-id") { Description = "The HTTPS native OAuth client metadata URL.", Required = true };
+        Option<string> handle = new("--account-handle") { Description = "The labeler account whose PLC identity will be changed.", Required = true };
+        Option<string> clientId = new("--oauth-client-id") { Description = "The HTTPS native OAuth client metadata URL advertising identity authority.", Required = true };
         Option<string> publicKey = new("--public-key") { Description = "The replacement public multibase key from rotation status.", Required = true };
         Option<Uri?> endpoint = CreateUriOption("--endpoint", "The configured public HTTPS labeler origin.", required: true);
         Option<string?> authorizationToken = new("--authorization-token")
@@ -702,6 +784,7 @@ internal static partial class Program
             Description = "The PDS email authorization code, if it was requested separately."
         };
         Option<bool> yes = new("--yes") { Description = "Confirm without an interactive prompt." };
+        Option<bool> rememberMe = AddRememberMeOption(command);
         command.Options.Add(handle);
         command.Options.Add(clientId);
         command.Options.Add(publicKey);
@@ -726,7 +809,7 @@ internal static partial class Program
                 publicEndpoint is null ||
                 !IsHttpsOrigin(publicEndpoint))
             {
-                await Console.Error.WriteLineAsync("Supply a valid handle, HTTPS native OAuth metadata URL, public key, and HTTPS labeler origin.").ConfigureAwait(false);
+                await Console.Error.WriteLineAsync("✖   Supply a valid handle, HTTPS native OAuth metadata URL, public key, and HTTPS labeler origin.").ConfigureAwait(false);
                 return 2;
             }
 
@@ -741,6 +824,7 @@ internal static partial class Program
                 publicKeyMultibase: key,
                 labelerEndpoint: publicEndpoint,
                 authorizationToken: parseResult.GetValue(authorizationToken),
+                rememberMe: parseResult.GetValue(rememberMe),
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         });
         return command;
@@ -751,12 +835,13 @@ internal static partial class Program
     {
         Command command = new("recover-plc", "Safely resume a saved signed PLC identity operation.");
         Argument<string> didText = new("did") { Description = "The labeler's PLC DID." };
-        Option<string> handle = new("--handle") { Description = "The administrator's Bluesky handle.", Required = true };
-        Option<string> clientId = new("--client-id") { Description = "The HTTPS native OAuth client metadata URL.", Required = true };
+        Option<string> handle = new("--account-handle") { Description = "The labeler account whose PLC identity will be recovered.", Required = true };
+        Option<string> clientId = new("--oauth-client-id") { Description = "The HTTPS native OAuth client metadata URL advertising identity authority.", Required = true };
         Option<string> publicKey = new("--public-key") { Description = "The public label verification key expected in the DID document.", Required = true };
         Option<Uri?> endpoint = CreateUriOption("--endpoint", "The configured public HTTPS labeler origin.", required: true);
         Option<FileInfo> operationFile = new("--operation-file") { Description = "A file containing the saved signed PLC operation.", Required = true };
         Option<bool> yes = new("--yes") { Description = "Confirm without an interactive prompt." };
+        Option<bool> rememberMe = AddRememberMeOption(command);
         command.Arguments.Add(didText);
         command.Options.Add(handle);
         command.Options.Add(clientId);
@@ -790,7 +875,7 @@ internal static partial class Program
                 !IsHttpsOrigin(publicEndpoint) ||
                 operationPath is null)
             {
-                await Console.Error.WriteLineAsync("Supply a PLC DID, valid handle, HTTPS metadata and endpoint, public key, and signed-operation file.").ConfigureAwait(false);
+                await Console.Error.WriteLineAsync("✖   Supply a PLC DID, valid handle, HTTPS metadata and endpoint, public key, and signed-operation file.").ConfigureAwait(false);
                 return 2;
             }
 
@@ -807,7 +892,7 @@ internal static partial class Program
                 byte[] operationBytes = await File.ReadAllBytesAsync(operationPath.FullName, cancellationToken).ConfigureAwait(false);
                 if (operationBytes.Length is 0 or > 64 * 1024)
                 {
-                    await Console.Error.WriteLineAsync("The signed PLC operation file must be between 1 byte and 64 KiB.").ConfigureAwait(false);
+                    await Console.Error.WriteLineAsync("✖   The signed PLC operation file must be between 1 byte and 64 KiB.").ConfigureAwait(false);
                     return 2;
                 }
 
@@ -821,16 +906,17 @@ internal static partial class Program
                     publicKeyMultibase: key,
                     labelerEndpoint: publicEndpoint,
                     signedOperation: operationDocument.RootElement.Clone(),
+                    rememberMe: parseResult.GetValue(rememberMe),
                     cancellationToken: cancellationToken).ConfigureAwait(false);
             }
             catch (JsonException)
             {
-                await Console.Error.WriteLineAsync("The signed PLC operation file is not valid bounded JSON.").ConfigureAwait(false);
+                await Console.Error.WriteLineAsync("✖   The signed PLC operation file is not valid bounded JSON.").ConfigureAwait(false);
                 return 2;
             }
             catch (IOException exception)
             {
-                await Console.Error.WriteLineAsync($"Could not read the PLC operation file ({exception.GetType().Name}).").ConfigureAwait(false);
+                await Console.Error.WriteLineAsync($"✖   Could not read the PLC operation file ({exception.GetType().Name}).").ConfigureAwait(false);
                 return 3;
             }
         });
@@ -852,43 +938,43 @@ internal static partial class Program
         string publicKeyMultibase,
         Uri labelerEndpoint,
         JsonElement signedOperation,
+        bool rememberMe,
         CancellationToken cancellationToken)
     {
         OAuthOptions oauthOptions = CreatePlcOAuthOptions(clientId);
+        CliSignInLifetime signInLifetime = new();
+        await using ConfiguredAsyncDisposable signInCleanup = signInLifetime.ConfigureAwait(false);
         using BlueskyAgent agent = new(new BlueskyAgentOptions { OAuthOptions = oauthOptions });
-        CallbackServer callback = await CallbackServer.CreateAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
-        await using ConfiguredAsyncDisposable callbackLifetime = callback.ConfigureAwait(false);
-        OAuthClient loginClient = agent.CreateOAuthClient();
-        Uri loginUri = await agent.BuildOAuth2LoginUri(
-            oAuthClient: loginClient,
+        if (!await SignInAsync(
+            agent: agent,
             handle: handle,
-            scopes: oauthOptions.Scopes,
-            returnUri: callback.Uri,
-            allowLoopback: true,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-        await Console.Error.WriteLineAsync($"Opening the OAuth sign-in page for {handle}.").ConfigureAwait(false);
-        OAuthClient.OpenBrowser(loginUri);
-        string callbackData = await callback.WaitForCallbackAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
-        if (string.IsNullOrWhiteSpace(callbackData) ||
-            !await agent.ProcessOAuth2LoginResponse(loginClient, callbackData, cancellationToken).ConfigureAwait(false) ||
-            !agent.IsAuthenticated)
+            options: oauthOptions,
+            purpose: "Labeler-account identity authority to recover the saved PLC identity operation.",
+            rememberMe: rememberMe,
+            lifetime: signInLifetime,
+            cancellationToken: cancellationToken).ConfigureAwait(false))
         {
-            await Console.Error.WriteLineAsync("OAuth sign-in did not establish an authenticated session.").ConfigureAwait(false);
+            return 4;
+        }
+        if (agent.Did != did)
+        {
+            await Console.Error.WriteLineAsync("✖   The signed-in account does not match the PLC identity being recovered. No operation was submitted.").ConfigureAwait(false);
             return 4;
         }
 
         DidDocument? current = await agent.ResolveDidDocument(did, cancellationToken).ConfigureAwait(false);
         if (current is null || current.Id != did)
         {
-            await Console.Error.WriteLineAsync("The PLC DID document could not be resolved and verified.").ConfigureAwait(false);
+            await Console.Error.WriteLineAsync("✖   The PLC DID document could not be resolved and verified.").ConfigureAwait(false);
             return 5;
         }
 
         if (HasPublishedPlcIdentity(current, did, publicKeyMultibase, labelerEndpoint))
         {
-            await Console.Out.WriteLineAsync(JsonSerializer.Serialize(
+            await WriteStructuredOutputAsync(JsonSerializer.Serialize(
                 new PlcRecoveryCliResult(did.Value, "Verified", null, null),
                 AdministrationJsonContext.Default.PlcRecoveryCliResult)).ConfigureAwait(false);
+            await Console.Error.WriteLineAsync("✔   PLC identity verified. No submission was needed.").ConfigureAwait(false);
             return 0;
         }
 
@@ -897,13 +983,14 @@ internal static partial class Program
             cancellationToken).ConfigureAwait(false);
         if (!submission.Succeeded)
         {
-            await Console.Out.WriteLineAsync(JsonSerializer.Serialize(
+            await WriteStructuredOutputAsync(JsonSerializer.Serialize(
                 new PlcRecoveryCliResult(
                     did.Value,
                     "SubmissionFailed",
                     (int)submission.StatusCode,
                     "Resolve the DID document before retrying; submit the saved operation only if it has not already published."),
                 AdministrationJsonContext.Default.PlcRecoveryCliResult)).ConfigureAwait(false);
+            await Console.Error.WriteLineAsync("✖   PLC submission failed. Inspect the recovery guidance before retrying.").ConfigureAwait(false);
             return 5;
         }
 
@@ -913,13 +1000,16 @@ internal static partial class Program
             did,
             publicKeyMultibase,
             labelerEndpoint);
-        await Console.Out.WriteLineAsync(JsonSerializer.Serialize(
+        await WriteStructuredOutputAsync(JsonSerializer.Serialize(
             new PlcRecoveryCliResult(
                 did.Value,
                 verified ? "Verified" : "VerificationFailed",
                 verified ? null : (int)submission.StatusCode,
                 verified ? null : "Resolve the DID document and inspect its label key and service before retrying."),
             AdministrationJsonContext.Default.PlcRecoveryCliResult)).ConfigureAwait(false);
+        await Console.Error.WriteLineAsync(verified
+            ? "✔   PLC identity publication succeeded and was independently verified."
+            : "✖   PLC submission completed, but verification failed. Inspect the recovery guidance before retrying.").ConfigureAwait(false);
         return verified ? 0 : 5;
     }
 
@@ -946,6 +1036,7 @@ internal static partial class Program
         string publicKeyMultibase,
         Uri labelerEndpoint,
         string? authorizationToken,
+        bool rememberMe,
         CancellationToken cancellationToken)
     {
         OAuthOptions oauthOptions = CreatePlcOAuthOptions(clientId);
@@ -953,25 +1044,18 @@ internal static partial class Program
         {
             OAuthOptions = oauthOptions
         };
+        CliSignInLifetime signInLifetime = new();
+        await using ConfiguredAsyncDisposable signInCleanup = signInLifetime.ConfigureAwait(false);
         using BlueskyAgent agent = new(options);
-        CallbackServer callback = await CallbackServer.CreateAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
-        await using ConfiguredAsyncDisposable callbackLifetime = callback.ConfigureAwait(false);
-        OAuthClient loginClient = agent.CreateOAuthClient();
-        Uri loginUri = await agent.BuildOAuth2LoginUri(
-            oAuthClient: loginClient,
+        if (!await SignInAsync(
+            agent: agent,
             handle: handle,
-            scopes: oauthOptions.Scopes,
-            returnUri: callback.Uri,
-            allowLoopback: true,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-        await Console.Error.WriteLineAsync($"Opening the OAuth sign-in page for {handle}.").ConfigureAwait(false);
-        OAuthClient.OpenBrowser(loginUri);
-        string callbackData = await callback.WaitForCallbackAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
-        if (string.IsNullOrWhiteSpace(callbackData) ||
-            !await agent.ProcessOAuth2LoginResponse(loginClient, callbackData, cancellationToken).ConfigureAwait(false) ||
-            !agent.IsAuthenticated)
+            options: oauthOptions,
+            purpose: "Labeler-account identity authority to publish the label key and service in its PLC DID document.",
+            rememberMe: rememberMe,
+            lifetime: signInLifetime,
+            cancellationToken: cancellationToken).ConfigureAwait(false))
         {
-            await Console.Error.WriteLineAsync("OAuth sign-in did not establish an authenticated session.").ConfigureAwait(false);
             return 4;
         }
 
@@ -981,11 +1065,11 @@ internal static partial class Program
             AtProtoHttpResult<EmptyResponse> codeRequest = await agent.RequestPlcOperationSignature(cancellationToken).ConfigureAwait(false);
             if (!codeRequest.Succeeded)
             {
-                await Console.Error.WriteLineAsync($"The PDS did not request a PLC authorization code ({(int)codeRequest.StatusCode}).").ConfigureAwait(false);
+                await Console.Error.WriteLineAsync($"✖   The PDS did not request a PLC authorization code ({(int)codeRequest.StatusCode}).").ConfigureAwait(false);
                 return 4;
             }
 
-            await Console.Error.WriteLineAsync("Enter the PLC authorization code sent by the PDS.").ConfigureAwait(false);
+            await Console.Error.WriteLineAsync("⚠   Enter the PLC authorization code sent by the PDS.").ConfigureAwait(false);
             token = await Console.In.ReadLineAsync(cancellationToken).ConfigureAwait(false);
         }
 
@@ -994,13 +1078,16 @@ internal static partial class Program
             labelerEndpoint: labelerEndpoint,
             authorizationToken: token,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-        await Console.Out.WriteLineAsync(JsonSerializer.Serialize(
+        await WriteStructuredOutputAsync(JsonSerializer.Serialize(
             new PlcPublicationCliResult(
                 result.Did.Value,
                 result.Stage.ToString(),
                 result.SignedOperation,
                 result.RecoveryAction),
             AdministrationJsonContext.Default.PlcPublicationCliResult)).ConfigureAwait(false);
+        await Console.Error.WriteLineAsync(result.Stage == PlcLabelerIdentityUpdateStage.Verified
+            ? "✔   PLC identity publication succeeded and was independently verified."
+            : "✖   PLC identity publication was not verified. Inspect the stage and recovery guidance before retrying.").ConfigureAwait(false);
         return result.Stage == PlcLabelerIdentityUpdateStage.Verified ? 0 : 5;
     }
 
@@ -1033,16 +1120,17 @@ internal static partial class Program
     private static TransportOptions AddTransportOptions(Command command)
     {
         Option<string?> localEndpoint = new("--local-endpoint") { Description = "Use the configured protected local pipe/socket." };
-        Option<Uri?> adminUrl = CreateUriOption("--admin-url", "The HTTPS labeler origin for remote administration.");
-        Option<string?> audienceText = new("--audience") { Description = "The exact labeler service reference, for example did:web:labeler.example#labeler_admin." };
-        Option<string?> handle = new("--handle") { Description = "The administrator's Bluesky handle for OAuth." };
-        Option<string?> clientId = new("--client-id") { Description = "The HTTPS URL of the registered native OAuth client metadata." };
+        Option<Uri?> adminUrl = CreateUriOption("--labeler-url", "The labeler's HTTPS origin, without a path, for remote administration.");
+        Option<string?> audienceText = new("--admin-service") { Description = "Override the administration DID#service reference discovered from native OAuth metadata." };
+        Option<string?> handle = new("--admin-handle") { Description = "The administrator's Bluesky handle, not the labeler account." };
+        Option<string?> clientId = new("--oauth-client-id") { Description = "The native OAuth metadata URL; defaults to <labeler-url>/native-client-metadata.json." };
+        Option<bool> rememberMe = AddRememberMeOption(command);
         command.Options.Add(localEndpoint);
         command.Options.Add(adminUrl);
         command.Options.Add(audienceText);
         command.Options.Add(handle);
         command.Options.Add(clientId);
-        return new(localEndpoint, adminUrl, audienceText, handle, clientId);
+        return new(localEndpoint, adminUrl, audienceText, handle, clientId, rememberMe);
     }
 
     /// <summary>Executes one bounded command over the chosen authorized transport.</summary>
@@ -1089,28 +1177,39 @@ internal static partial class Program
                     audienceText: parseResult.GetValue(transport.AudienceText),
                     handleText: parseResult.GetValue(transport.Handle),
                     clientId: parseResult.GetValue(transport.ClientId),
+                    rememberMe: parseResult.GetValue(transport.RememberMe),
                     cancellationToken: cancellationToken,
                     workflow: workflow).ConfigureAwait(false);
             }
 
-            await Console.Error.WriteLineAsync("Select exactly one transport: --local-endpoint or --admin-url.").ConfigureAwait(false);
+            await Console.Error.WriteLineAsync("✖   Select exactly one transport: --local-endpoint or --labeler-url.").ConfigureAwait(false);
             return 2;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            await Console.Error.WriteLineAsync("Operation cancelled.").ConfigureAwait(false);
+            await Console.Error.WriteLineAsync("⚠   Operation cancelled.").ConfigureAwait(false);
             return 130;
+        }
+        catch (OperationCanceledException)
+        {
+            await Console.Error.WriteLineAsync("⚠   Administration request timed out. Sign-in may have succeeded, but no command success was confirmed. Check service availability before retrying.").ConfigureAwait(false);
+            return 3;
         }
         catch (ArgumentException exception)
         {
-            await Console.Error.WriteLineAsync($"Invalid administration input ({exception.GetType().Name}).").ConfigureAwait(false);
+            await Console.Error.WriteLineAsync($"✖   Invalid administration input ({exception.GetType().Name}).").ConfigureAwait(false);
             return 2;
         }
+        catch (OAuthException exception)
+        {
+            await Console.Error.WriteLineAsync($"✖   Administration OAuth failed ({ClassifyOAuthFailure(exception)}). No further workflow steps will run.").ConfigureAwait(false);
+            return 4;
+        }
         catch (Exception exception) when (exception is HttpRequestException or IOException or UnauthorizedAccessException or
-                                           InvalidDataException or JsonException or OAuthException or
+                                           InvalidDataException or JsonException or
                                            InvalidOperationException or PlatformNotSupportedException)
         {
-            await Console.Error.WriteLineAsync($"Administration failed ({exception.GetType().Name}).").ConfigureAwait(false);
+            await Console.Error.WriteLineAsync($"✖   Administration failed ({exception.GetType().Name}).").ConfigureAwait(false);
             return 3;
         }
     }
@@ -1123,48 +1222,122 @@ internal static partial class Program
         string? audienceText,
         string? handleText,
         string? clientId,
+        bool rememberMe,
         CancellationToken cancellationToken,
         AdministrationWorkflow? workflow = null)
     {
         if (!IsHttpsOrigin(adminUrl) ||
             handleText is null ||
-            !TryParseServiceReference(audienceText, out AtProtoServiceReference? audience) ||
             !Handle.TryParse(handleText, out Handle? handle) ||
-            !Uri.TryCreate(clientId, UriKind.Absolute, out Uri? metadataUri) ||
+            !Uri.TryCreate(clientId ?? new Uri(adminUrl, "/native-client-metadata.json").AbsoluteUri, UriKind.Absolute, out Uri? metadataUri) ||
             metadataUri is null ||
             !IsNativeClientMetadataUri(metadataUri, adminUrl) ||
-            audience is null ||
             handle is null)
         {
-            await Console.Error.WriteLineAsync("Remote mode requires an HTTPS origin, exact DID#service audience, handle, and HTTPS native OAuth client ID.").ConfigureAwait(false);
+            await Console.Error.WriteLineAsync("✖   Remote mode requires --labeler-url with an HTTPS origin and --admin-handle. An explicit --oauth-client-id must share the labeler origin.").ConfigureAwait(false);
             return 2;
         }
 
-        string lxm = AdminMethodPrefix + method;
-        string encodedAudience = Uri.EscapeDataString(audience.ToString());
-        OAuthOptions oauthOptions = new()
+        AtProtoServiceReference? audience;
+        if (audienceText is not null)
         {
-            ClientId = metadataUri.AbsoluteUri,
-            Scopes = workflow is null
-                ? ["atproto", $"rpc:{lxm}?aud={encodedAudience}"]
-                : ["atproto", .. s_policyPublicationMethods.Select(value => $"rpc:{AdminMethodPrefix}{value}?aud={encodedAudience}")]
-        };
-        AtProtoAgentOptions options = new()
+            if (!TryParseServiceReference(audienceText, out audience) || audience is null)
+            {
+                await Console.Error.WriteLineAsync("✖   --admin-service must be an exact DID#service reference.").ConfigureAwait(false);
+                return 2;
+            }
+        }
+        else
         {
-            OAuthOptions = oauthOptions
-        };
-        using AtProtoAgent agent = new(new Uri(DefaultPds), options);
-        if (!await SignInAsync(agent, handle, oauthOptions.Scopes, cancellationToken).ConfigureAwait(false))
-        {
-            return 4;
+            audience = await DiscoverAdminServiceAsync(metadataUri, cancellationToken).ConfigureAwait(false);
+            if (audience is null)
+            {
+                await Console.Error.WriteLineAsync("✖   OAuth metadata does not advertise one unambiguous labeler administration service. Supply --admin-service explicitly.").ConfigureAwait(false);
+                return 2;
+            }
         }
 
+        CliSignInLifetime signInLifetime = new();
+        await using ConfiguredAsyncDisposable signInCleanup = signInLifetime.ConfigureAwait(false);
         if (workflow is not null)
         {
-            return await workflow(
-                (command, token) => SendRemoteCommandAsync(
-                    agent: agent, adminUrl: adminUrl, audience: audience, request: command, cancellationToken: token),
-                cancellationToken).ConfigureAwait(false);
+            Dictionary<string, AtProtoAgent> methodAgents = new(StringComparer.Ordinal);
+            try
+            {
+                return await workflow(
+                    async (command, token) =>
+                    {
+                        if (!s_policyPublicationMethods.Contains(command.Method, StringComparer.Ordinal))
+                        {
+                            return new(
+                                """{"succeeded":false,"error":"InvalidRequest"}""",
+                                HttpStatusCode.BadRequest);
+                        }
+
+                        AtProtoAgent methodAgent;
+                        if (methodAgents.TryGetValue(command.Method, out AtProtoAgent? existingAgent))
+                        {
+                            methodAgent = existingAgent;
+                        }
+                        else
+                        {
+                            OAuthOptions methodOptions = CreateRemoteOAuthOptions(metadataUri, audience, command.Method);
+                            methodAgent = new(
+                                new Uri(DefaultPds),
+                                new AtProtoAgentOptions
+                                {
+                                    OAuthOptions = methodOptions,
+                                    HttpClientOptions = new(timeout: s_remoteRequestTimeout)
+                                });
+                            methodAgents.Add(command.Method, methodAgent);
+                            if (!await SignInAsync(
+                                agent: methodAgent,
+                                handle: handle,
+                                options: methodOptions,
+                                purpose: null,
+                                rememberMe: rememberMe,
+                                lifetime: signInLifetime,
+                                cancellationToken: token).ConfigureAwait(false))
+                            {
+                                throw new OAuthException("Administrator sign-in did not complete.");
+                            }
+                        }
+
+                        return await SendRemoteCommandAsync(
+                            agent: methodAgent,
+                            adminUrl: adminUrl,
+                            audience: audience,
+                            request: command,
+                            cancellationToken: token).ConfigureAwait(false);
+                    },
+                    cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                foreach (AtProtoAgent methodAgent in methodAgents.Values)
+                {
+                    methodAgent.Dispose();
+                }
+            }
+        }
+
+        OAuthOptions oauthOptions = CreateRemoteOAuthOptions(metadataUri, audience, method);
+        AtProtoAgentOptions options = new()
+        {
+            OAuthOptions = oauthOptions,
+            HttpClientOptions = new(timeout: s_remoteRequestTimeout)
+        };
+        using AtProtoAgent agent = new(new Uri(DefaultPds), options);
+        if (!await SignInAsync(
+            agent: agent,
+            handle: handle,
+            options: oauthOptions,
+            purpose: null,
+            rememberMe: rememberMe,
+            lifetime: signInLifetime,
+            cancellationToken: cancellationToken).ConfigureAwait(false))
+        {
+            return 4;
         }
 
         AdministrationReply reply = await SendRemoteCommandAsync(
@@ -1172,35 +1345,16 @@ internal static partial class Program
         return await WriteResponseAsync(reply.Body, reply.StatusCode).ConfigureAwait(false);
     }
 
-    /// <summary>Establishes one ephemeral operator session without retaining its credentials.</summary>
-    private static async Task<bool> SignInAsync(
-        AtProtoAgent agent,
-        Handle handle,
-        IEnumerable<string> scopes,
-        CancellationToken cancellationToken)
+    /// <summary>Creates OAuth options bound to one remote administration method.</summary>
+    internal static OAuthOptions CreateRemoteOAuthOptions(Uri clientId, AtProtoServiceReference audience, string method)
     {
-        CallbackServer callback = await CallbackServer.CreateAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
-        await using ConfiguredAsyncDisposable callbackLifetime = callback.ConfigureAwait(false);
-        OAuthClient loginClient = agent.CreateOAuthClient();
-        Uri loginUri = await agent.BuildOAuth2LoginUri(
-            oAuthClient: loginClient,
-            handle: handle,
-            scopes: scopes,
-            returnUri: callback.Uri,
-            allowLoopback: true,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-        await Console.Error.WriteLineAsync($"Opening the OAuth sign-in page for {handle}.").ConfigureAwait(false);
-        OAuthClient.OpenBrowser(loginUri);
-        string callbackData = await callback.WaitForCallbackAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
-        if (string.IsNullOrWhiteSpace(callbackData) ||
-            !await agent.ProcessOAuth2LoginResponse(loginClient, callbackData, cancellationToken).ConfigureAwait(false) ||
-            !agent.IsAuthenticated)
+        string lxm = AdminMethodPrefix + method;
+        string encodedAudience = Uri.EscapeDataString(audience.ToString());
+        return new()
         {
-            await Console.Error.WriteLineAsync("OAuth sign-in did not establish an authenticated session.").ConfigureAwait(false);
-            return false;
-        }
-
-        return true;
+            ClientId = clientId.AbsoluteUri,
+            Scopes = ["atproto", $"rpc:{lxm}?aud={encodedAudience}"]
+        };
     }
 
     /// <summary>Sends one independently method-bound request without coupling transport to console output.</summary>
@@ -1212,6 +1366,7 @@ internal static partial class Program
         CancellationToken cancellationToken)
     {
         string lxm = AdminMethodPrefix + request.Method;
+        await Console.Error.WriteLineAsync("🔒  Requesting a method-bound service token from the authenticated PDS.").ConfigureAwait(false);
         AtProtoHttpResult<ServiceCredential> tokenResult = await agent.GetServiceAuth(
             service: agent.Service,
             audience: audience,
@@ -1219,7 +1374,7 @@ internal static partial class Program
             cancellationToken: cancellationToken).ConfigureAwait(false);
         if (!tokenResult.Succeeded)
         {
-            await Console.Error.WriteLineAsync($"The PDS could not issue the requested service token ({(int)tokenResult.StatusCode}).").ConfigureAwait(false);
+            await Console.Error.WriteLineAsync($"✖   The PDS could not issue the requested service token ({(int)tokenResult.StatusCode}).").ConfigureAwait(false);
             return new(
                 """{"succeeded":false,"error":"Unauthorized","detail":"The PDS could not issue the requested method-bound service token."}""",
                 HttpStatusCode.Forbidden);
@@ -1234,7 +1389,8 @@ internal static partial class Program
             afterSequence: request.AfterSequence,
             limit: request.Limit);
         using SocketsHttpHandler handler = new() { AllowAutoRedirect = false };
-        using HttpClient httpClient = new(handler);
+        using HttpClient httpClient = new(handler) { Timeout = s_remoteRequestTimeout };
+        await Console.Error.WriteLineAsync("➜   Calling the labeler administration endpoint.").ConfigureAwait(false);
         using HttpRequestMessage httpRequest = new(
             IsRemoteGetMethod(request.Method) ? HttpMethod.Get : HttpMethod.Post,
             requestUri);
@@ -1253,40 +1409,165 @@ internal static partial class Program
     }
 
     /// <summary>Writes the service's JSON result and maps authorization and availability failures to process exit codes.</summary>
-    private static async Task<int> WriteResponseAsync(string body, HttpStatusCode statusCode)
+    private static Task<int> WriteResponseAsync(string body, HttpStatusCode statusCode) =>
+        WriteResponseAsync(
+            body: body,
+            statusCode: statusCode,
+            output: Console.Out,
+            diagnostics: Console.Error,
+            verbose: s_verboseOutput.Value);
+
+    /// <summary>Keeps machine-readable output separate from human-readable confirmations and errors.</summary>
+    internal static async Task<int> WriteResponseAsync(
+        string body,
+        HttpStatusCode statusCode,
+        TextWriter output,
+        TextWriter diagnostics,
+        bool verbose = false)
     {
-        await Console.Out.WriteLineAsync(body).ConfigureAwait(false);
+        if (verbose)
+        {
+            await output.WriteLineAsync(body).ConfigureAwait(false);
+        }
         if (statusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
         {
+            await diagnostics.WriteLineAsync("✖   Administration failed: access was denied.").ConfigureAwait(false);
             return 4;
         }
 
         if ((int)statusCode >= 500)
         {
+            await diagnostics.WriteLineAsync("✖   Administration failed: the service is unavailable. Use --verbose to inspect the response before retrying.").ConfigureAwait(false);
             return 5;
         }
 
         try
         {
             using JsonDocument response = JsonDocument.Parse(body);
-            if (response.RootElement.TryGetProperty("succeeded", out JsonElement succeeded) &&
-                succeeded.ValueKind == JsonValueKind.False)
+            if (response.RootElement.ValueKind != JsonValueKind.Object ||
+                !response.RootElement.TryGetProperty("succeeded", out JsonElement succeeded) ||
+                succeeded.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+            {
+                await diagnostics.WriteLineAsync("✖   Administration failed: the response has no valid success receipt.").ConfigureAwait(false);
+                return 5;
+            }
+            if (succeeded.ValueKind == JsonValueKind.False)
             {
                 string? error = response.RootElement.TryGetProperty("error", out JsonElement errorValue)
                     && errorValue.ValueKind == JsonValueKind.String
                     ? errorValue.GetString()
                     : null;
+                await diagnostics.WriteLineAsync($"✖   Administration failed ({SafeServiceError(error)}). Use --verbose to inspect the response for details.").ConfigureAwait(false);
                 return MapServiceErrorToExitCode(error);
+            }
+            if ((int)statusCode is >= 200 and < 300)
+            {
+                string message = response.RootElement.TryGetProperty("changed", out JsonElement changed) &&
+                    changed.ValueKind == JsonValueKind.False
+                    ? "✔   Administration succeeded. No change was needed."
+                    : "✔   Administration succeeded.";
+                await diagnostics.WriteLineAsync(message).ConfigureAwait(false);
+                if (!verbose)
+                {
+                    await WriteReadableResultAsync(response.RootElement, output, 0).ConfigureAwait(false);
+                }
+                return 0;
             }
         }
         catch (JsonException)
         {
-            await Console.Error.WriteLineAsync("The administration service returned an invalid JSON response.").ConfigureAwait(false);
+            await diagnostics.WriteLineAsync("✖   The administration service returned an invalid JSON response.").ConfigureAwait(false);
             return 5;
         }
 
-        return (int)statusCode is >= 200 and < 300 ? 0 : 5;
+        await diagnostics.WriteLineAsync($"✖   Administration failed (HTTP {(int)statusCode}).").ConfigureAwait(false);
+        return 5;
     }
+
+    /// <summary>Formats retained PLC outcomes without enabling raw response output by default.</summary>
+    private static async Task WriteStructuredOutputAsync(string body)
+    {
+        if (s_verboseOutput.Value)
+        {
+            await Console.Out.WriteLineAsync(body).ConfigureAwait(false);
+            return;
+        }
+
+        using JsonDocument document = JsonDocument.Parse(body);
+        await WriteReadableResultAsync(document.RootElement, Console.Out, 0).ConfigureAwait(false);
+    }
+
+    /// <summary>Shows inspection fields as indented text rather than hiding useful command results with their raw JSON.</summary>
+    internal static async Task WriteReadableResultAsync(JsonElement element, TextWriter output, int depth)
+    {
+        string indent = new(' ', depth * 2);
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            foreach (JsonProperty property in element.EnumerateObject())
+            {
+                if (depth == 0 && property.Name is "succeeded" or "changed")
+                {
+                    continue;
+                }
+                if (property.Name == "openCounts" && property.Value.ValueKind == JsonValueKind.Object)
+                {
+                    await WriteReadableResultAsync(property.Value, output, depth).ConfigureAwait(false);
+                    continue;
+                }
+                if (property.Value.ValueKind is JsonValueKind.Object or JsonValueKind.Array)
+                {
+                    await output.WriteLineAsync($"{indent}{ResultIcon(property.Name)}{property.Name}:").ConfigureAwait(false);
+                    await WriteReadableResultAsync(property.Value, output, depth + 1).ConfigureAwait(false);
+                }
+                else
+                {
+                    await output.WriteLineAsync($"{indent}{ResultIcon(property.Name)}{property.Name}: {ReadableValue(property.Value)}").ConfigureAwait(false);
+                }
+            }
+        }
+        else if (element.ValueKind == JsonValueKind.Array)
+        {
+            int index = 0;
+            foreach (JsonElement item in element.EnumerateArray())
+            {
+                await output.WriteLineAsync($"{indent}•   Item {++index}:").ConfigureAwait(false);
+                await WriteReadableResultAsync(item, output, depth + 1).ConfigureAwait(false);
+            }
+            if (index == 0)
+            {
+                await output.WriteLineAsync($"{indent}ℹ   None").ConfigureAwait(false);
+            }
+        }
+        else
+        {
+            await output.WriteLineAsync($"{indent}•   {ReadableValue(element)}").ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>Selects recognizable four-column prefixes, padding narrow symbols differently from two-column emoji.</summary>
+    private static string ResultIcon(string name) => name switch
+    {
+        "cases" or "case" => "📋  ",
+        "reports" or "report" => "📨  ",
+        "appeals" or "appeal" => "⚖   ",
+        "members" or "team" or "actor" => "👤  ",
+        "labels" or "label" or "value" => "🏷️  ",
+        "issuer" or "did" => "🪪  ",
+        "sequence" or "revision" => "#   ",
+        "state" or "moderation" or "openCounts" => "ℹ   ",
+        _ => "•   "
+    };
+
+    /// <summary>Keeps primitive field values readable without preserving terminal-control sequences from remote strings.</summary>
+    private static string ReadableValue(JsonElement value) =>
+        string.Concat((value.ValueKind == JsonValueKind.Null ? "(none)" : value.ToString())
+            .Select(character => char.IsControl(character) ? ' ' : character));
+
+    /// <summary>Limits terminal diagnostics to short protocol error identifiers rather than untrusted server text.</summary>
+    private static string SafeServiceError(string? error) =>
+        error is { Length: > 0 and <= 80 } && error.All(character => char.IsAsciiLetterOrDigit(character) || character == '_')
+            ? error
+            : "service error";
 
     /// <summary>Requires deliberate confirmation for mutations unless the user explicitly supplied <c>--yes</c>.</summary>
     private static async Task<bool> ConfirmAsync(bool confirmed, string prompt, CancellationToken cancellationToken)
@@ -1298,11 +1579,11 @@ internal static partial class Program
 
         if (Console.IsInputRedirected)
         {
-            await Console.Error.WriteLineAsync("Mutation requires interactive confirmation or --yes.").ConfigureAwait(false);
+            await Console.Error.WriteLineAsync("⚠   Mutation requires interactive confirmation or --yes.").ConfigureAwait(false);
             return false;
         }
 
-        await Console.Error.WriteAsync($"{prompt} [y/N] ").ConfigureAwait(false);
+        await Console.Error.WriteAsync($"⚠   {prompt} [y/N] ").ConfigureAwait(false);
         string? answer = await Console.In.ReadLineAsync(cancellationToken).ConfigureAwait(false);
         return string.Equals(answer, "y", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(answer, "yes", StringComparison.OrdinalIgnoreCase);
@@ -1404,6 +1685,103 @@ internal static partial class Program
         string.Equals(uri.IdnHost, adminOrigin.IdnHost, StringComparison.OrdinalIgnoreCase) &&
         uri.Port == adminOrigin.Port;
 
+    /// <summary>Discovers one administration service from the configured native OAuth metadata document.</summary>
+    private static async Task<AtProtoServiceReference?> DiscoverAdminServiceAsync(Uri metadataUri, CancellationToken cancellationToken)
+    {
+        using SocketsHttpHandler handler = new() { AllowAutoRedirect = false };
+        using HttpClient client = new(handler) { Timeout = TimeSpan.FromSeconds(15) };
+        using HttpResponseMessage response = await client.GetAsync(
+            metadataUri,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken).ConfigureAwait(false);
+        if (!response.IsSuccessStatusCode ||
+            response.Content.Headers.ContentLength is > MaximumOAuthMetadataSize)
+        {
+            return null;
+        }
+
+        Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        await using ConfiguredAsyncDisposable streamLifetime = stream.ConfigureAwait(false);
+        using MemoryStream buffer = new();
+        byte[] chunk = new byte[4096];
+        while (true)
+        {
+            int count = await stream.ReadAsync(chunk, cancellationToken).ConfigureAwait(false);
+            if (count == 0)
+            {
+                break;
+            }
+
+            if (buffer.Length + count > MaximumOAuthMetadataSize)
+            {
+                return null;
+            }
+
+            await buffer.WriteAsync(chunk.AsMemory(0, count), cancellationToken).ConfigureAwait(false);
+        }
+
+        OAuthMetadataDocument? metadata;
+        try
+        {
+            metadata = JsonSerializer.Deserialize(buffer.ToArray(), AdministrationJsonContext.Default.OAuthMetadataDocument);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+
+        return metadata is not null &&
+            string.Equals(metadata.ClientId, metadataUri.AbsoluteUri, StringComparison.Ordinal) &&
+            TryDiscoverAdminService(metadata.Scope, out AtProtoServiceReference? audience)
+                ? audience
+                : null;
+    }
+
+    /// <summary>Accepts only administration RPC scopes that identify one exact, unambiguous DID service.</summary>
+    internal static bool TryDiscoverAdminService(string? scope, out AtProtoServiceReference? audience)
+    {
+        const string rpcPrefix = "rpc:" + AdminMethodPrefix;
+        audience = null;
+        if (string.IsNullOrWhiteSpace(scope))
+        {
+            return false;
+        }
+
+        HashSet<string> candidates = new(StringComparer.Ordinal);
+        foreach (string value in scope.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (!value.StartsWith(rpcPrefix, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            int audienceStart = value.IndexOf("?aud=", StringComparison.Ordinal);
+            if (audienceStart <= rpcPrefix.Length ||
+                value.IndexOf('&', audienceStart) >= 0 ||
+                value.IndexOf('?', audienceStart + 1) >= 0)
+            {
+                return false;
+            }
+
+            string encodedAudience = value[(audienceStart + "?aud=".Length)..];
+            string decodedAudience = Uri.UnescapeDataString(encodedAudience);
+            if (TryParseServiceReference(decodedAudience, out AtProtoServiceReference? candidate) &&
+                candidate is not null)
+            {
+                candidates.Add(candidate.ToString());
+            }
+        }
+
+        if (candidates.Count != 1)
+        {
+            return false;
+        }
+
+        return TryParseServiceReference(candidates.Single(), out audience) && audience is not null;
+    }
+
+    private const int MaximumOAuthMetadataSize = 64 * 1024;
+
     /// <summary>Parses a case-insensitive named role while rejecting undefined numeric values.</summary>
     internal static bool TryParseRole(string? text, out LabelTeamRole role) =>
         Enum.TryParse(text, ignoreCase: true, out role) && Enum.IsDefined(role);
@@ -1434,7 +1812,8 @@ internal static partial class Program
         Option<Uri?> AdminUrl,
         Option<string?> AudienceText,
         Option<string?> Handle,
-        Option<string?> ClientId);
+        Option<string?> ClientId,
+        Option<bool> RememberMe);
 
     /// <summary>Describes the existing administration protocol command without accepting caller identity.</summary>
     [JsonSourceGenerationOptions(
@@ -1443,7 +1822,12 @@ internal static partial class Program
     [JsonSerializable(typeof(AdministrationCommand))]
     [JsonSerializable(typeof(PlcPublicationCliResult))]
     [JsonSerializable(typeof(PlcRecoveryCliResult))]
+    [JsonSerializable(typeof(OAuthMetadataDocument))]
     private sealed partial class AdministrationJsonContext : JsonSerializerContext;
+
+    private sealed record OAuthMetadataDocument(
+        [property: JsonPropertyName("client_id")] string? ClientId,
+        [property: JsonPropertyName("scope")] string? Scope);
 
     /// <summary>Contains only public PLC publication recovery data.</summary>
     private sealed record PlcPublicationCliResult(string Did, string Stage, JsonElement? SignedOperation, string? RecoveryAction);

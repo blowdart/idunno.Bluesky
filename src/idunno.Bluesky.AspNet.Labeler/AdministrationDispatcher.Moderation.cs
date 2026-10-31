@@ -147,9 +147,9 @@ internal sealed partial class AdministrationDispatcher
                         accountLabels = [.. account.Result.Select(label => label.SignedLabel.Label.Value).Order(StringComparer.Ordinal)];
                     }
 
-                    LabelTarget target = subject.Cid is null
-                        ? LabelTarget.Account(subject.Repository)
-                        : LabelTarget.Record(new AtUri(subject.Subject), subject.Cid);
+                    LabelTarget target = subject.RecordUri is { } subjectUri
+                        ? LabelTarget.Record(subjectUri, subject.Cid)
+                        : LabelTarget.Account(subject.Repository);
                     List<ModerationLabelChoiceView> choices = [];
                     foreach (string[] values in definition.Issuance.DeclaredValues
                         .Concat(applied.Result.Select(label => label.SignedLabel.Label.Value))
@@ -171,9 +171,10 @@ internal sealed partial class AdministrationDispatcher
                                 (label.ExpiresAt is null || label.ExpiresAt > gate.Result.DatabaseTime);
                             choices.Add(new(
                                 Value: values[index],
-                                Applied: active && label!.Cid == subject.Cid,
+                                Applied: active && (subject.Cid is null || label!.Cid is null || label.Cid == subject.Cid),
                                 Sequence: current?.Sequence ?? 0,
-                                OtherVersion: active && label!.Cid != subject.Cid));
+                                OtherVersion: active && subject.Cid is not null && label!.Cid is not null && label.Cid != subject.Cid,
+                                UriWide: active && subject.RecordUri is not null && label!.Cid is null));
                         }
                     }
 
@@ -216,7 +217,7 @@ internal sealed partial class AdministrationDispatcher
                 {
                     LabelCaseQuery query = new(
                         queue: input.Queue,
-                        subject: input.Subject is { } subject ? ModerationWire.ParseSubject(subject) : null,
+                        subject: input.Subject is { } subject ? ModerationWire.ParseSubject(subject, administrationView: true) : null,
                         reasonType: input.ReasonType,
                         assignee: input.Assignee is null ? null : new(input.Assignee));
                     LabelServiceResult<LabelCasePage> result = await cases.GetCaseQueueAsync(
@@ -308,7 +309,8 @@ internal sealed partial class AdministrationDispatcher
                             appealIds: input.AppealIds,
                             appealOutcome: input.AppealOutcome,
                             reportId: input.ReportId == 0 ? null : input.ReportId,
-                            handleOtherReports: input.HandleOtherReports);
+                            handleOtherReports: input.HandleOtherReports,
+                            handleReportsAcrossRecordVersions: input.HandleReportsAcrossRecordVersions);
                     }
                     catch (ArgumentException exception)
                     {
@@ -363,7 +365,7 @@ internal sealed partial class AdministrationDispatcher
                     LabelServiceResult<LabelCaseReceipt> result = await cases.ChangeCaseAsync(
                         caller: caller,
                         change: new(
-                            operationId: command.OperationId, subject: ModerationWire.ParseSubject(subject),
+                            operationId: command.OperationId, subject: ModerationWire.ParseSubject(subject, administrationView: true),
                             action: action, reason: command.Reason, caseId: input.CaseId, expectedRevision: input.ExpectedRevision,
                             assignee: input.Assignee is null ? null : new(input.Assignee)),
                         cancellationToken: token).ConfigureAwait(false);
@@ -505,7 +507,8 @@ internal sealed partial class AdministrationDispatcher
         AppealIds: [.. value.Request.AppealIds],
         AppealOutcome: value.Request.AppealOutcome?.ToString(),
         ReportId: value.Request.ReportId,
-        HandleOtherReports: value.Request.HandleOtherReports);
+        HandleOtherReports: value.Request.HandleOtherReports,
+        HandleReportsAcrossRecordVersions: value.Request.HandleReportsAcrossRecordVersions);
 
     /// <summary>Projects original signed challenges without replacing them with current label history.</summary>
     private static ModerationAppealView AppealView(LabelAppeal value) => new(
@@ -606,7 +609,8 @@ internal sealed record ModerationCommand(
     string? AfterVersion = null,
     bool HandleOtherReports = false,
     long HistoryPage = 1,
-    string? SearchQuery = null);
+    string? SearchQuery = null,
+    bool HandleReportsAcrossRecordVersions = false);
 
 /// <summary>Defines one bounded label-slot action without accepting target or actor overrides.</summary>
 internal sealed record ModerationLabelActionInput(LabelOperationKind Kind, string Value, DateTimeOffset? ExpiresAt = null, long? ExpectedLabelSequence = null);
@@ -650,7 +654,7 @@ internal sealed record ModerationActivityView(ModerationReportView? Report, Mode
 internal sealed record ModerationOpenCountsView(long Cases, long Reports, long Appeals);
 
 /// <summary>Contains a declared label's exact-target state and sequence fence without exposing issuance internals.</summary>
-internal sealed record ModerationLabelChoiceView(string Value, bool Applied, long Sequence, bool OtherVersion);
+internal sealed record ModerationLabelChoiceView(string Value, bool Applied, long Sequence, bool OtherVersion, bool UriWide = false);
 
 /// <summary>Contains immutable policy publication and observation history for protected recovery.</summary>
 internal sealed record ModerationPolicyHistoryView(
@@ -677,7 +681,8 @@ internal sealed record ModerationDecisionView(
     long[] AppealIds,
     string? AppealOutcome,
     long? ReportId,
-    bool HandleOtherReports);
+    bool HandleOtherReports,
+    bool HandleReportsAcrossRecordVersions);
 /// <summary>Contains protected immutable challenge provenance and the latest explicit review outcome.</summary>
 internal sealed record ModerationAppealView(
     long Id,

@@ -103,6 +103,12 @@ public sealed partial class LabelIssuanceService
         }
 
         LabelReportSubject subject = current.Result.Subject;
+        if (request.HandleReportsAcrossRecordVersions && subject.RecordUri is null)
+        {
+            return Failure<LabelCaseDecisionReceipt>(
+                LabelServiceErrorCode.InvalidTarget, "All-versions report handling requires a record case.");
+        }
+
         LabelTarget target = subject.RecordUri is { } record
             ? LabelTarget.Record(record, subject.Cid)
             : LabelTarget.Account(subject.Repository);
@@ -111,12 +117,34 @@ public sealed partial class LabelIssuanceService
         for (int index = 0; index < request.Actions.Count; index++)
         {
             LabelCaseLabelAction action = request.Actions[index];
+            LabelTarget actionTarget = target;
+            if (action.Kind == LabelOperationKind.Negate && subject.RecordUri is { } recordUri)
+            {
+                LabelServiceResult<LabelDecisionSnapshot> observed = await _store.ReadDecisionAsync(target, action.Value, token).ConfigureAwait(false);
+                if (!observed.Succeeded)
+                {
+                    return LabelServiceResult<LabelCaseDecisionReceipt>.Failure(observed.Error);
+                }
+
+                if (observed.Result.CurrentLabel is { } currentLabel &&
+                    (subject.Cid is null || currentLabel.SignedLabel.Label.Cid is null))
+                {
+                    if (action.ExpectedLabelSequence != currentLabel.Sequence)
+                    {
+                        return Failure<LabelCaseDecisionReceipt>(
+                            LabelServiceErrorCode.StaleDecision, "Withdrawing a label independently of the report CID requires its observed sequence.");
+                    }
+
+                    actionTarget = LabelTarget.Record(recordUri, currentLabel.SignedLabel.Label.Cid);
+                }
+            }
+
             string operationId = request.ActionOperationId(index);
             LabelServiceResult<LabelAuthorizationGrant> admission = await AuthorizeAsync(
                 action: action.Kind == LabelOperationKind.Issue ? LabelAuthorizationAction.Issue : LabelAuthorizationAction.Negate,
                 context: context,
                 operationId: operationId,
-                requested: target,
+                requested: actionTarget,
                 resolved: null,
                 value: action.Value,
                 admission: true,
@@ -128,9 +156,9 @@ public sealed partial class LabelIssuanceService
 
             LabelOperationRequest label = action.Kind == LabelOperationKind.Issue
                 ? LabelOperationRequest.Issue(
-                    operationId: operationId, target: target, value: action.Value, context: context, expiresAt: action.ExpiresAt)
-                : LabelOperationRequest.Negate(operationId: operationId, target: target, value: action.Value, context: context);
-            LabelServiceResult<LabelDecisionCommit> prepared = await PrepareDecisionAsync(label, token).ConfigureAwait(false);
+                    operationId: operationId, target: actionTarget, value: action.Value, context: context, expiresAt: action.ExpiresAt)
+                : LabelOperationRequest.Negate(operationId: operationId, target: actionTarget, value: action.Value, context: context);
+            LabelServiceResult<LabelDecisionCommit> prepared = await PrepareDecisionAsync(label, token, action.ExpectedLabelSequence).ConfigureAwait(false);
             if (!prepared.Succeeded)
             {
                 return LabelServiceResult<LabelCaseDecisionReceipt>.Failure(prepared.Error);

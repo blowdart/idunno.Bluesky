@@ -108,7 +108,7 @@ public sealed class IndexModel : PageModel
                     Reason: Reason,
                     Target: snapshot.Target,
                     Value: choice.Value,
-                    Cid: Cid.Length == 0 ? null : Cid,
+                    Cid: choice.UriWide || Cid.Length == 0 ? null : Cid,
                     ExpectedLabelSequence: choice.Sequence)).ConfigureAwait(false);
             if (!response.Succeeded)
             {
@@ -120,7 +120,7 @@ public sealed class IndexModel : PageModel
             completed++;
         }
 
-        ViewData["Status"] = $"{completed} label changes completed.";
+        ViewData["Status"] = $"{completed} label {(completed == 1 ? "change" : "changes")} completed.";
         Reason = string.Empty;
         await LoadLabelsAsync().ConfigureAwait(false);
         return Page();

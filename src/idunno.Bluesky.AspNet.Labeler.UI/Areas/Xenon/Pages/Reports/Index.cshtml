@@ -69,9 +69,29 @@ else if (ViewData["Error"] is null)
 {
     <p class="panel">No reports match this filter.</p>
 }
+@if (Model.PolicyStatusError is string policyError)
+{
+    <p class="panel" role="alert">@policyError</p>
+}
+@if (Model.PolicyNotice is not null || Model.PendingTable?.Total > 0)
+{
 <section class="panel" aria-labelledby="pending-reports-heading">
-    <h2 id="pending-reports-heading">Pending policy verification</h2>
-    <p>These authenticated reports are retained but are not cases and cannot be acted on or cause labels to be issued until an active policy is independently verified. Reports that pass its subject-scope check automatically enter ordinary case review. Subject-scope violations remain here as Not Applicable without a case.</p>
+    <h2 id="pending-reports-heading">Reports outside case review</h2>
+    @if (Model.PolicyNotice is string notice)
+    {
+        if (Model.PolicyVerificationNeedsRefresh && Model.PolicyNotice.Contains("no longer current", StringComparison.Ordinal))
+        {
+            <p>@notice <a asp-area="Xenon" asp-page="/Policy/Index" asp-fragment="policy-verification">Go to policy verification</a>.</p>
+        }
+        else
+        {
+            <p>@notice</p>
+        }
+    }
+    @if (Model.HasOutOfScopeReports)
+    {
+        <p>The reports marked Not Applicable below were outside the policy's accepted subject types or collections. They did not become cases.</p>
+    }
     @if (pendingReports is { ValueKind: JsonValueKind.Array } pendingList && pendingList.GetArrayLength() > 0)
     {
         <table>
@@ -106,8 +126,5 @@ else if (ViewData["Error"] is null)
         </table>
         @await Html.PartialAsync("_Pagination", Model.PendingTable)
     }
-    else if (ViewData["Error"] is null)
-    {
-        <p>No reports are awaiting policy verification or retained as out of scope.</p>
-    }
 </section>
+}

@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Text;
 using System.Text.Json;
 
 using idunno.AtProto;
@@ -30,13 +31,49 @@ internal static class UiPageHelpers
         {
             page.ViewData["Error"] = response.Message ?? response.Error ?? "The operation was not completed.";
         }
-        else if (response.OperationId is not null)
+        else if (ShouldShowOperationCompletion(command.Method, response.OperationId))
         {
             page.ViewData["Status"] = $"Operation {response.OperationId} completed.";
         }
 
         await WarmIdentitiesAsync(page, response).ConfigureAwait(false);
         return response;
+    }
+
+    /// <summary>Excludes inspections whose response may contain an ID belonging to retained state.</summary>
+    internal static bool ShouldShowOperationCompletion(string method, string? operationId) =>
+        !string.IsNullOrWhiteSpace(operationId) &&
+        method is not ("getTeam" or "getAudit" or "getOperation" or "getPublicationState" or
+            "getMaintenanceState" or "getRetirementState" or "getCase" or "getCaseActivity" or
+            "getCaseLabels" or "getReports" or "getReport" or "getAppeals" or "getAppeal" or
+            "getManualLabelChoices" or "searchModeration" or "getPolicy" or "getPolicyHistory" or
+            "getPolicyVersion" or "getPolicyVersions");
+
+    /// <summary>Separates PascalCase words for readable enum labels.</summary>
+    internal static string FormatEnumLabel(string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return string.Empty;
+        }
+
+        StringBuilder label = new(value.Length + 8);
+        for (int index = 0; index < value.Length; index++)
+        {
+            char current = value[index];
+            bool beginsWord = index > 0 &&
+                char.IsUpper(current) &&
+                (char.IsLower(value[index - 1]) || char.IsDigit(value[index - 1]) ||
+                    char.IsUpper(value[index - 1]) && index + 1 < value.Length && char.IsLower(value[index + 1]));
+            if (beginsWord)
+            {
+                label.Append(' ');
+            }
+
+            label.Append(current);
+        }
+
+        return label.ToString();
     }
 
     /// <summary>Reads one counted, sorted page through the same browser caller and provider authorization boundaries.</summary>

@@ -35,6 +35,15 @@ The UI requires `LabelerModeration__Enabled=true`; the host rejects a configurat
 that enables the UI without the moderation backend. Existing local administration
 and remote CLI administration remain independently configurable.
 
+Set `LabelerAdministration__RemoteMode=WebUiControlled` in the standalone host to let
+the owner control remote access from Xenon. In that mode, the **Team and
+membership** page displays the effective remote-access status and offers the durable
+switch only to the DID that completed the one-time local bootstrap. Administrator
+role alone is insufficient. Every change is committed with its audit event; protected
+local administration remains available when the switch is off. See the
+[remote administration control modes](administration.md#remote-administration-control-modes)
+for configuration precedence and owner identity details.
+
 The host registers Bluesky authentication and its sign-in pages only when the UI is
 enabled. Browse to `/Xenon` and sign in through the Bluesky authentication pages. The
 host must be served over HTTPS in production. If it is behind a proxy, configure only
@@ -158,6 +167,13 @@ The status column is globally sortable. Checks distinguish resolved/handled work
 an exclamation circle identifies unresolved work, and scales identify pending
 appeals; visible text carries the meaning without relying on color. Only Cases,
 Reports and Appeals display live open-work totals in the navigation.
+Every authorized page also prefixes its browser title with `C:<cases> R:<reports>
+A:<appeals>`. JavaScript refreshes these totals and the navigation every 30 seconds,
+including in background tabs, and when a tab becomes visible. Browsers may throttle
+or suspend background tabs, so updates are best effort rather than notifications.
+Failed refreshes mark the title and displayed counts as stale; expired sign-in or
+revoked team access stops updates and asks the operator to reload. Without JavaScript,
+counts reflect the last page load.
 The Appeals list defaults to Pending; selecting All includes completed appeals and
 is preserved when sorting or paging. Completed outcomes display as "Labels withdrawn",
 "Labels changed" and "Labels kept" rather than Withdrawn, Replaced and Upheld.
@@ -603,10 +619,10 @@ To exercise remote CLI OAuth through the tunnel:
 
 ```powershell
 dotnet run --project src\idunno.Bluesky.Labeler.Cli -- team `
-  --admin-url https://your-tunnel-host.example `
-  --audience "did:web:labeler.xenon.invalid#labeler_admin" `
-  --handle your-actual-handle.bsky.social `
-  --client-id https://your-tunnel-host.example/native-client-metadata.json
+  --labeler-url https://your-tunnel-host.example `
+  --admin-service "did:web:labeler.xenon.invalid#labeler_admin" `
+  --admin-handle your-actual-handle.bsky.social `
+  --oauth-client-id https://your-tunnel-host.example/native-client-metadata.json
 ```
 
 The CLI's native metadata is separate from the website's web metadata, but both

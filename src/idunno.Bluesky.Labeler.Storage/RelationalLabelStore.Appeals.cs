@@ -128,7 +128,8 @@ internal abstract partial class RelationalLabelStore
         LabelStoreState state,
         LabelReportSubject subject,
         long now,
-        CancellationToken token) =>
+        CancellationToken token,
+        string? appealLabelValue = null) =>
         await ReadTargetLabelsAsync(
             connection: connection,
             transaction: transaction,
@@ -136,7 +137,8 @@ internal abstract partial class RelationalLabelStore
             target: subject.RecordUri is { } record ? LabelTarget.Record(record, subject.Cid) : LabelTarget.Account(subject.Repository),
             exactVersion: true,
             now: now,
-            token: token).ConfigureAwait(false);
+            token: token,
+            appealLabelValue: appealLabelValue).ConfigureAwait(false);
 
     /// <summary>Captures bounded active label values, optionally retaining other record versions for manual review.</summary>
     private static async Task<LabelServiceResult<StoredLabel[]>> ReadTargetLabelsAsync(
@@ -146,7 +148,8 @@ internal abstract partial class RelationalLabelStore
         LabelTarget target,
         bool exactVersion,
         long now,
-        CancellationToken token)
+        CancellationToken token,
+        string? appealLabelValue = null)
     {
         byte[] key = s_strictUtf8.GetBytes(target.Subject);
         List<string> values = [];
@@ -163,7 +166,11 @@ internal abstract partial class RelationalLabelStore
             {
                 while (await reader.ReadAsync(token).ConfigureAwait(false))
                 {
-                    values.Add(reader.GetString(0));
+                    string value = reader.GetString(0);
+                    if (appealLabelValue is null || value == appealLabelValue)
+                    {
+                        values.Add(value);
+                    }
                 }
             }
         }
@@ -192,7 +199,9 @@ internal abstract partial class RelationalLabelStore
                 return LabelServiceResult<StoredLabel[]>.Failure(snapshot.Error);
             }
 
-            if (snapshot.Result.CurrentLabel is { } current && (!exactVersion || current.SignedLabel.Label.Cid == target.Cid) &&
+            if (snapshot.Result.CurrentLabel is { } current &&
+                (!exactVersion || target.Cid is null || current.SignedLabel.Label.Cid == target.Cid ||
+                    appealLabelValue is not null && current.SignedLabel.Label.Cid is null) &&
                 LabelDecisionRules.IsActive(current.SignedLabel, DateTimeOffset.FromUnixTimeMilliseconds(now)))
             {
                 challenges.Add(current);
@@ -365,13 +374,15 @@ internal abstract partial class RelationalLabelStore
             if (appeal.Challenges.Length > 0)
             {
                 StoredLabel[] captured = [.. appeal.ToAppeal().Challenges];
+                LabelReportSubject subject = ModerationSubjectEncoding.Decode(appeal.Subject, appeal.Cid);
                 IReadOnlyList<LabelServiceResult<LabelDecisionSnapshot>> current = await DecisionSnapshotsAsync(
                     connection: connection,
                     transaction: transaction,
                     state: state,
                     queries: [.. captured.Select(challenge =>
-                        (appeal.Cid is null ? LabelTarget.Account(new Did(appeal.Subject)) :
-                            LabelTarget.Record(new(appeal.Subject), new(appeal.Cid)), challenge.SignedLabel.Label.Value))],
+                        (subject.RecordUri is { } uri
+                            ? LabelTarget.Record(uri, subject.Cid)
+                            : LabelTarget.Account(new Did(appeal.Subject)), challenge.SignedLabel.Label.Value))],
                     token: token).ConfigureAwait(false);
                 for (int index = 0; index < captured.Length; index++)
                 {
@@ -417,11 +428,12 @@ internal abstract partial class RelationalLabelStore
         DateTimeOffset completedAt,
         CancellationToken token)
     {
-        LabelServiceResult<StoredLabel[]> observed = await ReadAppealChallengesAsync(
+        LabelServiceResult<StoredLabel[]> observed = await ReadTargetLabelsAsync(
             connection: connection,
             transaction: transaction,
             state: state,
-            subject: subject,
+            target: subject.RecordUri is { } record ? LabelTarget.Record(record, subject.Cid) : LabelTarget.Account(subject.Repository),
+            exactVersion: false,
             now: completedAt.ToUnixTimeMilliseconds(),
             token: token).ConfigureAwait(false);
         if (!observed.Succeeded)

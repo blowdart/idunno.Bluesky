@@ -133,4 +133,50 @@ public interface ILabelAdministrationStore
         long afterSequence = 0,
         int limit = 100,
         CancellationToken cancellationToken = default);
+
+    /// <summary>Reads the durable remote-administration switch after checking current inspection authority.</summary>
+    /// <param name="caller">The provider-issued invocation evidence.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The persisted switch state or a classified authorization/persistence failure.</returns>
+    Task<LabelServiceResult<LabelRemoteAdministrationStatus>> GetRemoteAdministrationStatusAsync(
+        LabelAdministrationCaller caller,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Changes the durable remote-administration switch under the bootstrap owner's authority.</summary>
+    /// <param name="caller">The provider-issued invocation evidence.</param>
+    /// <param name="operationId">The stable operation identity for retries.</param>
+    /// <param name="enabled">A value that indicates whether remote administration should be enabled.</param>
+    /// <param name="reason">The bounded audit reason.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The original or newly committed audit receipt, or a classified denial.</returns>
+    /// <remarks><para>Only the DID that completed the one-time local bootstrap may change this setting.
+    /// The update and its audit receipt commit atomically. An existing installation's bootstrap audit
+    /// is used to identify its owner when its persisted team predates this setting.</para></remarks>
+    Task<LabelServiceResult<LabelAdministrationReceipt>> SetRemoteAdministrationEnabledAsync(
+        LabelAdministrationCaller caller,
+        string operationId,
+        bool enabled,
+        string reason,
+        CancellationToken cancellationToken = default);
+}
+
+/// <summary>Describes the persisted remote-administration switch and the caller's owner status.</summary>
+public sealed class LabelRemoteAdministrationStatus
+{
+    /// <summary>Initializes a status projection for a validated administration caller.</summary>
+    /// <param name="enabled">A value that indicates whether the persisted remote-administration switch is enabled.</param>
+    /// <param name="isOwner">A value that indicates whether the caller is the bootstrap owner.</param>
+    internal LabelRemoteAdministrationStatus(bool enabled, bool isOwner)
+    {
+        Enabled = enabled;
+        IsOwner = isOwner;
+    }
+
+    /// <summary>Gets a value that indicates whether the persisted remote-administration switch is enabled.</summary>
+    /// <value><see langword="true"/> if the persisted switch is enabled; otherwise, <see langword="false"/>.</value>
+    public bool Enabled { get; }
+
+    /// <summary>Gets a value that indicates whether the caller is the bootstrap owner.</summary>
+    /// <value><see langword="true"/> if the caller is the bootstrap owner; otherwise, <see langword="false"/>.</value>
+    public bool IsOwner { get; }
 }

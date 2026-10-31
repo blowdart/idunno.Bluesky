@@ -19,7 +19,7 @@
 {
     <section class="panel">
         <h2>Maintenance and host coordination</h2>
-        <p>Rotation/drain phase: <strong>@maintenanceState.GetProperty("phase").GetString()</strong></p>
+        <p>Rotation/drain phase: <strong>@UiPageHelpers.FormatEnumLabel(maintenanceState.GetProperty("phase").GetString())</strong></p>
         <details><summary>Host acknowledgements and blockers</summary><pre>@maintenanceState.ToString()</pre></details>
         <p>Missing contact is not proof that a signing host stopped. Resolve maintenance blockers before retrying.</p>
     </section>
@@ -28,50 +28,61 @@
 {
     string phase = state.GetProperty("phase").GetString() ?? "";
     string keyRemoval = state.GetProperty("keyRemoval").GetString() ?? "";
+    string stage = state.GetProperty("stage").GetString() ?? "";
     bool running = state.GetProperty("running").GetBoolean();
-    <section class="panel">
-        <h2>Durable retirement progress</h2>
-        <dl>
-            @if (state.TryGetProperty("issuer", out JsonElement issuer))
+    bool hasSavedWorkflow = state.TryGetProperty("operationId", out JsonElement workflow) &&
+        workflow.ValueKind == JsonValueKind.String &&
+        !string.IsNullOrWhiteSpace(workflow.GetString());
+    if (hasSavedWorkflow)
+    {
+        <section class="panel">
+            <h2>Durable retirement progress</h2>
+            <dl>
+                @if (state.TryGetProperty("issuer", out JsonElement issuer))
+                {
+                    <dt>Issuer</dt><dd><code>@issuer.GetString()</code></dd>
+                }
+                <dt>Phase / worker stage</dt><dd>@UiPageHelpers.FormatEnumLabel(phase) / @UiPageHelpers.FormatEnumLabel(stage)</dd>
+                <dt>Worker authorized to run</dt><dd>@running</dd>
+                <dt>Saved workflow / generation</dt><dd>@workflow.GetString() / @state.GetProperty("generation")</dd>
+                <dt>Frozen history boundary</dt><dd>@state.GetProperty("upperBound")</dd>
+                <dt>Timestamp scan checkpoint</dt><dd>@state.GetProperty("scannedThrough")</dd>
+                <dt>Negation checkpoint</dt><dd>@state.GetProperty("negatedThrough")</dd>
+                <dt>Issued / locally published</dt><dd>@state.GetProperty("issuedThrough") / @state.GetProperty("publishedThrough")</dd>
+                <dt>Publication backlog</dt><dd>@(state.GetProperty("issuedThrough").GetInt64() - state.GetProperty("publishedThrough").GetInt64())</dd>
+                <dt>Grace deadline (database time)</dt><dd>@(state.TryGetProperty("graceDeadline", out JsonElement deadline) ? deadline.ToString() : "Not started")</dd>
+                <dt>Last attempt/activity (not proof of liveness)</dt><dd>@(state.TryGetProperty("lastActivityAt", out JsonElement activity) ? activity.ToString() : "Not recorded")</dd>
+                <dt>Last checkpoint progress</dt><dd>@(state.TryGetProperty("lastProgressAt", out JsonElement progress) ? progress.ToString() : "Not recorded")</dd>
+                <dt>Key removal (operator attestation only)</dt><dd>@UiPageHelpers.FormatEnumLabel(keyRemoval)</dd>
+                <dt>Selected signing key ID</dt><dd>@(state.TryGetProperty("signingKeyId", out JsonElement keyId) ? keyId.GetString() : "Not reported")</dd>
+                <dt>Public signing fingerprint</dt><dd><code>@(state.TryGetProperty("signingPublicKey", out JsonElement publicKey) ? publicKey.GetString() : "Not reported")</code></dd>
+            </dl>
+            @if (state.TryGetProperty("hosts", out JsonElement hosts))
             {
-                <dt>Issuer</dt><dd><code>@issuer.GetString()</code></dd>
+                <details><summary>Registered hosts (last contact is not proof of stopped processes)</summary><pre>@hosts.ToString()</pre></details>
             }
-            <dt>Phase / worker stage</dt><dd>@phase / @state.GetProperty("stage").GetString()</dd>
-            <dt>Worker authorized to run</dt><dd>@running</dd>
-            <dt>Saved workflow / generation</dt><dd>@(state.TryGetProperty("operationId", out JsonElement workflow) ? workflow.ToString() : "Not started") / @state.GetProperty("generation")</dd>
-            <dt>Frozen history boundary</dt><dd>@state.GetProperty("upperBound")</dd>
-            <dt>Timestamp scan checkpoint</dt><dd>@state.GetProperty("scannedThrough")</dd>
-            <dt>Negation checkpoint</dt><dd>@state.GetProperty("negatedThrough")</dd>
-            <dt>Issued / locally published</dt><dd>@state.GetProperty("issuedThrough") / @state.GetProperty("publishedThrough")</dd>
-            <dt>Publication backlog</dt><dd>@(state.GetProperty("issuedThrough").GetInt64() - state.GetProperty("publishedThrough").GetInt64())</dd>
-            <dt>Grace deadline (database time)</dt><dd>@(state.TryGetProperty("graceDeadline", out JsonElement deadline) ? deadline.ToString() : "Not started")</dd>
-            <dt>Last attempt/activity (not proof of liveness)</dt><dd>@(state.TryGetProperty("lastActivityAt", out JsonElement activity) ? activity.ToString() : "Not recorded")</dd>
-            <dt>Last checkpoint progress</dt><dd>@(state.TryGetProperty("lastProgressAt", out JsonElement progress) ? progress.ToString() : "Not recorded")</dd>
-            <dt>Key removal (operator attestation only)</dt><dd>@keyRemoval</dd>
-            <dt>Selected signing key ID</dt><dd>@(state.TryGetProperty("signingKeyId", out JsonElement keyId) ? keyId.GetString() : "Not reported")</dd>
-            <dt>Public signing fingerprint</dt><dd><code>@(state.TryGetProperty("signingPublicKey", out JsonElement publicKey) ? publicKey.GetString() : "Not reported")</code></dd>
-        </dl>
-        @if (state.TryGetProperty("hosts", out JsonElement hosts))
-        {
-            <details><summary>Registered hosts (last contact is not proof of stopped processes)</summary><pre>@hosts.ToString()</pre></details>
-        }
-        @if (state.TryGetProperty("pauseReason", out JsonElement pause) && pause.ValueKind == JsonValueKind.String)
-        {
-            <p role="alert">Paused: @pause.GetString(). Resolve the error or restore authority, then explicitly resume with a new command operation ID. The saved scope and checkpoints are retained.</p>
-        }
-        @if (state.TryGetProperty("blocker", out JsonElement blocker) && blocker.ValueKind == JsonValueKind.String)
-        {
-            <p role="alert">Preflight blocker: @blocker.GetString()</p>
-        }
-        @if (state.TryGetProperty("inventory", out JsonElement inventory))
-        {
-            <h3>Recorded key/copy inventory</h3><pre>@inventory.GetString()</pre>
-        }
-        @if (state.TryGetProperty("availabilityAttestation", out JsonElement availability))
-        {
-            <h3>Operator availability attestation</h3><pre>@availability.GetString()</pre>
-        }
-    </section>
+            @if (state.TryGetProperty("pauseReason", out JsonElement pause) && pause.ValueKind == JsonValueKind.String)
+            {
+                <p role="alert">Paused: @pause.GetString(). Resolve the error or restore authority, then explicitly resume with a new command operation ID. The saved scope and checkpoints are retained.</p>
+            }
+            @if (state.TryGetProperty("blocker", out JsonElement blocker) && blocker.ValueKind == JsonValueKind.String)
+            {
+                <p role="alert">Preflight blocker: @blocker.GetString()</p>
+            }
+            @if (state.TryGetProperty("inventory", out JsonElement inventory))
+            {
+                <h3>Recorded key/copy inventory</h3><pre>@inventory.GetString()</pre>
+            }
+            @if (state.TryGetProperty("availabilityAttestation", out JsonElement availability))
+            {
+                <h3>Operator availability attestation</h3><pre>@availability.GetString()</pre>
+            }
+        </section>
+    }
+    else
+    {
+        <p>Retirement not started.</p>
+    }
     @if (Model.Intent is { } intent)
     {
         <section class="panel">
@@ -85,9 +96,15 @@
                 <dt>Inventory</dt><dd>@intent.Inventory</dd>
                 <dt>Attestation</dt><dd>@intent.Attestation</dd>
                 <dt>Exact host registration</dt><dd><code>@intent.HostInstanceId</code></dd>
+                <dt>Selected signing key ID</dt><dd>@(state.TryGetProperty("signingKeyId", out JsonElement previewKeyId) ? previewKeyId.GetString() : "Not reported")</dd>
+                <dt>Public signing fingerprint</dt><dd><code>@(state.TryGetProperty("signingPublicKey", out JsonElement previewPublicKey) ? previewPublicKey.GetString() : "Not reported")</code></dd>
                 <dt>Challenge</dt><dd><code>@(state.TryGetProperty("confirmation", out JsonElement proof) ? proof.GetString() : "Not required for this action")</code></dd>
                 <dt>Challenge expires</dt><dd>@(state.TryGetProperty("confirmationExpiresAt", out JsonElement expires) ? expires.ToString() : "Not applicable")</dd>
             </dl>
+            @if (state.TryGetProperty("hosts", out JsonElement previewHosts))
+            {
+                <details><summary>Registered hosts (last contact is not proof of stopped processes)</summary><pre>@previewHosts.ToString()</pre></details>
+            }
             @if (intent.Method == "purgeRetiredData")
             {
                 <p><strong>Purge deletes only label history and label-operation receipts.</strong> Reports, cases, appeals, policy history, team, administrative audit, backups and downstream copies remain. This is not whole-database erasure.</p>
@@ -201,7 +218,7 @@
                     {
                         <label class="field">@(method == "completeRetirement" ? "Availability attestation: checks, distribution outages and grace review (not downstream receipt)" : "External-removal attestation: stopped hosts, removed copies, partial progress and outstanding copies")<textarea name="attestation" required maxlength="4096"></textarea></label>
                     }
-                    <button type="submit">Preview @method</button>
+                    <button type="submit">Preview: @title</button>
                 </form>
             </section>
         }

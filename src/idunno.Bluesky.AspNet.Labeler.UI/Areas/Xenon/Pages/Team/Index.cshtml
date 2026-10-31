@@ -7,9 +7,45 @@
     ViewData["WideLayout"] = true;
     JsonElement? members = Model.Data.ValueKind == JsonValueKind.Object &&
         Model.Data.TryGetProperty("members", out JsonElement values) ? values : null;
+    string remoteAccessIcon = Model.RemoteAdministrationEnabled switch
+    {
+        true => "circle-check",
+        false => "circle-xmark",
+        null => "circle-exclamation"
+    };
 }
 <h1>Team and membership</h1>
 <p>Team authority is persisted by DID. Suspension, removal and role changes take effect on the next server-side authorization check.</p>
+<section class="panel">
+    <h2>Remote CLI administration</h2>
+    @if (ViewData["RemoteAdministrationError"] is string remoteAdministrationError)
+    {
+        <p role="alert">@remoteAdministrationError</p>
+    }
+    @if (Model.RemoteAdministrationControlMode == RemoteAdministrationMode.WebUiControlled)
+    {
+        <p><span class="fa-icon fa-@remoteAccessIcon" aria-hidden="true"></span> Remote CLI access is <strong>@(Model.RemoteAdministrationEnabled switch { true => "enabled", false => "disabled", null => "unavailable" })</strong>.</p>
+        @if (Model.CanControlRemoteAdministration && Model.RemoteAdministrationEnabled is bool currentRemoteEnabled)
+        {
+            <form method="post" asp-page-handler="RemoteAdministration">
+                <input type="hidden" name="operationId" value="@(ViewData["OperationId"] ?? Guid.NewGuid().ToString("N"))" />
+                <input type="hidden" name="enabled" value="@((!currentRemoteEnabled).ToString().ToLowerInvariant())" />
+                <label class="field" for="remote-administration-reason">Audit reason
+                    <input id="remote-administration-reason" name="reason" required maxlength="4096" />
+                </label>
+                <p class="form-actions"><button type="submit">@(currentRemoteEnabled ? "Disable remote CLI access" : "Enable remote CLI access")</button></p>
+            </form>
+        }
+        else
+        {
+            <p>Only the bootstrap owner can change this setting.</p>
+        }
+    }
+    else
+    {
+        <p><span class="fa-icon fa-@remoteAccessIcon" aria-hidden="true"></span> Remote CLI access is <strong>@(Model.RemoteAdministrationEnabled switch { true => "enabled", false => "disabled", null => "unavailable" })</strong> by the host.</p>
+    }
+</section>
 @if (Model.CanManagePolicyEmail)
 {
     <section class="panel">

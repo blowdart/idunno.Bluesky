@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.CommandLine;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -80,7 +81,7 @@ internal static partial class Program
                 name == "version" && string.IsNullOrWhiteSpace(selectedVersion) ||
                 name == "operation" && string.IsNullOrWhiteSpace(operation))
             {
-                await Console.Error.WriteLineAsync("Supply the requested identifier, a nonnegative sequence, and a page size from 1 through 16.").ConfigureAwait(false);
+                await Console.Error.WriteLineAsync("✖   Supply the requested identifier, a nonnegative sequence, and a page size from 1 through 16.").ConfigureAwait(false);
                 return 2;
             }
 
@@ -120,7 +121,7 @@ internal static partial class Program
         Option<bool> create = new("--create");
         Option<FileInfo> file = new("--file") { Required = name == "save" };
         Option<string> labelerHandle = new("--labeler-handle") { Required = publisher };
-        Option<Uri?> labelerClientId = CreateUriOption("--labeler-client-id", "The labeler account's native OAuth client metadata URL.", publisher);
+        Option<Uri?> labelerClientId = CreateUriOption("--labeler-oauth-client-id", "An optional native OAuth metadata URL for the labeler account; defaults to --oauth-client-id or <labeler-url>/native-client-metadata.json.");
         command.Options.Add(reason);
         command.Options.Add(yes);
         if (name != "verify")
@@ -157,7 +158,10 @@ internal static partial class Program
             bool creating = publication && parsed.GetValue(create);
             Handle? owner = null;
             string? ownerText = publisher ? parsed.GetValue(labelerHandle) : null;
-            Uri? metadata = publisher ? parsed.GetValue(labelerClientId) : null;
+            Uri? metadata = publisher ? SelectPolicyClientMetadata(
+                labelerMetadata: parsed.GetValue(labelerClientId),
+                administratorMetadata: parsed.GetValue(transport.ClientId),
+                origin: parsed.GetValue(transport.AdminUrl)) : null;
             if (string.IsNullOrWhiteSpace(auditReason) ||
                 name != "verify" && string.IsNullOrWhiteSpace(operation) ||
                 (publication || name == "abandon") && expectedRevision <= 0 ||
@@ -166,7 +170,7 @@ internal static partial class Program
                 publisher && (ownerText is null || !Handle.TryParse(ownerText, out owner) ||
                     metadata is null || !IsNativeClientMetadataUri(metadata, new Uri(metadata.GetLeftPart(UriPartial.Authority)))))
             {
-                await Console.Error.WriteLineAsync("Supply complete policy intent; publication requires exactly one of --create or --previous-cid and a valid labeler OAuth identity.").ConfigureAwait(false);
+                await Console.Error.WriteLineAsync("✖   Supply complete policy intent; publication requires exactly one of --create or --previous-cid and a valid labeler OAuth identity.").ConfigureAwait(false);
                 return 2;
             }
 
@@ -193,7 +197,7 @@ internal static partial class Program
                 }
                 catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or ArgumentException or InvalidDataException)
                 {
-                    await Console.Error.WriteLineAsync($"Invalid policy file ({exception.GetType().Name}).").ConfigureAwait(false);
+                    await Console.Error.WriteLineAsync($"✖   Invalid policy file ({exception.GetType().Name}).").ConfigureAwait(false);
                     return 2;
                 }
             }
@@ -209,12 +213,34 @@ internal static partial class Program
             AdministrationCommand request = new(Method: method, OperationId: operation, Reason: auditReason, Moderation: input);
             AdministrationWorkflow? workflow = publisher
                 ? (sender, cancellationToken) => PublishPolicyAsync(
-                    sender: sender, request: request, owner: owner!, clientId: metadata!, cancellationToken: cancellationToken)
+                    sender: sender,
+                    request: request,
+                    owner: owner!,
+                    clientId: metadata!,
+                    rememberMe: parsed.GetValue(transport.RememberMe),
+                    cancellationToken: cancellationToken)
                 : null;
             return await ExecuteAsync(
                 method: method, request: request, transport: transport, parseResult: parsed, cancellationToken: token, workflow: workflow).ConfigureAwait(false);
         });
         return command;
+    }
+
+    /// <summary>Defaults labeler publication to the same native metadata without hiding malformed explicit configuration.</summary>
+    internal static Uri? SelectPolicyClientMetadata(Uri? labelerMetadata, string? administratorMetadata, Uri? origin)
+    {
+        if (labelerMetadata is not null)
+        {
+            return labelerMetadata;
+        }
+        if (administratorMetadata is not null)
+        {
+            return Uri.TryCreate(administratorMetadata, UriKind.Absolute, out Uri? metadata) ? metadata : null;
+        }
+
+        return origin is not null && IsHttpsOrigin(origin)
+            ? new Uri(origin, "/native-client-metadata.json")
+            : null;
     }
 
     /// <summary>Reads bounded operator-authored intent and rejects ambiguous envelope fields.</summary>
@@ -262,6 +288,7 @@ internal static partial class Program
         AdministrationCommand request,
         Handle owner,
         Uri clientId,
+        bool rememberMe,
         CancellationToken cancellationToken)
     {
         (PolicyState? intent, int failure) = await ReadPolicyReplyAsync(await sender(request, cancellationToken).ConfigureAwait(false)).ConfigureAwait(false);
@@ -282,7 +309,7 @@ internal static partial class Program
         }
         if (!MatchesPolicyPublication(current, intent))
         {
-            await Console.Error.WriteLineAsync("Publication intent was abandoned or superseded; inspect current policy and retained history. No PDS write was attempted.").ConfigureAwait(false);
+            await Console.Error.WriteLineAsync("✖   Publication intent was abandoned or superseded; inspect current policy and retained history. No PDS write was attempted.").ConfigureAwait(false);
             return 5;
         }
         if (current.Phase == nameof(LabelPolicyPhase.VerifiedActive))
@@ -291,14 +318,23 @@ internal static partial class Program
         }
 
         OAuthOptions oauth = CreatePolicyOAuthOptions(clientId, intent.PreviousCid is null);
+        CliSignInLifetime signInLifetime = new();
+        await using ConfiguredAsyncDisposable signInCleanup = signInLifetime.ConfigureAwait(false);
         using AtProtoAgent labeler = new(new Uri(DefaultPds), new AtProtoAgentOptions { OAuthOptions = oauth });
-        if (!await SignInAsync(labeler, owner, oauth.Scopes, cancellationToken).ConfigureAwait(false))
+        if (!await SignInAsync(
+            agent: labeler,
+            handle: owner,
+            options: oauth,
+            purpose: "Labeler-account authority to conditionally publish app.bsky.labeler.service/self. This is separate from administrator sign-in.",
+            rememberMe: rememberMe,
+            lifetime: signInLifetime,
+            cancellationToken: cancellationToken).ConfigureAwait(false))
         {
             return 4;
         }
         if (labeler.Did?.Value != intent.Issuer)
         {
-            await Console.Error.WriteLineAsync("The authenticated labeler account does not match the issuer bound to the moderation database. No PDS write was attempted.").ConfigureAwait(false);
+            await Console.Error.WriteLineAsync("✖   The authenticated labeler account does not match the issuer bound to the moderation database. No PDS write was attempted.").ConfigureAwait(false);
             return 4;
         }
 
@@ -316,7 +352,7 @@ internal static partial class Program
         }
         if (!MatchesPolicyPublication(current, intent))
         {
-            await Console.Error.WriteLineAsync("Current publication selection changed during sign-in. No PDS write was attempted.").ConfigureAwait(false);
+            await Console.Error.WriteLineAsync("✖   Current publication selection changed during sign-in. No PDS write was attempted.").ConfigureAwait(false);
             return 5;
         }
         if (current.Phase == nameof(LabelPolicyPhase.VerifiedActive))
@@ -340,13 +376,13 @@ internal static partial class Program
             }
             if (intent.PreviousCid != existing.Result.Cid.ToString())
             {
-                await Console.Error.WriteLineAsync("The authoritative declaration differs from the expected previous CID. No overwrite was attempted.").ConfigureAwait(false);
+                await Console.Error.WriteLineAsync("✖   The authoritative declaration differs from the expected previous CID. No overwrite was attempted.").ConfigureAwait(false);
                 return 5;
             }
         }
         else if (existing.AtErrorDetail?.Error != "RecordNotFound" || intent.PreviousCid is not null)
         {
-            await Console.Error.WriteLineAsync($"The expected declaration could not be read ({(int)existing.StatusCode}). No PDS write was attempted.").ConfigureAwait(false);
+            await Console.Error.WriteLineAsync($"✖   The expected declaration could not be read ({(int)existing.StatusCode}). No PDS write was attempted.").ConfigureAwait(false);
             return 5;
         }
 
@@ -363,7 +399,7 @@ internal static partial class Program
         }
         if (!MatchesPolicyPublication(current, intent))
         {
-            await Console.Error.WriteLineAsync("Publication selection changed during the authoritative read. No PDS write was attempted.").ConfigureAwait(false);
+            await Console.Error.WriteLineAsync("✖   Publication selection changed during the authoritative read. No PDS write was attempted.").ConfigureAwait(false);
             return 5;
         }
         if (current.Phase == nameof(LabelPolicyPhase.VerifiedActive))
@@ -371,12 +407,12 @@ internal static partial class Program
             return await VerifyPublishedPolicyAsync(sender, request.Reason, intent, cancellationToken).ConfigureAwait(false);
         }
 
-        await Console.Error.WriteLineAsync("Submitting a conditional declaration write. If interrupted, inspect the retained operation and authoritative record before recovery; cancellation does not undo a PDS write.").ConfigureAwait(false);
+        await Console.Error.WriteLineAsync("➜   Submitting a conditional declaration write. If interrupted, inspect the retained operation and authoritative record before recovery; cancellation does not undo a PDS write.").ConfigureAwait(false);
         (bool succeeded, HttpStatusCode status, string? error) = await WritePolicyRecordAsync(
             labeler: labeler, policy: policy, previousCid: intent.PreviousCid, cancellationToken: cancellationToken).ConfigureAwait(false);
         if (!succeeded)
         {
-            await Console.Error.WriteLineAsync($"The conditional PDS write did not confirm success ({(int)status}, {error ?? "no AT error"}). Inspect the retained gate and declaration, and recover the same operation; never overwrite a conflict.").ConfigureAwait(false);
+            await Console.Error.WriteLineAsync($"✖   The conditional PDS write did not confirm success ({(int)status}, {error ?? "no AT error"}). Inspect the retained gate and declaration, and recover the same operation; never overwrite a conflict.").ConfigureAwait(false);
             return 5;
         }
 
@@ -384,6 +420,8 @@ internal static partial class Program
     }
 
     /// <summary>Uses create-only or record-CID compare-and-swap, never an unconditional replacement.</summary>
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "PolicyRecordJsonOptions uses source-generated metadata for the exact AtProtoRecord contract.")]
+    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "PolicyRecordJsonOptions uses source-generated metadata for the exact AtProtoRecord contract.")]
     internal static async Task<(bool Succeeded, HttpStatusCode Status, string? Error)> WritePolicyRecordAsync(
         AtProtoAgent labeler,
         LabelPolicyDefinition policy,
@@ -459,7 +497,7 @@ internal static partial class Program
                     return (null, failure);
                 }
             }
-            await Console.Error.WriteLineAsync("Waiting for removed-label negations to be committed and published. Interrupting does not undo committed negations; recover the same publication operation.").ConfigureAwait(false);
+            await Console.Error.WriteLineAsync("⚠   Waiting for removed-label negations to be committed and published. Interrupting does not undo committed negations; recover the same publication operation.").ConfigureAwait(false);
             await Task.Delay(TimeSpan.FromSeconds(5), clock, cancellationToken).ConfigureAwait(false);
         }
     }
@@ -479,7 +517,7 @@ internal static partial class Program
         }
         if (!MatchesPolicyPublication(verified, intent) || verified.Phase != nameof(LabelPolicyPhase.VerifiedActive))
         {
-            await Console.Error.WriteLineAsync("Independent verification did not activate this exact intent. Inspect retained publication history; do not repeat an unconditional write.").ConfigureAwait(false);
+            await Console.Error.WriteLineAsync("✖   Independent verification did not activate this exact intent. Inspect retained publication history; do not repeat an unconditional write.").ConfigureAwait(false);
             return 5;
         }
         return await WriteResponseAsync(reply.Body, reply.StatusCode).ConfigureAwait(false);

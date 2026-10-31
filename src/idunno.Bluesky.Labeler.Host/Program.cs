@@ -23,7 +23,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 namespace idunno.Bluesky.Labeler.Host;
 
 /// <summary>Configures the canonical labeler application and its isolated readiness probe.</summary>
-internal static class Program
+internal static partial class Program
 {
     /// <summary>Runs either the standalone labeler host or an isolated readiness probe.</summary>
     internal static async Task<int> Main(string[] args)
@@ -110,12 +110,21 @@ internal static class Program
         builder.Services.AddLabelerLocalAdministration(localAdministrationEndpoint);
         if (uiEnabled)
         {
+            if (provider == "postgresql")
+            {
+                AddPersistentAuthentication(builder.Services, connectionString, publicEndpoint);
+            }
             AddWebsiteAuthentication(builder.Services, publicEndpoint);
             builder.Services.AddLabelerUI();
         }
 
         WebApplication app = builder.Build();
         await using ConfiguredAsyncDisposable appDisposal = app.ConfigureAwait(false);
+        if (uiEnabled && provider == "postgresql")
+        {
+            await app.Services.GetRequiredService<PostgreSqlXmlRepository>()
+                .InitializeAsync(app.Lifetime.ApplicationStopping).ConfigureAwait(false);
+        }
         if (keyRing is null)
         {
             await ValidateKeylessHostingAsync(
@@ -188,6 +197,7 @@ internal static class Program
         }
 
         app.UseWebSockets();
+        MapRootRoute(app);
         app.MapBlueskyLabeler();
         app.MapLabelerAdministration();
         if (moderationEnabled)
@@ -202,6 +212,23 @@ internal static class Program
 
         await app.RunAsync().ConfigureAwait(false);
         return 0;
+    }
+
+    /// <summary>Maps the plain-text banner at the host root.</summary>
+    internal static void MapRootRoute(WebApplication app)
+    {
+        string blankLine = new(' ', 31);
+        string banner = string.Join(
+            '\n',
+            blankLine,
+            blankLine,
+            " _____ _____ ____   ___  ____  ",
+            "(___  ) ___ |  _ \\ / _ \\|  _ \\ ",
+            " / __/| ____| | | | |_| | | | |",
+            "(_____)_____)_| |_|\\___/|_| |_|",
+            blankLine) + '\n';
+
+        app.MapGet("/", () => Results.Text(banner, contentType: "text/plain; charset=utf-8"));
     }
 
     /// <summary>Probes the running host without starting services, loading secrets, following redirects or using an outbound proxy.</summary>
@@ -364,9 +391,9 @@ internal static class Program
             "extendGracePeriod", "requestKeyRemoval", "attestKeyRemoval", "confirmRetirementHostStopped",
             "purgeRetiredData", "beginRotation", "confirmHostStopped", "captureRotationBoundary",
             "verifyRotationKeyPublication", "resignRotationBatch", "completeRotation",
-            "getCase", "getCases", "getCaseHistory", "getCaseOperation", "changeCase", "decideCase", "getCaseDecision",
+            "getModerationOverview", "getCase", "getCases", "getCaseHistory", "getCaseOperation", "changeCase", "decideCase", "getCaseDecision",
             "getAppeal", "getAppeals", "getAppealReports", "getCaseQueue",
-            "getPolicyVersion", "getPolicyVersions", "getPolicyHistory", "getPolicyOperation",
+            "getPolicyVersion", "getPolicyVersions", "getPolicyHistory", "getPolicyOperation", "resumePolicyPublication",
             "getReport", "getReports", "getPolicy", "savePolicy", "beginPolicyPublication", "abandonPolicyPublication", "verifyPolicy"
         ];
         return new OAuthOptions

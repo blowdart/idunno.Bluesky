@@ -88,6 +88,7 @@ public static class LabelerModerationExtensions
         services.AddSingleton(provider => new LabelerModerationHost(
             issuer: issuer,
             httpClient: httpClient,
+            store: provider.GetRequiredService<ILabelStore>(),
             reports: provider.GetRequiredService<ILabelReportStore>(),
             policyStore: provider.GetRequiredService<ILabelPolicyStore>(),
             settings: settings,
@@ -120,6 +121,9 @@ public static class LabelerModerationExtensions
         ArgumentNullException.ThrowIfNull(endpoints);
         LabelerModerationHost host = endpoints.ServiceProvider.GetRequiredService<LabelerModerationHost>();
         endpoints.MapPost("/xrpc/com.atproto.moderation.createReport", (RequestDelegate)host.ReportAsync).AllowAnonymous();
+        endpoints.MapPost(
+            "/xrpc/tools.ozone.inbox.appealActionedSubject",
+            (RequestDelegate)host.AppealActionedSubjectAsync).AllowAnonymous();
         endpoints.MapHealthChecks("/health/labeler/moderation", new HealthCheckOptions
         {
             Predicate = registration => registration.Name == "xenon_moderation"

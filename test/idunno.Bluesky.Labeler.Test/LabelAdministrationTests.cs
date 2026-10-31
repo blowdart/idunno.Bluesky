@@ -302,6 +302,66 @@ public class LabelAdministrationTests
     }
 
     [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task RemoteAdministrationSwitchIsDurableAuditedAndBootstrapOwnerOnly(string engine)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        ILabelAdministrationStore store = (ILabelAdministrationStore)fixture.Store;
+        LabelAdministrationCaller owner = await BootstrapAsync(store);
+        LabelRemoteAdministrationStatus initial = (await store.GetRemoteAdministrationStatusAsync(owner, token)).Result!;
+        Assert.False(initial.Enabled);
+        Assert.True(initial.IsOwner);
+
+        await EnrollAndBindAsync(store, owner, LabelTeamRole.Administrator);
+        LabelAdministrationCaller administrator = (await store.AuthenticateLocalAsync("uid:1", token)).Result!;
+        LabelRemoteAdministrationStatus administratorStatus =
+            (await store.GetRemoteAdministrationStatusAsync(administrator, token)).Result!;
+        Assert.False(administratorStatus.IsOwner);
+        Assert.False((await store.SetRemoteAdministrationEnabledAsync(
+            caller: administrator,
+            operationId: "non-owner-enable",
+            enabled: true,
+            reason: "A non-owner must not control remote administration.",
+            cancellationToken: token)).Succeeded);
+
+        LabelServiceResult<LabelAdministrationReceipt> enabled = await store.SetRemoteAdministrationEnabledAsync(
+            caller: owner,
+            operationId: "owner-enable",
+            enabled: true,
+            reason: "Enable remote access for a controlled maintenance window.",
+            cancellationToken: token);
+        Assert.True(enabled.Succeeded, enabled.Error?.Message);
+        Assert.Equal(enabled.Result, (await store.SetRemoteAdministrationEnabledAsync(
+            caller: owner,
+            operationId: "owner-enable",
+            enabled: true,
+            reason: "Enable remote access for a controlled maintenance window.",
+            cancellationToken: token)).Result);
+
+        ILabelAdministrationStore restarted = (ILabelAdministrationStore)fixture.NewStore();
+        LabelAdministrationCaller currentOwner = (await restarted.AuthenticateLocalAsync("uid:0", token)).Result!;
+        LabelRemoteAdministrationStatus afterRestart =
+            (await restarted.GetRemoteAdministrationStatusAsync(currentOwner, token)).Result!;
+        Assert.True(afterRestart.Enabled);
+        Assert.True(afterRestart.IsOwner);
+
+        IReadOnlyList<LabelAdministrationReceipt> audit =
+            (await restarted.GetAdministrationAuditAsync(currentOwner, cancellationToken: token)).Result!;
+        Assert.Contains(audit, receipt =>
+            receipt.Action == "remote-administration-enable" &&
+            receipt.Actor == s_member &&
+            !receipt.Succeeded);
+        Assert.Contains(audit, receipt =>
+            receipt.Action == "remote-administration-enabled" &&
+            receipt.OperationId == "owner-enable" &&
+            receipt.Actor == s_administrator &&
+            receipt.Succeeded);
+    }
+
+    [Theory]
     [InlineData("sqlite", LabelTeamAction.Remove)]
     [InlineData("sqlite", LabelTeamAction.Suspend)]
     [InlineData("sqlite", LabelTeamAction.SetRole)]

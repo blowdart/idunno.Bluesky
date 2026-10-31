@@ -282,6 +282,13 @@ public sealed class DetailModel : PageModel
 
         ReportId = snapshot.ReportId;
         Microsoft.AspNetCore.Http.IFormCollection form = await Request.ReadFormAsync(HttpContext.RequestAborted).ConfigureAwait(false);
+        string reportHandling = form["reportHandling"].ToString();
+        if (reportHandling is not ("selected" or "same-target" or "all-records"))
+        {
+            ViewData["Error"] = "Choose which reports to mark as handled.";
+            return await ReloadDecisionAsync(snapshot, form).ConfigureAwait(false);
+        }
+
         HashSet<string> selectedLabels = form["selectedLabels"].Select(value => value ?? string.Empty).ToHashSet(StringComparer.Ordinal);
         if (selectedLabels.Any(value => !snapshot.Choices.Any(choice => choice.Value == value && !choice.OtherVersion)))
         {
@@ -335,7 +342,8 @@ public sealed class DetailModel : PageModel
                     AppealIds: appealIds,
                     AppealOutcome: appealOutcome,
                     ReportId: snapshot.ReportId ?? 0,
-                    HandleOtherReports: form["handleOtherReports"] == "true"))).ConfigureAwait(false);
+                    HandleOtherReports: reportHandling == "same-target",
+                    HandleReportsAcrossRecordVersions: reportHandling == "all-records"))).ConfigureAwait(false);
         if (response.Succeeded)
         {
             TempData["Status"] = "Moderation decision saved.";
@@ -346,7 +354,7 @@ public sealed class DetailModel : PageModel
         if (response.Error == "OutcomeUnknown")
         {
             DecisionState = protectedState;
-            RetryFields = [.. form.Where(field => field.Key is "reason" or "selectedLabels" or "handleOtherReports" or "appealId" or "appealOutcome").SelectMany(field => field.Value.Select(value => new KeyValuePair<string, string>(field.Key, value ?? string.Empty)))];
+            RetryFields = [.. form.Where(field => field.Key is "reason" or "selectedLabels" or "reportHandling" or "appealId" or "appealOutcome").SelectMany(field => field.Value.Select(value => new KeyValuePair<string, string>(field.Key, value ?? string.Empty)))];
             ViewData["Error"] = "The decision outcome could not be confirmed. Retry the unchanged decision to recover its original result; do not start a new decision.";
         }
 

@@ -31,8 +31,9 @@ blockers, retained-data scope and consequences. The response's `retirement.confi
 is the challenge expiry. If history or generation changes, or the challenge expires, obtain a fresh
 preflight and explicitly retry. Never manufacture a challenge or substitute `--yes`.
 The CLI deliberately uses two explicit invocations rather than silently fetching approval.
-Remote use selects `--admin-url`, `--audience`, `--handle` and `--client-id` instead of the local
-endpoint; each invocation requests its own method-bound service permission.
+Remote use selects `--labeler-url`, `--admin-handle` and optional `--oauth-client-id` instead of the local
+endpoint; the CLI discovers the administration audience from OAuth metadata unless `--admin-service`
+is supplied as an explicit override. Each invocation requests its own method-bound service permission.
 
 Xenon first displays a read-only preview. A separate antiforgery-protected submission carries the
 intended immutable fields and challenge; type the exact action name to confirm. A generic checkbox

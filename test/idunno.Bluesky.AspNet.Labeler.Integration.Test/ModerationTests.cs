@@ -18,6 +18,8 @@ using idunno.Bluesky.Labeler.Storage;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Testing;
 
 namespace idunno.Bluesky.AspNet.Labeler.Integration.Test;
 
@@ -34,6 +36,108 @@ public class ModerationTests
         {"reasonType":"tools.ozone.report.defs#reasonMisleadingSpam","reason":"Please review.",
          "subject":{"$type":"com.atproto.admin.defs#repoRef","did":"did:plc:subject"}}
         """;
+
+    [Theory]
+    [InlineData(false, true, "token-audience-mismatch")]
+    [InlineData(false, false, "token-method-mismatch")]
+    [InlineData(true, true, "token-audience-mismatch")]
+    [InlineData(true, false, "token-method-mismatch")]
+    public async Task AuthenticationLogsIdentifyFailedCheckWithoutLeakingRequestContents(bool appeal, bool wrongAudience, string category)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(key: key, identity: identity);
+        string method = appeal ? "tools.ozone.inbox.appealActionedSubject" : "com.atproto.moderation.createReport";
+        const string privateReason = "Confidential appeal diagnostic sentinel";
+        string body = appeal
+            ? $$"""
+                {"subject":{"$type":"com.atproto.admin.defs#repoRef","did":"did:plc:reporter"},
+                 "action":{"$type":"tools.ozone.inbox.appealActionedSubject#labelRef","val":"spam"},
+                 "reason":"{{privateReason}}"}
+                """
+            : Report;
+        string assertion = AdministrationTests.Token(
+            key: key,
+            now: fixture.Clock.GetUtcNow(),
+            audience: wrongAudience ? "did:plc:other#atproto_labeler" : TestServerBuilder.s_issuer.Value + "#atproto_labeler",
+            method: wrongAudience ? method : "dev.idunno.labeler.admin.issueLabel",
+            actor: s_reporter.Value);
+        using HttpRequestMessage request = new(HttpMethod.Post, "/xrpc/" + method)
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json")
+        };
+        AdministrationTests.AddTrustedProxyHeaders(request);
+        request.Headers.Authorization = new("Bearer", assertion);
+        using HttpResponseMessage response = await fixture.Client.SendAsync(request, token);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        FakeLogRecord record = Assert.Single(fixture.Services.GetFakeLogCollector().GetSnapshot(),
+            entry => entry.Id.Id == 2 && entry.Category == typeof(LabelerModerationHost).FullName);
+        Assert.Equal(LogLevel.Warning, record.Level);
+        Assert.Contains(method, record.Message, StringComparison.Ordinal);
+        Assert.Contains(category, record.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(assertion, record.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(privateReason, record.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(s_reporter.Value, record.Message, StringComparison.Ordinal);
+        Assert.Null(record.Exception);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        LabelAdministrationCaller administrator = (await team.AuthenticateLocalAsync("uid:0", token)).Result!;
+        IReadOnlyList<LabelAdministrationReceipt> audit = (await team.GetAdministrationAuditAsync(
+            administrator, cancellationToken: token)).Result!;
+        Assert.DoesNotContain(audit, entry => entry.Action == "appeal-intake");
+    }
+
+    [Fact]
+    public async Task MissingAppealLabelLogsSpecificReasonAndRequestIdentifier()
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(key: key, identity: identity);
+        const string body = """
+            {"subject":{"$type":"com.atproto.admin.defs#repoRef","did":"did:plc:reporter"},
+             "action":{"$type":"tools.ozone.inbox.appealActionedSubject#labelRef","val":"spam"}}
+            """;
+        using HttpRequestMessage request = new(HttpMethod.Post, "/xrpc/tools.ozone.inbox.appealActionedSubject")
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json")
+        };
+        AdministrationTests.AddTrustedProxyHeaders(request);
+        request.Headers.Authorization = new("Bearer", AdministrationTests.Token(
+            key: key,
+            now: fixture.Clock.GetUtcNow(),
+            audience: TestServerBuilder.s_issuer.Value,
+            method: "tools.ozone.inbox.appealActionedSubject",
+            actor: s_reporter.Value));
+        using HttpResponseMessage response = await fixture.Client.SendAsync(request, token);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        FakeLogRecord record = Assert.Single(fixture.Services.GetFakeLogCollector().GetSnapshot(),
+            entry => entry.Id.Id == 3 && entry.Category == typeof(LabelerModerationHost).FullName);
+        Assert.Contains("label-missing", record.Message, StringComparison.Ordinal);
+        Assert.Contains(record.StructuredState!, entry => entry.Key == "RequestId" && !string.IsNullOrWhiteSpace(entry.Value));
+        Assert.Null(record.Exception);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        LabelAdministrationCaller administrator = (await team.AuthenticateLocalAsync("uid:0", token)).Result!;
+        IReadOnlyList<LabelAdministrationReceipt> audit = (await team.GetAdministrationAuditAsync(
+            administrator, cancellationToken: token)).Result!;
+        LabelAdministrationReceipt rejected = Assert.Single(audit, entry => entry.Action == "appeal-intake");
+        Assert.False(rejected.Succeeded);
+        Assert.Equal(s_reporter, rejected.Actor);
+        Assert.Equal("label-missing", rejected.Reason);
+        ModerationReportAuthenticationResult authentication = await ServiceAuthentication.VerifyModerationAppealAsync(
+            token: request.Headers.Authorization.Parameter!,
+            labeler: TestServerBuilder.s_issuer,
+            httpClient: identity,
+            timeProvider: fixture.Clock,
+            cancellationToken: token);
+        LabelServiceResult<LabelAdministrationReceipt> replay = await fixture.Services.GetRequiredService<ILabelReportStore>()
+            .AuditRejectedAppealAsync(authentication, "label-missing", token);
+        Assert.False(replay.Succeeded);
+        Assert.Equal(LabelServiceErrorCode.Unauthorized, replay.Error.Code);
+        IReadOnlyList<LabelAdministrationReceipt> afterReplay = (await team.GetAdministrationAuditAsync(
+            administrator, cancellationToken: token)).Result!;
+        Assert.Single(afterReplay, entry => entry.Action == "appeal-intake");
+    }
 
     [Theory]
     [InlineData(false)]
@@ -928,6 +1032,125 @@ public class ModerationTests
     }
 
     [Theory]
+    [InlineData(false, false, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    [InlineData(true, true, true)]
+    public async Task OzoneLabelAppealCapturesSelectedLabelWithOrWithoutCid(bool legacy, bool pinned, bool strongReference)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        const string declaration = """
+            {"$type":"app.bsky.labeler.service","createdAt":"2026-01-01T00:00:00Z",
+             "policies":{"labelValues":["spam","beansonista"],"labelValueDefinitions":[]},"subjectTypes":["account","record"],
+             "reasonTypes":["com.atproto.moderation.defs#reasonOther"]}
+            """;
+        DeclarationHandler declarationHandler = new(key.ExportPublicKeyMultibase()) { Declaration = declaration };
+        using HttpClient identity = new(declarationHandler);
+        await using TestServerBuilder fixture = await CreateAsync(
+            key: key,
+            identity: identity,
+            declarationJson: declaration,
+            remoteEnabled: true);
+        await VerifyPolicyAsync(fixture);
+        LabelAdministrationCaller administrator = (await fixture.Services.GetRequiredService<ILabelAdministrationStore>()
+            .AuthenticateLocalAsync("uid:0", token)).Result!;
+        AdministrationDispatcher dispatcher = fixture.Services.GetRequiredService<AdministrationDispatcher>();
+        const string recordUri = "at://did:plc:reporter/app.bsky.feed.post/3loqo3h6jbb2g";
+        AdministrationResponse issued = await dispatcher.DispatchAsync(
+            administrator,
+            new(
+                Method: "issueLabel",
+                OperationId: "ozone-record-label",
+                Reason: "Ozone compatibility test.",
+                Target: recordUri,
+                Value: "beansonista",
+                Cid: pinned ? Cid : null),
+            token);
+        Assert.True(issued.Succeeded, issued.Message);
+        AdministrationResponse otherIssued = await dispatcher.DispatchAsync(
+            administrator,
+            new(
+                Method: "issueLabel",
+                OperationId: "ozone-record-other-label",
+                Reason: "Ozone compatibility test.",
+                Target: recordUri,
+                Value: "spam",
+                Cid: Cid),
+            token);
+        Assert.True(otherIssued.Succeeded, otherIssued.Message);
+        int recordReads = declarationHandler.SubjectRecordReads;
+
+        string body = strongReference
+            ? $$"""
+                {"action":{"$type":"tools.ozone.inbox.appealActionedSubject#labelRef","val":"beansonista"},
+                 "subject":{"$type":"com.atproto.repo.strongRef","uri":"{{recordUri}}","cid":"{{Cid}}"},
+                 "reason":"Test"}
+                """
+            : """
+                {"action":{"$type":"tools.ozone.inbox.appealActionedSubject#labelRef","val":"beansonista"},
+                 "subject":{"$type":"com.atproto.admin.defs#repoRef","did":"at://did:plc:reporter/app.bsky.feed.post/3loqo3h6jbb2g"},
+                 "reason":"Test"}
+                """;
+        using HttpRequestMessage request = new(HttpMethod.Post, "/xrpc/tools.ozone.inbox.appealActionedSubject")
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json")
+        };
+        AdministrationTests.AddTrustedProxyHeaders(request);
+        request.Headers.Authorization = new("Bearer", AdministrationTests.Token(
+            key: key,
+            now: fixture.Clock.GetUtcNow(),
+            audience: TestServerBuilder.s_issuer.Value + (legacy ? string.Empty : "#atproto_labeler"),
+            method: "tools.ozone.inbox.appealActionedSubject",
+            actor: s_reporter.Value));
+        using HttpResponseMessage response = await fixture.Client.SendAsync(request, token);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument output = JsonDocument.Parse(await response.Content.ReadAsByteArrayAsync(token));
+        JsonElement appealSubject = output.RootElement.GetProperty("subject");
+        Assert.Equal(TestServerBuilder.s_issuer.Value, output.RootElement.GetProperty("src").GetString());
+        Assert.Equal(recordReads, declarationHandler.SubjectRecordReads);
+        if (strongReference)
+        {
+            Assert.Equal("com.atproto.repo.strongRef", appealSubject.GetProperty("$type").GetString());
+            Assert.Equal(recordUri, appealSubject.GetProperty("uri").GetString());
+            Assert.Equal(Cid, appealSubject.GetProperty("cid").GetString());
+        }
+        else
+        {
+            Assert.Equal("com.atproto.admin.defs#repoRef", appealSubject.GetProperty("$type").GetString());
+            Assert.Equal(recordUri, appealSubject.GetProperty("did").GetString());
+            Assert.False(appealSubject.TryGetProperty("cid", out _));
+        }
+        Assert.Equal("beansonista", output.RootElement.GetProperty("enforcement").GetProperty("labels")[0].GetString());
+        Assert.Equal("pending", output.RootElement.GetProperty("appeal").GetProperty("state").GetString());
+
+        AdministrationResponse listed = await dispatcher.DispatchAsync(administrator, new(Method: "getAppeals"), token);
+        Assert.True(listed.Succeeded, listed.Message);
+        ModerationAppealView appeal = Assert.Single(listed.Moderation!.Appeals!);
+        Assert.Equal("Pending", appeal.Status);
+        Assert.Equal(recordUri, appeal.Subject.Uri);
+        Assert.Equal(strongReference ? Cid : null, appeal.Subject.Cid);
+        ILabelReportStore reports = fixture.Services.GetRequiredService<ILabelReportStore>();
+        LabelModerationReport saved = Assert.Single((await reports.GetReportsAsync(administrator, cancellationToken: token)).Result!);
+        Assert.Equal(strongReference ? new Cid(Cid) : null, saved.Submission.Subject.Cid);
+        Assert.Equal(new AtUri(recordUri), saved.Submission.Subject.RecordUri);
+        ModerationChallengeView challenge = Assert.Single(appeal.Challenges);
+        Assert.Equal("beansonista", challenge.Label.GetProperty("val").GetString());
+        if (pinned)
+        {
+            Assert.Equal(Cid, challenge.Label.GetProperty("cid").GetString());
+        }
+        else
+        {
+            Assert.False(challenge.Label.TryGetProperty("cid", out _));
+        }
+    }
+
+    [Theory]
     [InlineData(LabelAppealStatus.Upheld, true)]
     [InlineData(LabelAppealStatus.Superseded, true)]
     [InlineData(LabelAppealStatus.Withdrawn, true)]
@@ -1079,6 +1302,7 @@ public class ModerationTests
         TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
             configureAdministration: services =>
             {
+                services.AddLogging(builder => builder.AddFakeLogging());
                 services.AddLabelerModeration(issuer: TestServerBuilder.s_issuer, httpClient: identity, options: options);
                 services.AddLabelerAdministration(new(TestServerBuilder.s_issuer, "labeler_admin"), key, identity);
             },
@@ -1126,11 +1350,12 @@ public class ModerationTests
         return request;
     }
 
-    /// <summary>Serves exact DID documents and complete declaration records without fetching report subjects.</summary>
+    /// <summary>Serves exact DID documents, declaration records, and the record used by the Ozone appeal test.</summary>
     private sealed class DeclarationHandler(string publicKey) : HttpMessageHandler
     {
         internal string Declaration { get; set; } = ModerationTests.Declaration;
         internal int DeclarationReads { get; private set; }
+        internal int SubjectRecordReads { get; private set; }
         internal bool BlockDeclarationReads { get; set; }
         internal TaskCompletionSource DeclarationRequested { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         /// <summary>Gets or sets whether account resolution pauses after the case policy revision has been captured.</summary>
@@ -1156,6 +1381,14 @@ public class ModerationTests
                     {"id":"{{did}}#atproto","type":"Multikey","controller":"{{did}}","publicKeyMultibase":"{{publicKey}}"}],
                     "service":[{"id":"#atproto_pds","type":"AtprotoPersonalDataServer","serviceEndpoint":"https://pds.example"}]}
                     """;
+            }
+            else if (uri.Host == "pds.example" &&
+                uri.AbsolutePath == "/xrpc/com.atproto.repo.getRecord" &&
+                uri.Query.Contains("collection=app.bsky.feed.post", StringComparison.Ordinal))
+            {
+                SubjectRecordReads++;
+                Assert.Contains("rkey=3loqo3h6jbb2g", uri.Query, StringComparison.Ordinal);
+                json = $$$"""{"uri":"at://did:plc:reporter/app.bsky.feed.post/3loqo3h6jbb2g","cid":"{{{Cid}}}","value":{"$type":"app.bsky.feed.post","text":"Test"}}""";
             }
             else if (uri.Host == "pds.example" && uri.AbsolutePath == "/xrpc/com.atproto.repo.getRecord")
             {

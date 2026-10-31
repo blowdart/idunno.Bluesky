@@ -62,6 +62,10 @@ and Microsoft.Extensions.Logging (MIT). The SQLite provider uses Microsoft.Data.
 (MIT), the PostgreSQL provider uses Npgsql (PostgreSQL license), and the MySQL
 provider uses MySqlConnector (MIT), listed below.
 
+The canonical labeler host also uses idunno.Bluesky.AspNet.Authentication.PostgreSQL
+and Npgsql (PostgreSQL license) for retained website authentication state and
+Data Protection keys in PostgreSQL deployments.
+
 The idunno.Bluesky.AspNet.Labeler hosting package uses the ASP.NET Core shared
 framework (MIT) and System.Formats.Cbor (MIT), as well as the shared labeler
 contracts and their dependencies. Its integration tests use Microsoft.AspNetCore.TestHost,

@@ -7,6 +7,8 @@ does not require Xenon, reports, cases or an Ozone server.
 
 This backend does not implement a moderation UI, browser cookie authentication,
 notifications, full Ozone compatibility, or PDS/AppView administrative powers.
+It implements Ozone's label-appeal intake endpoint as a narrow interoperability
+surface; this does not add Ozone case management or administrative APIs.
 Issuing a label does not take down content, suspend an account, restore deleted
 content, or guarantee that downstream clients remove their cached copies.
 
@@ -75,20 +77,23 @@ restarts. Reusing an assertion is rejected. Retrying the same contents with
 fresh assertions creates distinct reports: the standard method has no client
 operation identifier, and replay protection is not content deduplication.
 
-Supported subjects are an exact account DID (`repoRef`) or a full DID-based
-record URI and CID (`strongRef`). An account is distinct from its profile record.
-Different record CIDs identify different cases. Intake never fetches the
-reported subject as a prerequisite: deleted and historical records remain
-reportable.
+Supported subjects are an account DID (`repoRef`), a full DID-based record URI
+without a CID (`repoRef.did` containing that URI, as sent by Bluesky), or a record
+URI and explicitly supplied CID (`strongRef`). An account is distinct from its
+profile record. URI-only submissions form their own cases, separate from every
+explicit-CID version. An omitted CID stays absent: intake never copies a CID
+from a label or fetches one from a PDS. Deleted and historical records remain
+reportable. Current-record previews are separate context and do not change the
+stored report subject.
 
 Reason identifiers are open strings, including granular `tools.ozone.report.defs`
-reasons; recognizing those identifiers does not implement Ozone APIs.
+reasons; recognizing those identifiers does not implement the broader Ozone APIs.
 The selected declaration must explicitly support account and/or record subjects.
 Missing `reasonTypes` and `subjectCollections` mean unrestricted within the
 supported subject kinds; empty arrays permit none. Explicit JSON null and
 unsupported subjects, including chat messages, are rejected.
 
-An authenticated report for an allowed subject whose reason is outside
+An authenticated ordinary report for an allowed subject whose reason is outside
 `reasonTypes` receives the normal report receipt, but is immediately retained as
 handled with resolution reason `Not Applicable`. It does not enter the open-work
 counts, create a pending appeal or change labels. Existing case status, assignment
@@ -97,6 +102,10 @@ already resolved. The original reporter, reason and evidence remain available.
 History and audit attribute the automatic action to the issuer DID with
 `system:report-reason` provenance. Authentication, token replay protection,
 verified-policy fencing, subject restrictions and appeal ownership still apply.
+Owner appeals are exempt from this reason filter: both supported appeal reason
+identifiers enter appeal review even when the declaration accepts only Other or
+has an empty `reasonTypes` array. The same rule applies during pending-report
+promotion. Subject-scope and ownership checks remain enforced.
 The report, resolution, history, audit and token reservation commit atomically.
 
 The host bounds request bytes, depth, report context and optional tool metadata,
@@ -109,6 +118,13 @@ administration envelope. It excludes case identifiers, captured appeal labels,
 policy/authentication evidence and tool metadata. Report, replay reservation,
 case linkage, any appeal capture and audit commit atomically. Intake never
 issues or withdraws a label.
+
+The Xenon Reports page explains policy admission only when verification is unavailable,
+publication is in progress, a declaration conflicts, or retained reports need explanation.
+A current verified policy with no retained reports shows no policy-warning panel.
+Out-of-scope reports are identified separately from reports awaiting case creation;
+retirement-held reports require staff reconciliation rather than automatic admission.
+Failure to load policy or lifecycle status is shown as an error, not as an unverified policy.
 
 If policy verification is unavailable, authenticated reports are durably queued
 and receive the ordinary successful protocol response. They remain visible in
@@ -160,6 +176,29 @@ label sequences fence explicit corrections against newer manual decisions.
 Network lookups and signing occur outside database transactions. Label-bearing
 decisions join the host's existing admission/drain accounting.
 
+Report identity and label scope are separate. A record case and its reports
+retain their submitted URI and optional CID, even when an appealed label is URI-wide (has no
+CID). Xenon shows such a label as applied to all versions, rather than as a
+different-version label. Removing it signs a URI-wide negation, fenced against
+the observed label sequence; it does not invent a CID-pinned withdrawal.
+Labels pinned to a genuinely different CID remain unavailable for that version.
+
+Xenon provides one "Reports to mark as handled" choice: only the selected report
+(or none when no report is selected), reports with the same submitted target
+(the default), or all reports for the record URI. For a URI-only case, matching
+the submitted target means the same URI with no CID supplied; it does not mean
+every CID-pinned report. The all-records choice explicitly includes reports with
+and without CIDs, but never the author account or other record URIs.
+The shared decision API exposes this as `HandleReportsAcrossRecordVersions`;
+account cases reject it. This choice is retained in audit history and immutable
+retry intent. Reports arriving after the committed decision are not handled by
+retrying it.
+
+All-versions handling updates affected case revisions and history, resolving
+cases whose reports are handled only when they have no pending appeals.
+It does not resolve appeals on other versions; those cases remain in review.
+Label actions preserve their own scope regardless of report-handling choices.
+
 Manual account and record labeling remains available without a report or case
 through the ordinary shared issuance service and administration methods.
 
@@ -170,8 +209,33 @@ Both `com.atproto.moderation.defs#reasonAppeal` and
 Moderators can open an internal review using `LabelCaseAction.OpenAppeal`,
 without impersonating a reporter or creating an external report.
 
-Capture retains all currently active local labels matching the exact account
-or record CID, including manually issued labels. Current-state selection uses
+`POST /xrpc/tools.ozone.inbox.appealActionedSubject` accepts Ozone's
+`labelRef` action for an active account or record label. It requires the
+reporter's method-bound service JWT, addressed to this labeler's service or its
+bare DID as used by PDS proxies, and the subject owner, then records the
+appeal through the same policy, replay-protection, audit and durable capture
+path as `createReport`. A `repoRef.did` containing a record AT URI is accepted
+as an unversioned record subject. Its missing CID remains missing, whether the
+selected label has a CID or not. Only a client-supplied strong reference supplies
+a report CID. The appeal retains the original signed label independently of the
+report subject; label scope is never copied into report identity.
+Other Ozone action
+types are rejected as not appealable. This endpoint does not imply support for
+other Ozone APIs.
+
+The host emits .NET warning logs identifying authentication validation failures
+and individual label-state rejection checks, and error logs for dependency
+failures. These contain fixed diagnostic categories, not bearer tokens, claim
+values or report text. Authenticated pre-intake appeal rejections also enter the
+shared administration audit as failed `appeal-intake` events attributed to the
+verified reporter. Each rejected assertion is reserved through expiry plus clock
+skew, so replaying it cannot append repeated rejection events. Audit storage
+failures are surfaced as service failures. Unauthenticated requests remain
+logging-only and cannot manufacture audit identities or durable audit traffic.
+
+Capture retains currently active local labels for the submitted account or record,
+including manually issued labels. An explicit CID restricts versioned challenges
+to that CID; a URI-only submission does not assert a version. Current-state selection uses
 signed creation time, not append sequence. Negated, expired and superseded
 outcomes are excluded. Original signed bytes and sequences are retained; later
 manual changes or signature rotation do not rewrite that provenance.
@@ -401,12 +465,10 @@ back committed negations. For example, after saving the example draft:
 
 ```powershell
 .\idunno.Bluesky.Labeler.Cli.exe policy publish `
-  --admin-url https://labeler.example `
-  --audience did:web:labeler.example#labeler_admin `
-  --handle administrator.example `
-  --client-id https://labeler.example/native-client-metadata.json `
+  --labeler-url https://labeler.example `
+  --admin-service did:web:labeler.example#labeler_admin `
+  --admin-handle administrator.example `
   --labeler-handle labeler.example `
-  --labeler-client-id https://labeler.example/native-client-metadata.json `
   --version v1 --expected-revision 1 --create `
   --operation-id publish-v1 --reason "Publish reviewed rules."
 ```
@@ -415,12 +477,20 @@ Use the observed gate revision, not an assumed revision of one. For updates,
 replace `--create` with `--previous-cid <observed-record-cid>`. Exactly one is
 required. Mutations require interactive confirmation or explicit `--yes`.
 With local administration, replace the administrator's remote options with
-`--local-endpoint`; the separate labeler-account sign-in is still required.
+`--local-endpoint`; the separate labeler-account sign-in is still required, with
+`--labeler-oauth-client-id` specifying its native metadata URL. In remote mode,
+that URL defaults to the administrator's metadata URL, or
+`<labeler-url>/native-client-metadata.json`.
 
 The administrator and labeler account need not be the same DID or team member.
-Administrative sign-in requests only the four publication/recovery RPC scopes,
-including the ability to renew paused cleanup authorization;
-labeler-account sign-in requests only create or update permission for
+The CLI creates a separate administrator session for each remote
+publication/recovery method as the workflow needs it. Each sign-in requests only
+`atproto` and that method's RPC scope; the workflow may therefore open multiple
+browser sign-ins, including one for `getPolicy` while waiting for cleanup and
+one for `resumePolicyPublication` if cleanup needs renewed authorization.
+Sessions are reused for the same method and discarded when the CLI exits unless
+`--remember-me` explicitly enables the [protected local credential cache](administration.md#remembering-sign-ins).
+Labeler-account sign-in requests only create or update permission for
 `app.bsky.labeler.service`, never delete, identity, account or general repository
 authority. The authenticated labeler DID must match the issuer returned by the
 protected policy gate. The host receives neither PDS credentials nor the OAuth

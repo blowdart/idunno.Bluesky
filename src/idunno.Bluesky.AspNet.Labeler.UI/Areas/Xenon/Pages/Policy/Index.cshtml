@@ -7,6 +7,23 @@
     JsonElement? policy = Model.Data.ValueKind == JsonValueKind.Object &&
         Model.Data.TryGetProperty("moderation", out JsonElement moderation) &&
         moderation.TryGetProperty("policy", out JsonElement state) ? state : null;
+    string verificationStatus;
+    bool verificationCurrent;
+    if (policy is { ValueKind: JsonValueKind.Object } verificationPolicy)
+    {
+        string phase = verificationPolicy.GetProperty("phase").GetString()!;
+        DateTimeOffset? verifiedUntil = verificationPolicy.TryGetProperty("verifiedUntil", out JsonElement until) &&
+            until.ValueKind == JsonValueKind.String ? until.GetDateTimeOffset() : null;
+        DateTimeOffset databaseTime = verificationPolicy.GetProperty("databaseTime").GetDateTimeOffset();
+        long freshnessMilliseconds = verificationPolicy.GetProperty("verificationFreshnessMilliseconds").GetInt64();
+        verificationStatus = IndexModel.DescribeVerificationStatus(phase, verifiedUntil, databaseTime, freshnessMilliseconds);
+        verificationCurrent = IndexModel.IsVerificationCurrent(phase, verifiedUntil, databaseTime, freshnessMilliseconds);
+    }
+    else
+    {
+        verificationStatus = "Policy status is unavailable.";
+        verificationCurrent = false;
+    }
     JsonElement editor = Model.Editor;
     bool hasEditor = editor.ValueKind == JsonValueKind.Object;
     JsonElement declaration = hasEditor ? editor.GetProperty("declaration") : default;
@@ -318,7 +335,7 @@ else if (ViewData["Error"] is null)
             <label class="field">Previous declaration CID (optional)<input name="previousCid" maxlength="128" /></label>
             <label class="field">Reason<input name="reason" required maxlength="4096" /></label>
             <label><input type="checkbox" name="confirmed" value="true" required /> Confirm publication and irreversible batched negation of existing applications of removed label values, even if publication later fails</label>
-            <p class="form-actions"><button type="submit" disabled="@(Model.DraftDefinitions.Count == 0)">Begin publication</button></p>
+            <p class="form-actions"><button type="submit" class="@(IndexModel.CanBeginPublication(Model.DraftDefinitions.Count) ? null : "policy-unavailable-button")" disabled="@(!IndexModel.CanBeginPublication(Model.DraftDefinitions.Count))">@IndexModel.PublicationButtonText(Model.DraftDefinitions.Count)</button></p>
         </form>
         }
     </section>
@@ -331,9 +348,10 @@ else
 <div id="policy-verification" data-policy-panel>
     <section class="panel">
         <h2>Verify declaration</h2>
+        <p><strong>@verificationStatus</strong></p>
         <p>Check that the public policy still matches Xenon's saved copy of the last published policy. If a new publication is pending, check against the policy being published instead. This does not change the public policy. A successful match can activate the policy and reopen reporting and label issuance. Verification remains blocked while label withdrawal is in progress.</p>
         <form method="post" asp-page-handler="Verify">
-            <p class="form-actions"><button type="submit">Verify declaration</button></p>
+            <p class="form-actions"><button type="submit" class="@(verificationCurrent ? "policy-verified-button" : null)" disabled="@verificationCurrent">@(verificationCurrent ? "Already verified" : "Verify declaration")</button></p>
         </form>
     </section>
 </div>

@@ -287,6 +287,7 @@ internal abstract partial class RelationalLabelStore
             }
 
             team.Bootstrapped = true;
+            team.OwnerDid = administrator.Value;
             team.Members.Add(administrator.Value, new(LabelTeamRole.Administrator, true, false, 1));
             team.Bindings.Add(localIdentity, new(administrator.Value, Guid.NewGuid().ToString("N")));
             LabelAdministrationReceipt receipt = await AuditAdministrationAsync(
@@ -733,6 +734,137 @@ internal abstract partial class RelationalLabelStore
 
             return LabelServiceResult<IReadOnlyList<LabelAdministrationReceipt>>.Success(page);
         }, cancellationToken);
+    }
+
+    public Task<LabelServiceResult<LabelRemoteAdministrationStatus>> GetRemoteAdministrationStatusAsync(
+        LabelAdministrationCaller caller,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(caller);
+        return AdministrationAsync<LabelRemoteAdministrationStatus>(async (connection, transaction, state) =>
+        {
+            AdministrationState team = await ReadAdministrationAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+            bool allowed = await HasPermissionAsync(
+                connection: connection,
+                transaction: transaction,
+                state: state,
+                administration: team,
+                caller: caller,
+                permission: LabelAdministrationPermission.Inspect,
+                token: cancellationToken).ConfigureAwait(false);
+            if (!allowed)
+            {
+                return LabelServiceResult<LabelRemoteAdministrationStatus>.Failure(new(
+                    code: LabelServiceErrorCode.Unauthorized,
+                    message: "Current team inspection authority is required."));
+            }
+
+            if (team.OwnerDid is null && await ResolveOwnerDidAsync(connection, transaction, team, cancellationToken).ConfigureAwait(false) is not null)
+            {
+                await SaveAdministrationAsync(connection, transaction, team, cancellationToken).ConfigureAwait(false);
+            }
+
+            return LabelServiceResult<LabelRemoteAdministrationStatus>.Success(new(
+                team.RemoteAdministrationEnabled,
+                team.OwnerDid == caller.Actor.Value));
+        }, cancellationToken);
+    }
+
+    public Task<LabelServiceResult<LabelAdministrationReceipt>> SetRemoteAdministrationEnabledAsync(
+        LabelAdministrationCaller caller,
+        string operationId,
+        bool enabled,
+        string reason,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(caller);
+        LabelInput.ValidateText(operationId, nameof(operationId), 256);
+        LabelInput.ValidateText(reason, nameof(reason), 4096);
+        byte[] intent = Intent("remote-administration", enabled ? "enabled" : "disabled", reason);
+        return AdministrationAsync(async (connection, transaction, state) =>
+        {
+            AdministrationState team = await ReadAdministrationAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+            bool administrator = await HasPermissionAsync(
+                connection: connection,
+                transaction: transaction,
+                state: state,
+                administration: team,
+                caller: caller,
+                permission: LabelAdministrationPermission.ManageTeam,
+                token: cancellationToken).ConfigureAwait(false);
+            string? ownerDid = await ResolveOwnerDidAsync(connection, transaction, team, cancellationToken).ConfigureAwait(false);
+            if (!administrator || ownerDid != caller.Actor.Value)
+            {
+                await AuditAdministrationAsync(
+                    connection: connection,
+                    transaction: transaction,
+                    administration: team,
+                    actor: caller.Actor,
+                    localIdentity: caller.LocalIdentity,
+                    operationId: operationId,
+                    action: enabled ? "remote-administration-enable" : "remote-administration-disable",
+                    reason: "Owner-only remote administration change denied.",
+                    succeeded: false,
+                    token: cancellationToken).ConfigureAwait(false);
+                return AdminFailure<LabelAdministrationReceipt>("Only the bootstrap owner can change remote administration.");
+            }
+
+            LabelServiceResult<LabelAdministrationReceipt>? original = await AdministrationReceiptAsync(
+                connection: connection,
+                transaction: transaction,
+                operationId: operationId,
+                intent: intent,
+                token: cancellationToken).ConfigureAwait(false);
+            if (original is not null)
+            {
+                return original;
+            }
+
+            team.OwnerDid = ownerDid;
+            team.RemoteAdministrationEnabled = enabled;
+            LabelAdministrationReceipt receipt = await AuditAdministrationAsync(
+                connection: connection,
+                transaction: transaction,
+                administration: team,
+                actor: caller.Actor,
+                localIdentity: caller.LocalIdentity,
+                operationId: operationId,
+                action: enabled ? "remote-administration-enabled" : "remote-administration-disabled",
+                reason: reason,
+                succeeded: true,
+                token: cancellationToken).ConfigureAwait(false);
+            await SaveAdministrationReceiptAsync(connection, transaction, receipt, intent, cancellationToken).ConfigureAwait(false);
+            return LabelServiceResult<LabelAdministrationReceipt>.Success(receipt);
+        }, cancellationToken);
+    }
+
+    /// <summary>Recovers the owner for installations whose team aggregate predates explicit owner storage.</summary>
+    private static async Task<string?> ResolveOwnerDidAsync(
+        DbConnection connection,
+        DbTransaction transaction,
+        AdministrationState administration,
+        CancellationToken token)
+    {
+        if (administration.OwnerDid is not null)
+        {
+            return administration.OwnerDid;
+        }
+
+        object? payload = await ScalarAsync(
+            connection: connection,
+            transaction: transaction,
+            sql: "SELECT payload FROM label_admin_audit WHERE seq=1",
+            token: token).ConfigureAwait(false);
+        if (payload is byte[] bytes)
+        {
+            AdministrationAudit? bootstrap = JsonSerializer.Deserialize(bytes, AdministrationJsonContext.Default.AdministrationAudit);
+            if (bootstrap is { Action: "bootstrap", Actor: not null })
+            {
+                administration.OwnerDid = bootstrap.Actor;
+            }
+        }
+
+        return administration.OwnerDid;
     }
 
     /// <summary>Encodes length-delimited primitive intent without culture-sensitive representations.</summary>
