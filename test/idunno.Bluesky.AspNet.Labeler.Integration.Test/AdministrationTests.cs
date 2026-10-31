@@ -26,7 +26,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace idunno.Bluesky.AspNet.Labeler.Integration.Test;
 
-public class AdministrationTests
+public partial class AdministrationTests
 {
     [Theory]
     [InlineData(false, false)]
@@ -1295,7 +1295,8 @@ public class AdministrationTests
         TimeSpan? lifetime = null,
         DateTimeOffset? notBefore = null)
     {
-        string header = Base64Url(Encoding.UTF8.GetBytes("""{"typ":"JWT","alg":"ES256"}"""));
+        string algorithm = key.Curve == LabelSigningCurve.P256 ? "ES256" : "ES256K";
+        string header = Base64Url(Encoding.UTF8.GetBytes($$"""{"typ":"JWT","alg":"{{algorithm}}"}"""));
         string payload = $$"""
             {"iss":"{{actor ?? s_actor.Value}}","aud":"{{audience ?? s_audience.ToString()}}",
              "lxm":"{{method}}","iat":{{now.ToUnixTimeSeconds()}},"exp":{{(now + (lifetime ?? TimeSpan.FromSeconds(60))).ToUnixTimeSeconds()}},

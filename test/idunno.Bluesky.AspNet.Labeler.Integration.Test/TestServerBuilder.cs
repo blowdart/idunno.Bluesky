@@ -72,7 +72,8 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
         ILabelSigningKeyRing? signingKeyRing = null,
         bool moderation = false,
         bool xenonUi = false,
-        bool controlDatabaseTime = false)
+        bool controlDatabaseTime = false,
+        bool ozoneAdministration = false)
     {
         TestServerBuilder fixture = new(database);
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
@@ -181,6 +182,10 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
             {
                 fixture._app.MapLabelerAdministration();
             }
+        }
+        if (ozoneAdministration)
+        {
+            fixture._app.MapOzoneCompatibility();
         }
         if (xenonUi)
         {

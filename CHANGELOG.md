@@ -6,6 +6,7 @@
 
 #### idunno.Bluesky.AspNet.Labeler
 
+* Adds explicitly optional `MapOzoneCompatibility()` discovery, server configuration, live team/report/history inspection, label events and report resolution through the existing remote-mode, owner-switch and replay-protected administration boundary. Label/report updates commit atomically with durable event identities; unsupported capabilities fail explicitly. The canonical host opts in only with `LabelerOzone:Enabled`; Ozone itself is unchanged and end-to-end UI interoperability remains unverified.
 * Adds Disabled, Enabled and WebUiControlled remote-administration host modes, defaulting to disabled and preserving the legacy RemoteEnabled fallback; explicit modes take precedence without affecting protected local administration.
 * Runs durable retirement and optional local-purge batches independently of administration-client lifetime, retaining public distribution during grace and after retirement; supports explicitly keyless administration only on terminal retired storage.
 * Recovers retirement command receipts before phase-dependent signing checks, dispatches stopped-host confirmations consistently, and durably pauses failed worker epochs across uncertain batch commits without overriding later administrator recovery.
@@ -179,6 +180,7 @@
 
 #### idunno.Bluesky.Labeler
 
+* Adds shared atomic Ozone event preparation and provider commits for multi-label actions and explicit cross-version report selection, retaining original CIDs, live authorization, policy fencing and pending appeals.
 * Adds irreversible, authorized retirement with action-bound confirmations, bounded timestamp-aware signed negations, resumable database checkpoints, live worker authority, explicit 1–365 day grace selection and distribution-availability attestation. Local history purge and operator-attested external key removal remain separate confirmations; moderation and audit history, backups and downstream copies are not erased.
 * Closes new label/report/appeal/policy workflows on retirement while retaining non-label case completion and explicitly coordinated recovery signing-key rotation without reopening issuance.
 
@@ -218,6 +220,7 @@
 
 #### idunno.Bluesky.Labeler.SQLite / PostgreSQL / MySQL
 
+* Adds schema-fourteen durable Ozone event identities and closure provenance, committed atomically with labels, reports, native case history and audit; upgrades remain additive and older writers reject the new schema.
 * Enforces Bluesky AppView label-service limits by default at the shared durable publication boundary: 5 labels per rolling second, 10,000 per rolling hour and 100,000 per rolling 24 hours, including negations. Schema thirteen persists accounting across hosts and restarts; excess remains pending rather than being discarded.
 * Preserves the longest-lived positive label when retirement encounters equal creation timestamps, regardless of insertion order.
 * Adds additive schema-twelve retirement state, exact-intent receipts, expiring confirmation challenges and bounded CID-slot selection across all three providers, preserving existing lifecycle checkpoints until explicitly adopted.
@@ -244,6 +247,7 @@
 
 #### idunno.AtProto
 
+* Adds separate Ozone administration service-token verification for exact labeler service and PDS bare-DID audiences, retaining method binding, replay identifiers and strict generic/native verification.
 * Added moderation-only service authentication for exact labeler service audiences and bare issuer DIDs used by PDS proxies, with exact-method verification for reports and Ozone label appeals without relaxing administration. Added shared explicit label-policy publication validation without restricting remote DTO deserialization.
 
 * Added exact `DID#service` token-acquisition overloads and strict AT Protocol service JWT verification. Production native loopback callbacks no longer implicitly permit insecure remote OAuth endpoints.

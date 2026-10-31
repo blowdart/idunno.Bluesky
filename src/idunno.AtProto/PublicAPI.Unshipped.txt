@@ -1,4 +1,5 @@
 #nullable enable
+static idunno.AtProto.ServiceAuthentication.VerifyOzoneAdministrationAsync(string! token, idunno.AtProto.Did! labeler, idunno.AtProto.Nsid! method, System.Net.Http.HttpClient! httpClient, System.TimeProvider? timeProvider = null, System.TimeSpan? maximumLifetime = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.ServiceAuthenticationResult!>!
 idunno.AtProto.Labels.LabelPolicyValidator
 static idunno.AtProto.Labels.LabelPolicyValidator.Validate(System.Collections.Generic.IEnumerable<string!>! labelValues, System.Collections.Generic.IEnumerable<idunno.AtProto.Labels.LabelValueDefinition!>! definitions) -> void
 idunno.AtProto.ModerationReportAuthenticationResult

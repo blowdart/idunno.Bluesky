@@ -289,6 +289,39 @@ public static class LabelerAdministrationExtensions
         ILabelAdministrationStore store,
         TimeProvider clock,
         ILogger logger)
+        => await HandleRemoteRequestAsync(
+            context: context,
+            method: new("dev.idunno.labeler.admin." + method),
+            ozone: false,
+            configuration: configuration,
+            remoteOptions: remoteOptions,
+            fixedRemoteEnabled: fixedRemoteEnabled,
+            store: store,
+            clock: clock,
+            logger: logger,
+            dispatch: caller => ReadAndDispatchAsync(
+                context: context,
+                method: method,
+                isPost: isPost,
+                dispatcher: dispatcher,
+                caller: caller),
+            write: WriteResponseAsync).ConfigureAwait(false);
+
+    /// <summary>Shares transport, replay, live remote-switch and denial-audit enforcement between native and Ozone routes.</summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S6667:Logging in a catch clause should pass the caught exception as a parameter",
+        Justification = "Untrusted authentication and JSON exceptions may contain sensitive input; log only their category.")]
+    internal static async Task HandleRemoteRequestAsync(
+        HttpContext context,
+        Nsid method,
+        bool ozone,
+        AdministrationConfiguration configuration,
+        IOptionsMonitor<LabelerAdministrationOptions> remoteOptions,
+        bool? fixedRemoteEnabled,
+        ILabelAdministrationStore store,
+        TimeProvider clock,
+        ILogger logger,
+        Func<LabelAdministrationCaller, Task<AdministrationResponse>> dispatch,
+        Func<HttpContext, AdministrationResponse, int, Task> write)
     {
         LabelerAdministrationOptions currentOptions = remoteOptions.CurrentValue;
         RemoteAdministrationMode mode = fixedRemoteEnabled switch
@@ -321,7 +354,7 @@ public static class LabelerAdministrationExtensions
                 transportStatus = StatusCodes.Status503ServiceUnavailable;
             }
 
-            await WriteResponseAsync(context, transportResponse, transportStatus).ConfigureAwait(false);
+            await write(context, transportResponse, transportStatus).ConfigureAwait(false);
             return;
         }
 
@@ -336,14 +369,23 @@ public static class LabelerAdministrationExtensions
                 throw new InvalidDataException("A service authentication token is required.");
             }
 
-            ServiceAuthenticationResult authentication = await ServiceAuthentication.VerifyAsync(
-                token: header[7..],
-                audience: configuration.Audience,
-                method: new Nsid("dev.idunno.labeler.admin." + method),
-                httpClient: configuration.HttpClient,
-                timeProvider: clock,
-                cancellationToken: context.RequestAborted,
-                maximumLifetime: configuration.MaximumServiceTokenLifetime).ConfigureAwait(false);
+            ServiceAuthenticationResult authentication = ozone
+                ? await ServiceAuthentication.VerifyOzoneAdministrationAsync(
+                    token: header[7..],
+                    labeler: configuration.Audience.Did,
+                    method: method,
+                    httpClient: configuration.HttpClient,
+                    timeProvider: clock,
+                    cancellationToken: context.RequestAborted,
+                    maximumLifetime: configuration.MaximumServiceTokenLifetime).ConfigureAwait(false)
+                : await ServiceAuthentication.VerifyAsync(
+                    token: header[7..],
+                    audience: configuration.Audience,
+                    method: method,
+                    httpClient: configuration.HttpClient,
+                    timeProvider: clock,
+                    cancellationToken: context.RequestAborted,
+                    maximumLifetime: configuration.MaximumServiceTokenLifetime).ConfigureAwait(false);
             LabelServiceResult<LabelAdministrationCaller> caller = await store.AuthenticateServiceAsync(authentication, context.RequestAborted).ConfigureAwait(false);
             if (!caller.Succeeded)
             {
@@ -367,22 +409,12 @@ public static class LabelerAdministrationExtensions
                     }
                     else
                     {
-                        response = await ReadAndDispatchAsync(
-                            context: context,
-                            method: method,
-                            isPost: isPost,
-                            dispatcher: dispatcher,
-                            caller: caller.Result).ConfigureAwait(false);
+                        response = await dispatch(caller.Result).ConfigureAwait(false);
                     }
                 }
                 else
                 {
-                    response = await ReadAndDispatchAsync(
-                        context: context,
-                        method: method,
-                        isPost: isPost,
-                        dispatcher: dispatcher,
-                        caller: caller.Result).ConfigureAwait(false);
+                    response = await dispatch(caller.Result).ConfigureAwait(false);
                 }
             }
 
@@ -427,7 +459,7 @@ public static class LabelerAdministrationExtensions
             }
         }
 
-        await WriteResponseAsync(context, response, status).ConfigureAwait(false);
+        await write(context, response, status).ConfigureAwait(false);
     }
 
     /// <summary>Reads one method-bound request only after its caller has been authenticated.</summary>

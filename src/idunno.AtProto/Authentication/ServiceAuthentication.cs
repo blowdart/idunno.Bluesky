@@ -81,7 +81,8 @@ public static class ServiceAuthentication
     /// <remarks>
     /// <para>Accepts only <c>com.atproto.moderation.createReport</c>, addressed either to the exact
     /// <c>labeler#atproto_labeler</c> service or to the same bare labeler DID for legacy PDS proxies.
-    /// This compatibility does not apply to <see cref="VerifyAsync"/> or administrative authentication.</para>
+    /// This intake verifier grants no administrative authority, and <see cref="VerifyAsync"/> remains exact-audience.
+    /// Ozone administration uses the separate <see cref="VerifyOzoneAdministrationAsync"/> boundary.</para>
     /// <para>Uses the same signature, key, lifetime and required replay-identifier validation as
     /// <see cref="VerifyAsync"/>. The caller must durably prevent replay before accepting the report.
     /// A verified reporter does not need labeler team membership.</para>
@@ -125,7 +126,8 @@ public static class ServiceAuthentication
     /// <remarks>
     /// <para>Requires the <c>tools.ozone.inbox.appealActionedSubject</c> method claim and accepts either the exact
     /// <c>labeler#atproto_labeler</c> audience or the same bare labeler DID used by PDS proxies.
-    /// This compatibility does not apply to <see cref="VerifyAsync"/> or administrative authentication.</para>
+    /// This intake verifier grants no administrative authority, and <see cref="VerifyAsync"/> remains exact-audience.
+    /// Ozone administration uses the separate <see cref="VerifyOzoneAdministrationAsync"/> boundary.</para>
     /// <para>Uses the same signature, key, lifetime and replay-identifier validation as
     /// <see cref="VerifyAsync"/>. The caller must durably prevent replay before accepting the appeal.</para>
     /// </remarks>
@@ -150,9 +152,61 @@ public static class ServiceAuthentication
         return new(verified);
     }
 
-    /// <summary>
-    /// Applies common token validation with bare-DID audience compatibility restricted to moderation intake.
-    /// </summary>
+    /// <summary>Verifies a method-bound Ozone administration assertion for an independent labeler.</summary>
+    /// <param name="token">The compact signed service JWT.</param>
+    /// <param name="labeler">The destination labeler DID.</param>
+    /// <param name="method">The exact Ozone administration method receiving the assertion.</param>
+    /// <param name="httpClient">The hardened identity-resolution client.</param>
+    /// <param name="timeProvider">An optional validation clock.</param>
+    /// <param name="maximumLifetime">The maximum accepted service-token lifetime. The default is 15 minutes.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The verified caller evidence and identifiers for durable replay protection.</returns>
+    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="method"/> is not a supported Ozone administration namespace.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="maximumLifetime"/> is zero or negative.</exception>
+    /// <exception cref="InvalidDataException">The token, claims, identity or signature is invalid.</exception>
+    /// <exception cref="HttpRequestException">Identity resolution fails at the transport layer.</exception>
+    /// <exception cref="OperationCanceledException">The operation is canceled.</exception>
+    /// <remarks>
+    /// <para>Accepts the exact <c>labeler#atproto_labeler</c> audience or the same bare labeler DID
+    /// used by Ozone's PDS proxy. This does not change <see cref="VerifyAsync"/> or accept native
+    /// <c>dev.idunno.labeler.admin</c> assertions.</para>
+    /// <para>Verification grants no permission. The trusted adapter must consume the replay identifiers
+    /// through <c>ILabelAdministrationStore.AuthenticateServiceAsync</c> and check live team authority
+    /// for every operation. Public report and appeal intake must use their separate verification methods.</para>
+    /// </remarks>
+    public static Task<ServiceAuthenticationResult> VerifyOzoneAdministrationAsync(
+        string token,
+        Did labeler,
+        Nsid method,
+        HttpClient httpClient,
+        TimeProvider? timeProvider = null,
+        TimeSpan? maximumLifetime = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(labeler);
+        ArgumentNullException.ThrowIfNull(method);
+        string nsid = method.ToString();
+        if (!nsid.StartsWith("tools.ozone.server.", StringComparison.Ordinal) &&
+            !nsid.StartsWith("tools.ozone.team.", StringComparison.Ordinal) &&
+            !nsid.StartsWith("tools.ozone.moderation.", StringComparison.Ordinal) &&
+            !nsid.StartsWith("tools.ozone.report.", StringComparison.Ordinal))
+        {
+            throw new ArgumentException("An Ozone administration method is required.", nameof(method));
+        }
+
+        return VerifyCoreAsync(
+            token: token,
+            audience: new(labeler, "atproto_labeler"),
+            method: method,
+            httpClient: httpClient,
+            timeProvider: timeProvider,
+            maximumLifetime: maximumLifetime,
+            allowLegacyModerationAudience: true,
+            cancellationToken: cancellationToken);
+    }
+
+    /// <summary>Applies common token validation with explicitly selected labeler audience compatibility.</summary>
     private static async Task<ServiceAuthenticationResult> VerifyCoreAsync(
         string token,
         AtProtoServiceReference audience,
@@ -216,7 +270,6 @@ public static class ServiceAuthentication
             failureCategory = "token-audience-mismatch";
             string tokenAudience = ReadString(payload, "aud");
             bool legacyModerationAudience = allowLegacyModerationAudience &&
-                method.ToString() is "com.atproto.moderation.createReport" or "tools.ozone.inbox.appealActionedSubject" &&
                 audience.Fragment == "atproto_labeler" &&
                 tokenAudience == audience.Did.Value;
             if (jwt.IsEncrypted ||

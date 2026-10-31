@@ -23,7 +23,7 @@ using Microsoft.Extensions.Logging.Testing;
 
 namespace idunno.Bluesky.AspNet.Labeler.Integration.Test;
 
-public class ModerationTests
+public partial class ModerationTests
 {
     private static readonly Did s_administrator = new("did:plc:administration-actor");
     private static readonly Did s_reporter = new("did:plc:reporter");
@@ -1297,7 +1297,8 @@ public class ModerationTests
         LabelerModerationOptions? options = null,
         bool remoteEnabled = false,
         string declarationJson = Declaration,
-        bool xenonUi = false)
+        bool xenonUi = false,
+        bool ozone = false)
     {
         TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
             configureAdministration: services =>
@@ -1305,6 +1306,13 @@ public class ModerationTests
                 services.AddLogging(builder => builder.AddFakeLogging());
                 services.AddLabelerModeration(issuer: TestServerBuilder.s_issuer, httpClient: identity, options: options);
                 services.AddLabelerAdministration(new(TestServerBuilder.s_issuer, "labeler_admin"), key, identity);
+                if (ozone)
+                {
+                    services.Configure<LabelerAdministrationOptions>(settings =>
+                    {
+                        settings.RemoteMode = RemoteAdministrationMode.Enabled;
+                    });
+                }
             },
             initialize: async store =>
             {
@@ -1324,7 +1332,9 @@ public class ModerationTests
             },
             remoteAdministrationEnabled: remoteEnabled,
             moderation: true,
-            xenonUi: xenonUi);
+            xenonUi: xenonUi,
+            ozoneAdministration: ozone,
+            controlDatabaseTime: ozone);
         return fixture;
     }
 
@@ -1356,6 +1366,8 @@ public class ModerationTests
         internal string Declaration { get; set; } = ModerationTests.Declaration;
         internal int DeclarationReads { get; private set; }
         internal int SubjectRecordReads { get; private set; }
+        /// <summary>Gets or sets whether the reported record is authoritatively absent.</summary>
+        internal bool MissingSubjectRecord { get; set; }
         internal bool BlockDeclarationReads { get; set; }
         internal TaskCompletionSource DeclarationRequested { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         /// <summary>Gets or sets whether account resolution pauses after the case policy revision has been captured.</summary>
@@ -1388,6 +1400,13 @@ public class ModerationTests
             {
                 SubjectRecordReads++;
                 Assert.Contains("rkey=3loqo3h6jbb2g", uri.Query, StringComparison.Ordinal);
+                if (MissingSubjectRecord)
+                {
+                    return new HttpResponseMessage(HttpStatusCode.BadRequest)
+                    {
+                        Content = new StringContent("""{"error":"RecordNotFound","message":"The record is deleted."}""", Encoding.UTF8, "application/json")
+                    };
+                }
                 json = $$$"""{"uri":"at://did:plc:reporter/app.bsky.feed.post/3loqo3h6jbb2g","cid":"{{{Cid}}}","value":{"$type":"app.bsky.feed.post","text":"Test"}}""";
             }
             else if (uri.Host == "pds.example" && uri.AbsolutePath == "/xrpc/com.atproto.repo.getRecord")

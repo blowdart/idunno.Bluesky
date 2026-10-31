@@ -190,6 +190,11 @@ CREATE TABLE IF NOT EXISTS label_case_decisions (
     intent BYTEA NOT NULL,
     payload BYTEA NOT NULL
 );
+CREATE TABLE IF NOT EXISTS label_ozone_events (
+    event_id BIGINT PRIMARY KEY CHECK(event_id>0),
+    operation_hash BYTEA NOT NULL UNIQUE CHECK(octet_length(operation_hash)=32),
+    payload BYTEA NOT NULL
+);
 CREATE TABLE IF NOT EXISTS label_search_handles (
     subject_hash BYTEA PRIMARY KEY CHECK(octet_length(subject_hash)=32),
     subject_key BYTEA NOT NULL,
@@ -206,4 +211,4 @@ CREATE TABLE IF NOT EXISTS label_post_review_checks (
     case_id BIGINT PRIMARY KEY REFERENCES label_cases(case_id),
     checked_ms BIGINT NOT NULL
 );
-INSERT INTO label_schema(id, version) VALUES(1, 13) ON CONFLICT DO NOTHING;
+INSERT INTO label_schema(id, version) VALUES(1, 14) ON CONFLICT DO NOTHING;

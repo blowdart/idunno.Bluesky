@@ -276,7 +276,7 @@ internal abstract partial class RelationalLabelStore
                 DbCommand command = Command(
                     connection: connection,
                     transaction: transaction,
-                    sql: "SELECT payload FROM label_case_events WHERE case_id=@id AND seq>@after ORDER BY seq LIMIT @limit",
+                    sql: "SELECT payload,operation_hash FROM label_case_events WHERE case_id=@id AND seq>@after ORDER BY seq LIMIT @limit",
                     ("@id", caseId), ("@after", afterSequence), ("@limit", limit));
                 await using ConfiguredAsyncDisposable commandDisposal = command.ConfigureAwait(false);
                 DbDataReader reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
@@ -284,7 +284,12 @@ internal abstract partial class RelationalLabelStore
                 List<LabelCaseReceipt> history = [];
                 while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
                 {
-                    history.Add(DecodeCaseEvent((byte[])reader.GetValue(0)).ToReceipt());
+                    ModerationCaseEvent entry = DecodeCaseEvent((byte[])reader.GetValue(0));
+                    byte[] operationHash = (byte[])reader.GetValue(1);
+                    bool isOzoneEvent = operationHash.AsSpan().SequenceEqual(CaseOperationHash(
+                        entry.OperationId,
+                        "ozone/" + caseId.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+                    history.Add(entry.ToReceipt(isOzoneEvent));
                 }
 
                 return LabelServiceResult<IReadOnlyList<LabelCaseReceipt>>.Success(history.AsReadOnly());

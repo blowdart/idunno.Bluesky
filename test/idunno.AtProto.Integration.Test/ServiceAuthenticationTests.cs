@@ -25,6 +25,90 @@ public class ServiceAuthenticationTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public async Task OzoneAdministrationAcceptsPdsAudienceWithExactMethodAndReplayEvidence(bool bareAudience)
+    {
+        FakeTimeProvider clock = CreateClock();
+        using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        JsonObject payload = Payload(clock);
+        payload["aud"] = bareAudience ? s_audience.Did.Value : s_audience.ToString();
+        Nsid method = new("tools.ozone.server.getConfig");
+        payload["lxm"] = method.ToString();
+        string token = Sign(key, """{"typ":"JWT","alg":"ES256"}""", payload.ToJsonString());
+        using TestServer server = Resolver(DidDocumentFor(TestDid, "atproto", key));
+        using HttpClient client = server.CreateClient();
+        ServiceAuthenticationResult result = await ServiceAuthentication.VerifyOzoneAdministrationAsync(
+            token: token,
+            labeler: s_audience.Did,
+            method: method,
+            httpClient: client,
+            timeProvider: clock,
+            cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Equal("unique-token", result.TokenId);
+        Assert.Equal(Convert.ToHexString(SHA256.HashData(Encoding.ASCII.GetBytes(token))), result.TokenHash);
+        if (bareAudience)
+        {
+            await Assert.ThrowsAsync<InvalidDataException>(() => ServiceAuthentication.VerifyAsync(
+                token: token,
+                audience: s_audience,
+                method: method,
+                httpClient: client,
+                timeProvider: clock,
+                cancellationToken: TestContext.Current.CancellationToken));
+        }
+        await Assert.ThrowsAsync<InvalidDataException>(() => ServiceAuthentication.VerifyOzoneAdministrationAsync(
+            token: token,
+            labeler: s_audience.Did,
+            method: new("tools.ozone.team.listMembers"),
+            httpClient: client,
+            timeProvider: clock,
+            cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData("dev.idunno.labeler.admin.getTeam")]
+    [InlineData("tools.ozone.inbox.appealActionedSubject")]
+    [InlineData("tools.ozone.safelink.queryRules")]
+    public async Task OzoneAdministrationRejectsMethodsOutsideItsExplicitNamespaces(string method)
+    {
+        using HttpClient client = new();
+        await Assert.ThrowsAsync<ArgumentException>(() => ServiceAuthentication.VerifyOzoneAdministrationAsync(
+            token: "not-read-for-an-invalid-method",
+            labeler: s_audience.Did,
+            method: new(method),
+            httpClient: client,
+            cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData("aud", "\"did:plc:other\"")]
+    [InlineData("aud", "\"did:plc:g6ylltenitt4tp27bpwalh7b#labeler_admin\"")]
+    [InlineData("aud", "[\"did:plc:g6ylltenitt4tp27bpwalh7b\"]")]
+    [InlineData("lxm", "null")]
+    [InlineData("jti", "null")]
+    [InlineData("exp", "0")]
+    public async Task OzoneAdministrationRejectsUnrelatedAudiencesAndInvalidClaims(string claim, string value)
+    {
+        FakeTimeProvider clock = CreateClock();
+        using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        JsonObject payload = Payload(clock);
+        payload["aud"] = s_audience.Did.Value;
+        payload["lxm"] = "tools.ozone.server.getConfig";
+        payload[claim] = JsonNode.Parse(value);
+        string token = Sign(key, """{"typ":"JWT","alg":"ES256"}""", payload.ToJsonString());
+        using TestServer server = Resolver(DidDocumentFor(TestDid, "atproto", key));
+        using HttpClient client = server.CreateClient();
+        await Assert.ThrowsAsync<InvalidDataException>(() => ServiceAuthentication.VerifyOzoneAdministrationAsync(
+            token: token,
+            labeler: s_audience.Did,
+            method: new("tools.ozone.server.getConfig"),
+            httpClient: client,
+            timeProvider: clock,
+            cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public async Task ReportingCompatibilityRetainsSignedAudienceWithoutWeakeningExactVerification(bool legacy)
     {
         FakeTimeProvider clock = CreateClock();

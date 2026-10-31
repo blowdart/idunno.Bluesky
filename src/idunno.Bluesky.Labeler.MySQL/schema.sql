@@ -209,6 +209,11 @@ CREATE TABLE IF NOT EXISTS label_case_decisions (
     payload LONGBLOB NOT NULL,
     FOREIGN KEY(case_id) REFERENCES label_cases(case_id)
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_ozone_events (
+    event_id BIGINT PRIMARY KEY CHECK(event_id>0),
+    operation_hash BINARY(32) NOT NULL UNIQUE,
+    payload LONGBLOB NOT NULL
+) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS label_search_handles (
     subject_hash BINARY(32) PRIMARY KEY,
     subject_key BLOB NOT NULL,
@@ -226,4 +231,4 @@ CREATE TABLE IF NOT EXISTS label_post_review_checks (
     checked_ms BIGINT NOT NULL,
     FOREIGN KEY(case_id) REFERENCES label_cases(case_id)
 ) ENGINE=InnoDB;
-INSERT INTO label_schema(id, version) VALUES(1, 13) ON DUPLICATE KEY UPDATE id=id;
+INSERT INTO label_schema(id, version) VALUES(1, 14) ON DUPLICATE KEY UPDATE id=id;

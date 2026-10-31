@@ -74,6 +74,7 @@ internal static partial class Program
 
         bool moderationEnabled = builder.Configuration.GetValue<bool>("LabelerModeration:Enabled");
         bool uiEnabled = builder.Configuration.GetValue<bool>("LabelerUI:Enabled");
+        bool ozoneEnabled = builder.Configuration.GetValue<bool>("LabelerOzone:Enabled");
         if (uiEnabled && !moderationEnabled)
         {
             throw new InvalidOperationException("Enable LabelerModeration before enabling the Xenon web UI.");
@@ -200,6 +201,10 @@ internal static partial class Program
         MapRootRoute(app);
         app.MapBlueskyLabeler();
         app.MapLabelerAdministration();
+        if (ozoneEnabled)
+        {
+            app.MapOzoneCompatibility();
+        }
         if (moderationEnabled)
         {
             app.MapLabelerModeration();

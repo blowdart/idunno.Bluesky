@@ -12,6 +12,107 @@ must consume this boundary rather than construct actor DIDs from request fields 
 The `dev.idunno.labeler.admin.*` methods are this library's administration protocol, not Ozone or
 standard AT Protocol moderation endpoints.
 
+## Optional Ozone compatibility
+
+`app.MapOzoneCompatibility()` explicitly opts an application into the adapter while
+building its pipeline. Omit the call and no Ozone compatibility routes are registered.
+It uses the same administration services; register `AddLabelerAdministration` first.
+
+```csharp
+WebApplication app = builder.Build();
+app.UseForwardedHeaders();
+app.MapBlueskyLabeler();
+app.MapLabelerAdministration();
+
+// Optional Ozone compatibility; omit this call for a native-only host.
+app.MapOzoneCompatibility();
+```
+
+Configure trusted proxies before calling `UseForwardedHeaders`, as shown below.
+The canonical host makes this call only when `LabelerOzone:Enabled` is `true`
+(default `false`). This is a startup choice; changing it requires restarting the host.
+Opting in **does not enable remote administration**:
+authenticated Ozone methods also obey `RemoteMode` and, in `WebUiControlled` mode, the durable
+owner switch. Protected local administration and public report/appeal intake are unchanged.
+
+The adapter adds labeler-focused report inspection, subject/history views, label events and
+report resolution to discovery and team inspection. It requires the shared moderation
+services for those operations. **Unmodified Ozone has not yet been exercised end to end**;
+the adapter is not a replacement for an Ozone PDS/AppView or its broader administration APIs.
+
+| Endpoint | Current adapter support |
+|---|---|
+| `/.well-known/ozone-metadata.json` | Anonymous configured DID, HTTPS origin and active public `did:key`; no private material |
+| `tools.ozone.server.getConfig` | Authenticated live viewer role; no fabricated PDS, AppView, chat, blob-diversion or verifier service |
+| `tools.ozone.team.listMembers` | Bounded live team pages; DID text search, role/disabled filters and exclusive DID cursors |
+| `tools.ozone.moderation.getEvent`, `queryEvents` | Durable Ozone events, original reports and native workflow comments with disjoint stable event IDs |
+| `tools.ozone.moderation.getRecord`, `getRepo` | Independently resolved repository/record display and retained local labels/status; no PDS administrative authority |
+| `tools.ozone.moderation.queryStatuses` | Native CID-scoped case status and chronological report/review sorting |
+| `tools.ozone.report.getReport`, `queryReports` | Original report evidence with current handling/assignment status and bounded live pages |
+| `tools.ozone.report.listActivities` | Report closure activities committed by this adapter, including moderator and automation provenance |
+| `tools.ozone.moderation.emitEvent` | Label additions/negations and acknowledgment; unsupported event types/options fail explicitly |
+| `tools.ozone.report.closeReports`, `createActivity` | Subject report closure and explicit single-report close activities; other activities fail explicitly |
+| `tools.ozone.team.addMember`, `deleteMember`, `updateMember` | Explicit authenticated `NotImplemented` error |
+| Other Ozone methods | Not mapped; no claim of support |
+
+Discovery reads only the configured public origin and installed key, never an incoming Host
+header. It is anonymously cross-origin readable for a separately hosted Ozone UI. Discovery
+requires a signing key and returns `ServiceUnavailable` on a keyless retired host. Ozone
+independently compares this public metadata to the DID document; successful discovery does
+not establish successful identity publication.
+
+The authentication boundary accepts method-bound assertions addressed to the exact
+`DID#atproto_labeler` service or the same bare DID issued by PDS proxies. Generic and native
+administrative verification remain exact-audience. Both adapters consume tokens through the
+same durable replay store and recheck live team authority; browser cookies, request-body DIDs
+and Basic credentials grant no permission.
+
+Administrator, Moderator and Viewer map to Ozone's Admin, Moderator and Triage wire roles.
+That mapping does not widen SDK permissions. Ozone derives some visible controls solely from
+roles, so unsupported controls may remain visible and fail explicitly. Team projections omit
+notification email, unverified profiles and unavailable timestamps rather than inventing them.
+Search currently matches DIDs, not handles. Cursors are live continuations, not snapshots.
+Report, event and status queries keep bounded pages in memory but may scan retained history;
+the page size does not cap total query work.
+
+Label events prepare every action before one shared provider transaction commits the labels,
+selected report outcomes, Ozone event, case history and audit. `createdBy` must match the
+authenticated actor. Without `reportAction`, label events leave reports open. Explicit report
+IDs may select assigned reports; bulk/type selection skips assigned reports. Native assignment
+is case-scoped, so it applies to every report in that case. Ozone assignment mutations are not
+implemented. A sole eligible native moderator receives automatic case assignment; use explicit
+report IDs to close those assigned reports. Report closure never implicitly decides a pending appeal.
+Native workflow history remains visible even when its operation ID matches an Ozone operation;
+it is projected as a comment, not an additional label action.
+
+`externalId` is unique for an event type and subject; a duplicate returns `DuplicateExternalId`.
+Fresh requests without that identifier are distinct operations, even with identical content.
+An uncertain storage outcome is not evidence of rollback. Multi-label events accept at most
+16 distinct actions, explicit report selections at most 100 IDs, and a transaction at most
+1000 cases/reports. Larger transactions fail before applying any action. Unknown query
+filters and unsupported account-wide/blob/queue/takedown operations are rejected, not ignored.
+Retained pending-verification reports remain in native Xenon/CLI recovery views until promoted;
+they are not represented as Ozone-managed queues.
+
+**CID-less/deleted record limitation:** reports are listed and resolved by their original
+URI/ID without inventing a CID. Display hydration never changes their evidence or signed label
+scope. Unmodified Ozone obtains a record action's CID from `getRecord` or an earlier strong-reference
+event. A deleted record for which no CID was ever supplied cannot produce such an action;
+use Xenon/CLI for label actions in that precise case. Accounts do not require a record CID.
+The basic `queryEvents` and subject-status reference unions also have no URI-only record variant.
+A query matching such an event/status returns `NotImplemented`, rather than emitting an invalid
+DID or inventing a CID. URI-only reports omit the optional subject-status reference. Use report
+detail/detailed `getEvent` views or native history for that evidence.
+
+Schema fourteen adds `label_ozone_events` to every relational provider. Initialization is
+additive; do not deploy an older writer against the upgraded schema. Include the event table
+in whole-database backups: it retains operation identities and confidential moderation history,
+not private signing keys. Public signed-label distribution is unchanged.
+
+The reference contract was inspected against Ozone commit
+`bd619ed5b930cb62be65d99cd1e080327e1e7cf6` and AT Protocol lexicon commit
+`d3080834ac43dbb94e97e82fdd85b1a0f12558ad`. No Ozone code or dependencies are changed.
+
 Team services, callers, permissions and administrative storage contracts are in
 `idunno.Bluesky.Labeler.Administration`. Maintenance coordination is in `.Maintenance`,
 signing providers are in `.Signing`, and common targets/results remain in

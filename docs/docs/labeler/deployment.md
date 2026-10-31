@@ -57,6 +57,7 @@ provider, or a host-owned configuration file:
 | `Labeler:AllowRecordLabels` | Whether the issuance policy permits record labels |
 | `LabelerAdministration:RemoteMode` | `Disabled` (default), `Enabled`, or `WebUiControlled`; overrides the legacy Boolean |
 | `LabelerAdministration:RemoteEnabled` | Legacy fallback only when `RemoteMode` is absent; defaults to `false` |
+| `LabelerOzone:Enabled` | Startup opt-in to `MapOzoneCompatibility()` discovery and labeler-focused administration; defaults to `false` and does not enable remote administration |
 | `LabelerModeration:Enabled` | Optional Xenon report/case/policy backend; defaults to `false` |
 | `LabelerModeration:VerificationFreshness` | Persisted declaration-observation lifetime; defaults to `00:30:00`; active policies are checked in the background every five minutes |
 | `Labeler:TrustedProxies` | Optional array of exact proxy IP addresses trusted to forward client IP and HTTPS scheme |

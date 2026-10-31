@@ -14,7 +14,7 @@ using Microsoft.Data.Sqlite;
 
 namespace idunno.Bluesky.Labeler.Test;
 
-public class LabelCaseDecisionTests
+public partial class LabelCaseDecisionTests
 {
     private static readonly LabelReportSubject s_subject = LabelReportSubject.Account(new(TargetResolutionHandler.SubjectDid));
 

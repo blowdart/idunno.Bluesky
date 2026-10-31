@@ -84,7 +84,7 @@ internal sealed record ModerationCaseEvent(
     ModerationCaseData Case)
 {
     /// <summary>Projects primitive event fields without exposing authentication evidence.</summary>
-    internal LabelCaseReceipt ToReceipt() => new(
+    internal LabelCaseReceipt ToReceipt(bool isOzoneEvent = false) => new(
         sequence: Sequence,
         operationId: OperationId,
         action: Action,
@@ -92,7 +92,10 @@ internal sealed record ModerationCaseEvent(
         localIdentity: LocalIdentity,
         reason: Reason,
         createdAt: CreatedAt,
-        moderationCase: Case.ToCase());
+        moderationCase: Case.ToCase())
+    {
+        IsOzoneEvent = isOzoneEvent
+    };
 }
 
 /// <summary>Retains a complete immutable policy independently of JSON implementation types.</summary>
