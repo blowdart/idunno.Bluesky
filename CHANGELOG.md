@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### ➕ Added
+
+#### idunno.Bluesky
+
+* Made `Graph.ListItem` public, with constructors and null validation for list and subject values, including object initializers and `with` expressions.
+
 ### 🟢 Changed
 
 #### Packaging
