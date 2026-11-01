@@ -621,7 +621,8 @@ internal abstract partial class RelationalLabelStore
             TokenHash: tokenHashValue,
             DecisionOperationId: notApplicable ? operation : null,
             HandledAt: notApplicable ? timestamp : null,
-            ResolutionReason: notApplicable ? "Not Applicable" : null);
+            ResolutionReason: notApplicable ? "Not Applicable" : null,
+            AppealLabelValue: submission.AppealLabelValue);
         byte[] payload = JsonSerializer.SerializeToUtf8Bytes(report, ModerationJsonContext.Default.ModerationReportData);
         LabelCaseAction reportAction = (notApplicable, current) switch
         {

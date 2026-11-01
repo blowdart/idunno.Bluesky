@@ -7,6 +7,7 @@
 #### idunno.Bluesky.AspNet.Labeler
 
 * Adds explicitly optional `MapOzoneCompatibility()` discovery, server configuration, live team/report/history inspection, label events and report resolution through the existing remote-mode, owner-switch and replay-protected administration boundary. Label/report updates commit atomically with durable event identities; unsupported capabilities fail explicitly. The canonical host opts in only with `LabelerOzone:Enabled`; Ozone itself is unchanged and end-to-end UI interoperability remains unverified.
+* Explicitly binds Ozone discovery to a request delegate so trimmed and Native AOT builds avoid an incompatible generated route interceptor.
 * Adds Disabled, Enabled and WebUiControlled remote-administration host modes, defaulting to disabled and preserving the legacy RemoteEnabled fallback; explicit modes take precedence without affecting protected local administration.
 * Runs durable retirement and optional local-purge batches independently of administration-client lifetime, retaining public distribution during grace and after retirement; supports explicitly keyless administration only on terminal retired storage.
 * Recovers retirement command receipts before phase-dependent signing checks, dispatches stopped-host confirmations consistently, and durably pauses failed worker epochs across uncertain batch commits without overriding later administrator recovery.
@@ -220,6 +221,7 @@
 
 #### idunno.Bluesky.Labeler.SQLite / PostgreSQL / MySQL
 
+* Filters selected appeal label values before bounded challenge capture, retains the selected value in accepted reports and pending promotion, and recovers legacy bootstrap owners even when earlier authentication denials occupy the first audit entries.
 * Adds schema-fourteen durable Ozone event identities and closure provenance, committed atomically with labels, reports, native case history and audit; upgrades remain additive and older writers reject the new schema.
 * Enforces Bluesky AppView label-service limits by default at the shared durable publication boundary: 5 labels per rolling second, 10,000 per rolling hour and 100,000 per rolling 24 hours, including negations. Schema thirteen persists accounting across hosts and restarts; excess remains pending rather than being discarded.
 * Preserves the longest-lived positive label when retirement encounters equal creation timestamps, regardless of insertion order.

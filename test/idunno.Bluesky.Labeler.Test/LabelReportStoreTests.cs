@@ -627,7 +627,10 @@ public class LabelReportStoreTests
         ILabelReportStore reports = (ILabelReportStore)fixture.Store;
         ModerationReportAuthenticationResult authentication = await ReportTestAuthentication.CreateAsync(
             s_account.Repository, policy.DatabaseTime, "owner-filtered-appeal");
-        LabelReportSubmission submission = new(s_account, reason);
+        LabelReportSubmission submission = new(
+            subject: s_account,
+            reasonType: reason,
+            appealLabelValue: "spam");
         LabelReportIntakeReceipt receipt = Success(await reports.AcceptReportAsync(
             authentication: authentication,
             submission: submission,
@@ -635,9 +638,13 @@ public class LabelReportStoreTests
             maximumPendingReports: 10,
             cancellationToken: token));
         Assert.Equal(queued, receipt.PendingVerification);
+        if (!queued)
+        {
+            Assert.Equal("spam", Success(await reports.GetReportAsync(administrator, receipt.Id, token)).Submission.AppealLabelValue);
+        }
         if (queued)
         {
-            LabelPendingReportBatchResult promoted = Success(await reports.ProcessPendingReportsAsync(
+            LabelPendingReportBatchResult promoted = Success(await ((ILabelReportStore)fixture.NewStore()).ProcessPendingReportsAsync(
                 expectedPolicyRevision: policy.Revision,
                 limit: 10,
                 cancellationToken: token));
@@ -646,6 +653,7 @@ public class LabelReportStoreTests
 
         ILabelReportStore restarted = (ILabelReportStore)fixture.NewStore();
         LabelModerationReport report = Success(await restarted.GetReportAsync(administrator, receipt.Id, token));
+        Assert.Equal("spam", report.Submission.AppealLabelValue);
         Assert.Null(report.HandledAt);
         Assert.Null(report.ResolutionReason);
         LabelAppeal appeal = Assert.Single(Success(await ((ILabelAppealStore)fixture.NewStore())

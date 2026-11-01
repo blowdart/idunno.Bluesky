@@ -850,17 +850,35 @@ internal abstract partial class RelationalLabelStore
             return administration.OwnerDid;
         }
 
-        object? payload = await ScalarAsync(
-            connection: connection,
-            transaction: transaction,
-            sql: "SELECT payload FROM label_admin_audit WHERE seq=1",
-            token: token).ConfigureAwait(false);
-        if (payload is byte[] bytes)
+        long after = 0;
+        while (true)
         {
-            AdministrationAudit? bootstrap = JsonSerializer.Deserialize(bytes, AdministrationJsonContext.Default.AdministrationAudit);
-            if (bootstrap is { Action: "bootstrap", Actor: not null })
+            DbCommand command = Command(
+                connection: connection,
+                transaction: transaction,
+                sql: "SELECT seq,payload FROM label_admin_audit WHERE seq>@after ORDER BY seq LIMIT 100",
+                ("@after", after));
+            await using ConfiguredAsyncDisposable commandDisposal = command.ConfigureAwait(false);
+            DbDataReader reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false);
+            await using ConfiguredAsyncDisposable readerDisposal = reader.ConfigureAwait(false);
+            int count = 0;
+            while (await reader.ReadAsync(token).ConfigureAwait(false))
             {
-                administration.OwnerDid = bootstrap.Actor;
+                after = reader.GetInt64(0);
+                count++;
+                AdministrationAudit audit = JsonSerializer.Deserialize(
+                    (byte[])reader.GetValue(1), AdministrationJsonContext.Default.AdministrationAudit)
+                    ?? throw new InvalidDataException("The administration audit event is null.");
+                if (audit is { Action: "bootstrap", Succeeded: true, Actor: not null })
+                {
+                    administration.OwnerDid = audit.Actor;
+                    return administration.OwnerDid;
+                }
+            }
+
+            if (count < 100)
+            {
+                break;
             }
         }
 

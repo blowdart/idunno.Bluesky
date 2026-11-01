@@ -5,6 +5,7 @@ using System.Data.Common;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 
 using idunno.AtProto;
 using idunno.AtProto.Labels;
@@ -359,6 +360,71 @@ public class LabelAdministrationTests
             receipt.OperationId == "owner-enable" &&
             receipt.Actor == s_administrator &&
             receipt.Succeeded);
+    }
+
+    [Theory]
+    [InlineData("sqlite", 0)]
+    [InlineData("sqlite", 101)]
+    [InlineData("postgresql", 0)]
+    [InlineData("postgresql", 101)]
+    [InlineData("mysql", 0)]
+    [InlineData("mysql", 101)]
+    public async Task LegacyOwnerRecoveryFindsSuccessfulBootstrapAfterEarlierDenials(string engine, int denials)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        ILabelAdministrationStore store = (ILabelAdministrationStore)fixture.Store;
+        for (int index = 0; index < denials; index++)
+        {
+            Assert.True((await store.RecordAdministrationDenialAsync(
+                reason: "Pre-bootstrap authentication denial.",
+                cancellationToken: token)).Succeeded);
+        }
+        LabelAdministrationCaller owner = await BootstrapAsync(store);
+        Assert.False((await store.BootstrapAsync(s_member, "uid:1", "failed-bootstrap", token)).Succeeded);
+        await EnrollAndBindAsync(store, owner, LabelTeamRole.Administrator);
+        await using (DbConnection connection = fixture.Connection())
+        {
+            await connection.OpenAsync(token);
+            await using DbCommand read = connection.CreateCommand();
+            read.CommandText = "SELECT payload FROM label_team WHERE id=1";
+            byte[] payload = (byte[])(await read.ExecuteScalarAsync(token))!;
+            using JsonDocument document = JsonDocument.Parse(payload);
+            using MemoryStream legacy = new();
+            using (Utf8JsonWriter writer = new(legacy))
+            {
+                writer.WriteStartObject();
+                foreach (JsonProperty property in document.RootElement.EnumerateObject())
+                {
+                    if (property.Name != "OwnerDid")
+                    {
+                        property.WriteTo(writer);
+                    }
+                }
+                writer.WriteEndObject();
+            }
+            await using DbCommand update = connection.CreateCommand();
+            update.CommandText = "UPDATE label_team SET payload=@payload WHERE id=1";
+            DbParameter parameter = update.CreateParameter();
+            parameter.ParameterName = "@payload";
+            parameter.Value = legacy.ToArray();
+            update.Parameters.Add(parameter);
+            await update.ExecuteNonQueryAsync(token);
+        }
+        ILabelAdministrationStore restarted = (ILabelAdministrationStore)fixture.NewStore();
+        LabelAdministrationCaller administrator = (await restarted.AuthenticateLocalAsync("uid:1", token)).Result!;
+        Assert.False((await restarted.GetRemoteAdministrationStatusAsync(administrator, token)).Result!.IsOwner);
+        LabelAdministrationCaller recovered = (await restarted.AuthenticateLocalAsync("uid:0", token)).Result!;
+        Assert.True((await restarted.GetRemoteAdministrationStatusAsync(recovered, token)).Result!.IsOwner);
+        Assert.True((await restarted.SetRemoteAdministrationEnabledAsync(
+            caller: recovered,
+            operationId: "recovered-owner-enable",
+            enabled: true,
+            reason: "Verify recovered bootstrap owner authority.",
+            cancellationToken: token)).Succeeded);
+        ILabelAdministrationStore again = (ILabelAdministrationStore)fixture.NewStore();
+        LabelAdministrationCaller persisted = (await again.AuthenticateLocalAsync("uid:0", token)).Result!;
+        Assert.True((await again.GetRemoteAdministrationStatusAsync(persisted, token)).Result!.Enabled);
     }
 
     [Theory]

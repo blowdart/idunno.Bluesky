@@ -51,7 +51,7 @@ public static class LabelerOzoneAdministrationExtensions
 
         app.MapGet(
             "/.well-known/ozone-metadata.json",
-            async (HttpContext context) =>
+            (RequestDelegate)(async (HttpContext context) =>
         {
             context.Response.Headers.AccessControlAllowOrigin = "*";
             Uri? origin = app.Services.GetService<LabelerHostingOptions>()?.PublicEndpoint;
@@ -76,7 +76,7 @@ public static class LabelerOzoneAdministrationExtensions
                         PublicKey: "did:key:" + keys.GetPublicKeyMultibase(keys.ActiveKeyId)),
                     OzoneAdministrationJsonContext.Default.OzoneMetadata),
                 status: StatusCodes.Status200OK).ConfigureAwait(false);
-        }).AllowAnonymous();
+        })).AllowAnonymous();
 
         MapMethod("tools.ozone.server.getConfig", false);
         MapMethod("tools.ozone.team.listMembers", false);

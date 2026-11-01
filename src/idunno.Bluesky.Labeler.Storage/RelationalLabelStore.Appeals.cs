@@ -156,9 +156,11 @@ internal abstract partial class RelationalLabelStore
         DbCommand command = Command(
             connection: connection,
             transaction: transaction,
-            sql: "SELECT DISTINCT value FROM label_subject_index WHERE subject_hash=@hash AND subject_key=@key LIMIT 1001",
+            sql: "SELECT DISTINCT value FROM label_subject_index WHERE subject_hash=@hash AND subject_key=@key" +
+                (appealLabelValue is null ? "" : " AND value=@value") + " LIMIT 1001",
             ("@hash", SHA256.HashData(key)),
-            ("@key", key));
+            ("@key", key),
+            ("@value", appealLabelValue));
         await using (command.ConfigureAwait(false))
         {
             DbDataReader reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false);
@@ -166,11 +168,7 @@ internal abstract partial class RelationalLabelStore
             {
                 while (await reader.ReadAsync(token).ConfigureAwait(false))
                 {
-                    string value = reader.GetString(0);
-                    if (appealLabelValue is null || value == appealLabelValue)
-                    {
-                        values.Add(value);
-                    }
+                    values.Add(reader.GetString(0));
                 }
             }
         }

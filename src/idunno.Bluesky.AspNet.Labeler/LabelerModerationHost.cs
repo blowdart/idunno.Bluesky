@@ -219,6 +219,8 @@ internal sealed partial class LabelerModerationHost(
         using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(deadline.Token, context.RequestAborted);
         try
         {
+            // Early transport rejection only; service-token authentication and appeal ownership checks follow.
+            // Hosts using forwarded headers must trust only legitimate proxies when establishing IsHttps.
             if (!context.Request.IsHttps)
             {
                 Rejected(logger, "appeal-https-required");
@@ -227,6 +229,8 @@ internal sealed partial class LabelerModerationHost(
                 return;
             }
 
+            // Early request-shape rejection only, not authorization. Authentication, ownership and active-label
+            // checks follow; the bounded body reader also rejects oversized bodies regardless of Content-Length.
             if (!context.Request.HasJsonContentType() || context.Request.QueryString.HasValue ||
                 context.Request.ContentLength > ModerationWire.MaximumReportBytes)
             {

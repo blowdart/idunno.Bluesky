@@ -191,6 +191,8 @@ public class LabelAppealStoreTests
             cancellationToken: token);
         LabelModerationReport first = await SubmitSelectedAsync("first", "spam");
         LabelModerationReport second = await SubmitSelectedAsync("second", "scam");
+        Assert.Equal("spam", first.Submission.AppealLabelValue);
+        Assert.Equal("scam", second.Submission.AppealLabelValue);
         ILabelAppealStore appeals = (ILabelAppealStore)fixture.Store;
         ILabelModerationStore cases = (ILabelModerationStore)fixture.Store;
         IReadOnlyList<LabelAppeal> pending = Success(await appeals.GetAppealsAsync(caller, cancellationToken: token));
@@ -709,6 +711,31 @@ public class LabelAppealStoreTests
         Assert.Equal(LabelServiceErrorCode.PolicyUnavailable, retry.Error!.Code);
         Assert.Contains("bounded capture limit", retry.Error.Message, StringComparison.Ordinal);
         Assert.Equal(1001, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
+
+        SignedLabelSnapshot selected = new(key.CreateLabel(
+            source: StoreFixture.s_issuer,
+            uri: s_account.Subject,
+            value: "selected-after-capture-limit",
+            creationTimestamp: policy.DatabaseTime.AddHours(-1)));
+        await fixture.Store.AppendAsync(
+            operationId: "selected-history-last",
+            labels: [selected],
+            cancellationToken: token);
+        ModerationReportAuthenticationResult selectedAuthentication = await ReportTestAuthentication.CreateAsync(
+            s_owner, policy.DatabaseTime, "selected-bounded-appeal");
+        LabelModerationReport selectedReport = Success(await ((ILabelReportStore)fixture.Store).SubmitReportAsync(
+            authentication: selectedAuthentication,
+            submission: new(
+                subject: s_account,
+                reasonType: AppealReason,
+                appealLabelValue: "selected-after-capture-limit"),
+            expectedPolicyRevision: policy.Revision,
+            cancellationToken: token));
+        Assert.Equal("selected-after-capture-limit", selectedReport.Submission.AppealLabelValue);
+        LabelAppeal selectedAppeal = Assert.Single(
+            Success(await ((ILabelAppealStore)fixture.NewStore()).GetAppealsAsync(caller, cancellationToken: token)),
+            appeal => appeal.Id != original.Id);
+        Assert.Equal(selected.GetJsonBytes(), Assert.Single(selectedAppeal.Challenges).SignedLabel.GetJsonBytes());
     }
 
     /// <summary>Initializes the real provider's shared administration and independently verified policy gate.</summary>

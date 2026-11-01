@@ -340,7 +340,8 @@ internal sealed record ModerationReportData(
     string TokenHash,
     string? DecisionOperationId = null,
     DateTimeOffset? HandledAt = null,
-    string? ResolutionReason = null)
+    string? ResolutionReason = null,
+    string? AppealLabelValue = null)
 {
     /// <summary>Revalidates a retained report and defensively clones arbitrary tool metadata.</summary>
     internal LabelModerationReport ToReport()
@@ -360,7 +361,8 @@ internal sealed record ModerationReportData(
                 reasonType: ReasonType,
                 reason: Reason,
                 modToolName: ToolName,
-                modToolMetadata: metadata),
+                modToolMetadata: metadata,
+                appealLabelValue: AppealLabelValue),
             reportedBy: new(Reporter),
             createdAt: CreatedAt,
             policyVersion: PolicyVersion,
@@ -433,7 +435,8 @@ internal sealed record PendingModerationReportData(
         CreatedAt: CreatedAt,
         PolicyVersion: policyVersion,
         Audience: Audience,
-        TokenHash: TokenHash);
+        TokenHash: TokenHash,
+        AppealLabelValue: AppealLabelValue);
 }
 
 /// <summary>Supplies trimming-safe metadata for moderation state, retry intent and history.</summary>
