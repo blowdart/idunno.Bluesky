@@ -28,11 +28,43 @@ namespace idunno.Bluesky.Labeler.Cli.Test;
 /// <summary>Exercises canonical host authentication across independent lifetimes using a disposable PostgreSQL database.</summary>
 public class PostgreSqlAuthenticationPersistenceTests
 {
-    [Fact]
-    public async Task RestartRetainsCookieIdentityLoginStateAndRevocation()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    public async Task RestartRetainsCookieIdentityLoginStateAndRevocation(int invocation)
     {
-        string? database = Environment.GetEnvironmentVariable("LABELER_AUTH_TEST_POSTGRES");
-        Assert.SkipUnless(database is not null, "Set LABELER_AUTH_TEST_POSTGRES to a disposable PostgreSQL database.");
+        string? administrativeConnection = Environment.GetEnvironmentVariable("LABELER_AUTH_TEST_POSTGRES");
+        Assert.SkipUnless(administrativeConnection is not null, "Set LABELER_AUTH_TEST_POSTGRES to an administrative connection on a disposable PostgreSQL server.");
+        string name = $"labeler_auth_{invocation}_{Guid.NewGuid():N}";
+        await using NpgsqlConnection administration = new(administrativeConnection);
+        await administration.OpenAsync(TestContext.Current.CancellationToken);
+        await using NpgsqlCommand create = administration.CreateCommand();
+#pragma warning disable CA2100 // The identifier contains only a fixed prefix, an integer and generated hexadecimal digits.
+        create.CommandText = $"CREATE DATABASE {name}";
+#pragma warning restore CA2100
+        await create.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+        try
+        {
+            string database = new NpgsqlConnectionStringBuilder(administrativeConnection)
+            {
+                Database = name,
+                Pooling = false
+            }.ConnectionString;
+            await VerifyPersistenceAsync(database);
+        }
+        finally
+        {
+            await using NpgsqlCommand drop = administration.CreateCommand();
+#pragma warning disable CA2100 // The identifier is the same generated fixture-owned database name used above.
+            drop.CommandText = $"DROP DATABASE {name} WITH (FORCE)";
+#pragma warning restore CA2100
+            await drop.ExecuteNonQueryAsync(CancellationToken.None);
+        }
+    }
+
+    /// <summary>Verifies authentication persistence and revocation across independent service lifetimes in an isolated database.</summary>
+    private static async Task VerifyPersistenceAsync(string database)
+    {
         CancellationToken token = TestContext.Current.CancellationToken;
         Did did = new("did:plc:persistence");
         Guid correlation = Guid.NewGuid();

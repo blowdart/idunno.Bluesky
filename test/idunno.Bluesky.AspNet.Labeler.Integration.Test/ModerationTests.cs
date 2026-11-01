@@ -1061,6 +1061,8 @@ public partial class ModerationTests
             .AuthenticateLocalAsync("uid:0", token)).Result!;
         AdministrationDispatcher dispatcher = fixture.Services.GetRequiredService<AdministrationDispatcher>();
         const string recordUri = "at://did:plc:reporter/app.bsky.feed.post/3loqo3h6jbb2g";
+        // Finish the startup review batch before creating the case so background PDS reads cannot affect this assertion.
+        await fixture.Clock.DeletedPostReviewRegistrations.Reader.ReadAsync(token);
         AdministrationResponse issued = await dispatcher.DispatchAsync(
             administrator,
             new(
