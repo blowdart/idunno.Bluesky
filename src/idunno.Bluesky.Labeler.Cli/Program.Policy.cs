@@ -270,11 +270,13 @@ internal static partial class Program
             ?? throw new InvalidDataException("A complete policy definition is required.");
     }
 
-    /// <summary>Requests only the selected declaration write action, never account, identity or general repository authority.</summary>
+    /// <summary>Requests the declaration actions required by createRecord or putRecord, never delete, account, identity or general repository authority.</summary>
     internal static OAuthOptions CreatePolicyOAuthOptions(Uri clientId, bool create) => new()
     {
         ClientId = clientId.AbsoluteUri,
-        Scopes = ["atproto", $"repo:app.bsky.labeler.service?action={(create ? "create" : "update")}"]
+        Scopes = create
+            ? ["atproto", "repo:app.bsky.labeler.service?action=create"]
+            : ["atproto", "repo:app.bsky.labeler.service?action=create", "repo:app.bsky.labeler.service?action=update"]
     };
 
     /// <summary>Preserves the exact validated record fields instead of injecting typed DTO defaults.</summary>

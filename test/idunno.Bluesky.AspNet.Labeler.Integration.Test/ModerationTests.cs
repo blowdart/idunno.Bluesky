@@ -152,7 +152,8 @@ public partial class ModerationTests
             key: key,
             identity: identity,
             remoteEnabled: remoteEnabled,
-            xenonUi: true);
+            xenonUi: true,
+            handles: new PublicationHandles(remoteEnabled ? new Handle("labeler.example") : Handle.Invalid));
         await fixture.Clock.WithdrawalRegistrations.Reader.ReadAsync(token);
         await fixture.Clock.PolicyVerificationRegistrations.Reader.ReadAsync(token);
         LabelPolicyService verifier = fixture.Services.GetRequiredService<LabelPolicyService>();
@@ -206,8 +207,53 @@ public partial class ModerationTests
         unconfirmed.Headers.Add("Cookie", string.Join("; ", confirmation.Headers.GetValues("Set-Cookie")
             .Select(cookie => cookie.Split(';')[0])));
         using HttpResponseMessage rejected = await fixture.Client.SendAsync(unconfirmed, token);
-        Assert.Equal(HttpStatusCode.OK, rejected.StatusCode);
-        Assert.Contains("Confirm policy publication before submitting.", await rejected.Content.ReadAsStringAsync(token), StringComparison.Ordinal);
+        Assert.Equal(HttpStatusCode.Redirect, rejected.StatusCode);
+        Assert.EndsWith("#policy-publication", rejected.Headers.Location!.OriginalString, StringComparison.Ordinal);
+        using HttpRequestMessage redirected = new(HttpMethod.Get, rejected.Headers.Location);
+        redirected.Headers.Add("X-Test-Did", s_administrator.Value);
+        redirected.Headers.Add("Cookie", string.Join("; ", rejected.Headers.GetValues("Set-Cookie")
+            .Select(cookie => cookie.Split(';')[0])));
+        using HttpResponseMessage errorPage = await fixture.Client.SendAsync(redirected, token);
+        Assert.Equal(HttpStatusCode.OK, errorPage.StatusCode);
+        Assert.Contains("Confirm policy publication before submitting.", await errorPage.Content.ReadAsStringAsync(token), StringComparison.Ordinal);
+
+        foreach ((string pageHandler, string field, string value, string expected) in new[]
+        {
+            ("Publish", "revision", "invalid", "The policy revision was invalid."),
+            ("Publish", "revision", "-1", "The policy revision was invalid."),
+            ("Publish", "revision", "999", "Reload or recover the pending policy publication."),
+            ("Publish", "resumeWithdrawal", "true", "publication"),
+            ("SignInAndPublish", "labelerHandle", "invalid handle", "Enter the labeler account"),
+            ("SignInAndPublish", "labelerHandle", "beanslabeltest.bsky.social", "publication")
+        })
+        {
+            Dictionary<string, string> fields = new()
+            {
+                ["__RequestVerificationToken"] = WebUtility.HtmlDecode(antiforgery),
+                ["confirmed"] = "true",
+                ["version"] = "v2",
+                ["operationId"] = "failed-publication",
+                ["reason"] = "Exercise publication failure redirects.",
+                [field] = value
+            };
+            using HttpRequestMessage failure = new(HttpMethod.Post, "/Xenon/Policy?handler=" + pageHandler)
+            {
+                Content = new FormUrlEncodedContent(fields)
+            };
+            failure.Headers.Add("X-Test-Did", s_administrator.Value);
+            failure.Headers.Add("Cookie", string.Join("; ", confirmation.Headers.GetValues("Set-Cookie")
+                .Select(cookie => cookie.Split(';')[0])));
+            using HttpResponseMessage failed = await fixture.Client.SendAsync(failure, token);
+            Assert.Equal(HttpStatusCode.Redirect, failed.StatusCode);
+            Assert.EndsWith("#policy-publication", failed.Headers.Location!.OriginalString, StringComparison.Ordinal);
+            using HttpRequestMessage reload = new(HttpMethod.Get, failed.Headers.Location);
+            reload.Headers.Add("X-Test-Did", s_administrator.Value);
+            reload.Headers.Add("Cookie", string.Join("; ", failed.Headers.GetValues("Set-Cookie")
+                .Select(cookie => cookie.Split(';')[0])));
+            using HttpResponseMessage reloaded = await fixture.Client.SendAsync(reload, token);
+            Assert.Equal(HttpStatusCode.OK, reloaded.StatusCode);
+            Assert.Contains(expected, await reloaded.Content.ReadAsStringAsync(token), StringComparison.OrdinalIgnoreCase);
+        }
         Assert.Equal(LabelPolicyPhase.VerifiedActive, (await fixture.Services.GetRequiredService<ILabelPolicyStore>()
             .ReadPolicyStateAsync(token))!.Phase);
         AdministrationResponse started = await dispatcher.DispatchAsync(
@@ -261,6 +307,16 @@ public partial class ModerationTests
                 Assert.Contains(progressAt.ToString("O"), progressHtml, StringComparison.Ordinal);
             }
         }
+        using HttpRequestMessage publicationPage = new(HttpMethod.Get, "/Xenon/Policy");
+        publicationPage.Headers.Add("X-Test-Did", s_administrator.Value);
+        using HttpResponseMessage publicationResponse = await fixture.Client.SendAsync(publicationPage, token);
+        Assert.Equal(HttpStatusCode.OK, publicationResponse.StatusCode);
+        string publicationHtml = await publicationResponse.Content.ReadAsStringAsync(token);
+        Assert.Contains(
+            $"name=\"labelerHandle\" value=\"{(remoteEnabled ? "labeler.example" : string.Empty)}\"",
+            publicationHtml,
+            StringComparison.Ordinal);
+        Assert.Equal(!remoteEnabled, publicationHtml.Contains("The labeler account handle could not be resolved.", StringComparison.Ordinal));
         LabelStoreState stream = await fixture.Store.GetStateAsync(token);
         Assert.Equal(2, stream.IssuedThrough);
         Assert.Equal(stream.IssuedThrough, stream.PublishedThrough);
@@ -273,6 +329,206 @@ public partial class ModerationTests
             cancellationToken: token);
         Assert.True(Assert.Single(labels.Labels).SignedLabel.Label.IsNegationLabel);
         Assert.True((await verifier.GetVerifiedStateAsync(forceVerification: true, cancellationToken: token)).Succeeded);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PolicyAbandonmentRequiresConfirmationAndCurrentRevisionAndRedirects(bool withdrawing)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(
+            key: key,
+            identity: identity,
+            xenonUi: true,
+            handles: new PublicationHandles(new Handle("labeler.example")));
+        await fixture.Clock.WithdrawalRegistrations.Reader.ReadAsync(token);
+        await fixture.Clock.PolicyVerificationRegistrations.Reader.ReadAsync(token);
+        ILabelPolicyStore policies = fixture.Services.GetRequiredService<ILabelPolicyStore>();
+        LabelPolicyState active = (await fixture.Services.GetRequiredService<LabelPolicyService>()
+            .GetVerifiedStateAsync(cancellationToken: token)).Result!;
+        LabelAdministrationCaller administrator = (await fixture.Services.GetRequiredService<ILabelAdministrationStore>()
+            .AuthenticateLocalAsync("uid:0", token)).Result!;
+        if (withdrawing)
+        {
+            await fixture.Store.AppendAsync("label-before-abandonment", [new(key.CreateLabel(
+                source: TestServerBuilder.s_issuer,
+                uri: "did:plc:subject",
+                value: "spam",
+                creationTimestamp: active.DatabaseTime))], cancellationToken: token);
+        }
+        using JsonDocument declaration = JsonDocument.Parse(Declaration.Replace("[\"spam\"]", "[]", StringComparison.Ordinal));
+        AdministrationDispatcher dispatcher = fixture.Services.GetRequiredService<AdministrationDispatcher>();
+        AdministrationResponse saved = await dispatcher.DispatchAsync(
+            caller: administrator,
+            command: new(
+                Method: "savePolicy",
+                OperationId: "save-abandon-draft",
+                Reason: "Prepare interrupted publication.",
+                Moderation: new(PolicyVersion: "abandon-v2", Declaration: declaration.RootElement, AllowAccounts: true, AllowRecords: true, Rules: "Retire spam.")),
+            token: token);
+        Assert.True(saved.Succeeded, saved.Message);
+        AdministrationResponse started = await dispatcher.DispatchAsync(
+            caller: administrator,
+            command: new(
+                Method: "beginPolicyPublication",
+                OperationId: "interrupted-publication",
+                Reason: "Begin interrupted publication.",
+                Moderation: new(PolicyVersion: "abandon-v2", ExpectedRevision: active.Revision)),
+            token: token);
+        Assert.True(started.Succeeded, started.Message);
+        LabelPolicyState pending = (await policies.ReadPolicyStateAsync(token))!;
+        Assert.Equal(withdrawing ? LabelPolicyPhase.Withdrawing : LabelPolicyPhase.Publishing, pending.Phase);
+        LabelStoreState before = await fixture.Store.GetStateAsync(token);
+        using HttpRequestMessage get = new(HttpMethod.Get, "/Xenon/Policy");
+        get.Headers.Add("X-Test-Did", s_administrator.Value);
+        using HttpResponseMessage page = await fixture.Client.SendAsync(get, token);
+        string html = await page.Content.ReadAsStringAsync(token);
+        Assert.Contains("Abandon pending publication", html, StringComparison.Ordinal);
+        Assert.Contains("Already committed label negations are permanent", html, StringComparison.Ordinal);
+        const string prefix = "name=\"__RequestVerificationToken\" type=\"hidden\" value=\"";
+        int start = html.IndexOf(prefix, StringComparison.Ordinal);
+        Assert.NotEqual(-1, start);
+        string antiforgery = WebUtility.HtmlDecode(html[(start + prefix.Length)..].Split('"')[0]);
+        string cookies = string.Join("; ", page.Headers.GetValues("Set-Cookie").Select(cookie => cookie.Split(';')[0]));
+        foreach ((string confirmed, string revision, string reason, string expected) in new[]
+        {
+            ("false", pending.Revision.ToString(), "Cancel.", "Confirm abandonment"),
+            ("true", "invalid", "Cancel.", "policy revision was invalid"),
+            ("true", active.Revision.ToString(), "Cancel.", "Only the observed pending publication"),
+            ("true", pending.Revision.ToString(), " ", "reason"),
+            ("true", pending.Revision.ToString(), string.Concat(Enumerable.Repeat("\u754c", 1400)), "reason"),
+            ("true", pending.Revision.ToString(), "Restart with a correct declaration CID.", "Publication abandoned")
+        })
+        {
+            using HttpRequestMessage post = new(HttpMethod.Post, "/Xenon/Policy?handler=AbandonPublication")
+            {
+                Content = new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                    ["__RequestVerificationToken"] = antiforgery,
+                    ["confirmed"] = confirmed,
+                    ["revision"] = revision,
+                    ["reason"] = reason,
+                    ["operationId"] = Guid.NewGuid().ToString("N")
+                })
+            };
+            post.Headers.Add("X-Test-Did", s_administrator.Value);
+            post.Headers.Add("Cookie", cookies);
+            using HttpResponseMessage response = await fixture.Client.SendAsync(post, token);
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+            Assert.EndsWith("#policy-publication", response.Headers.Location!.OriginalString, StringComparison.Ordinal);
+            using HttpRequestMessage reload = new(HttpMethod.Get, response.Headers.Location);
+            reload.Headers.Add("X-Test-Did", s_administrator.Value);
+            reload.Headers.Add("Cookie", string.Join("; ", response.Headers.GetValues("Set-Cookie").Select(cookie => cookie.Split(';')[0])));
+            using HttpResponseMessage refreshed = await fixture.Client.SendAsync(reload, token);
+            Assert.Equal(HttpStatusCode.OK, refreshed.StatusCode);
+            string refreshedHtml = WebUtility.HtmlDecode(await refreshed.Content.ReadAsStringAsync(token));
+            Assert.Contains(expected, refreshedHtml, StringComparison.OrdinalIgnoreCase);
+            LabelPolicyState current = (await policies.ReadPolicyStateAsync(token))!;
+            if (expected == "Publication abandoned")
+            {
+                Assert.Equal(LabelPolicyPhase.Conflict, current.Phase);
+                Assert.DoesNotContain("Abandon pending publication", refreshedHtml, StringComparison.Ordinal);
+                Assert.Contains("abandon-v2 (retry interrupted publication)", refreshedHtml, StringComparison.Ordinal);
+                Assert.DoesNotContain("No drafts to publish", refreshedHtml, StringComparison.Ordinal);
+            }
+            else
+            {
+                Assert.Equal(pending.Revision, current.Revision);
+                Assert.Equal(pending.Phase, current.Phase);
+            }
+        }
+        LabelStoreState after = await fixture.Store.GetStateAsync(token);
+        Assert.Equal(before.IssuedThrough, after.IssuedThrough);
+        AdministrationResponse restarted = await dispatcher.DispatchAsync(
+            caller: administrator,
+            command: new(
+                Method: "beginPolicyPublication",
+                OperationId: "restart-publication",
+                Reason: "Use observed PDS declaration.",
+                Moderation: new(PolicyVersion: "abandon-v2", ExpectedRevision: (await policies.ReadPolicyStateAsync(token))!.Revision, PreviousCid: Cid)),
+            token: token);
+        Assert.True(restarted.Succeeded, restarted.Message);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task WebPublicationCapturesCurrentCidAndStopsOnLookupFailure(bool missing)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()));
+        DeclarationHandler lookup = new(key.ExportPublicKeyMultibase());
+        await using TestServerBuilder fixture = await CreateAsync(
+            key: key,
+            identity: identity,
+            xenonUi: true,
+            handles: new PublicationHandles(new Handle("labeler.example")),
+            publicationLookup: lookup);
+        LabelPolicyState active = (await fixture.Services.GetRequiredService<LabelPolicyService>()
+            .GetVerifiedStateAsync(cancellationToken: token)).Result!;
+        LabelAdministrationCaller administrator = (await fixture.Services.GetRequiredService<ILabelAdministrationStore>()
+            .AuthenticateLocalAsync("uid:0", token)).Result!;
+        using JsonDocument declaration = JsonDocument.Parse(Declaration);
+        AdministrationResponse saved = await fixture.Services.GetRequiredService<AdministrationDispatcher>().DispatchAsync(
+            caller: administrator,
+            command: new(
+                Method: "savePolicy",
+                OperationId: "save-auto-cid",
+                Reason: "Save an updated policy.",
+                Moderation: new(PolicyVersion: "auto-cid-v2", Declaration: declaration.RootElement, AllowAccounts: true, AllowRecords: true, Rules: "Updated rules.")),
+            token: token);
+        Assert.True(saved.Succeeded, saved.Message);
+        using HttpRequestMessage get = new(HttpMethod.Get, "/Xenon/Policy");
+        get.Headers.Add("X-Test-Did", s_administrator.Value);
+        using HttpResponseMessage page = await fixture.Client.SendAsync(get, token);
+        string html = await page.Content.ReadAsStringAsync(token);
+        Assert.DoesNotContain("name=\"previousCid\"", html, StringComparison.Ordinal);
+        const string prefix = "name=\"__RequestVerificationToken\" type=\"hidden\" value=\"";
+        int start = html.IndexOf(prefix, StringComparison.Ordinal);
+        Assert.NotEqual(-1, start);
+        string antiforgery = WebUtility.HtmlDecode(html[(start + prefix.Length)..].Split('"')[0]);
+        string cookies = string.Join("; ", page.Headers.GetValues("Set-Cookie").Select(cookie => cookie.Split(';')[0]));
+        foreach (HttpStatusCode status in new[] { HttpStatusCode.InternalServerError, HttpStatusCode.OK })
+        {
+            lookup.DeclarationStatus = status == HttpStatusCode.OK && missing ? HttpStatusCode.BadRequest : status;
+            using HttpRequestMessage post = new(HttpMethod.Post, "/Xenon/Policy?handler=Publish")
+            {
+                Content = new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                    ["__RequestVerificationToken"] = antiforgery,
+                    ["confirmed"] = "true",
+                    ["revision"] = active.Revision.ToString(),
+                    ["reason"] = "Publish updated policy.",
+                    ["operationId"] = Guid.NewGuid().ToString("N"),
+                    ["version"] = "auto-cid-v2",
+                    ["previousCid"] = "must-not-trust-a-posted-cid"
+                })
+            };
+            post.Headers.Add("X-Test-Did", s_administrator.Value);
+            post.Headers.Add("Cookie", cookies);
+            using HttpResponseMessage response = await fixture.Client.SendAsync(post, token);
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+            LabelPolicyState state = (await fixture.Services.GetRequiredService<ILabelPolicyStore>().ReadPolicyStateAsync(token))!;
+            if (status == HttpStatusCode.OK)
+            {
+                Assert.Equal(LabelPolicyPhase.Publishing, state.Phase);
+                Assert.Equal(missing ? null : Cid, state.PreviousCid?.ToString());
+            }
+            else
+            {
+                Assert.Equal(active.Revision, state.Revision);
+                Assert.Equal(LabelPolicyPhase.VerifiedActive, state.Phase);
+                using HttpRequestMessage reload = new(HttpMethod.Get, response.Headers.Location);
+                reload.Headers.Add("X-Test-Did", s_administrator.Value);
+                reload.Headers.Add("Cookie", string.Join("; ", response.Headers.GetValues("Set-Cookie").Select(cookie => cookie.Split(';')[0])));
+                using HttpResponseMessage refreshed = await fixture.Client.SendAsync(reload, token);
+                Assert.Contains("No publication was started.", await refreshed.Content.ReadAsStringAsync(token), StringComparison.Ordinal);
+            }
+        }
     }
 
     [Theory]
@@ -1300,7 +1556,9 @@ public partial class ModerationTests
         bool remoteEnabled = false,
         string declarationJson = Declaration,
         bool xenonUi = false,
-        bool ozone = false)
+        bool ozone = false,
+        IDidHandleResolver? handles = null,
+        DeclarationHandler? publicationLookup = null)
     {
         TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
             configureAdministration: services =>
@@ -1308,6 +1566,16 @@ public partial class ModerationTests
                 services.AddLogging(builder => builder.AddFakeLogging());
                 services.AddLabelerModeration(issuer: TestServerBuilder.s_issuer, httpClient: identity, options: options);
                 services.AddLabelerAdministration(new(TestServerBuilder.s_issuer, "labeler_admin"), key, identity);
+                if (handles is not null)
+                {
+                    services.AddSingleton(handles);
+                }
+                if (publicationLookup is not null)
+                {
+                    services.PostConfigure<Microsoft.Extensions.Http.HttpClientFactoryOptions>(
+                        "Xenon.PublicPreviews",
+                        settings => settings.HttpMessageHandlerBuilderActions.Add(builder => builder.PrimaryHandler = publicationLookup));
+                }
                 if (ozone)
                 {
                     services.Configure<LabelerAdministrationOptions>(settings =>
@@ -1362,11 +1630,35 @@ public partial class ModerationTests
         return request;
     }
 
+    /// <summary>Supplies a deterministic labeler identity lookup for publication rendering.</summary>
+    private sealed class PublicationHandles(Handle handle) : IDidHandleResolver
+    {
+        /// <inheritdoc/>
+        public ValueTask<Handle> ResolveHandleAsync(Did did, CancellationToken cancellationToken = default)
+        {
+            return ValueTask.FromResult(did == TestServerBuilder.s_issuer ? handle : Handle.Invalid);
+        }
+
+        /// <inheritdoc/>
+        public bool TryGetCachedHandle(Did did, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out Handle? cachedHandle)
+        {
+            cachedHandle = did == TestServerBuilder.s_issuer ? handle : Handle.Invalid;
+            return true;
+        }
+
+        /// <inheritdoc/>
+        public void Invalidate(Did did)
+        {
+        }
+    }
+
     /// <summary>Serves exact DID documents, declaration records, and the record used by the Ozone appeal test.</summary>
     private sealed class DeclarationHandler(string publicKey) : HttpMessageHandler
     {
         internal string Declaration { get; set; } = ModerationTests.Declaration;
         internal int DeclarationReads { get; private set; }
+        /// <summary>Gets or sets the result of the declaration lookup, independently of fixture verification.</summary>
+        internal HttpStatusCode DeclarationStatus { get; set; } = HttpStatusCode.OK;
         internal int SubjectRecordReads { get; private set; }
         /// <summary>Gets or sets whether the reported record is authoritatively absent.</summary>
         internal bool MissingSubjectRecord { get; set; }
@@ -1416,6 +1708,16 @@ public partial class ModerationTests
                 DeclarationReads++;
                 Assert.Contains("collection=app.bsky.labeler.service", uri.Query, StringComparison.Ordinal);
                 Assert.Contains("rkey=self", uri.Query, StringComparison.OrdinalIgnoreCase);
+                if (DeclarationStatus != HttpStatusCode.OK)
+                {
+                    return new HttpResponseMessage(DeclarationStatus)
+                    {
+                        Content = new StringContent(
+                            DeclarationStatus == HttpStatusCode.BadRequest ? """{"error":"RecordNotFound"}""" : """{"error":"InternalServerError"}""",
+                            Encoding.UTF8,
+                            "application/json")
+                    };
+                }
                 if (BlockDeclarationReads)
                 {
                     DeclarationRequested.TrySetResult();

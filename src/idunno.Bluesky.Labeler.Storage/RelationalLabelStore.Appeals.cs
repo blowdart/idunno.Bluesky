@@ -426,20 +426,9 @@ internal abstract partial class RelationalLabelStore
         DateTimeOffset completedAt,
         CancellationToken token)
     {
-        LabelServiceResult<StoredLabel[]> observed = await ReadTargetLabelsAsync(
-            connection: connection,
-            transaction: transaction,
-            state: state,
-            target: subject.RecordUri is { } record ? LabelTarget.Record(record, subject.Cid) : LabelTarget.Account(subject.Repository),
-            exactVersion: false,
-            now: completedAt.ToUnixTimeMilliseconds(),
-            token: token).ConfigureAwait(false);
-        if (!observed.Succeeded)
-        {
-            throw new InvalidDataException("Current appeal outcomes could not be inspected: " + observed.Error.Message);
-        }
-
-        HashSet<long> current = [.. observed.Result.Select(label => label.Sequence)];
+        LabelTarget target = subject.RecordUri is { } record
+            ? LabelTarget.Record(record, subject.Cid)
+            : LabelTarget.Account(subject.Repository);
         List<ModerationAppealData> superseded = [];
         long after = 0;
         while (true)
@@ -467,7 +456,34 @@ internal abstract partial class RelationalLabelStore
             foreach (ModerationAppealData appeal in page)
             {
                 if (appeal.Subject != subject.Subject || appeal.Cid != subject.Cid?.ToString() ||
-                    appeal.Challenges.Length == 0 || appeal.Challenges.Any(challenge => current.Contains(challenge.Sequence)))
+                    appeal.Challenges.Length == 0)
+                {
+                    continue;
+                }
+
+                StoredLabel[] captured = [.. appeal.ToAppeal().Challenges];
+                IReadOnlyList<LabelServiceResult<LabelDecisionSnapshot>> observed = await DecisionSnapshotsAsync(
+                    connection: connection,
+                    transaction: transaction,
+                    state: state,
+                    queries: [.. captured.Select(challenge => (target, challenge.SignedLabel.Label.Value))],
+                    token: token).ConfigureAwait(false);
+                HashSet<long> current = [];
+                foreach (LabelServiceResult<LabelDecisionSnapshot> snapshot in observed)
+                {
+                    if (!snapshot.Succeeded)
+                    {
+                        throw new InvalidDataException("Current appeal outcomes could not be inspected: " + snapshot.Error.Message);
+                    }
+
+                    if (snapshot.Result.CurrentLabel is { } label &&
+                        LabelDecisionRules.IsActive(label.SignedLabel, completedAt))
+                    {
+                        current.Add(label.Sequence);
+                    }
+                }
+
+                if (captured.Any(challenge => current.Contains(challenge.Sequence)))
                 {
                     continue;
                 }

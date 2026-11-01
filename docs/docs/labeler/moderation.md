@@ -490,8 +490,10 @@ browser sign-ins, including one for `getPolicy` while waiting for cleanup and
 one for `resumePolicyPublication` if cleanup needs renewed authorization.
 Sessions are reused for the same method and discarded when the CLI exits unless
 `--remember-me` explicitly enables the [protected local credential cache](administration.md#remembering-sign-ins).
-Labeler-account sign-in requests only create or update permission for
-`app.bsky.labeler.service`, never delete, identity, account or general repository
+Labeler-account sign-in requests create permission for a new declaration, or both
+create and update permission for an existing declaration because the PDS
+`putRecord` endpoint requires both even with a CID precondition. Permissions cover
+only `app.bsky.labeler.service`, never delete, identity, account or general repository
 authority. The authenticated labeler DID must match the issuer returned by the
 protected policy gate. The host receives neither PDS credentials nor the OAuth
 callback.

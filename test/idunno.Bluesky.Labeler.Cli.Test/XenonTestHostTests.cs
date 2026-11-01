@@ -143,6 +143,23 @@ public partial class XenonTestHostTests
                 await team.GetRemoteAdministrationStatusAsync(owner, token));
             Assert.False(initial.Enabled);
 
+            if (controllable)
+            {
+                foreach (string invalidReason in new[] { "   ", new string('\u4e00', 1500) })
+                {
+                    using HttpResponseMessage invalid = await SubmitAsync(
+                        page: html,
+                        operationId: "invalid-remote-reason",
+                        enabled: true,
+                        includeAntiforgery: true,
+                        reason: invalidReason);
+                    Assert.Equal(HttpStatusCode.OK, invalid.StatusCode);
+                    Assert.Contains("notice-error", await invalid.Content.ReadAsStringAsync(token), StringComparison.Ordinal);
+                    Assert.False(Xenon.TestHost.SeedData.Require(
+                        await team.GetRemoteAdministrationStatusAsync(owner, token)).Enabled);
+                }
+            }
+
             using HttpResponseMessage posted = await SubmitAsync(
                 page: html,
                 operationId: "remote-enable",
@@ -228,13 +245,14 @@ public partial class XenonTestHostTests
                 string page,
                 string operationId,
                 bool enabled,
-                bool includeAntiforgery)
+                bool includeAntiforgery,
+                string reason = "Exercise the owner-only remote administration form.")
             {
                 Dictionary<string, string> form = new()
                 {
                     ["operationId"] = operationId,
                     ["enabled"] = enabled ? "true" : "false",
-                    ["reason"] = "Exercise the owner-only remote administration form."
+                    ["reason"] = reason
                 };
                 if (includeAntiforgery)
                 {

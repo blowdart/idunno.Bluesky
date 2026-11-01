@@ -46,6 +46,12 @@
 
 #### idunno.Bluesky.AspNet.Labeler.UI
 
+* Displays invalid remote-administration audit reasons as validation errors instead of unhandled server errors.
+* Redirects failed policy publication, cleanup-resume and authorization submissions back to the publication tab with retained errors, so refreshing does not resubmit a POST.
+* Prefills the publication authorization handle by resolving the labeler DID, with an explicit message and manual entry when resolution is unavailable.
+* Adds confirmed, revision-fenced abandonment of pending policy publication in Xenon, retaining permanent negations and allowing a new publication of the interrupted policy version.
+* Automatically captures the existing PDS declaration CID before web policy publication, failing closed on lookup errors and preserving conditional-write conflict protection.
+* Requests both declaration create and update permissions for conditional PDS updates in Xenon and the CLI, as required by `putRecord`, without granting delete or unrelated repository access.
 * Restores selected signing-key and registered-host context in retirement confirmation previews before the durable workflow has started.
 * Prefixes authorized page titles with open case, report and appeal totals, refreshing titles and navigation in the background on a best-effort basis with explicit stale/access feedback.
 * Displays the source commit ID in the Xenon footer when supplied by the container build.
@@ -221,6 +227,7 @@
 
 #### idunno.Bluesky.Labeler.SQLite / PostgreSQL / MySQL
 
+* Resolves selected-label appeals on targets with large historical label sets by checking remaining captured outcomes directly, without reapplying the intake capture limit.
 * Filters selected appeal label values before bounded challenge capture, retains the selected value in accepted reports and pending promotion, and recovers legacy bootstrap owners even when earlier authentication denials occupy the first audit entries.
 * Adds schema-fourteen durable Ozone event identities and closure provenance, committed atomically with labels, reports, native case history and audit; upgrades remain additive and older writers reject the new schema.
 * Enforces Bluesky AppView label-service limits by default at the shared durable publication boundary: 5 labels per rolling second, 10,000 per rolling hour and 100,000 per rolling 24 hours, including negations. Schema thirteen persists accounting across hosts and restarts; excess remains pending rather than being discarded.

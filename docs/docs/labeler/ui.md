@@ -462,8 +462,9 @@ activate the policy and reopen reporting and issuance. Clicking **Verify declara
 requires no reason field or confirmation checkbox; the shared service retains an
 automatic audit reason and enforces live administrator authorization.
 Its Policy ID dropdown lists all available unpublished drafts, excluding deleted
-and previously selected policies. If no drafts exist, publication is disabled
-until a draft is saved.
+and previously selected policies, except that the currently selected policy can
+be retried after publication enters a conflict state. If neither a draft nor a
+retryable selected policy exists, publication is disabled until a draft is saved.
 
 Starting publication explicitly confirms irreversible withdrawal of existing
 applications of label values removed by the selected draft. The host scans and
@@ -488,6 +489,23 @@ write the replacement declaration. The UI only prepares publication and asks
 for independent verification; it does not hold labeler PDS credentials or
 perform that write. If publication fails or is abandoned, committed negations
 are not automatically undone, and reintroducing a value does not reapply it.
+
+The **Publication** tab shows **Abandon pending publication** during withdrawal
+and declaration publication. Enter a reason and explicitly confirm abandonment.
+The action is fenced to the displayed policy revision and requires current
+administrator authority. It makes no PDS write and does not undo completed
+negations; reporting and issuance remain blocked until independent verification.
+A stale or rejected submission redirects to refreshed state with an error,
+so reloading does not resubmit the form. After abandonment, select the interrupted
+Policy ID to begin a new operation, or save and select another draft. Xenon reads
+the authoritative PDS declaration and captures its CID automatically before
+beginning the operation; only an explicit `RecordNotFound` permits create intent.
+Lookup failures leave the policy unchanged. The post-login comparison and
+conditional write still reject a declaration changed after that observation.
+Updating an existing declaration requests both create and update permission for
+`app.bsky.labeler.service`, as required by the PDS `putRecord` endpoint. No delete
+permission is requested. The stored CID precondition still prevents creating a
+replacement for a disappeared record or overwriting an unexpectedly changed one.
 
 The editor starts from the current selected policy. **Current State** lists all
 saved, undeleted versions that have never been selected for publication, with

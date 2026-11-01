@@ -29,6 +29,55 @@ internal sealed partial class PolicyPublicationService(
     internal const string Scheme = "Xenon.PolicyPublication";
     private const string AuditReason = "Publish the selected declaration from Xenon using separate labeler authorization.";
 
+    /// <summary>Captures the authoritative declaration CID before retaining a new publication intent.</summary>
+    internal async Task<string?> ReadPreviousCidAsync(HttpContext context, long revision, string reason)
+    {
+        AdministrationResponse authorized = await administration.AuthorizePolicyPublicationAsync(
+            principal: context.User,
+            reason: reason,
+            token: context.RequestAborted).ConfigureAwait(false);
+        if (!authorized.Succeeded)
+        {
+            throw new InvalidOperationException(authorized.Message ?? "Current administrator publication authority is required.");
+        }
+        AdministrationResponse observed = await administration.DispatchAsync(
+            principal: context.User,
+            command: new(Method: "getPolicy"),
+            cancellationToken: context.RequestAborted).ConfigureAwait(false);
+        ModerationPolicyView policy = observed.Moderation?.Policy ??
+            throw new InvalidOperationException("The current policy state could not be loaded. No publication was started.");
+        if (policy.Revision != revision || policy.Phase is "Publishing" or "Withdrawing")
+        {
+            throw new InvalidOperationException("Reload or recover the pending policy publication.");
+        }
+        using HttpClient client = clients.CreateClient(SubjectPreviewService.ClientName);
+        using CancellationTokenSource deadline = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted);
+        deadline.CancelAfter(TimeSpan.FromSeconds(8));
+        Did issuer = new(policy.Issuer);
+        Uri pds = await SubjectPreviewService.ResolvePersonalDataServerAsync(client, issuer, deadline.Token).ConfigureAwait(false) ??
+            throw new InvalidOperationException("The labeler's PDS could not be resolved. No publication was started.");
+        AtProtoHttpResult<AtProtoRepositoryRecord> existing = await AtProtoServer.GetRecord(
+            repo: issuer,
+            collection: new("app.bsky.labeler.service"),
+            rKey: new("self"),
+            cid: null,
+            service: pds,
+            accessCredentials: null,
+            httpClient: client,
+            loggerFactory: context.RequestServices.GetRequiredService<ILoggerFactory>(),
+            maximumResponseSize: 524_288,
+            cancellationToken: deadline.Token).ConfigureAwait(false);
+        if (existing.Succeeded)
+        {
+            return existing.Result.Cid.ToString();
+        }
+        if (existing.StatusCode == HttpStatusCode.BadRequest && existing.AtErrorDetail?.Error == "RecordNotFound")
+        {
+            return null;
+        }
+        throw new InvalidOperationException("The existing PDS declaration could not be read. No publication was started.");
+    }
+
     /// <summary>Builds a separate web client from configured origins, never request host headers or moderator scopes.</summary>
     internal OAuthOptions CreateOptions(bool? create = null)
     {
@@ -41,7 +90,6 @@ internal sealed partial class PolicyPublicationService(
         {
             throw new InvalidOperationException("Web declaration publication requires a configured public HTTPS origin.");
         }
-        string writeAction = create is true ? "create" : "update";
         OAuthOptions publication = new()
         {
             ClientId = new Uri(origin, "/Xenon/Policy/ClientMetadata").AbsoluteUri,
@@ -53,9 +101,10 @@ internal sealed partial class PolicyPublicationService(
             ClientSigningKey = website.ClientSigningKey,
             ClientSigningKeyPath = website.ClientSigningKeyPath,
             ClientSigningKeyId = website.ClientSigningKeyId,
-            Scopes = create is null
-                ? ["atproto", "repo:app.bsky.labeler.service?action=create", "repo:app.bsky.labeler.service?action=update"]
-                : ["atproto", $"repo:app.bsky.labeler.service?action={writeAction}"]
+            // putRecord requires both actions even with an existing-record CID precondition.
+            Scopes = create is true
+                ? ["atproto", "repo:app.bsky.labeler.service?action=create"]
+                : ["atproto", "repo:app.bsky.labeler.service?action=create", "repo:app.bsky.labeler.service?action=update"]
         };
         foreach (OAuthClientSigningKey key in website.AdditionalClientSigningKeys)
         {

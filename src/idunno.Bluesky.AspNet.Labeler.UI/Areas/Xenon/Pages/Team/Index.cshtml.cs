@@ -269,14 +269,25 @@ public sealed class IndexModel : PageModel
             return Page();
         }
 
-        LabelServiceResult<LabelAdministrationReceipt> result = await HttpContext.RequestServices
-            .GetRequiredService<LabelerUiAdministration>()
-            .SetRemoteAdministrationEnabledAsync(
-                principal: User,
-                operationId: operationId,
-                enabled: enabled,
-                reason: reason,
-                cancellationToken: HttpContext.RequestAborted).ConfigureAwait(false);
+        LabelServiceResult<LabelAdministrationReceipt> result;
+        try
+        {
+            result = await HttpContext.RequestServices
+                .GetRequiredService<LabelerUiAdministration>()
+                .SetRemoteAdministrationEnabledAsync(
+                    principal: User,
+                    operationId: operationId,
+                    enabled: enabled,
+                    reason: reason,
+                    cancellationToken: HttpContext.RequestAborted).ConfigureAwait(false);
+        }
+        catch (ArgumentException exception)
+        {
+            ViewData["Error"] = exception.Message;
+            await OnGetAsync().ConfigureAwait(false);
+            return Page();
+        }
+
         if (result.Succeeded)
         {
             TempData["Status"] = enabled

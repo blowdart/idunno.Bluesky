@@ -308,18 +308,30 @@ else if (ViewData["Error"] is null)
             <p>Xenon checks that the published declaration has not changed unexpectedly before replacing it. If publication of a policy has completed Xenon checks the public policy and will not attempt to replace it. If publication is interrupted, check its status before trying again; anything already published is not automatically undone.</p>
             <form method="post" asp-page-handler="SignInAndPublish">
                 <input type="hidden" name="operationId" value="@publication.GetProperty("publicationOperationId").GetString()" />
-                <label class="field">Labeler account handle<input name="labelerHandle" required maxlength="253" placeholder="labeler.example" autocomplete="off" /></label>
+                @if (ViewData["LabelerHandleError"] is string handleError)
+                {
+                    <p role="alert">@handleError</p>
+                }
+                <label class="field">Labeler account handle<input name="labelerHandle" value="@Model.LabelerHandle" required maxlength="253" placeholder="labeler.example" autocomplete="off" /></label>
                 <p class="form-actions"><button type="submit">Sign in as the labeler and publish</button></p>
             </form>
         }
         else
         {
+        bool retrySelected = publication.GetProperty("phase").GetString() == "Conflict" &&
+            publication.TryGetProperty("definition", out JsonElement interruptedDefinition) && interruptedDefinition.ValueKind == JsonValueKind.Object;
+        int availableVersions = Model.DraftDefinitions.Count + (retrySelected ? 1 : 0);
         <form method="post" asp-page-handler="Publish">
             <input type="hidden" name="revision" value="@publication.GetProperty("revision").GetInt64()" />
             <input type="hidden" name="operationId" value="@(ViewData["OperationId"] ?? Guid.NewGuid().ToString("N"))" />
             <label class="field">Policy ID
-                <select name="version" required aria-describedby="publication-policy-id-help" disabled="@(Model.DraftDefinitions.Count == 0)">
+                <select name="version" required aria-describedby="publication-policy-id-help" disabled="@(availableVersions == 0)">
                     <option value="">Select a saved draft</option>
+                    @if (retrySelected)
+                    {
+                        string recoveryVersion = publication.GetProperty("definition").GetProperty("version").GetString()!;
+                        <option value="@recoveryVersion">@recoveryVersion (retry interrupted publication)</option>
+                    }
                     @foreach (JsonElement draft in Model.DraftDefinitions)
                     {
                         string draftId = draft.GetProperty("version").GetString()!;
@@ -327,16 +339,31 @@ else if (ViewData["Error"] is null)
                     }
                 </select>
             </label>
-            <p id="publication-policy-id-help" class="muted">Select an unpublished saved draft. The ID is internal to this app and is not published as part of the policy; only the declaration JSON is published.</p>
-            @if (Model.DraftDefinitions.Count == 0)
+            <p id="publication-policy-id-help" class="muted">Select an unpublished saved draft or retry the interrupted policy. The ID is internal to this app and is not published as part of the policy; only the declaration JSON is published.</p>
+            @if (availableVersions == 0)
             {
                 <p>No saved drafts are available. Save a draft before beginning publication.</p>
             }
-            <label class="field">Previous declaration CID (optional)<input name="previousCid" maxlength="128" /></label>
+            <p>Xenon reads the current declaration from the labeler's PDS before starting publication and captures its CID automatically. Publication stops if that declaration changes before the authorized write.</p>
             <label class="field">Reason<input name="reason" required maxlength="4096" /></label>
             <label><input type="checkbox" name="confirmed" value="true" required /> Confirm publication and irreversible batched negation of existing applications of removed label values, even if publication later fails</label>
-            <p class="form-actions"><button type="submit" class="@(IndexModel.CanBeginPublication(Model.DraftDefinitions.Count) ? null : "policy-unavailable-button")" disabled="@(!IndexModel.CanBeginPublication(Model.DraftDefinitions.Count))">@IndexModel.PublicationButtonText(Model.DraftDefinitions.Count)</button></p>
+            <p class="form-actions"><button type="submit" class="@(IndexModel.CanBeginPublication(availableVersions) ? null : "policy-unavailable-button")" disabled="@(!IndexModel.CanBeginPublication(availableVersions))">@IndexModel.PublicationButtonText(availableVersions)</button></p>
         </form>
+        }
+        @if (publication.GetProperty("phase").GetString() is "Publishing" or "Withdrawing")
+        {
+            <section aria-labelledby="publication-recovery-title">
+                <h3 id="publication-recovery-title">Recover an interrupted publication</h3>
+                <p>If the selected publication cannot continue, abandon it before starting a new operation with the correct declaration CID. This does not write to the PDS or restore the old declaration.</p>
+                <p><strong>Already committed label negations are permanent and are not undone. Reporting and issuance remain blocked until a policy is independently verified.</strong></p>
+                <form method="post" asp-page-handler="AbandonPublication">
+                    <input type="hidden" name="revision" value="@publication.GetProperty("revision").GetInt64()" />
+                    <input type="hidden" name="operationId" value="@Guid.NewGuid().ToString("N")" />
+                    <label class="field">Reason<input name="reason" required maxlength="4096" /></label>
+                    <label><input type="checkbox" name="confirmed" value="true" required /> Abandon this pending publication without undoing completed label negations</label>
+                    <p class="form-actions"><button type="submit">Abandon pending publication</button></p>
+                </form>
+            </section>
         }
     </section>
 }

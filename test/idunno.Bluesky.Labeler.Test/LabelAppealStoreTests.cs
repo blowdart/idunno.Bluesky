@@ -736,6 +736,24 @@ public class LabelAppealStoreTests
             Success(await ((ILabelAppealStore)fixture.NewStore()).GetAppealsAsync(caller, cancellationToken: token)),
             appeal => appeal.Id != original.Id);
         Assert.Equal(selected.GetJsonBytes(), Assert.Single(selectedAppeal.Challenges).SignedLabel.GetJsonBytes());
+        using HttpClient http = new(new TargetResolutionHandler());
+        LabelIssuanceService service = Service(fixture, caller, policy, key, http);
+        LabelModerationCase current = Success(await ((ILabelModerationStore)fixture.Store).GetCaseAsync(
+            caller, selectedReport.CaseId, token));
+        LabelCaseDecision decision = new(
+            operationId: "uphold-selected-high-history",
+            caseId: current.Id,
+            expectedRevision: current.Revision,
+            policyVersion: "v1",
+            reason: "Uphold the selected challenge without scanning unrelated historical values.",
+            actions: [],
+            appealIds: [selectedAppeal.Id],
+            appealOutcome: LabelAppealStatus.Upheld,
+            reportId: selectedReport.Id);
+        Success(await service.ExecuteCaseDecisionAsync(caller, decision, token));
+        ILabelAppealStore restarted = (ILabelAppealStore)fixture.NewStore();
+        Assert.Equal(LabelAppealStatus.Upheld, Success(await restarted.GetAppealAsync(caller, selectedAppeal.Id, token)).Status);
+        Assert.Equal(LabelAppealStatus.Pending, Success(await restarted.GetAppealAsync(caller, original.Id, token)).Status);
     }
 
     /// <summary>Initializes the real provider's shared administration and independently verified policy gate.</summary>
