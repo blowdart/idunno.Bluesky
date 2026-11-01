@@ -98,6 +98,75 @@ public class LabelAppealStoreTests
     }
 
     [Theory]
+    [InlineData("sqlite", 0)]
+    [InlineData("sqlite", 1)]
+    [InlineData("sqlite", 2)]
+    [InlineData("postgresql", 0)]
+    [InlineData("postgresql", 1)]
+    [InlineData("postgresql", 2)]
+    [InlineData("mysql", 0)]
+    [InlineData("mysql", 1)]
+    [InlineData("mysql", 2)]
+    public async Task PinnedAppealsCaptureAndWithdrawUriWideLabelsWithoutIncludingOtherCids(string engine, int intake)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        (LabelAdministrationCaller caller, LabelPolicyState policy) = await ActivateAsync(fixture);
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient http = new(new TargetResolutionHandler());
+        LabelIssuanceService service = Service(fixture, caller, policy, key, http);
+        AtUri uri = new($"at://{s_owner}/app.bsky.feed.post/example");
+        LabelReportSubject subject = LabelReportSubject.Record(uri, new(TargetResolutionHandler.RecordCid));
+        DateTimeOffset created = policy.DatabaseTime.AddHours(-1);
+        await fixture.Store.AppendAsync(
+            operationId: "mixed-cid-history",
+            labels:
+            [
+                new(key.CreateLabel(source: StoreFixture.s_issuer, uri: uri.ToString(), value: "spam", creationTimestamp: created)),
+                new(key.CreateLabel(source: StoreFixture.s_issuer, uri: uri.ToString(), value: "scam", creationTimestamp: created,
+                    cid: new("bafyreif2pall7yry6b3sh5rttgeczzmhnnemy6rtbwwsvxeceebzxtpfwu")))
+            ],
+            cancellationToken: token);
+        ILabelModerationStore cases = (ILabelModerationStore)fixture.Store;
+        long caseId;
+        if (intake == 2)
+        {
+            LabelCaseReceipt opened = Success(await cases.ChangeCaseAsync(
+                caller,
+                new(operationId: "internal-pinned-review", subject: subject, action: LabelCaseAction.OpenAppeal, reason: "Review URI-wide labels."),
+                token));
+            caseId = opened.Case.Id;
+        }
+        else
+        {
+            ModerationReportAuthenticationResult authentication = await ReportTestAuthentication.CreateAsync(s_owner, policy.DatabaseTime, "pinned-report");
+            LabelModerationReport report = Success(await ((ILabelReportStore)fixture.Store).SubmitReportAsync(
+                authentication,
+                new(subject: subject, reasonType: AppealReason, appealLabelValue: intake == 1 ? "spam" : null),
+                policy.Revision,
+                token));
+            caseId = report.CaseId;
+        }
+        ILabelAppealStore appeals = (ILabelAppealStore)fixture.Store;
+        LabelAppeal appeal = Assert.Single(Success(await appeals.GetAppealsAsync(caller, cancellationToken: token)));
+        StoredLabel captured = Assert.Single(appeal.Challenges);
+        Assert.Equal("spam", captured.SignedLabel.Label.Value);
+        Assert.Null(captured.SignedLabel.Label.Cid);
+        LabelModerationCase current = Success(await cases.GetCaseAsync(caller, caseId, token));
+        LabelCaseDecision decision = Decision(
+            moderationCase: current,
+            actions: [new(LabelOperationKind.Negate, "spam", expectedLabelSequence: captured.Sequence)],
+            operation: "withdraw-uri-wide-from-pinned-review",
+            appeals: [appeal.Id],
+            outcome: LabelAppealStatus.Withdrawn);
+        LabelCaseDecisionReceipt receipt = Success(await service.ExecuteCaseDecisionAsync(caller, decision, token));
+        StoredLabel negated = Assert.Single(receipt.Labels).Label!;
+        Assert.True(negated.SignedLabel.Label.IsNegationLabel);
+        Assert.Null(negated.SignedLabel.Label.Cid);
+        Assert.Equal(LabelAppealStatus.Withdrawn, Success(await ((ILabelAppealStore)fixture.NewStore()).GetAppealAsync(caller, appeal.Id, token)).Status);
+    }
+
+    [Theory]
     [InlineData("sqlite", LabelAppealStatus.Upheld)]
     [InlineData("sqlite", LabelAppealStatus.Withdrawn)]
     [InlineData("sqlite", LabelAppealStatus.Replaced)]
@@ -365,6 +434,49 @@ public class LabelAppealStoreTests
             caller, Decision(superseded.CaseEvent.Case, [], "upheld", [pending[1].Id], LabelAppealStatus.Upheld), token));
         Assert.Equal(LabelCaseStatus.Resolved, upheld.CaseEvent.Case.Status);
         Assert.Equal(2, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
+    }
+
+    [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task DuplicateCapturedValuesAcrossAppealPagesRetainOnlyCurrentOutcomes(string engine)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        (LabelAdministrationCaller caller, LabelPolicyState policy) = await ActivateAsync(fixture);
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient http = new(new TargetResolutionHandler());
+        LabelIssuanceService service = Service(fixture, caller, policy, key, http);
+        LabelModerationReport? report = null;
+        for (int index = 0; index < 130; index++)
+        {
+            await fixture.Store.AppendAsync(
+                operationId: $"duplicate-value-{index}",
+                labels: [new(key.CreateLabel(
+                    source: StoreFixture.s_issuer,
+                    uri: s_account.Subject,
+                    value: "spam",
+                    creationTimestamp: policy.DatabaseTime.AddHours(-1).AddSeconds(index)))],
+                cancellationToken: token);
+            report = await SubmitAsync(fixture.Store, policy, $"duplicate-capture-{index}", s_account);
+        }
+        ILabelAppealStore appeals = (ILabelAppealStore)fixture.Store;
+        List<LabelAppeal> pending = [.. Success(await appeals.GetAppealsAsync(caller, cancellationToken: token))];
+        pending.AddRange(Success(await appeals.GetAppealsAsync(caller: caller, afterId: pending[^1].Id, cancellationToken: token)));
+        Assert.Equal(130, pending.Count);
+        LabelModerationCase current = Success(await ((ILabelModerationStore)fixture.Store).GetCaseAsync(caller, report!.CaseId, token));
+        Success(await service.ExecuteCaseDecisionAsync(
+            caller,
+            Decision(current, [], "uphold-current-duplicate", [pending[^1].Id], LabelAppealStatus.Upheld),
+            token));
+        ILabelAppealStore restarted = (ILabelAppealStore)fixture.NewStore();
+        List<LabelAppeal> retained = [.. Success(await restarted.GetAppealsAsync(caller, cancellationToken: token))];
+        retained.AddRange(Success(await restarted.GetAppealsAsync(caller: caller, afterId: retained[^1].Id, cancellationToken: token)));
+        Assert.Equal(129, retained.Count(appeal => appeal.Status == LabelAppealStatus.Superseded));
+        Assert.Equal(LabelAppealStatus.Upheld, retained[^1].Status);
+        Assert.Equal(pending.Select(appeal => Assert.Single(appeal.Challenges).Sequence),
+            retained.Select(appeal => Assert.Single(appeal.Challenges).Sequence));
     }
 
     [Theory]

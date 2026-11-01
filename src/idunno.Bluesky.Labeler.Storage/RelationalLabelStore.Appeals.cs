@@ -199,7 +199,7 @@ internal abstract partial class RelationalLabelStore
 
             if (snapshot.Result.CurrentLabel is { } current &&
                 (!exactVersion || target.Cid is null || current.SignedLabel.Label.Cid == target.Cid ||
-                    appealLabelValue is not null && current.SignedLabel.Label.Cid is null) &&
+                    current.SignedLabel.Label.Cid is null) &&
                 LabelDecisionRules.IsActive(current.SignedLabel, DateTimeOffset.FromUnixTimeMilliseconds(now)))
             {
                 challenges.Add(current);
@@ -453,6 +453,32 @@ internal abstract partial class RelationalLabelStore
                 }
             }
 
+            string[] values = [.. page
+                .Where(appeal => appeal.Subject == subject.Subject && appeal.Cid == subject.Cid?.ToString())
+                .SelectMany(appeal => appeal.ToAppeal().Challenges)
+                .Select(challenge => challenge.SignedLabel.Label.Value)
+                .Distinct(StringComparer.Ordinal)];
+            IReadOnlyList<LabelServiceResult<LabelDecisionSnapshot>> observed = values.Length == 0 ? [] : await DecisionSnapshotsAsync(
+                connection: connection,
+                transaction: transaction,
+                state: state,
+                queries: [.. values.Select(value => (target, value))],
+                token: token).ConfigureAwait(false);
+            HashSet<long> current = [];
+            foreach (LabelServiceResult<LabelDecisionSnapshot> snapshot in observed)
+            {
+                if (!snapshot.Succeeded)
+                {
+                    throw new InvalidDataException("Current appeal outcomes could not be inspected: " + snapshot.Error.Message);
+                }
+
+                if (snapshot.Result.CurrentLabel is { } label &&
+                    LabelDecisionRules.IsActive(label.SignedLabel, completedAt))
+                {
+                    current.Add(label.Sequence);
+                }
+            }
+
             foreach (ModerationAppealData appeal in page)
             {
                 if (appeal.Subject != subject.Subject || appeal.Cid != subject.Cid?.ToString() ||
@@ -462,27 +488,6 @@ internal abstract partial class RelationalLabelStore
                 }
 
                 StoredLabel[] captured = [.. appeal.ToAppeal().Challenges];
-                IReadOnlyList<LabelServiceResult<LabelDecisionSnapshot>> observed = await DecisionSnapshotsAsync(
-                    connection: connection,
-                    transaction: transaction,
-                    state: state,
-                    queries: [.. captured.Select(challenge => (target, challenge.SignedLabel.Label.Value))],
-                    token: token).ConfigureAwait(false);
-                HashSet<long> current = [];
-                foreach (LabelServiceResult<LabelDecisionSnapshot> snapshot in observed)
-                {
-                    if (!snapshot.Succeeded)
-                    {
-                        throw new InvalidDataException("Current appeal outcomes could not be inspected: " + snapshot.Error.Message);
-                    }
-
-                    if (snapshot.Result.CurrentLabel is { } label &&
-                        LabelDecisionRules.IsActive(label.SignedLabel, completedAt))
-                    {
-                        current.Add(label.Sequence);
-                    }
-                }
-
                 if (captured.Any(challenge => current.Contains(challenge.Sequence)))
                 {
                     continue;

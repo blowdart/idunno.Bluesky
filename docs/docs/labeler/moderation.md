@@ -235,7 +235,8 @@ logging-only and cannot manufacture audit identities or durable audit traffic.
 
 Capture retains currently active local labels for the submitted account or record,
 including manually issued labels. An explicit CID restricts versioned challenges
-to that CID; a URI-only submission does not assert a version. Current-state selection uses
+to that CID while also retaining applicable URI-wide labels with no CID, whether
+the appeal selects one value or all values. A URI-only submission does not assert a version. Current-state selection uses
 signed creation time, not append sequence. Negated, expired and superseded
 outcomes are excluded. Original signed bytes and sequences are retained; later
 manual changes or signature rotation do not rewrite that provenance.
@@ -258,6 +259,9 @@ superseded acknowledgment instead of withdrawing a newer outcome.
 Other pending appeals keep the case in review. Ordinary resolution cannot
 silently orphan them. The original decision-maker may resolve an appeal; a
 second reviewer is not required.
+Automatic supersession checks distinct captured values once per bounded appeal
+page, sharing current observations across appeals that captured different
+sequences of the same value. It does not repeat the intake history-value limit.
 
 ## Policies, publication and recovery
 

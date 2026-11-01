@@ -468,6 +468,7 @@ public partial class ModerationTests
             xenonUi: true,
             handles: new PublicationHandles(new Handle("labeler.example")),
             publicationLookup: lookup);
+        await fixture.Clock.PolicyVerificationRegistrations.Reader.ReadAsync(token);
         LabelPolicyState active = (await fixture.Services.GetRequiredService<LabelPolicyService>()
             .GetVerifiedStateAsync(cancellationToken: token)).Result!;
         LabelAdministrationCaller administrator = (await fixture.Services.GetRequiredService<ILabelAdministrationStore>()

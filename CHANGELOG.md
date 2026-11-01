@@ -227,6 +227,7 @@
 
 #### idunno.Bluesky.Labeler.SQLite / PostgreSQL / MySQL
 
+* Captures applicable URI-wide labels for CID-pinned all-label appeals and batches duplicate captured values per appeal page when checking superseded outcomes.
 * Resolves selected-label appeals on targets with large historical label sets by checking remaining captured outcomes directly, without reapplying the intake capture limit.
 * Filters selected appeal label values before bounded challenge capture, retains the selected value in accepted reports and pending promotion, and recovers legacy bootstrap owners even when earlier authentication denials occupy the first audit entries.
 * Adds schema-fourteen durable Ozone event identities and closure provenance, committed atomically with labels, reports, native case history and audit; upgrades remain additive and older writers reject the new schema.
