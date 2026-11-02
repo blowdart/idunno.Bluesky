@@ -30,6 +30,54 @@ internal sealed partial class SubjectPreviewService(
     /// <summary>Gets the fixed public read-only AppView origin; report data never selects the service.</summary>
     private static readonly Uri s_appView = new("https://public.api.bsky.app");
 
+    /// <summary>Reads the current version of an authorized canonical record through the bounded, SSRF-protected client.</summary>
+    internal async Task<(string? Cid, string? Error)> LookupRecordCidAsync(string target, CancellationToken cancellationToken)
+    {
+        if (!AtUri.TryParse(target, out AtUri? uri) || uri.Repo is not Did did ||
+            uri.Collection is null || uri.RecordKey is null)
+        {
+            return (null, "Enter a complete content address before looking up its current version.");
+        }
+
+        using HttpClient client = clients.CreateClient(ClientName);
+        using CancellationTokenSource deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        deadline.CancelAfter(TimeSpan.FromSeconds(8));
+        try
+        {
+            Uri? pds = await ResolvePersonalDataServerAsync(client, did, deadline.Token).ConfigureAwait(false);
+            if (pds is null)
+            {
+                return (null, "The server storing this account's data could not be found.");
+            }
+            AtProtoHttpResult<AtProtoRepositoryRecord> record = await AtProtoServer.GetRecord(
+                repo: did,
+                collection: uri.Collection,
+                rKey: uri.RecordKey,
+                cid: null,
+                service: pds,
+                accessCredentials: null,
+                httpClient: client,
+                loggerFactory: loggerFactory,
+                maximumResponseSize: 524_288,
+                cancellationToken: deadline.Token).ConfigureAwait(false);
+            if (!record.Succeeded || record.Result.Uri != uri)
+            {
+                return (null, "The current content version could not be loaded from the account server.");
+            }
+            return (record.Result.Cid.ToString(), null);
+        }
+        catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            PreviewUnavailable(loggerFactory.CreateLogger<SubjectPreviewService>(), "Record version", "The current content version lookup timed out.", exception);
+            return (null, "The content version lookup timed out. Try again.");
+        }
+        catch (Exception exception) when (exception is HttpRequestException or JsonException)
+        {
+            PreviewUnavailable(loggerFactory.CreateLogger<SubjectPreviewService>(), "Record version", "The current content version lookup failed.", exception);
+            return (null, "The current content version could not be loaded. Try again.");
+        }
+    }
+
     /// <summary>Loads current public content after the caller has been authorized to inspect the report or case.</summary>
     internal async Task<SubjectPreview> LoadAsync(JsonElement subject, CancellationToken cancellationToken)
     {

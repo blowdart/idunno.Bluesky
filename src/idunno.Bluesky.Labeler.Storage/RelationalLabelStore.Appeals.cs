@@ -400,7 +400,7 @@ internal abstract partial class RelationalLabelStore
             {
                 return CaseFailure<IReadOnlyList<ModerationAppealData>>(
                     LabelServiceErrorCode.StaleDecision,
-                    changed ? "The challenged labels have changed or expired. Review the appeal using 'The challenged labels are no longer in effect'." : "The challenged labels are still in effect. Choose an outcome that reviews them.");
+                    changed ? "The challenged labels have changed or expired. Review the appeal using 'Challenged labels changed'." : "The challenged labels are still in effect. Choose an outcome that reviews them.");
             }
 
             appeals.Add(appeal);

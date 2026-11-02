@@ -12,14 +12,31 @@
         pendingModeration.TryGetProperty("pendingReports", out JsonElement pendingValues) ? pendingValues : null;
 }
 <h1>Reports</h1>
+<nav class="queue-tabs" aria-label="Report workflow queues">
+    @foreach ((LabelCaseWorkflow queue, string title) in new[]
+    {
+        (LabelCaseWorkflow.Unresolved, "Unresolved"),
+        (LabelCaseWorkflow.InReview, "In review"),
+        (LabelCaseWorkflow.Resolved, "Resolved"),
+        (LabelCaseWorkflow.All, "All")
+    })
+    {
+        <a asp-area="Xenon" asp-page="/Reports/Index" asp-route-Queue="@queue" aria-current="@(Model.Queue == queue ? "page" : null)">@title</a>
+    }
+</nav>
 <form method="get" class="panel">
     <input type="hidden" name="Sort" value="@(Model.Table?.Query.Sort ?? LabelTableSort.Received)" />
     <input type="hidden" name="Ascending" value="@((Model.Table?.Query.Ascending ?? false).ToString())" />
-    <label for="status">Status</label>
-    <select id="status" name="Status">
-        <option value="Unresolved" selected="@(Model.Status == "Unresolved")">Awaiting review</option>
-        <option value="Handled" selected="@(Model.Status == "Handled")">Reviewed</option>
-        <option value="All" selected="@(Model.Status == "All")">All</option>
+    <label for="queue">Show reports</label>
+    <select id="queue" name="Queue">
+        @foreach ((LabelCaseWorkflow queue, string title) in new[]
+        {
+            (LabelCaseWorkflow.Unresolved, "Unresolved"), (LabelCaseWorkflow.InReview, "In review"),
+            (LabelCaseWorkflow.Resolved, "Resolved"), (LabelCaseWorkflow.All, "All")
+        })
+        {
+            <option value="@queue" selected="@(Model.Queue == queue)">@title</option>
+        }
     </select>
     <button type="submit" aria-label="Filter reports" title="Filter reports"><span class="fa-icon fa-filter" aria-hidden="true"></span></button>
 </form>

@@ -153,6 +153,10 @@ internal abstract partial class RelationalLabelStore
                     sql: "SELECT COALESCE(MAX(case_id),0) FROM label_cases",
                     token: cancellationToken).ConfigureAwait(false)) + 1);
                 string? assigneeDid = change.Action == LabelCaseAction.Assign ? change.Assignee?.Value : current?.Assignee;
+                if (!opening && change.Action != LabelCaseAction.Assign)
+                {
+                    assigneeDid ??= caller.Actor.Value;
+                }
                 if (status != LabelCaseStatus.Resolved && SoleModerator(administration) is string sole)
                 {
                     assigneeDid = sole;

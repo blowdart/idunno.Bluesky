@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Text.Json;
 
 using idunno.AtProto;
 using idunno.AtProto.Labels;
@@ -11,6 +12,7 @@ using idunno.Bluesky.Labeler;
 using idunno.Bluesky.Labeler.Administration;
 using idunno.Bluesky.Labeler.Issuance;
 using idunno.Bluesky.Labeler.Maintenance;
+using idunno.Bluesky.Labeler.Moderation;
 using idunno.Bluesky.Labeler.Signing;
 using idunno.Bluesky.Labeler.Storage;
 
@@ -23,6 +25,126 @@ public class XenonUiTests
     private static readonly Did s_administrator = new("did:plc:xenon-admin");
     private static readonly Did s_member = new("did:plc:xenon-member");
     private static readonly AtProtoServiceReference s_audience = new(TestServerBuilder.s_issuer, "labeler_admin");
+
+    [Theory]
+    [InlineData(false, false, false)]
+    [InlineData(true, false, false)]
+    [InlineData(false, true, false)]
+    [InlineData(true, true, false)]
+    [InlineData(false, false, true)]
+    [InlineData(true, false, true)]
+    public async Task AppealOutcomesReflectDeclaredPolicyAndChangedChallenges(bool multipleLabels, bool expired, bool reissued)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new AppealIdentityHandler());
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
+            configureAdministration: services =>
+            {
+                services.AddLabelerModeration(issuer: TestServerBuilder.s_issuer, httpClient: identity);
+                services.AddSingleton<IDidHandleResolver, TestHandles>();
+                services.AddLabelerAdministration(s_audience, key, identity);
+            },
+            moderation: true,
+            xenonUi: true,
+            controlDatabaseTime: true);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        Assert.True((await team.BootstrapAsync(
+            administrator: s_administrator,
+            localIdentity: "uid:0",
+            operationId: "appeal-bootstrap",
+            cancellationToken: token)).Succeeded);
+        LabelAdministrationCaller caller = Assert.IsType<LabelAdministrationCaller>((await team.AuthenticateLocalAsync("uid:0", token)).Result);
+        ILabelPolicyStore policies = fixture.Services.GetRequiredService<ILabelPolicyStore>();
+        string values = multipleLabels ? """["spam","scam"]""" : """["spam"]""";
+        using JsonDocument declaration = JsonDocument.Parse(
+            $$"""{"$type":"app.bsky.labeler.service","createdAt":"2026-01-01T00:00:00Z","policies":{"labelValues":{{values}}},"subjectTypes":["account"]}""");
+        Assert.True((await policies.SavePolicyAsync(
+            caller: caller,
+            operationId: "appeal-policy",
+            policy: new(
+                version: "xenon-ui-test",
+                declaration: declaration.RootElement,
+                allowAccounts: true,
+                allowRecords: false,
+                rules: "Test appeal controls."),
+            reason: "Configure appeal controls.",
+            cancellationToken: token)).Succeeded);
+        LabelPolicyState initial = (await policies.ReadPolicyStateAsync(token))!;
+        LabelPolicyState publishing = Assert.IsType<LabelPolicyState>((await policies.BeginPolicyPublicationAsync(
+            caller: caller,
+            operationId: "publish-appeal-policy",
+            version: "xenon-ui-test",
+            expectedRevision: initial.Revision,
+            previousCid: null,
+            reason: "Publish test policy.",
+            cancellationToken: token)).Result);
+        Assert.True((await policies.ObservePolicyAsync(
+            expectedRevision: publishing.Revision,
+            verificationStartedAt: publishing.DatabaseTime,
+            observedCid: new("bafyreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku"),
+            declaration: declaration.RootElement,
+            cancellationToken: token)).Succeeded);
+        LabelIssuanceService issuance = new(
+            issuer: TestServerBuilder.s_issuer,
+            signingKey: key,
+            store: fixture.Store,
+            authorizer: new LabelTeamAuthorizer(team, caller),
+            policyProvider: new UiPolicy(),
+            httpClient: identity,
+            timeProvider: fixture.DatabaseClock);
+        LabelServiceResult<LabelOperationReceipt> issued = await issuance.ExecuteAsync(
+            LabelOperationRequest.Issue(
+                operationId: "appealed-label",
+                target: LabelTarget.Account(s_member),
+                value: "spam",
+                context: new(s_administrator, "Apply a test label."),
+                expiresAt: fixture.DatabaseClock.GetUtcNow().AddMinutes(1)),
+            token);
+        Assert.True(issued.Succeeded, issued.Error?.Message);
+        LabelCaseReceipt opened = Assert.IsType<LabelCaseReceipt>((await fixture.Services.GetRequiredService<ILabelModerationStore>().ChangeCaseAsync(
+            caller: caller,
+            change: new(
+                operationId: "test-appeal",
+                subject: LabelReportSubject.Account(s_member),
+                action: LabelCaseAction.OpenAppeal,
+                reason: "Review the test label."),
+            cancellationToken: token)).Result);
+        LabelServiceResult<IReadOnlyList<LabelAppeal>> appeals = await fixture.Services.GetRequiredService<ILabelAppealStore>()
+            .GetAppealsAsync(caller: caller, caseId: opened.Case.Id, cancellationToken: token);
+        Assert.True(appeals.Succeeded);
+        LabelAppeal appeal = Assert.Single(appeals.Result);
+        if (expired)
+        {
+            fixture.DatabaseClock.Advance(TimeSpan.FromMinutes(1));
+        }
+        if (reissued)
+        {
+            Assert.True((await issuance.ExecuteAsync(
+                LabelOperationRequest.Negate(
+                    operationId: "remove-appealed-label",
+                    target: LabelTarget.Account(s_member),
+                    value: "spam",
+                    context: new(s_administrator, "Remove the test label.")),
+                token)).Succeeded);
+            Assert.True((await issuance.ExecuteAsync(
+                LabelOperationRequest.Issue(
+                    operationId: "reissue-appealed-label",
+                    target: LabelTarget.Account(s_member),
+                    value: "spam",
+                    context: new(s_administrator, "Apply a new label outcome.")),
+                token)).Succeeded);
+        }
+        using HttpResponseMessage response = await GetAsAsync(fixture, s_administrator, $"/Xenon/Cases/Detail/{opened.Case.Id}?AppealId={appeal.Id}");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        string html = await response.Content.ReadAsStringAsync(token);
+        Assert.Equal(multipleLabels, html.Contains("value=\"Replaced\"", StringComparison.Ordinal));
+        Assert.Contains("Challenged labels changed", html, StringComparison.Ordinal);
+        bool changed = expired || reissued;
+        Assert.Equal(changed, html.Contains("value=\"Superseded\" selected", StringComparison.Ordinal));
+        Assert.Contains($"data-changed=\"{changed.ToString().ToLowerInvariant()}\" selected", html, StringComparison.Ordinal);
+        Assert.Contains(changed ? "data-appeal-changed>" : "data-appeal-changed hidden", html, StringComparison.Ordinal);
+    }
 
     [Theory]
     [InlineData("/Xenon/Terms")]
@@ -511,6 +633,20 @@ public class XenonUiTests
         using HttpRequestMessage request = new(HttpMethod.Get, path);
         request.Headers.Add("X-Test-Did", actor.Value);
         return await fixture.Client.SendAsync(request, TestContext.Current.CancellationToken);
+    }
+
+    /// <summary>Confirms the fictional appeal subject's DID without accessing public infrastructure.</summary>
+    private sealed class AppealIdentityHandler : HttpMessageHandler
+    {
+        /// <inheritdoc/>
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    $$"""{"id":"{{s_member}}","service":[]}""",
+                    System.Text.Encoding.UTF8,
+                    "application/json")
+            });
     }
 
     /// <summary>Publishes the selected label verification key and configured endpoint without external requests.</summary>

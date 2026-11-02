@@ -1,4 +1,8 @@
 #nullable enable
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Reports.IndexModel.Queue.get -> idunno.Bluesky.Labeler.Moderation.LabelCaseWorkflow
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Reports.IndexModel.Queue.set -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Appeals.IndexModel.Queue.get -> idunno.Bluesky.Labeler.Moderation.LabelCaseWorkflow
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Appeals.IndexModel.Queue.set -> void
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.IndexModel.OnGetCountsAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.ClientMetadataModel
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.ClientMetadataModel.ClientMetadataModel() -> void
@@ -60,6 +64,7 @@ idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Labels.IndexModel
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Labels.IndexModel.IndexModel() -> void
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Labels.IndexModel.OnGetAsync() -> System.Threading.Tasks.Task!
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Labels.IndexModel.OnPostLookupAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Labels.IndexModel.OnPostCurrentCidAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Labels.IndexModel.OnPostAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Lifecycle.IndexModel
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Lifecycle.IndexModel.IndexModel() -> void

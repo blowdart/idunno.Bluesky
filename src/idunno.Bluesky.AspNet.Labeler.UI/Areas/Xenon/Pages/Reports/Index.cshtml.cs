@@ -4,6 +4,7 @@
 using System.Text.Json;
 
 using idunno.Bluesky.Labeler.Administration;
+using idunno.Bluesky.Labeler.Moderation;
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -20,6 +21,10 @@ public sealed class IndexModel : PageModel
     /// <summary>Gets or sets the report handling filter, initially showing unresolved reports.</summary>
     [BindProperty(SupportsGet = true)]
     public string? Status { get; set; }
+
+    /// <summary>Gets or sets the report workflow queue, defaulting to unresolved work.</summary>
+    [BindProperty(SupportsGet = true)]
+    public LabelCaseWorkflow Queue { get; set; } = LabelCaseWorkflow.Unresolved;
 
     /// <summary>Gets the report response.</summary>
     internal JsonElement Data { get; private set; }
@@ -53,10 +58,21 @@ public sealed class IndexModel : PageModel
     {
         if (!Request.Query.ContainsKey(nameof(Status)))
         {
-            Status = "Unresolved";
+            Status = Request.Query.ContainsKey(nameof(Queue)) ? "All" : "Unresolved";
         }
 
-        if (!ModelState.IsValid || AfterId < 0 || Status is not ("Unresolved" or "Handled" or "All"))
+        if (!Request.Query.ContainsKey(nameof(Queue)) && Request.Query.ContainsKey(nameof(Status)))
+        {
+            Queue = Status switch
+            {
+                "Handled" => LabelCaseWorkflow.Resolved,
+                "All" => LabelCaseWorkflow.All,
+                _ => LabelCaseWorkflow.Unresolved
+            };
+        }
+
+        if (!ModelState.IsValid || AfterId < 0 || Status is not ("Unresolved" or "Handled" or "All") ||
+            Queue is not (LabelCaseWorkflow.Unresolved or LabelCaseWorkflow.InReview or LabelCaseWorkflow.Resolved or LabelCaseWorkflow.All))
         {
             ViewData["Error"] = "Choose an available report status and refresh the page before trying again.";
             return;
@@ -64,7 +80,8 @@ public sealed class IndexModel : PageModel
 
         Table = TableNavigation.Read(Request, new(
             Kind: LabelTableKind.Reports,
-            ReportHandled: Status switch { "Unresolved" => false, "Handled" => true, _ => null }));
+            ReportHandled: Status switch { "Unresolved" => false, "Handled" => true, _ => null },
+            Workflow: Queue));
         Data = await UiPageHelpers.ReadTableAsync(this, Table).ConfigureAwait(false);
         PendingTable = TableNavigation.Read(
             Request,

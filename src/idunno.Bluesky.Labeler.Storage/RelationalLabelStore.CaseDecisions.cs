@@ -185,6 +185,7 @@ internal abstract partial class RelationalLabelStore
                     ("@pending", (int)LabelAppealStatus.Pending)).ConfigureAwait(false));
                 ModerationCaseData next = current with
                 {
+                    Assignee = current.Assignee ?? decision.Caller.Actor.Value,
                     Revision = checked(current.Revision + 1),
                     Status = pending == 0 && !remainingReports ? LabelCaseStatus.Resolved : LabelCaseStatus.InReview,
                     UpdatedAt = completedAt
@@ -215,7 +216,12 @@ internal abstract partial class RelationalLabelStore
                     {
                         affected = await ReadCaseAsync(connection, transaction, appeal.CaseId, cancellationToken).ConfigureAwait(false)
                             ?? throw new InvalidDataException("A superseded appeal has no retained case.");
-                        affected = affected with { Revision = checked(affected.Revision + 1), UpdatedAt = completedAt };
+                        affected = affected with
+                        {
+                            Assignee = affected.Assignee ?? decision.Caller.Actor.Value,
+                            Revision = checked(affected.Revision + 1),
+                            UpdatedAt = completedAt
+                        };
                         await SaveCaseAsync(
                             connection: connection,
                             transaction: transaction,
@@ -362,6 +368,7 @@ internal abstract partial class RelationalLabelStore
                 ("@pending", (int)LabelAppealStatus.Pending)).ConfigureAwait(false));
             affected = affected with
             {
+                Assignee = affected.Assignee ?? caller.Actor.Value,
                 Revision = checked(affected.Revision + 1),
                 UpdatedAt = completedAt,
                 Status = pending == 0 ? LabelCaseStatus.Resolved : LabelCaseStatus.InReview

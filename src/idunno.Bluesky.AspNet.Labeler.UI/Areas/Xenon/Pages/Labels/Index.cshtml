@@ -10,9 +10,13 @@
         <label class="field">Account handle or ID (DID), content address (AT URI), or Bluesky URL
             <input name="target" value="@Model.Target" required maxlength="2048" autocomplete="off" />
         </label>
-        <label class="field" data-record-cid>Specific content version (CID, optional)
-            <input name="cid" value="@Model.Cid" maxlength="128" autocomplete="off" />
-        </label>
+        <div class="field" data-record-cid>
+            <label for="manual-label-cid">Specific content version (CID, optional)</label>
+            <div class="record-cid-input">
+                <input id="manual-label-cid" name="cid" value="@Model.Cid" maxlength="128" autocomplete="off" />
+                <button type="submit" asp-page-handler="CurrentCid" data-current-cid formnovalidate>Look up current CID</button>
+            </div>
+        </div>
         <p>For content, enter a CID to label only that version. Leave it blank to apply the label across all versions, including future edits. This field does not apply to account labels.</p>
         <p><button type="submit" asp-page-handler="Lookup" data-load-labels formnovalidate>Load labels</button></p>
         <div data-manual-label-controls aria-live="polite" aria-busy="false">

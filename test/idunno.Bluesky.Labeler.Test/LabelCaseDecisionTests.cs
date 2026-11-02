@@ -38,6 +38,15 @@ public partial class LabelCaseDecisionTests
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         using HttpClient http = new(new TargetResolutionHandler());
         LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
+        Success(await ((ILabelAdministrationStore)fixture.Store).ChangeTeamAsync(
+            caller: caller,
+            change: new(
+                operationId: "report-second-moderator",
+                action: LabelTeamAction.Enroll,
+                target: new("did:plc:report-second-moderator"),
+                reason: "Keep report cases unassigned before review.",
+                role: LabelTeamRole.Moderator),
+            cancellationToken: token));
         LabelPolicyState active = await LabelPolicyStoreTests.ActivateAsync((ILabelPolicyStore)fixture.Store, caller, token);
         LabelIssuanceService service = Service(fixture, caller, active, key, http);
         ILabelReportStore reports = (ILabelReportStore)fixture.Store;
@@ -58,6 +67,8 @@ public partial class LabelCaseDecisionTests
             LabelReportSubject.Record(new(uri + "-different"), target.Cid!), "other-record");
         LabelModerationCase otherCase = Success(await cases.GetCaseAsync(caller, differentCid.CaseId, token));
         LabelModerationCase current = Success(await cases.GetCaseAsync(caller, accepted[0].CaseId, token));
+        Assert.Null(current.Assignee);
+        Assert.Null(otherCase.Assignee);
         LabelCaseDecision decision = new(
             operationId: "handle-reports",
             caseId: current.Id,
@@ -69,6 +80,7 @@ public partial class LabelCaseDecisionTests
             handleOtherReports: handleOthers,
             handleReportsAcrossRecordVersions: acrossVersions);
         LabelCaseDecisionReceipt receipt = Success(await service.ExecuteCaseDecisionAsync(caller, decision, token));
+        Assert.Equal(caller.Actor, receipt.CaseEvent.Case.Assignee);
         bool handleMatching = handleOthers || acrossVersions;
         Assert.Equal(handleMatching ? LabelCaseStatus.Resolved : LabelCaseStatus.InReview, receipt.CaseEvent.Case.Status);
         ILabelReportStore restarted = (ILabelReportStore)fixture.NewStore();
@@ -90,6 +102,7 @@ public partial class LabelCaseDecisionTests
         Assert.Equal(uri, uriOnlyAfter.Submission.Subject.RecordUri);
         Assert.Equal(acrossVersions ? decision.OperationId : null, uriOnlyAfter.DecisionOperationId);
         LabelModerationCase otherAfter = Success(await cases.GetCaseAsync(caller, differentCid.CaseId, token));
+        Assert.Equal(acrossVersions ? caller.Actor : null, otherAfter.Assignee);
         Assert.Equal(otherCase.Revision + (acrossVersions ? 1 : 0), otherAfter.Revision);
         Assert.Equal(acrossVersions ? LabelCaseStatus.Resolved : otherCase.Status, otherAfter.Status);
         foreach (long id in new[] { account.Id, otherRecord.Id })
@@ -98,6 +111,21 @@ public partial class LabelCaseDecisionTests
         }
 
         ILabelTableStore tables = (ILabelTableStore)fixture.NewStore();
+        foreach ((LabelCaseWorkflow workflow, int expected) in new[]
+        {
+            (LabelCaseWorkflow.Unresolved, acrossVersions ? 2 : handleOthers ? 4 : 133),
+            (LabelCaseWorkflow.InReview, handleMatching ? 0 : 129),
+            (LabelCaseWorkflow.Resolved, acrossVersions ? 132 : handleOthers ? 130 : 1),
+            (LabelCaseWorkflow.All, 134)
+        })
+        {
+            LabelTablePage workflowPage = Success(await tables.ReadTableAsync(
+                caller: caller,
+                query: new(Kind: LabelTableKind.Reports, Workflow: workflow, Page: 999),
+                cancellationToken: token));
+            Assert.Equal(expected, workflowPage.Total);
+            Assert.Equal(Math.Max(1, (expected + 15) / 16), workflowPage.Page);
+        }
         LabelNavigationCounts counts = Success(await tables.ReadNavigationCountsAsync(caller, token));
         int remaining = acrossVersions ? 2 : handleOthers ? 4 : 133;
         Assert.Equal(remaining, counts.Reports);

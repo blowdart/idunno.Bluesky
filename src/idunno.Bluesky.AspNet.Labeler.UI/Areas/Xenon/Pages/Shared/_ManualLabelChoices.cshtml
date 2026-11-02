@@ -1,5 +1,5 @@
 @model idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Labels.ManualLabelFormDisplay
-<input type="hidden" name="labelState" value="@(Model.State ?? string.Empty)" data-target="@Model.Target" />
+<input type="hidden" name="labelState" value="@(Model.State ?? string.Empty)" data-target="@Model.Target" data-cid="@Model.Cid" />
 @if (Model.Error is { } error)
 {
     <p role="alert">@error</p>

@@ -225,6 +225,7 @@ internal abstract partial class RelationalLabelStore
                         token: cancellationToken).ConfigureAwait(false);
                     ModerationCaseData next = current with
                     {
+                        Assignee = current.Assignee ?? caller.Actor.Value,
                         Revision = checked(current.Revision + 1),
                         UpdatedAt = now,
                         Status = request.ResolveSubject && !pending && !remaining

@@ -137,6 +137,10 @@ nav { display: flex; flex-wrap: wrap; gap: 1rem; }
 .panel h2 { margin-top: 0; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; }
 .field { display: grid; gap: .35rem; margin: .8rem 0; }
+.grid > .field { min-width: 0; }
+.grid > .field select { min-width: 0; max-width: 100%; }
+.record-cid-input { display: flex; flex-wrap: wrap; gap: .5rem; }
+.record-cid-input input { flex: 1 1 20rem; min-width: 0; }
 input, select, textarea, button { font: inherit; padding: .55rem; }
 input, select, textarea { color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: .25rem; }
 input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }

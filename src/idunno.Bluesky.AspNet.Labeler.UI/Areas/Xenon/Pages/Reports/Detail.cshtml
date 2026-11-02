@@ -4,7 +4,7 @@
 @{
     ViewData["Title"] = $"Report {Model.Id}";
 }
-<p><a asp-area="Xenon" asp-page="/Reports/Index">Back to reports</a></p>
+<p><a asp-area="Xenon" asp-page="/Reports/Index"><span aria-hidden="true">&larr;</span> Back to reports</a></p>
 <h1>Report #@Model.Id</h1>
 @if (Model.Data.ValueKind == JsonValueKind.Object &&
     Model.Data.TryGetProperty("moderation", out JsonElement moderation) &&

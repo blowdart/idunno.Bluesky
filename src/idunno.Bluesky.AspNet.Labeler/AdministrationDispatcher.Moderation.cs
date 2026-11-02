@@ -315,7 +315,7 @@ internal sealed partial class AdministrationDispatcher
                     catch (ArgumentException exception)
                     {
                         return new(false, "InvalidRequest", exception.ParamName == "actions"
-                            ? "Your label choices do not match the appeal outcome. Keep the existing decision: leave the labels unchanged. Remove labels: remove applied labels without adding any. Replace labels: change the selection. Challenged labels no longer in effect: do not change labels."
+                            ? "Your label choices do not match the appeal outcome. Keep the existing decision: leave the labels unchanged. Remove labels: remove applied labels without adding any. Replace labels: change the selection. Challenged labels changed: do not change labels."
                             : exception.Message);
                     }
                     LabelServiceResult<LabelCaseDecisionReceipt> result;

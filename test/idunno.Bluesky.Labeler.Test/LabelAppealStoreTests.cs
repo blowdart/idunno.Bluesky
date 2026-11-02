@@ -112,6 +112,15 @@ public class LabelAppealStoreTests
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         (LabelAdministrationCaller caller, LabelPolicyState policy) = await ActivateAsync(fixture);
+        Success(await ((ILabelAdministrationStore)fixture.Store).ChangeTeamAsync(
+            caller: caller,
+            change: new(
+                operationId: "appeal-second-moderator",
+                action: LabelTeamAction.Enroll,
+                target: new("did:plc:appeal-second-moderator"),
+                reason: "Keep appeal cases unassigned before review.",
+                role: LabelTeamRole.Moderator),
+            cancellationToken: token));
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         using HttpClient http = new(new TargetResolutionHandler());
         LabelIssuanceService service = Service(fixture, caller, policy, key, http);
@@ -153,6 +162,7 @@ public class LabelAppealStoreTests
         Assert.Equal("spam", captured.SignedLabel.Label.Value);
         Assert.Null(captured.SignedLabel.Label.Cid);
         LabelModerationCase current = Success(await cases.GetCaseAsync(caller, caseId, token));
+        Assert.Null(current.Assignee);
         LabelCaseDecision decision = Decision(
             moderationCase: current,
             actions: [new(LabelOperationKind.Negate, "spam", expectedLabelSequence: captured.Sequence)],
@@ -160,6 +170,8 @@ public class LabelAppealStoreTests
             appeals: [appeal.Id],
             outcome: LabelAppealStatus.Withdrawn);
         LabelCaseDecisionReceipt receipt = Success(await service.ExecuteCaseDecisionAsync(caller, decision, token));
+        Assert.Equal(caller.Actor, receipt.CaseEvent.Case.Assignee);
+        Assert.Equal(caller.Actor, Success(await ((ILabelModerationStore)fixture.NewStore()).GetCaseAsync(caller, caseId, token)).Assignee);
         StoredLabel negated = Assert.Single(receipt.Labels).Label!;
         Assert.True(negated.SignedLabel.Label.IsNegationLabel);
         Assert.Null(negated.SignedLabel.Label.Cid);
@@ -322,6 +334,26 @@ public class LabelAppealStoreTests
             LabelCaseDecisionReceipt receipt = Success(result);
             Assert.Equal(LabelCaseStatus.InReview, receipt.CaseEvent.Case.Status);
             Assert.Equal(outcome, Success(await appeals.GetAppealAsync(caller, selected.Id, token)).Status);
+            ILabelTableStore tables = (ILabelTableStore)fixture.NewStore();
+            foreach ((LabelCaseWorkflow workflow, int expected) in new[]
+            {
+                (LabelCaseWorkflow.Unresolved, 1),
+                (LabelCaseWorkflow.InReview, 1),
+                (LabelCaseWorkflow.Resolved, 1),
+                (LabelCaseWorkflow.All, 2)
+            })
+            {
+                LabelTablePage page = Success(await tables.ReadTableAsync(
+                    caller: caller,
+                    query: new(Kind: LabelTableKind.Appeals, Workflow: workflow),
+                    cancellationToken: token));
+                Assert.Equal(expected, page.Total);
+                Assert.Equal(expected, page.Appeals!.Count);
+            }
+            Assert.Equal(0, Success(await tables.ReadTableAsync(
+                caller: caller,
+                query: new(Kind: LabelTableKind.Appeals, Workflow: LabelCaseWorkflow.Resolved, AppealStatus: LabelAppealStatus.Pending),
+                cancellationToken: token)).Total);
             if (outcome == LabelAppealStatus.Withdrawn)
             {
                 LabelOperationReceipt negation = Assert.Single(receipt.Labels);

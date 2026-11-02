@@ -29,9 +29,10 @@ function page() {
         },
         setAttribute(name, value) { attributes[name] = value; },
         replaceChildren(content) {
-            const [value, target] = content.state.split("|");
+            const [value, target, cid] = content.state.split("|");
             state.value = value;
             state.dataset.target = target;
+            state.dataset.cid = cid;
             fieldset.disabled = !value;
             fieldset.hidden = false;
         },
@@ -42,12 +43,17 @@ function page() {
         formAction: "/Xenon/Labels?handler=Lookup",
         addEventListener(event, callback) { callbacks.load = callback; }
     };
+    const currentCid = {
+        formAction: "/Xenon/Labels?handler=CurrentCid",
+        addEventListener(event, callback) { callbacks.currentCid = callback; }
+    };
     const form = {
         elements: { namedItem(name) { return fields[name]; } },
         querySelector(selector) {
             return {
                 "[data-manual-label-controls]": controls,
                 "[data-load-labels]": load,
+                "[data-current-cid]": currentCid,
                 "[data-record-cid]": cidField,
                 "[data-submit-labels]": submit
             }[selector];
@@ -78,11 +84,50 @@ function page() {
     });
     const event = () => ({ prevented: false, preventDefault() { this.prevented = true; } });
     return {
-        fields, callbacks, requests, state, fieldset, submit, loadButton: load, cidField, alerts, attributes, event,
+        fields, callbacks, requests, state, fieldset, submit, loadButton: load, currentCid, cidField, alerts, attributes, event,
         load() { return callbacks.load(event()); },
         fireTimer() { const callback = [...timers.values()].at(-1); timers.clear(); return callback(); }
     };
 }
+
+test("Explicit CID lookup fills the current version and reloads the protected baseline without issuing labels", async () => {
+    const p = page();
+    p.fields.target.value = "at://did:plc:example/app.bsky.feed.post/one";
+    p.callbacks.target();
+    const loading = p.callbacks.currentCid(p.event());
+    assert.equal(p.requests[0].url, "/Xenon/Labels?handler=CurrentCid");
+    complete(p.requests[0], "pinned-state|at://did:plc:example/app.bsky.feed.post/one|current-cid");
+    await loading;
+    assert.equal(p.fields.cid.value, "current-cid");
+    assert.equal(p.state.value, "pinned-state");
+    assert.equal(p.submit.disabled, false);
+});
+
+test("A stale current-CID response cannot overwrite a subsequently edited target", async () => {
+    const p = page();
+    p.fields.target.value = "at://did:plc:example/app.bsky.feed.post/one";
+    p.callbacks.target();
+    const loading = p.callbacks.currentCid(p.event());
+    p.fields.target.value = "at://did:plc:example/app.bsky.feed.post/two";
+    p.callbacks.target();
+    complete(p.requests[0], "old-state|at://did:plc:example/app.bsky.feed.post/one|old-cid");
+    await loading;
+    assert.equal(p.fields.cid.value, "");
+    assert.equal(p.submit.disabled, true);
+});
+
+test("A failed current-CID lookup preserves the entered CID and prevents submission", async () => {
+    const p = page();
+    p.fields.target.value = "at://did:plc:example/app.bsky.feed.post/one";
+    p.fields.cid.value = "entered-cid";
+    const loading = p.callbacks.currentCid(p.event());
+    complete(p.requests[0], "|at://did:plc:example/app.bsky.feed.post/one|");
+    await loading;
+    assert.equal(p.fields.cid.value, "entered-cid");
+    assert.equal(p.state.value, "");
+    assert.equal(p.submit.disabled, true);
+    assert.equal(p.loadButton.hidden, false);
+});
 
 function complete(request, body = "fresh-state", overrides = {}) {
     request.resolve({ ok: true, redirected: false, text: async () => body, ...overrides });

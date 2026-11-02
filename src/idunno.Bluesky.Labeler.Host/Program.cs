@@ -219,7 +219,7 @@ internal static partial class Program
         return 0;
     }
 
-    /// <summary>Maps the plain-text banner at the host root.</summary>
+    /// <summary>Maps the plain-text root banner and public crawler exclusion instructions.</summary>
     internal static void MapRootRoute(WebApplication app)
     {
         string blankLine = new(' ', 31);
@@ -234,6 +234,8 @@ internal static partial class Program
             blankLine) + '\n';
 
         app.MapGet("/", () => Results.Text(banner, contentType: "text/plain; charset=utf-8"));
+        app.MapGet("/robots.txt", () => Results.Text("User-agent: *\nDisallow: /\n", contentType: "text/plain; charset=utf-8"))
+            .AllowAnonymous();
     }
 
     /// <summary>Probes the running host without starting services, loading secrets, following redirects or using an outbound proxy.</summary>

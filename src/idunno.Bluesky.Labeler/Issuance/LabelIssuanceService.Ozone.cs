@@ -43,6 +43,15 @@ public sealed partial class LabelIssuanceService
             return Failure<LabelOzoneEvent>(LabelServiceErrorCode.IdempotencyConflict, "This Ozone operation has already committed.");
         }
 
+        if (request.Actions.Any(action => action.Kind == LabelOperationKind.Issue))
+        {
+            LabelServiceResult<LabelIssuancePolicy> verified = await _policyProvider.GetPolicyAsync(token).ConfigureAwait(false);
+            if (!verified.Succeeded)
+            {
+                return LabelServiceResult<LabelOzoneEvent>.Failure(verified.Error);
+            }
+        }
+
         LabelServiceResult<LabelPolicyState> policy = await policies.GetPolicyStateAsync(caller, token).ConfigureAwait(false);
         if (!policy.Succeeded)
         {

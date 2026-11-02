@@ -17,6 +17,105 @@ public partial class LabelCaseDecisionTests
     [InlineData("sqlite")]
     [InlineData("postgresql")]
     [InlineData("mysql")]
+    public async Task OzoneIssuanceRefreshesExpiredMatchingPolicyBeforeCapturingRevision(string engine)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
+        ILabelPolicyStore policies = (ILabelPolicyStore)fixture.Store;
+        LabelPolicyState active = await LabelPolicyStoreTests.ActivateAsync(policies, caller, token);
+        fixture.DatabaseClock!.Advance(active.VerificationFreshness);
+        using HttpClient http = new(new OzonePolicyRefreshHandler(active.Policy!.DeclarationJson));
+        LabelIssuanceService service = new(
+            issuer: StoreFixture.s_issuer,
+            signingKey: key,
+            store: fixture.Store,
+            authorizer: new LabelTeamAuthorizer((ILabelAdministrationStore)fixture.Store, caller),
+            policyProvider: new LabelPolicyService(StoreFixture.s_issuer, policies, http),
+            httpClient: http,
+            timeProvider: fixture.DatabaseClock);
+        LabelOzoneEvent committed = Success(await service.ExecuteOzoneEventAsync(caller, OzoneRequest(s_subject, []), token));
+        Assert.NotNull(committed);
+        Assert.Equal(active.Revision + 1, (await policies.ReadPolicyStateAsync(token))!.Revision);
+        Assert.Equal(2, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
+    }
+
+    [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task OzoneNegationDoesNotRequireFreshIssuancePolicy(string engine)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient http = new(new TargetResolutionHandler());
+        LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
+        LabelPolicyState active = await LabelPolicyStoreTests.ActivateAsync((ILabelPolicyStore)fixture.Store, caller, token);
+        TestLabelIssuancePolicyProvider policy = new(active.Policy!.Issuance);
+        LabelIssuanceService service = Service(
+            fixture: fixture,
+            caller: caller,
+            active: active,
+            key: key,
+            http: http,
+            policy: policy);
+        LabelOzoneEventRequest issue = OzoneRequest(s_subject, []);
+        Success(await service.ExecuteOzoneEventAsync(caller, issue, token));
+        fixture.DatabaseClock!.Advance(active.VerificationFreshness);
+        policy.Unavailable = true;
+        Assert.Equal(
+            LabelServiceErrorCode.PolicyUnavailable,
+            (await service.ExecuteOzoneEventAsync(caller, issue with { OperationId = "blocked-issue" }, token)).Error!.Code);
+        Assert.Equal(2, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
+        LabelOzoneEventRequest negate = issue with
+        {
+            OperationId = "negate",
+            ExternalId = "negate",
+            EventJson = """{"$type":"tools.ozone.moderation.defs#modEventLabel","createLabelVals":[],"negateLabelVals":["spam","scam"]}""",
+            Actions = [new(LabelOperationKind.Negate, "spam"), new(LabelOperationKind.Negate, "scam")]
+        };
+        Success(await service.ExecuteOzoneEventAsync(caller, negate, token));
+        Assert.Equal(4, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
+        Assert.Equal(active.Revision, (await ((ILabelPolicyStore)fixture.Store).ReadPolicyStateAsync(token))!.Revision);
+    }
+
+    /// <summary>Returns the unchanged public declaration while retaining normal subject identity lookups.</summary>
+    private sealed class OzonePolicyRefreshHandler(string declaration) : DelegatingHandler(new TargetResolutionHandler())
+    {
+        /// <summary>Serves the issuer's matching declaration and delegates subject requests to the normal resolver fixture.</summary>
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            if (request.RequestUri?.Host == "plc.directory" &&
+                request.RequestUri.AbsolutePath.EndsWith(StoreFixture.s_issuer.Value, StringComparison.Ordinal))
+            {
+                return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+                {
+                    Content = new StringContent(
+                        $$"""{"id":"{{StoreFixture.s_issuer}}","service":[{"id":"#atproto_pds","type":"AtprotoPersonalDataServer","serviceEndpoint":"https://pds.example"}]}""",
+                        System.Text.Encoding.UTF8,
+                        "application/json")
+                });
+            }
+            if (request.RequestUri?.Query.Contains("app.bsky.labeler.service", StringComparison.Ordinal) == true)
+            {
+                return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+                {
+                    Content = new StringContent(
+                        $$"""{"uri":"at://{{StoreFixture.s_issuer}}/app.bsky.labeler.service/self","cid":"{{TargetResolutionHandler.RecordCid}}","value":{{declaration}}}""",
+                        System.Text.Encoding.UTF8,
+                        "application/json")
+                });
+            }
+            return base.SendAsync(request, cancellationToken);
+        }
+    }
+
+    [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
     public async Task OzoneTransactionsKeepMultiLabelAndCrossVersionReportEvidenceAcrossRestart(string engine)
     {
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
@@ -24,6 +123,15 @@ public partial class LabelCaseDecisionTests
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         using HttpClient http = new(new TargetResolutionHandler());
         LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
+        Success(await ((ILabelAdministrationStore)fixture.Store).ChangeTeamAsync(
+            caller: caller,
+            change: new(
+                operationId: "ozone-second-moderator",
+                action: LabelTeamAction.Enroll,
+                target: new("did:plc:ozone-second-moderator"),
+                reason: "Keep Ozone report cases unassigned before review.",
+                role: LabelTeamRole.Moderator),
+            cancellationToken: token));
         LabelPolicyState active = await LabelPolicyStoreTests.ActivateAsync((ILabelPolicyStore)fixture.Store, caller, token);
         LabelIssuanceService service = Service(
             fixture: fixture,
@@ -65,6 +173,9 @@ public partial class LabelCaseDecisionTests
         Assert.Equal(request.ReportNote, restored.ReportNote);
         Assert.True(restored.Automated);
         ILabelModerationStore history = (ILabelModerationStore)fixture.NewStore();
+        Assert.Equal(caller.Actor, Success(await history.GetCaseAsync(caller, accepted[0].CaseId, token)).Assignee);
+        Assert.Equal(caller.Actor, Success(await history.GetCaseAsync(caller, accepted[1].CaseId, token)).Assignee);
+        Assert.Null(Success(await history.GetCaseAsync(caller, accepted[2].CaseId, token)).Assignee);
         foreach (LabelModerationReport report in accepted.Take(2))
         {
             IReadOnlyList<LabelCaseReceipt> entries = Success(await history.GetCaseHistoryAsync(

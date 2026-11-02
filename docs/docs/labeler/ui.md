@@ -299,18 +299,34 @@ using the selected UTC/local time zone. Without JavaScript, the exact UTC date
 remains visible.
 In appeal review, changing the label selection selects **Remove labels** when
 all applicable labels are cleared, or **Replace labels** for any other changed
-selection, including partial removal. Returning to the original selection restores
-the previously chosen outcome; outcomes remain manually selectable.
+selection, including partial removal. **Replace labels** is omitted when the selected
+policy has only one distinct label. Returning to the original selection selects
+**Keep the existing decision**; outcomes remain manually selectable.
+The page compares each appeal's captured label sequences with current active labels.
+When any challenged label has changed, been removed or expired, it selects
+**Challenged labels changed** and explains why. Close that appeal without label
+changes; staged changes keep Submit disabled until the original selection is restored.
 Clicking Submit confirms the case/appeal decision; there is no separate confirmation
 checkbox. Opening an appeal from the Appeals list or search results preselects
 that appeal for review. Case/appeal decision and assignment reasons are optional;
 leaving one blank records "No reason provided." in the audit history.
+Resolved cases retain their recorded assignee but no longer show the assignment form.
+The form is also hidden when reviewing a handled report or resolved appeal, even
+if its case remains open for other work.
+Taking a case, report or appeal action assigns an unassigned case to the acting
+moderator as part of the same saved action. Existing assignments are retained.
+Opening a workflow or explicitly clearing its assignment does not claim it.
+Cases, Reports and Appeals share **Unresolved**, **In review**, **Resolved** and
+**All** workflow tabs. Reports and appeals are in review when they remain unresolved
+and their case is in review. Resolved includes all handled reports and all completed
+appeal outcomes, even if the case has other outstanding work. Appeal outcomes can
+also be filtered individually. Counts, sorting and pagination use the selected filters.
 If a submission is rejected, its label selections, appeal outcome,
 reason and report-handling choice remain visible while the observed case, policy
 and labels are unchanged. Incompatible outcomes produce a validation message, not
 an exception page. Changed observations require fresh review instead of silently
 rebasing the rejected decision.
-**Acknowledge a superseded decision** records that newer outcomes have overtaken
+**Challenged labels changed** records that newer outcomes have overtaken
 the appeal's captured labels, resolving that appeal without changing current labels.
 When an appeal decision commits, other pending appeals for the same subject and
 CID are automatically marked superseded only if every captured outcome is no
@@ -426,6 +442,11 @@ The manual page presents policy values as selectable label buttons rather than
 free-text values. Entering a target or changing its optional CID refreshes this
 labeler's active labels in the background; **Load labels** provides an explicit
 alternative and works without JavaScript.
+For records, **Look up current CID** beside the optional CID input fetches the
+current version from the account's data server and refreshes the label selection
+for that version. This is explicit: ordinary label lookup leaves an omitted CID
+blank, and fetching a CID does not issue labels. A failed version lookup displays
+an error and keeps submission disabled until labels are loaded again.
 The target type is inferred on the server: DID/handle means account, and a complete
 AT URI means record. With JavaScript, the optional CID field is shown only for record
 targets. Repository-only AT URIs such as `at://did:plc:example` or `at://handle.example`

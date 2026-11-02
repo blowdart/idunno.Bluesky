@@ -19,6 +19,44 @@ public class LabelModerationStoreTests
     private static readonly LabelReportSubject s_subject = LabelReportSubject.Account(new("did:plc:subject"));
 
     [Theory]
+    [InlineData("sqlite", LabelCaseAction.StartReview)]
+    [InlineData("sqlite", LabelCaseAction.Note)]
+    [InlineData("sqlite", LabelCaseAction.Resolve)]
+    [InlineData("postgresql", LabelCaseAction.StartReview)]
+    [InlineData("postgresql", LabelCaseAction.Note)]
+    [InlineData("postgresql", LabelCaseAction.Resolve)]
+    [InlineData("mysql", LabelCaseAction.StartReview)]
+    [InlineData("mysql", LabelCaseAction.Note)]
+    [InlineData("mysql", LabelCaseAction.Resolve)]
+    public async Task CaseActionsClaimUnassignedWorkAtomicallyWithoutReplacingAssignments(string engine, LabelCaseAction action)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
+        ILabelAdministrationStore team = (ILabelAdministrationStore)fixture.Store;
+        LabelAdministrationCaller moderator = await EnrollAsync(team, administrator, LabelTeamRole.Moderator, token);
+        ILabelModerationStore cases = (ILabelModerationStore)fixture.Store;
+        LabelModerationCase opened = Success(await cases.ChangeCaseAsync(administrator, Open("claim-open"), token)).Case;
+        Assert.Null(opened.Assignee);
+        LabelCaseChange change = Change(opened, "claim-action", action);
+        fixture.SetCommitHooks(beforeCommit: (_, _, _) => throw new SqliteException("Injected rollback.", 10));
+        Assert.Equal(LabelServiceErrorCode.StorageUnavailable, (await cases.ChangeCaseAsync(moderator, change, token)).Error!.Code);
+        fixture.SetCommitHooks();
+        Assert.Null(Success(await cases.GetCaseAsync(administrator, opened.Id, token)).Assignee);
+        LabelCaseReceipt claimed = Success(await cases.ChangeCaseAsync(moderator, change, token));
+        Assert.Equal(s_member, claimed.Case.Assignee);
+        ILabelModerationStore restarted = (ILabelModerationStore)fixture.NewStore();
+        Assert.Equal(s_member, Success(await restarted.GetCaseAsync(administrator, opened.Id, token)).Assignee);
+        Assert.Equal(claimed.Sequence, Success(await restarted.ChangeCaseAsync(moderator, change, token)).Sequence);
+        LabelCaseReceipt noted = Success(await restarted.ChangeCaseAsync(
+            administrator, Change(claimed.Case, "other-moderator-note", LabelCaseAction.Note), token));
+        Assert.Equal(s_member, noted.Case.Assignee);
+        Assert.Equal(LabelServiceErrorCode.CaseConflict,
+            (await restarted.ChangeCaseAsync(administrator, Change(opened, "stale-claim", LabelCaseAction.Note), token)).Error!.Code);
+        Assert.Equal(s_member, Success(await restarted.GetCaseAsync(administrator, opened.Id, token)).Assignee);
+    }
+
+    [Theory]
     [InlineData("sqlite")]
     [InlineData("postgresql")]
     [InlineData("mysql")]
@@ -298,7 +336,8 @@ public class LabelModerationStoreTests
         fixture.SetCommitHooks(beforeCommit: (_, _, _) => throw new SqliteException("Injected rollback.", 10));
         Assert.Equal(LabelServiceErrorCode.StorageUnavailable, (await team.ChangeTeamAsync(administrator, suspend, token)).Error!.Code);
         fixture.SetCommitHooks();
-        Assert.All(Success(await store.GetCasesAsync(administrator, cancellationToken: token)), item => Assert.Null(item.Assignee));
+        Assert.All(Success(await store.GetCasesAsync(administrator, cancellationToken: token)), item =>
+            Assert.Equal(item.Id == resolved.Id ? s_administrator : null, item.Assignee));
         Success(await team.ChangeTeamAsync(administrator, suspend, token));
         ILabelModerationStore restarted = (ILabelModerationStore)fixture.NewStore();
         LabelModerationCase first = Success(await restarted.GetCaseAsync(administrator, opened[1].Case.Id, token));
@@ -307,7 +346,7 @@ public class LabelModerationStoreTests
         Assert.Equal(s_administrator, last.Assignee);
         Assert.Equal(2, first.Revision);
         Assert.Equal(resolved.Revision, Success(await restarted.GetCaseAsync(administrator, resolved.Id, token)).Revision);
-        Assert.Null(Success(await restarted.GetCaseAsync(administrator, resolved.Id, token)).Assignee);
+        Assert.Equal(s_administrator, Success(await restarted.GetCaseAsync(administrator, resolved.Id, token)).Assignee);
         Assert.Null(Success(await restarted.GetCaseOperationAsync(administrator, "open-1", token)).Case.Assignee);
         LabelCaseReceipt automatic = Success(await restarted.GetCaseHistoryAsync(administrator, first.Id, cancellationToken: token))[^1];
         Assert.Equal(LabelCaseAction.Assign, automatic.Action);

@@ -97,7 +97,8 @@ internal sealed record LabelTableQuery(
     DateTimeOffset? AuditTo = null,
     long AuditAfterSequence = 0,
     long? AuditThroughSequence = null,
-    string? TeamMember = null)
+    string? TeamMember = null,
+    LabelCaseWorkflow? Workflow = null)
 {
     internal const int PageSize = 16;
 
@@ -117,6 +118,7 @@ internal sealed record LabelTableQuery(
     internal void Validate()
     {
         if (Page <= 0 || !Columns.Contains(Sort) || !Enum.IsDefined(Queue) ||
+            Workflow is { } workflow && workflow is not (LabelCaseWorkflow.Unresolved or LabelCaseWorkflow.InReview or LabelCaseWorkflow.Resolved or LabelCaseWorkflow.All) ||
             AuditActor is { Length: > 2048 } ||
             TeamMember is not null && !idunno.AtProto.Did.TryParse(TeamMember, out _) ||
             AuditAfterSequence < 0 || AuditThroughSequence is < 0 ||

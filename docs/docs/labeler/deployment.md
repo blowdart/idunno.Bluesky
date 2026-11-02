@@ -18,6 +18,10 @@ The image also includes the matching Linux CLI in `/opt/labeler-cli`, which is o
 CLI runs as the container's configured user; existing local identity authorization
 and remote-administration restrictions still apply.
 
+The host serves `/robots.txt` anonymously as plain text with `User-agent: *` and
+`Disallow: /`, asking crawlers not to crawl any path. This is advisory and does not
+replace authentication or access controls.
+
 ## Required configuration
 
 When Xenon is enabled with PostgreSQL storage, the canonical host also uses

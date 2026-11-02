@@ -50,6 +50,12 @@
 
 #### idunno.Bluesky.AspNet.Labeler.UI
 
+* Adds matching Unresolved, In review, Resolved and All workflow tabs and filters to Reports and Appeals, with database-filtered totals and paging.
+* Adds left-arrow glyphs to detail-page back links and returns appeal reviews to the appeals list.
+* Hides the assignment form on resolved cases and when reviewing handled reports or resolved appeals, while retaining the recorded assignee.
+* Hides the Replace labels appeal outcome when the active policy does not declare multiple distinct labels.
+* Detects and explains changed appeal labels, uses the shorter Challenged labels changed outcome, constrains appeal dropdowns to their columns, and selects matching outcomes when label selections change.
+* Adds an explicit current-record CID lookup beside the optional manual-label CID input, refreshing label selections for that version without issuing labels.
 * Explains the separate manual removal of the labeler endpoint from the DID document after retirement and a permanent distribution shutdown, while preserving historical verification keys.
 * Keeps all Policy tab fragments in sync with the displayed tab so refresh restores the selection, including keyboard navigation and draft Publish shortcuts.
 * Gives report-summary tooltips equal top and bottom padding when no open reports precede the total.
@@ -152,6 +158,7 @@
 
 #### idunno.Bluesky.Labeler.Host
 
+* Serves a public plain-text `/robots.txt` asking all crawlers not to crawl any path.
 * Includes the matching Linux administration CLI in the canonical image, with `labeler-admin` on `PATH`.
 * Advertises the method-bound `resumePolicyPublication` native OAuth permission required by CLI publication recovery.
 * Supports explicit `Labeler:SigningKeyProvider=none` for an initialized retired labeler with no pending signatures, publication or rotation, preserving keyless read-only distribution and authorized recovery administration.
@@ -204,6 +211,8 @@
 
 #### idunno.Bluesky.Labeler
 
+* Assigns previously unassigned cases to the moderator committing a case, report or appeal action, atomically with the action and without replacing existing assignments.
+* Refreshes an expired issuance policy before capturing the Ozone batch revision, avoiding rejection of valid label events after a successful declaration check while preserving transactional policy fencing.
 * Clarifies account verification, label decision, policy check and retirement errors, preserving original tracking IDs and detailed diagnostics for recovery.
 * Adds shared atomic Ozone event preparation and provider commits for multi-label actions and explicit cross-version report selection, retaining original CIDs, live authorization, policy fencing and pending appeals.
 * Adds irreversible, authorized retirement with action-bound confirmations, bounded timestamp-aware signed negations, resumable database checkpoints, live worker authority, explicit 1–365 day grace selection and distribution-availability attestation. Local history purge and operator-attested external key removal remain separate confirmations; moderation and audit history, backups and downstream copies are not erased.

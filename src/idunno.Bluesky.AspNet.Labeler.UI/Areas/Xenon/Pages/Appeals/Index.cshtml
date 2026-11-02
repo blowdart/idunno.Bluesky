@@ -9,10 +9,33 @@
         moderation.TryGetProperty("appeals", out JsonElement values) ? values : null;
 }
 <h1>Appeals</h1>
+<nav class="queue-tabs" aria-label="Appeal workflow queues">
+    @foreach ((LabelCaseWorkflow queue, string title) in new[]
+    {
+        (LabelCaseWorkflow.Unresolved, "Unresolved"),
+        (LabelCaseWorkflow.InReview, "In review"),
+        (LabelCaseWorkflow.Resolved, "Resolved"),
+        (LabelCaseWorkflow.All, "All")
+    })
+    {
+        <a asp-area="Xenon" asp-page="/Appeals/Index" asp-route-Queue="@queue" aria-current="@(Model.Queue == queue ? "page" : null)">@title</a>
+    }
+</nav>
 <form method="get" class="panel">
     <input type="hidden" name="Sort" value="@(Model.Table?.Query.Sort ?? LabelTableSort.Received)" />
     <input type="hidden" name="Ascending" value="@((Model.Table?.Query.Ascending ?? false).ToString())" />
-    <label for="status">Status</label>
+    <label for="queue">Show appeals</label>
+    <select id="queue" name="Queue">
+        @foreach ((LabelCaseWorkflow queue, string title) in new[]
+        {
+            (LabelCaseWorkflow.Unresolved, "Unresolved"), (LabelCaseWorkflow.InReview, "In review"),
+            (LabelCaseWorkflow.Resolved, "Resolved"), (LabelCaseWorkflow.All, "All")
+        })
+        {
+            <option value="@queue" selected="@(Model.Queue == queue)">@title</option>
+        }
+    </select>
+    <label for="status">Outcome</label>
     <select id="status" name="Status">
         <option value="">All</option>
         @foreach (LabelAppealStatus status in Enum.GetValues<LabelAppealStatus>())
@@ -22,7 +45,7 @@
                     LabelAppealStatus.Withdrawn => "Labels withdrawn",
                     LabelAppealStatus.Replaced => "Labels changed",
                     LabelAppealStatus.Upheld => "Labels kept",
-                    LabelAppealStatus.Superseded => "Challenged labels no longer in effect",
+                    LabelAppealStatus.Superseded => "Challenged labels changed",
                     _ => status.ToString()
                 })</option>
         }

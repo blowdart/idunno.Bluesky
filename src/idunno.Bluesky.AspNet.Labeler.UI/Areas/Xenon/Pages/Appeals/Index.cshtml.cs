@@ -18,9 +18,13 @@ public sealed class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public long AfterId { get; set; }
 
-    /// <summary>Gets the optional status filter, defaulting to pending appeals when no filter is supplied.</summary>
+    /// <summary>Gets the optional exact appeal outcome filter within the selected workflow queue.</summary>
     [BindProperty(SupportsGet = true)]
     public LabelAppealStatus? Status { get; set; }
+
+    /// <summary>Gets or sets the appeal workflow queue, defaulting to unresolved work.</summary>
+    [BindProperty(SupportsGet = true)]
+    public LabelCaseWorkflow Queue { get; set; } = LabelCaseWorkflow.Unresolved;
 
     /// <summary>Gets the appeal response.</summary>
     internal JsonElement Data { get; private set; }
@@ -31,18 +35,24 @@ public sealed class IndexModel : PageModel
     /// <summary>Loads a bounded page of appeals.</summary>
     public async Task OnGetAsync()
     {
-        if (!Request.Query.ContainsKey(nameof(Status)))
+        if (!Request.Query.ContainsKey(nameof(Queue)) && Request.Query.ContainsKey(nameof(Status)))
         {
-            Status = LabelAppealStatus.Pending;
+            Queue = Status switch
+            {
+                LabelAppealStatus.Pending => LabelCaseWorkflow.Unresolved,
+                null => LabelCaseWorkflow.All,
+                _ => LabelCaseWorkflow.Resolved
+            };
         }
 
-        if (!ModelState.IsValid || AfterId < 0 || Status is { } status && !Enum.IsDefined(status))
+        if (!ModelState.IsValid || AfterId < 0 || Status is { } status && !Enum.IsDefined(status) ||
+            Queue is not (LabelCaseWorkflow.Unresolved or LabelCaseWorkflow.InReview or LabelCaseWorkflow.Resolved or LabelCaseWorkflow.All))
         {
             ViewData["Error"] = "Choose an available appeal status and refresh the page before trying again.";
             return;
         }
 
-        Table = TableNavigation.Read(Request, new(LabelTableKind.Appeals, AppealStatus: Status));
+        Table = TableNavigation.Read(Request, new(LabelTableKind.Appeals, AppealStatus: Status, Workflow: Queue));
         Data = await UiPageHelpers.ReadTableAsync(this, Table).ConfigureAwait(false);
     }
 }

@@ -53,6 +53,9 @@ public sealed class DetailModel : PageModel
     /// <summary>Gets pending appeals available for explicit review.</summary>
     internal ModerationAppealView[] Appeals { get; private set; } = [];
 
+    /// <summary>Gets whether the selected report or appeal has already been handled.</summary>
+    internal bool SelectedReviewCompleted { get; private set; }
+
     /// <summary>Gets the case detail response.</summary>
     internal JsonElement Data { get; private set; }
 
@@ -76,6 +79,24 @@ public sealed class DetailModel : PageModel
 
     /// <summary>Gets the currently selected immutable moderation policy version.</summary>
     internal string? PolicyVersion { get; private set; }
+
+    /// <summary>Gets whether the selected policy declares more than one distinct label value.</summary>
+    internal bool CanReplaceLabels { get; private set; }
+
+    /// <summary>Gets appeals whose captured label outcomes are no longer active and current.</summary>
+    internal HashSet<long> ChangedAppealIds { get; private set; } = [];
+
+    /// <summary>Compares captured appeal sequences with the active exact-subject label observations.</summary>
+    internal static bool HasChangedChallenges(ModerationAppealView appeal, ModerationLabelChoiceView[] choices) =>
+        appeal.Challenges.Any(challenge => !choices.Any(choice =>
+            choice.Value == challenge.Label.GetProperty("val").GetString() &&
+            choice.Sequence == challenge.Sequence && choice.Applied));
+
+    /// <summary>Determines replacement availability from declared policy values rather than retained applied labels.</summary>
+    internal static bool HasReplacementLabels(JsonElement declaration) =>
+        declaration.TryGetProperty("policies", out JsonElement policies) &&
+        policies.TryGetProperty("labelValues", out JsonElement values) &&
+        values.EnumerateArray().Select(value => value.GetString()).Distinct(StringComparer.Ordinal).Take(2).Count() > 1;
 
     /// <summary>Loads case detail and immutable workflow history.</summary>
     /// <returns>An action result that displays the case.</returns>
@@ -129,6 +150,8 @@ public sealed class DetailModel : PageModel
                 Reason: "Xenon case label selection.",
                 Moderation: new(CaseId: Id))).ConfigureAwait(false);
         PolicyVersion = labels.Moderation?.Policy?.Definition?.Version;
+        CanReplaceLabels = labels.Moderation?.Policy?.Definition is { } definition &&
+            HasReplacementLabels(definition.Declaration);
         LabelChoices = labels.Moderation?.LabelChoices ?? [];
         AccountLabels = labels.Moderation?.AccountLabels ?? [];
         LabelsAvailable = labels.Succeeded;
@@ -154,6 +177,7 @@ public sealed class DetailModel : PageModel
                 ViewData["Error"] = "The selected report does not belong to this case.";
                 return Page();
             }
+            SelectedReviewCompleted = CurrentReport.HandledAt is not null || CurrentReport.DecisionOperationId is not null;
         }
 
         AdministrationResponse appeals = await UiPageHelpers.DispatchAsync(
@@ -183,6 +207,15 @@ public sealed class DetailModel : PageModel
             {
                 Appeals = [.. Appeals, selectedAppeal];
             }
+            else
+            {
+                SelectedReviewCompleted = true;
+            }
+        }
+        if (labels.Succeeded)
+        {
+            ChangedAppealIds = Appeals.Where(appeal => HasChangedChallenges(appeal, LabelChoices))
+                .Select(appeal => appeal.Id).ToHashSet();
         }
         if (labels.Succeeded && reports.Succeeded && appeals.Succeeded &&
             PolicyVersion is not null && response.Moderation?.Case is { } current &&

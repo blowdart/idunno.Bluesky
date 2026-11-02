@@ -7,7 +7,14 @@
         Model.Data.TryGetProperty("moderation", out JsonElement moderation) &&
         moderation.TryGetProperty("case", out JsonElement value) ? value : null;
 }
-<p><a asp-area="Xenon" asp-page="/Cases/Index">Back to cases</a></p>
+@if (Model.AppealId is not null)
+{
+    <p><a asp-area="Xenon" asp-page="/Appeals/Index"><span aria-hidden="true">&larr;</span> Back to appeals</a></p>
+}
+else
+{
+    <p><a asp-area="Xenon" asp-page="/Cases/Index"><span aria-hidden="true">&larr;</span> Back to cases</a></p>
+}
 <h1>Case #@Model.Id</h1>
 <div class="moderation-review">
 <div class="moderation-workspace">
@@ -43,7 +50,9 @@
                 <span>Unassigned</span>
             }</p>
     </section>
-    @if ((ViewData["CurrentRole"] as LabelTeamRole?) >= LabelTeamRole.Administrator && Model.Assignees.Count > 1)
+    @if ((ViewData["CurrentRole"] as LabelTeamRole?) >= LabelTeamRole.Administrator &&
+        Model.Assignees.Count > 1 && item.GetProperty("status").GetString() != "Resolved" &&
+        !Model.SelectedReviewCompleted)
     {
         <section class="panel">
             <h2>Assignment</h2>
@@ -131,12 +140,15 @@
                 </fieldset>
                 @if (Model.Appeals.Length > 0)
                 {
+                    string selectedAppeal = Model.SubmittedDecision?["appealId"].ToString() ?? Model.AppealId?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
+                    bool challengedLabelsChanged = Model.ChangedAppealIds.Any(id => id.ToString(System.Globalization.CultureInfo.InvariantCulture) == selectedAppeal);
+                    string selectedOutcome = challengedLabelsChanged ? "Superseded" : Model.SubmittedDecision?["appealOutcome"].ToString() ?? string.Empty;
                     <div class="grid">
                         <label class="field">Appeal reviewed
                             <select name="appealId"><option value="">No appeal reviewed</option>
                                 @foreach (long appealId in Model.Appeals.Select(appeal => appeal.Id))
                                 {
-                                    <option value="@appealId" selected="@(Model.SubmittedDecision is { } submittedAppeal ? submittedAppeal["appealId"].ToString() == appealId.ToString(System.Globalization.CultureInfo.InvariantCulture) : Model.AppealId == appealId)">Appeal #@appealId</option>
+                                    <option value="@appealId" data-changed="@(Model.ChangedAppealIds.Contains(appealId) ? "true" : "false")" selected="@(selectedAppeal == appealId.ToString(System.Globalization.CultureInfo.InvariantCulture))">Appeal #@appealId</option>
                                 }
                             </select>
                         </label>
@@ -146,14 +158,19 @@
                                 @foreach ((string outcome, string title) in new[]
                                 {
                                     ("Upheld", "Keep the existing decision"), ("Replaced", "Replace labels"),
-                                    ("Withdrawn", "Remove labels"), ("Superseded", "The challenged labels are no longer in effect")
+                                    ("Withdrawn", "Remove labels"), ("Superseded", "Challenged labels changed")
                                 })
                                 {
-                                    <option value="@outcome" selected="@(Model.SubmittedDecision?["appealOutcome"].ToString() == outcome)">@title</option>
+                                    if (outcome == "Replaced" && !Model.CanReplaceLabels)
+                                    {
+                                        continue;
+                                    }
+                                    <option value="@outcome" selected="@(selectedOutcome == outcome)">@title</option>
                                 }
                             </select>
                         </label>
                     </div>
+                    <p role="status" data-appeal-changed hidden="@(!challengedLabelsChanged)">At least one challenged label has changed, been removed or expired since this appeal. Close this appeal without changing labels; review current labels separately.</p>
                     <p>Other appeals will close automatically when the labels they challenged are no longer in effect.</p>
                 }
                 <label class="field">Reason (optional)<textarea name="reason" maxlength="4096" aria-describedby="decision-reason-help">@Model.SubmittedDecision?["reason"]</textarea></label>
