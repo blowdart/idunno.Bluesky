@@ -42,7 +42,7 @@ For a React frontend with server-side OAuth credentials, see the [React BFF samp
 
 `Samples.BlazorAuthentication` provides the same timeline, claims and profile-editing functionality in a Blazor Web App
 using Interactive Server, with the library's Razor Pages UI for login, logout and callbacks.
-See its [setup and rendering notes](../../samples/Samples.BlazorAuthentication/readme.md).
+See its [setup and rendering notes](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.BlazorAuthentication).
 Its circuit client uses current server-side credentials and coordinates refresh through the identity store, while a
 revalidating authentication state provider checks session removal and cookie expiry. Cookie renewal still requires an
 HTTP request; the sample sends antiforgery-protected, activity-based renewal requests without reloading the page and
