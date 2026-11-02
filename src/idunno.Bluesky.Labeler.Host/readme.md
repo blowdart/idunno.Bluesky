@@ -91,5 +91,5 @@ or safe withdrawal. Remote administration remains independently opt-in.
 Build the container from the repository root:
 
 ```powershell
-docker build --file src\idunno.Bluesky.Labeler.Host\Dockerfile --tag idunno-bluesky-labeler .
+docker build --build-arg SOURCE_REVISION_ID=$(git rev-parse HEAD) --file src\idunno.Bluesky.Labeler.Host\Dockerfile --tag idunno-bluesky-labeler .
 ```
