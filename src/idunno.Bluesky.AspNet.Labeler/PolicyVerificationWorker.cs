@@ -71,7 +71,21 @@ internal sealed partial class PolicyVerificationWorker(
             {
                 VerificationFailed(logger, exception.GetType().Name);
             }
+            await DeliverPendingNotificationsAsync(stoppingToken).ConfigureAwait(false);
             await Task.Delay(interval, clock, stoppingToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>Delivers change notifications even when no active policy is available for verification.</summary>
+    private async Task DeliverPendingNotificationsAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await notifications.DeliverPendingAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is DbException or InvalidDataException)
+        {
+            VerificationFailed(logger, "alert-store-" + exception.GetType().Name);
         }
     }
 

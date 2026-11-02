@@ -269,6 +269,30 @@ public class LabelPolicyStoreTests
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
+        ILabelAdministrationStore team = (ILabelAdministrationStore)fixture.Store;
+        ILabelPolicyAlertStore alerts = (ILabelPolicyAlertStore)fixture.Store;
+        Assert.True((await team.ChangeTeamAsync(
+            caller: administrator,
+            change: new(
+                operationId: "second-admin",
+                action: LabelTeamAction.Enroll,
+                target: new Did("did:plc:second-policy-admin"),
+                reason: "Add administrator.",
+                role: LabelTeamRole.Administrator),
+            cancellationToken: token)).Succeeded);
+        Assert.True((await team.SetTeamNotificationEmailAsync(
+            caller: administrator,
+            change: new("email", administrator.Actor, "admin@example.invalid", "Register alerts."),
+            cancellationToken: token)).Succeeded);
+        LabelPolicyAlertDelivery enrollment = Assert.IsType<LabelPolicyAlertDelivery>(await alerts.ClaimPendingAlertAsync(
+            leaseId: "enrollment",
+            leaseDuration: TimeSpan.FromMinutes(2),
+            cancellationToken: token));
+        await alerts.CompleteAlertDeliveryAsync(
+            alertId: enrollment.AlertId,
+            leaseId: enrollment.LeaseId,
+            delivered: true,
+            cancellationToken: token);
         ILabelPolicyStore store = (ILabelPolicyStore)fixture.Store;
         LabelPolicyState initial = await store.InitializePolicyAsync(cancellationToken: token);
         LabelPolicyDefinition draft = Policy();
@@ -287,6 +311,10 @@ public class LabelPolicyStoreTests
             expectedRevision: publishing.Revision, verificationStartedAt: publishing.DatabaseTime,
             observedCid: s_cid, declaration: old.RootElement, cancellationToken: token));
         Assert.Equal(LabelPolicyPhase.Publishing, pending.Phase);
+        Assert.Null(await alerts.ClaimPendingAlertAsync(
+            leaseId: "not-published",
+            leaseDuration: TimeSpan.FromMinutes(2),
+            cancellationToken: token));
         Assert.Equal("publish", pending.PublicationOperationId);
         using JsonDocument declaration = JsonDocument.Parse(Declaration);
         LabelPolicyState verified = Success(await store.ObservePolicyAsync(
@@ -297,13 +325,34 @@ public class LabelPolicyStoreTests
         Assert.Equal(s_cid, verified.VerifiedCid);
         Assert.Equal(pending.DatabaseTime.AddMinutes(30), verified.VerifiedUntil);
         Assert.Contains("\"extension\":{\"preserve\":true}", verified.Policy!.DeclarationJson, StringComparison.Ordinal);
+        ILabelPolicyAlertStore restartedAlerts = (ILabelPolicyAlertStore)fixture.NewStore();
+        LabelPolicyAlertDelivery published = Assert.IsType<LabelPolicyAlertDelivery>(await restartedAlerts.ClaimPendingAlertAsync(
+            leaseId: "published",
+            leaseDuration: TimeSpan.FromMinutes(2),
+            cancellationToken: token));
+        Assert.Contains("Policy v1 was published", published.ChangeDescription, StringComparison.Ordinal);
+        await restartedAlerts.CompleteAlertDeliveryAsync(
+            alertId: published.AlertId,
+            leaseId: published.LeaseId,
+            delivered: true,
+            cancellationToken: token);
+        Assert.True((await store.ObservePolicyAsync(
+            expectedRevision: verified.Revision,
+            verificationStartedAt: verified.DatabaseTime,
+            observedCid: s_cid,
+            declaration: declaration.RootElement,
+            cancellationToken: token)).Succeeded);
+        Assert.Null(await restartedAlerts.ClaimPendingAlertAsync(
+            leaseId: "checked-again",
+            leaseDuration: TimeSpan.FromMinutes(2),
+            cancellationToken: token));
         LabelPolicyState recovered = Success(await store.BeginPolicyPublicationAsync(
             caller: administrator, operationId: "publish", version: "v1", expectedRevision: initial.Revision,
             previousCid: null, reason: "Publish reviewed policy.", cancellationToken: token));
         Assert.Equal(publishing.Revision, recovered.Revision);
         Assert.Equal("publish", recovered.PublicationOperationId);
         Assert.Equal(LabelPolicyPhase.Publishing, recovered.Phase);
-        Assert.Equal(verified.Revision, (await store.ReadPolicyStateAsync(token))!.Revision);
+        Assert.Equal(verified.Revision + 1, (await store.ReadPolicyStateAsync(token))!.Revision);
     }
 
     [Theory]

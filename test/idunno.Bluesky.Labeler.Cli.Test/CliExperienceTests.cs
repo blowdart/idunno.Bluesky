@@ -247,10 +247,10 @@ public class CliExperienceTests
 
         Assert.Equal(0, result);
         Assert.Equal(
-            "ℹ   moderation:" + Environment.NewLine +
-            "  📋  cases: 12" + Environment.NewLine +
-            "  📨  reports: 0" + Environment.NewLine +
-            "  ⚖   appeals: 3" + Environment.NewLine,
+            "ℹ   Moderation:" + Environment.NewLine +
+            "  📋  Cases: 12" + Environment.NewLine +
+            "  📨  Reports: 0" + Environment.NewLine +
+            "  ⚖   Appeals: 3" + Environment.NewLine,
             output.ToString());
         Assert.StartsWith("✔   ", diagnostics.ToString(), StringComparison.Ordinal);
     }
@@ -260,6 +260,12 @@ public class CliExperienceTests
     [InlineData("labels", "🏷️  ")]
     [InlineData("issuer", "🪪  ")]
     [InlineData("sequence", "#   ")]
+    [InlineData("streamId", "🌊  ")]
+    [InlineData("issuedThrough", "🏷️  ")]
+    [InlineData("publishedThrough", "📡  ")]
+    [InlineData("phase", "🚦  ")]
+    [InlineData("retirementUpperBound", "🎯  ")]
+    [InlineData("retirementThrough", "🏁  ")]
     [InlineData("other", "•   ")]
     public async Task ReadableFieldPrefixesPadNarrowSymbolsAndWideEmoji(string field, string prefix)
     {
@@ -267,7 +273,66 @@ public class CliExperienceTests
         using StringWriter output = new();
         await Program.WriteReadableResultAsync(document.RootElement, output, 0);
 
-        Assert.Equal($"{prefix}{field}: 1{Environment.NewLine}", output.ToString());
+        string name = field switch
+        {
+            "issuedThrough" => "Labels issued",
+            "publishedThrough" => "Labels published",
+            _ => field
+        };
+        name = char.ToUpperInvariant(name[0]) + name[1..];
+        Assert.Equal($"{prefix}{name}: 1{Environment.NewLine}", output.ToString());
+    }
+
+    [Theory]
+    [InlineData(0, "Full label history available.")]
+    [InlineData(1, "Available from label 2 onwards.")]
+    [InlineData(12, "Available from label 13 onwards.")]
+    [InlineData(long.MaxValue, "Available from label 9223372036854775808 onwards.")]
+    public async Task ReadableReplayFloorExplainsAvailableHistory(long floor, string expected)
+    {
+        using System.Text.Json.JsonDocument document = System.Text.Json.JsonDocument.Parse($"{{\"replayFloor\":{floor}}}");
+        using StringWriter output = new();
+        await Program.WriteReadableResultAsync(document.RootElement, output, 0);
+
+        Assert.Equal($"⏮   Label history: {expected}{Environment.NewLine}", output.ToString());
+    }
+
+    [Fact]
+    public async Task ReadableStateShowsIssuerThenPhaseBeforeStreamIdentifier()
+    {
+        using System.Text.Json.JsonDocument document = System.Text.Json.JsonDocument.Parse(
+            """{"state":{"streamId":"test-stream","issuer":"did:plc:test","issuedThrough":12,"phase":"Active","revision":24}}""");
+        using StringWriter output = new();
+        await Program.WriteReadableResultAsync(document.RootElement, output, 0);
+
+        Assert.Equal(
+            "ℹ   State:" + Environment.NewLine +
+            "  🪪  Issuer: did:plc:test" + Environment.NewLine +
+            "  🚦  Phase: Active" + Environment.NewLine +
+            "  🌊  StreamId: test-stream" + Environment.NewLine +
+            "  🏷️  Labels issued: 12" + Environment.NewLine,
+            output.ToString());
+    }
+
+    [Theory]
+    [InlineData("Active", false)]
+    [InlineData("Retiring", true)]
+    [InlineData("Distributing", true)]
+    [InlineData("Grace", true)]
+    [InlineData("Retired", true)]
+    [InlineData("Purging", true)]
+    [InlineData("Purged", true)]
+    public async Task RetirementCheckpointsAreHiddenUntilRetirementBegins(string phase, bool visible)
+    {
+        using System.Text.Json.JsonDocument document = System.Text.Json.JsonDocument.Parse(
+            $$$"""{"state":{"retirementUpperBound":0,"phase":"{{{phase}}}","retirementThrough":0,"issuedThrough":12}}""");
+        using StringWriter output = new();
+        await Program.WriteReadableResultAsync(document.RootElement, output, 0);
+
+        Assert.Equal(visible, output.ToString().Contains("RetirementUpperBound:", StringComparison.Ordinal));
+        Assert.Equal(visible, output.ToString().Contains("RetirementThrough:", StringComparison.Ordinal));
+        Assert.Contains($"Phase: {phase}", output.ToString(), StringComparison.Ordinal);
+        Assert.Contains("Labels issued: 12", output.ToString(), StringComparison.Ordinal);
     }
 
     [Theory]
@@ -288,8 +353,8 @@ public class CliExperienceTests
         Assert.DoesNotContain(body, output.ToString(), StringComparison.Ordinal);
         if (expected == 0)
         {
-            Assert.Contains("issuer: did:plc:test", output.ToString(), StringComparison.Ordinal);
-            Assert.Contains("sequence: 42", output.ToString(), StringComparison.Ordinal);
+            Assert.Contains("Issuer: did:plc:test", output.ToString(), StringComparison.Ordinal);
+            Assert.Contains("Sequence: 42", output.ToString(), StringComparison.Ordinal);
         }
         else
         {

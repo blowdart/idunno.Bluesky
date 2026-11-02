@@ -115,6 +115,22 @@ availability or that every downstream consumer fetched a withdrawal. Completion 
 distribution automatically. Retained negations remain queryable/replayable until a separate
 offline or purge decision.
 
+## Remove discovery when permanently shutting down
+
+If you decide to stop the public label service permanently, remove its
+`#atproto_labeler` service entry from the account's DID document so it no longer
+advertises an endpoint you have shut down. Do this only after the waiting period
+has ended, the availability review and retirement completion are finished, and
+you have explicitly decided to stop distributing withdrawals. Keep discovery
+intact while the service is still intended to distribute them.
+
+This is a separate, manual identity update through your account provider or
+identity-management tools; Xenon does not perform it. Preserve public label
+verification keys so historical signatures can still be checked, and leave
+unrelated DID services and keys unchanged. Account deletion is not required and
+must not be relied on to remove the labeler endpoint reference. Check the
+resolved DID document after the update; cached copies may take time to refresh.
+
 ## Optional label-history cleanup
 
 After completion, `purgeRetiredData` requires a separate preflight and confirmation:

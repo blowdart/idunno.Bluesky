@@ -149,6 +149,14 @@ public class XenonUiTests
         Assert.Contains("Retiring this labeler is permanent.", html, StringComparison.Ordinal);
         Assert.Contains("pausing does not reopen the labeler", html, StringComparison.Ordinal);
         Assert.Contains("Xenon cannot confirm that every app has received them", html, StringComparison.Ordinal);
+        Assert.Contains("remove its labeler service address", html, StringComparison.Ordinal);
+        Assert.Contains("Xenon does not update the DID document for you", html, StringComparison.Ordinal);
+        Assert.Contains("Keep the public verification keys", html, StringComparison.Ordinal);
+        Assert.Contains("You do not need to delete the account", html, StringComparison.Ordinal);
+        Assert.Contains("No maintenance in progress.", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Key replacement and server shutdown status:", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("An unreachable server is not proof that its signing process has stopped.", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("<summary>Technical details</summary>", html, StringComparison.Ordinal);
         Assert.DoesNotContain("value=\"30\"", html, StringComparison.Ordinal);
         (string token, string cookie) = await CsrfAsync(initial);
         Dictionary<string, string> fields = new()
@@ -271,6 +279,22 @@ public class XenonUiTests
             Assert.Matches("<input[^>]*name=\"graceDays\"[^>]*required", graceHtml);
             Assert.DoesNotMatch("<input[^>]*name=\"graceDays\"[^>]*value=", graceHtml);
         }
+        if (scenario == "generic-checkbox")
+        {
+            using LabelSigningKey replacement = LabelSigningKey.Generate(LabelSigningCurve.P256);
+            await fixture.Services.GetRequiredService<ILabelMaintenanceStore>().BeginRotationAsync(
+                operationId: "ui-maintenance",
+                previousKeyId: keyRing.ActiveKeyId,
+                replacementKeyId: "replacement",
+                replacementPublicKey: replacement.ExportPublicKeyMultibase(),
+                cancellationToken: TestContext.Current.CancellationToken);
+            using HttpResponseMessage maintenancePage = await GetAsAsync(fixture, s_administrator, "/Xenon/Lifecycle");
+            string maintenanceHtml = await maintenancePage.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+            Assert.DoesNotContain("No maintenance in progress.", maintenanceHtml, StringComparison.Ordinal);
+            Assert.Contains("Key replacement and server shutdown status:", maintenanceHtml, StringComparison.Ordinal);
+            Assert.Contains("An unreachable server is not proof that its signing process has stopped.", maintenanceHtml, StringComparison.Ordinal);
+            Assert.Contains("<summary>Technical details</summary>", maintenanceHtml, StringComparison.Ordinal);
+        }
     }
 
     [Fact]
@@ -337,7 +361,7 @@ public class XenonUiTests
         using HttpResponseMessage teamPage = await GetAsAsync(fixture, s_administrator, "/Xenon/Team");
         Assert.Equal(HttpStatusCode.OK, teamPage.StatusCode);
         string teamHtml = await teamPage.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        Assert.DoesNotContain("Public policy check alerts", teamHtml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Administrator email notifications", teamHtml, StringComparison.Ordinal);
         Assert.Contains("@admin.example", teamHtml, StringComparison.Ordinal);
         Assert.Contains("role=\"tooltip\"", teamHtml, StringComparison.Ordinal);
         Assert.Contains("aria-describedby=\"identity-", teamHtml, StringComparison.Ordinal);
@@ -436,7 +460,7 @@ public class XenonUiTests
         using HttpResponseMessage administratorPage = await GetAsAsync(fixture, s_administrator, "/Xenon/Team");
         Assert.Equal(HttpStatusCode.OK, administratorPage.StatusCode);
         string initialHtml = await administratorPage.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        Assert.Contains("Add an email address to be notified when an automatic public policy check fails.", initialHtml, StringComparison.Ordinal);
+        Assert.Contains("Add an email address for administrator notifications.", initialHtml, StringComparison.Ordinal);
         Assert.Contains(">Save alert email</button>", initialHtml, StringComparison.Ordinal);
         (string token, string cookie) = await CsrfAsync(administratorPage);
         const string address = "admin@example.invalid";
@@ -457,12 +481,12 @@ public class XenonUiTests
         using HttpResponseMessage updatedPage = await GetAsAsync(fixture, s_administrator, "/Xenon/Team");
         string updatedHtml = await updatedPage.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.Contains(address, updatedHtml, StringComparison.Ordinal);
-        Assert.Contains("Update your email address for notifications when an automatic public policy check fails.", updatedHtml, StringComparison.Ordinal);
+        Assert.Contains("Update your email address for administrator notifications.", updatedHtml, StringComparison.Ordinal);
         Assert.Contains(">Update email</button>", updatedHtml, StringComparison.Ordinal);
         Assert.Contains("Notifications go only to active administrators with a registered address. Leave the field blank to clear your address.", updatedHtml, StringComparison.Ordinal);
         using HttpResponseMessage moderatorPage = await GetAsAsync(fixture, s_member, "/Xenon/Team");
         string moderatorHtml = await moderatorPage.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        Assert.DoesNotContain("Public policy check alerts", moderatorHtml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Administrator email notifications", moderatorHtml, StringComparison.Ordinal);
         Assert.DoesNotContain(address, moderatorHtml, StringComparison.Ordinal);
 
         using HttpResponseMessage moderatorCsrfPage = await GetAsAsync(fixture, s_member, "/Xenon/Team");

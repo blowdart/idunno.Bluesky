@@ -192,6 +192,12 @@ labeler-admin status @remote --verbose
 labeler-admin team @ipc --verbose > team.json
 ```
 
+Normal status output shows Issuer first, followed by Phase, and uses “Labels issued”
+and “Labels published” for the lifetime totals, including withdrawals. Label history
+says “Full label history available” or identifies the first available label number.
+Internal revisions are omitted, and retirement checkpoints are hidden while Active.
+These display changes do not alter verbose JSON.
+
 `--verbose` does not enable HTTP tracing or OAuth credential logging. Treat exported
 team, audit, policy and recovery material as confidential. A successful local
 receipt does not prove downstream clients have consumed a label or withdrawal.

@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 
 namespace idunno.Bluesky.AspNet.Labeler;
 
-/// <summary>Delivers persisted policy-verification failure alerts through mandatory STARTTLS.</summary>
+/// <summary>Delivers persisted policy alerts and administration change notifications through mandatory STARTTLS.</summary>
 internal sealed partial class LabelerPolicyEmailService(
     Did issuer,
     ILabelPolicyAlertStore? alerts,
@@ -50,6 +50,18 @@ internal sealed partial class LabelerPolicyEmailService(
         await DeliverPendingAsync(alertStore, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>Retries durable notifications independently of the selected policy's verification phase.</summary>
+    internal async Task DeliverPendingAsync(CancellationToken cancellationToken)
+    {
+        if (!settings.Enabled)
+        {
+            return;
+        }
+        ILabelPolicyAlertStore alertStore = alerts ??
+            throw new InvalidOperationException("Enabled SMTP alerts require durable policy-alert storage.");
+        await DeliverPendingAsync(alertStore, cancellationToken).ConfigureAwait(false);
+    }
+
     /// <summary>Claims and sends one durable message without exposing credentials or report contents.</summary>
     private async Task DeliverPendingAsync(ILabelPolicyAlertStore alerts, CancellationToken cancellationToken)
     {
@@ -80,16 +92,7 @@ internal sealed partial class LabelerPolicyEmailService(
                 deadline.Token, cancellationToken);
             foreach (string recipient in delivery.Recipients)
             {
-                using MailMessage message = new()
-                {
-                    From = new MailAddress(settings.FromAddress!),
-                    Subject = "Labeler policy verification failed",
-                    Body = $"Independent policy verification for {issuer.Value} failed at {delivery.OccurredAt:O} " +
-                        $"({delivery.Category}). Authenticated reports remain queued and non-actionable until an " +
-                        "administrator restores verified policy state. Review the Xenon moderation health status and server logs.",
-                    IsBodyHtml = false
-                };
-                message.To.Add(new MailAddress(recipient));
+                using MailMessage message = CreateMessage(delivery, recipient);
                 await client.SendMailAsync(message, linked.Token).ConfigureAwait(false);
             }
 
@@ -111,7 +114,27 @@ internal sealed partial class LabelerPolicyEmailService(
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>Formats a plain-text notification without report contents, user-supplied audit reasons or access credentials.</summary>
+    internal MailMessage CreateMessage(LabelPolicyAlertDelivery delivery, string recipient)
+    {
+        MailMessage message = new()
+        {
+            From = new MailAddress(settings.FromAddress!),
+            Subject = delivery.ChangeDescription is null ? "Labeler policy verification failed" : "Labeler administration changed",
+            Body = delivery.ChangeDescription is { } description
+                ? $"An administration change for {issuer.Value} was recorded at {delivery.OccurredAt:O}.\n\n" +
+                    $"{description}\n\nReview the Policy or Team page and administration history in Xenon. " +
+                    "This notification is sent only while more than one administrator is active."
+                : $"Independent policy verification for {issuer.Value} failed at {delivery.OccurredAt:O} " +
+                    $"({delivery.Category}). Authenticated reports remain queued and non-actionable until an " +
+                    "administrator restores verified policy state. Review the Xenon moderation health status and server logs.",
+            IsBodyHtml = false
+        };
+        message.To.Add(new MailAddress(recipient));
+        return message;
+    }
+
     /// <summary>Logs only a stable operational category, never an address, message, credential or SMTP exception.</summary>
-    [LoggerMessage(EventId = 7306, Level = LogLevel.Warning, Message = "Policy verification alert email delivery failed ({Category}).")]
+    [LoggerMessage(EventId = 7306, Level = LogLevel.Warning, Message = "Administrator notification email delivery failed ({Category}).")]
     private static partial void DeliveryFailed(ILogger logger, string category);
 }

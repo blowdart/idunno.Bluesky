@@ -6,6 +6,8 @@
 
 #### idunno.Bluesky.AspNet.Labeler
 
+* Shows “No maintenance in progress” on Lifecycle when no maintenance is active, hiding irrelevant maintenance warnings and technical details.
+
 * Uses plain-language shared administration errors while retaining error codes, permissions and recovery behavior.
 * Adds explicitly optional `MapOzoneCompatibility()` discovery, server configuration, live team/report/history inspection, label events and report resolution through the existing remote-mode, owner-switch and replay-protected administration boundary. Label/report updates commit atomically with durable event identities; unsupported capabilities fail explicitly. The canonical host opts in only with `LabelerOzone:Enabled`; Ozone itself is unchanged and end-to-end UI interoperability remains unverified.
 * Explicitly binds Ozone discovery to a request delegate so trimmed and Native AOT builds avoid an incompatible generated route interceptor.
@@ -28,6 +30,7 @@
 * Rejects fractional-millisecond moderation verification freshness during registration so configured and persisted health-check intervals cannot disagree.
 * Adds a shared, restart-resumed background checker that resolves deleted-post reports and appeals only after an authoritative PDS `RecordNotFound`, with reason `Post deleted`, explicit system audit, revision fencing and no label changes.
 * Optionally sends deduplicated policy-verification failure alerts to active administrators who register an address, using authenticated SMTP with mandatory STARTTLS and durable retry state.
+* Emails registered active administrators after verified policy publication, team membership and role changes, and remote or local CLI access changes. These durable change notifications are suppressed when only one administrator remains active; existing policy-verification failure alerts remain enabled.
 
 * Added opt-in exact-audience, method-bound service-token administrative endpoints and protected Windows named-pipe/Linux Unix-socket administration, including explicit browserless root/SID setup and shared team authorization.
 * Remote administration is disabled by default and can be enabled or disabled through reloadable host options independently of protected local administration.
@@ -47,6 +50,7 @@
 
 #### idunno.Bluesky.AspNet.Labeler.UI
 
+* Explains the separate manual removal of the labeler endpoint from the DID document after retirement and a permanent distribution shutdown, while preserving historical verification keys.
 * Keeps all Policy tab fragments in sync with the displayed tab so refresh restores the selection, including keyboard navigation and draft Publish shortcuts.
 * Gives report-summary tooltips equal top and bottom padding when no open reports precede the total.
 * Clarifies UI errors and confirmation text while preserving exact-action confirmations, retry identities, permission checks and warnings about completed writes and withdrawals.
@@ -171,6 +175,8 @@
 * Renames credential commands to `--remember-me` and `forget-me`; the previous spellings are no longer accepted.
 * Keeps sign-in and temporary-credential notices concise, reserving account-purpose warnings for labeler-account operations.
 * Adds Unicode icons with display-width-aware padding to human-readable progress, authentication, confirmations, errors and result fields, using BOM-free UTF-8 console output without altering verbose JSON output.
+* Capitalizes human-readable CLI result labels, shows Issuer followed by Phase, calls the totals “Labels issued” and “Labels published”, hides internal revisions, and hides retirement checkpoints while Active; verbose JSON remains unchanged.
+* Describes available label history in plain language instead of displaying the internal replay floor.
 * Adds `counts` to display unresolved case, report and appeal totals over local or remote administration, without an unnecessary `openCounts` heading in readable output.
 * Fixes remote policy publication sign-in by requesting one method-bound RPC scope per administrator session.
 * Adds clear success/failure confirmations on stderr and readable result details by default, with raw JSON stdout behind `--verbose`; explains each sign-in's account and purpose, and stops workflows explicitly on authentication failure, cancellation or callback timeout without logging OAuth callback secrets.

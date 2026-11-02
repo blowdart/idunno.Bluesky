@@ -50,11 +50,12 @@
 @if (Model.CanManagePolicyEmail)
 {
     <section class="panel">
-        <h2>Public policy check alerts</h2>
+        <h2>Administrator email notifications</h2>
         <p>@(Model.CurrentNotificationEmail is null
-            ? "Add an email address to be notified when an automatic public policy check fails."
-            : "Update your email address for notifications when an automatic public policy check fails.")
+            ? "Add an email address for administrator notifications."
+            : "Update your email address for administrator notifications.")
             Notifications go only to active administrators with a registered address. Leave the field blank to clear your address.</p>
+        <p>When email is enabled on the server, notifications cover published policies, team membership and role changes, and remote or local CLI access changes. These change notifications are not sent when only one administrator is active. Automatic public policy check failure alerts are still sent, even to a single administrator. No emails are sent to moderators.</p>
         <form method="post" asp-page-handler="NotificationEmail">
             <input type="hidden" name="operationId" value="@(ViewData["OperationId"] ?? Guid.NewGuid().ToString("N"))" />
             <label class="field" for="notification-email">Your alert email address

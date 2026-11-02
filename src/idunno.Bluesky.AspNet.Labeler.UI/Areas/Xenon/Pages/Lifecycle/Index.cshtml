@@ -16,14 +16,22 @@
 <p><strong>Retiring this labeler is permanent.</strong> It stops applying new labels and accepting new reports and appeals. Existing labels are withdrawn, and those withdrawals remain available for other apps to collect.</p>
 <p>Retirement continues if you close this page or restart the service. You can pause the work, but pausing does not reopen the labeler. Refresh this page to see progress.</p>
 <p>Before finishing, allow time for other apps to collect the withdrawals. Xenon cannot confirm that every app has received them. Withdrawals remain available after retirement unless you delete the retained label history.</p>
+<p>If you permanently shut down the public label service, remove its labeler service address from the account's DID document (its public identity information). Do this only after the waiting period has ended, you have reviewed availability and completed retirement, and you have decided to stop distributing withdrawals. Keep the public verification keys so historical label signatures can still be checked. Xenon does not update the DID document for you; arrange this separately through your account provider or identity-management tools. You do not need to delete the account, and deleting it is not a substitute for checking that the endpoint reference has been removed.</p>
 <p>If a signing key needs replacing, use the administration CLI to coordinate the change across your servers. Review any service outages and extend the waiting period if needed.</p>
 @if (maintenance is { ValueKind: JsonValueKind.Object } maintenanceState)
 {
     <section class="panel">
         <h2>Service maintenance</h2>
-        <p>Key replacement and server shutdown status: <strong>@UiPageHelpers.FormatEnumLabel(maintenanceState.GetProperty("phase").GetString())</strong></p>
-        <details><summary>Technical details</summary><pre>@maintenanceState.ToString()</pre></details>
-        <p>An unreachable server is not proof that its signing process has stopped. Resolve the maintenance problems before retrying.</p>
+        @if (maintenanceState.GetProperty("phase").GetString() == "None")
+        {
+            <p>No maintenance in progress.</p>
+        }
+        else
+        {
+            <p>Key replacement and server shutdown status: <strong>@UiPageHelpers.FormatEnumLabel(maintenanceState.GetProperty("phase").GetString())</strong></p>
+            <details><summary>Technical details</summary><pre>@maintenanceState.ToString()</pre></details>
+            <p>An unreachable server is not proof that its signing process has stopped. Resolve the maintenance problems before retrying.</p>
+        }
     </section>
 }
 @if (retirement is { ValueKind: JsonValueKind.Object } state)

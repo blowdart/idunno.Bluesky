@@ -376,7 +376,7 @@ History and audit use explicit `system:deleted-post` provenance.
 This shared worker operates with or without the UI and independently of remote
 CLI administration.
 
-### Policy verification email alerts
+### Administrator email notifications
 
 Email alerts are optional. When enabled, independent background policy-verification
 failures create one durable notification per continuous failure incident. Delivery
@@ -391,6 +391,28 @@ Team page. Only active administrators with a registered address receive alerts.
 The message contains the labeler DID, failure category and first failure time, not
 report contents. Addresses are persisted with team state, are visible only to
 administrators, and are excluded from audit reasons and delivery logs.
+
+The same SMTP configuration and registered addresses also receive notifications
+after a policy publication is independently confirmed, team members are added,
+removed, suspended or reinstated, their roles change, remote CLI administration is
+enabled or disabled, or local CLI bindings are granted, replaced or revoked.
+Ordinary sign-ins and short-lived token renewals do not send emails.
+Change notifications require more than one active administrator after the change,
+regardless of how many have email addresses. This condition is checked again
+before delivery; queued changes are discarded if only one active administrator
+remains. Policy-verification failure alerts are not subject to this suppression.
+Moderators never receive these emails.
+
+Change descriptions are recorded atomically with successful mutations in the
+audit history. Replaying a request does not create another notification, and
+denied requests and unpublished drafts do not notify. Delivery uses a durable
+audit cursor and one recoverable lease, so disabled SMTP does not grow the team
+aggregate with an unbounded queue. Only current active administrators' registered
+addresses are selected for each attempt; credentials, local operating-system
+identifiers, audit reasons and report contents are not included. Pending
+notifications are checked at startup and every five minutes even while policy
+verification is paused; each delivery attempt sends one notification. As with
+failure alerts, SMTP acknowledgement loss can cause duplicate delivery.
 
 Configure `LabelerModerationOptions.PolicyEmail` from application settings before
 calling `AddLabelerModeration`. `SmtpClient` uses mandatory STARTTLS; a server that

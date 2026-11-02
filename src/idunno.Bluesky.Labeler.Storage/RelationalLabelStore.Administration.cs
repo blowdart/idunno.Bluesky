@@ -109,13 +109,15 @@ internal abstract partial class RelationalLabelStore
         string action,
         string reason,
         bool succeeded,
-        CancellationToken token)
+        CancellationToken token,
+        string? changeDescription = null)
     {
         administration.Sequence = checked(administration.Sequence + 1);
         AdministrationAudit audit = new(administration.Sequence, operationId, actor?.Value, localIdentity, action, reason, succeeded)
         {
             CreatedAt = DateTimeOffset.FromUnixTimeMilliseconds(
-                await DatabaseTimeAsync(connection, transaction, token).ConfigureAwait(false))
+                await DatabaseTimeAsync(connection, transaction, token).ConfigureAwait(false)),
+            ChangeDescription = succeeded && ActiveAdministratorCount(administration) > 1 ? changeDescription : null
         };
         await ExecuteAsync(
             connection: connection,
@@ -481,11 +483,27 @@ internal abstract partial class RelationalLabelStore
                 return original;
             }
 
+            team.Members.TryGetValue(change.Target.Value, out AdministrationMember? previousMember);
             string? failure = ApplyTeamChange(team, change);
+            string? description = change.Action switch
+            {
+                LabelTeamAction.Enroll => $"Team member {change.Target.Value} was added with the {change.Role} role.",
+                LabelTeamAction.Remove => $"Team member {change.Target.Value} was removed.",
+                LabelTeamAction.SetRole when previousMember?.Role != change.Role =>
+                    $"Team member {change.Target.Value} now has the {change.Role} role.",
+                LabelTeamAction.Suspend when previousMember is { Active: true } => $"Team member {change.Target.Value} was suspended.",
+                LabelTeamAction.Reinstate when previousMember is { Active: false } => $"Team member {change.Target.Value} was reinstated.",
+                LabelTeamAction.SetRole or LabelTeamAction.Suspend or LabelTeamAction.Reinstate =>
+                    $"Access credentials for team member {change.Target.Value} were invalidated.",
+                LabelTeamAction.BindLocal => $"Local CLI access for {change.Target.Value} was granted or replaced.",
+                LabelTeamAction.RevokeLocal => $"Local CLI access for {change.Target.Value} was revoked.",
+                _ => null
+            };
             LabelAdministrationReceipt receipt = await AuditAdministrationAsync(
                 connection: connection, transaction: transaction, administration: team, actor: caller.Actor,
                 localIdentity: caller.LocalIdentity, operationId: change.OperationId, action: change.Action.ToString(),
-                reason: change.Reason, succeeded: failure is null, token: cancellationToken).ConfigureAwait(false);
+                reason: change.Reason, succeeded: failure is null, token: cancellationToken,
+                changeDescription: description is null ? null : $"{description} Changed by {caller.Actor.Value}.").ConfigureAwait(false);
             if (failure is not null)
             {
                 return AdminFailure<LabelAdministrationReceipt>(failure);
@@ -821,7 +839,9 @@ internal abstract partial class RelationalLabelStore
             }
 
             team.OwnerDid = ownerDid;
+            bool changed = team.RemoteAdministrationEnabled != enabled;
             team.RemoteAdministrationEnabled = enabled;
+            string accessState = enabled ? "enabled" : "disabled";
             LabelAdministrationReceipt receipt = await AuditAdministrationAsync(
                 connection: connection,
                 transaction: transaction,
@@ -832,7 +852,10 @@ internal abstract partial class RelationalLabelStore
                 action: enabled ? "remote-administration-enabled" : "remote-administration-disabled",
                 reason: reason,
                 succeeded: true,
-                token: cancellationToken).ConfigureAwait(false);
+                token: cancellationToken,
+                changeDescription: changed
+                    ? $"Remote CLI administration was {accessState} by {caller.Actor.Value}."
+                    : null).ConfigureAwait(false);
             await SaveAdministrationReceiptAsync(connection, transaction, receipt, intent, cancellationToken).ConfigureAwait(false);
             return LabelServiceResult<LabelAdministrationReceipt>.Success(receipt);
         }, cancellationToken);

@@ -708,6 +708,8 @@ idunno.Bluesky.Labeler.Moderation.ILabelPolicyAlertStore.RecordVerificationSucce
 idunno.Bluesky.Labeler.Moderation.LabelPolicyAlertDelivery
 idunno.Bluesky.Labeler.Moderation.LabelPolicyAlertDelivery.AlertId.get -> string!
 idunno.Bluesky.Labeler.Moderation.LabelPolicyAlertDelivery.Category.get -> string!
+idunno.Bluesky.Labeler.Moderation.LabelPolicyAlertDelivery.ChangeDescription.get -> string?
+idunno.Bluesky.Labeler.Moderation.LabelPolicyAlertDelivery.ChangeDescription.init -> void
 idunno.Bluesky.Labeler.Moderation.LabelPolicyAlertDelivery.LeaseId.get -> string!
 idunno.Bluesky.Labeler.Moderation.LabelPolicyAlertDelivery.OccurredAt.get -> System.DateTimeOffset
 idunno.Bluesky.Labeler.Moderation.LabelPolicyAlertDelivery.Recipients.get -> System.Collections.Generic.IReadOnlyList<string!>!

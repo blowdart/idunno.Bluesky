@@ -1503,8 +1503,23 @@ internal static partial class Program
         string indent = new(' ', depth * 2);
         if (element.ValueKind == JsonValueKind.Object)
         {
-            foreach (JsonProperty property in element.EnumerateObject())
+            bool active = element.TryGetProperty("phase", out JsonElement phase) &&
+                phase.ValueKind == JsonValueKind.String && phase.GetString() == "Active";
+            foreach (JsonProperty property in element.EnumerateObject().OrderBy(property => property.Name switch
             {
+                "issuer" => 0,
+                "phase" => 1,
+                _ => 2
+            }))
+            {
+                if (property.Name == "revision")
+                {
+                    continue;
+                }
+                if (active && property.Name is "retirementUpperBound" or "retirementThrough")
+                {
+                    continue;
+                }
                 if (depth == 0 && property.Name is "succeeded" or "changed")
                 {
                     continue;
@@ -1514,14 +1529,31 @@ internal static partial class Program
                     await WriteReadableResultAsync(property.Value, output, depth).ConfigureAwait(false);
                     continue;
                 }
+                string name = property.Name switch
+                {
+                    "issuedThrough" => "Labels issued",
+                    "publishedThrough" => "Labels published",
+                    "replayFloor" => "Label history",
+                    _ => property.Name
+                };
+                if (name.Length > 0)
+                {
+                    name = char.ToUpperInvariant(name[0]) + name[1..];
+                }
                 if (property.Value.ValueKind is JsonValueKind.Object or JsonValueKind.Array)
                 {
-                    await output.WriteLineAsync($"{indent}{ResultIcon(property.Name)}{property.Name}:").ConfigureAwait(false);
+                    await output.WriteLineAsync($"{indent}{ResultIcon(property.Name)}{name}:").ConfigureAwait(false);
                     await WriteReadableResultAsync(property.Value, output, depth + 1).ConfigureAwait(false);
                 }
                 else
                 {
-                    await output.WriteLineAsync($"{indent}{ResultIcon(property.Name)}{property.Name}: {ReadableValue(property.Value)}").ConfigureAwait(false);
+                    string value = ReadableValue(property.Value);
+                    if (property.Name == "replayFloor" && property.Value.ValueKind == JsonValueKind.Number &&
+                        property.Value.TryGetInt64(out long floor))
+                    {
+                        value = floor == 0 ? "Full label history available." : $"Available from label {(decimal)floor + 1} onwards.";
+                    }
+                    await output.WriteLineAsync($"{indent}{ResultIcon(property.Name)}{name}: {value}").ConfigureAwait(false);
                 }
             }
         }
@@ -1553,6 +1585,13 @@ internal static partial class Program
         "members" or "team" or "actor" => "👤  ",
         "labels" or "label" or "value" => "🏷️  ",
         "issuer" or "did" => "🪪  ",
+        "streamId" => "🌊  ",
+        "issuedThrough" => "🏷️  ",
+        "publishedThrough" => "📡  ",
+        "replayFloor" => "⏮   ",
+        "phase" => "🚦  ",
+        "retirementUpperBound" => "🎯  ",
+        "retirementThrough" => "🏁  ",
         "sequence" or "revision" => "#   ",
         "state" or "moderation" or "openCounts" => "ℹ   ",
         _ => "•   "

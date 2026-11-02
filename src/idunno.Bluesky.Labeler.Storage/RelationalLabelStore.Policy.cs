@@ -428,7 +428,10 @@ internal abstract partial class RelationalLabelStore
                 await AuditAdministrationAsync(
                     connection: connection, transaction: transaction, administration: team, actor: null, localIdentity: null,
                     operationId: string.Empty, action: "policy-observation", reason: matching ? "Declaration verified." : "Declaration drift detected.",
-                    succeeded: phase == LabelPolicyPhase.VerifiedActive, token: cancellationToken).ConfigureAwait(false);
+                    succeeded: phase == LabelPolicyPhase.VerifiedActive, token: cancellationToken,
+                    changeDescription: gate.Phase == LabelPolicyPhase.Publishing && phase == LabelPolicyPhase.VerifiedActive
+                        ? $"Policy {gate.Policy.Version} was published and its public policy was checked."
+                        : null).ConfigureAwait(false);
             }
 
             return LabelServiceResult<LabelPolicyState>.Success(next.ToState(now));
