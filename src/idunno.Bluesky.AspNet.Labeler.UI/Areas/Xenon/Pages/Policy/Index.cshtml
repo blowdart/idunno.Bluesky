@@ -7,6 +7,23 @@
     JsonElement? policy = Model.Data.ValueKind == JsonValueKind.Object &&
         Model.Data.TryGetProperty("moderation", out JsonElement moderation) &&
         moderation.TryGetProperty("policy", out JsonElement state) ? state : null;
+    string verificationStatus;
+    bool verificationCurrent;
+    if (policy is { ValueKind: JsonValueKind.Object } verificationPolicy)
+    {
+        string phase = verificationPolicy.GetProperty("phase").GetString()!;
+        DateTimeOffset? verifiedUntil = verificationPolicy.TryGetProperty("verifiedUntil", out JsonElement until) &&
+            until.ValueKind == JsonValueKind.String ? until.GetDateTimeOffset() : null;
+        DateTimeOffset databaseTime = verificationPolicy.GetProperty("databaseTime").GetDateTimeOffset();
+        long freshnessMilliseconds = verificationPolicy.GetProperty("verificationFreshnessMilliseconds").GetInt64();
+        verificationStatus = IndexModel.DescribeVerificationStatus(phase, verifiedUntil, databaseTime, freshnessMilliseconds);
+        verificationCurrent = IndexModel.IsVerificationCurrent(phase, verifiedUntil, databaseTime, freshnessMilliseconds);
+    }
+    else
+    {
+        verificationStatus = "Policy status is unavailable.";
+        verificationCurrent = false;
+    }
     JsonElement editor = Model.Editor;
     bool hasEditor = editor.ValueKind == JsonValueKind.Object;
     JsonElement declaration = hasEditor ? editor.GetProperty("declaration") : default;
@@ -25,7 +42,7 @@
         !hasEditor || !editor.TryGetProperty("allowedRecordCollections", out JsonElement issueCollections) || issueCollections.ValueKind == JsonValueKind.Null;
 }
 <h1>Moderation policy</h1>
-<p>Policy drafts and publication history are durable shared state. Saving a draft does not publish it. The declaration's remote verification gate remains authoritative for new reports and issuance.</p>
+<p>Choose your labels and moderation rules, save a draft, then publish it. Saving alone does not change your public policy. Xenon checks the published policy before allowing new reports and labels.</p>
 <div class="policy-tabs" data-policy-tabs data-policy-publication-submitted="@((Request.Method == "POST" && (Request.Query["handler"] == "Publish" || Request.Query["handler"] == "SignInAndPublish")).ToString().ToLowerInvariant())" data-policy-verification-submitted="@((Request.Method == "POST" && Request.Query["handler"] == "Verify").ToString().ToLowerInvariant())">
     <nav aria-label="Policy sections">
         <a href="#policy-current" data-policy-tab>Current State</a>
@@ -41,11 +58,11 @@
     string phase = current.GetProperty("phase").GetString()!;
     (string phaseIcon, string phaseExplanation) = phase switch
     {
-        "Unverified" => ("fa-circle-exclamation", "No policy has been verified and activated yet."),
-        "Withdrawing" => ("fa-circle-pause", "Xenon is removing existing applications of labels omitted from the new policy. Worker activity and progress are shown below."),
-        "Publishing" => ("fa-globe", "Cleanup is complete, but publication and successful verification are still pending. This includes waiting for labeler sign-in or retrying failed verification."),
-        "VerifiedActive" => ("fa-circle-check", "The public policy matched the selected policy when last checked. Reports and issuance also require that check to remain fresh."),
-        "Conflict" => ("fa-triangle-exclamation", "A conflict requires explicit administrator recovery. This can follow a detected mismatch or an abandoned publication."),
+        "Unverified" => ("fa-circle-exclamation", "No policy has passed the public policy check yet."),
+        "Withdrawing" => ("fa-circle-pause", "Xenon is withdrawing labels removed from the new policy. See progress below."),
+        "Publishing" => ("fa-globe", "Any required label withdrawals are complete. Open Publication to sign in or check the result."),
+        "VerifiedActive" => ("fa-circle-check", "The published policy matched your saved policy when last checked. New reports and labels also need an up-to-date check."),
+        "Conflict" => ("fa-triangle-exclamation", "Publication needs your attention. The public policy may have changed, or a publication attempt was abandoned. Open Publication to recover."),
         _ => ("fa-circle-exclamation", "The policy state is not recognized. Do not assume the policy is active.")
     };
     DateTimeOffset? verifiedUntil = current.TryGetProperty("verifiedUntil", out JsonElement verificationDeadline) &&
@@ -56,46 +73,46 @@
         databaseTime >= validUntil.AddMilliseconds(-current.GetProperty("verificationFreshnessMilliseconds").GetInt64());
     string freshnessStatus = (fresh, verifiedUntil) switch
     {
-        (true, _) => "Fresh",
+        (true, _) => "Up to date",
         (false, null) => "Not verified",
         _ when verifiedUntil <= databaseTime => "Expired",
-        _ => "Not fresh"
+        _ => "Needs checking"
     };
     <section class="panel">
         <h2>Current state</h2>
         <table class="policy-state" aria-label="Current policy state">
             <tbody>
-            <tr><th scope="row">Phase</th><td><span class="fa-icon @phaseIcon" aria-hidden="true"></span> <strong>@IndexModel.FormatPhase(phase)</strong><br /><span class="muted">@phaseExplanation</span></td></tr>
+            <tr><th scope="row">Status</th><td><span class="fa-icon @phaseIcon" aria-hidden="true"></span> <strong>@IndexModel.FormatPhase(phase)</strong><br /><span class="muted">@phaseExplanation</span></td></tr>
             @if (phase == "Withdrawing" && current.TryGetProperty("withdrawal", out JsonElement currentWithdrawal) &&
                 currentWithdrawal.ValueKind == JsonValueKind.Object)
             {
                 <tr><th scope="row">Label withdrawal</th><td>@await Html.PartialAsync("_PolicyWithdrawalStatus", currentWithdrawal)</td></tr>
             }
-            <tr><th scope="row">Revision</th><td>@current.GetProperty("revision").GetInt64()</td></tr>
-            <tr><th scope="row">Issuer</th><td>@await Html.PartialAsync("_Identity", new IdentityDisplayModel(current.GetProperty("issuer").GetString(), Detailed: true))</td></tr>
-            <tr><th scope="row">Verified declaration CID</th><td>@(current.TryGetProperty("verifiedCid", out JsonElement cid) ? cid.GetString() : "Not verified")</td></tr>
-            <tr><th scope="row">Verification freshness</th>
+            <tr><th scope="row">Change number</th><td>@current.GetProperty("revision").GetInt64()</td></tr>
+            <tr><th scope="row">Labeler account</th><td>@await Html.PartialAsync("_Identity", new IdentityDisplayModel(current.GetProperty("issuer").GetString(), Detailed: true))</td></tr>
+            <tr><th scope="row">Checked public policy ID (CID)</th><td>@(current.TryGetProperty("verifiedCid", out JsonElement cid) ? cid.GetString() : "Not verified")</td></tr>
+            <tr><th scope="row">Public policy check</th>
             <td><span class="fa-icon @(fresh ? "fa-circle-check" : "fa-circle-exclamation")" aria-hidden="true"></span>
                 <strong>@freshnessStatus</strong>
                 <br /><span class="muted">@if (fresh)
                     {
-                        <text>Verification is currently fresh. Other authorization and service checks still apply.</text>
+                        <text>The public policy check is up to date. Account permissions and other service checks still apply.</text>
                     }
                     else if (phase == "Withdrawing")
                     {
-                        <text>Verification is blocked until label withdrawal completes.</text>
+                        <text>The policy cannot be checked until label withdrawals finish.</text>
                     }
                     else if (verifiedUntil is { } expiredDeadline && databaseTime >= expiredDeadline)
                     {
-                        <text>New reports and label issuance are blocked until <a href="#policy-verification">successful verification</a>.</text>
+                        <text>The policy must <a href="#policy-verification">pass another check</a> before new reports can be accepted and new labels applied.</text>
                     }
                     else
                     {
-                        <text>New reports and label issuance are blocked until successful verification.</text>
+                        <text>The policy must pass a check before new reports can be accepted and new labels applied.</text>
                     }
                     Refresh this page to see the latest status.</span>
             </td></tr>
-            <tr><th scope="row">@(verifiedUntil is { } expiry && databaseTime >= expiry ? "Verification expired at" : "Verification valid until")</th>
+            <tr><th scope="row">@(verifiedUntil is { } expiry && databaseTime >= expiry ? "Policy check expired at" : "Policy check valid until")</th>
             <td>@if (verifiedUntil is { } deadline)
                 {
                     <time datetime="@deadline.ToString("O")">@deadline.ToUniversalTime().ToString("u")</time>
@@ -104,12 +121,12 @@
                 {
                     <span>Unavailable</span>
                 }</td></tr>
-            <tr><th scope="row">Publication operation</th><td>@(current.TryGetProperty("publicationOperationId", out JsonElement op) ? op.GetString() : "None")<br /><span class="muted">Internal tracking ID for this publication attempt. It links cleanup, sign-in, retries and audit history to the same attempt. It is not published.</span></td></tr>
+            <tr><th scope="row">Publication tracking ID</th><td>@(current.TryGetProperty("publicationOperationId", out JsonElement op) ? op.GetString() : "None")<br /><span class="muted">Use this ID to find this attempt in the activity history. It is not part of your public policy.</span></td></tr>
             </tbody>
         </table>
         @if (current.TryGetProperty("definition", out JsonElement definition) && definition.ValueKind == JsonValueKind.Object)
         {
-            <h3>Selected immutable definition</h3>
+            <h3>Selected policy</h3>
             <p>Policy ID: <code>@definition.GetProperty("version").GetString()</code></p>
             <p class="muted">The Policy ID is internal to this app and is not published as part of the policy.</p>
             <pre>@Model.CurrentDeclaration</pre>
@@ -125,9 +142,8 @@ else if (ViewData["Error"] is null)
 {
     <section class="panel">
         <h2>Saved drafts</h2>
-        <p>These drafts have not been selected for publication. Loading a draft starts a new policy snapshot; deleting it preserves audit history.</p>
-        <table>
-            <caption>@Model.DraftDefinitions.Count saved drafts</caption>
+        <p>These drafts have not been selected for publication. Load one to edit a copy, or choose Publish to review it before publishing. Deleting a draft keeps its activity history.</p>
+        <table aria-label="Saved policy drafts">
             <thead><tr><th scope="col">Policy ID</th><th scope="col">Actions</th></tr></thead>
             <tbody>
             @foreach (JsonElement draft in Model.DraftDefinitions)
@@ -136,29 +152,31 @@ else if (ViewData["Error"] is null)
                 <tr>
                     <td><code>@version</code></td>
                     <td><div class="policy-draft-actions">
-                        <a asp-page="./Index" asp-route-editor="draft" asp-route-draft="@version" asp-fragment="policy-labels" data-policy-load="draft" data-policy-version="@version">Load draft</a>
+                        <a class="policy-action-button" asp-page="./Index" asp-route-editor="draft" asp-route-draft="@version" asp-fragment="policy-labels" data-policy-load="draft" data-policy-version="@version"><span class="fa-icon fa-download" aria-hidden="true"></span> Load draft</a>
+                        <a class="policy-action-button" asp-page="./Index" asp-route-publish="@version" asp-fragment="policy-publication" data-policy-publish="@version"><span class="fa-icon fa-globe" aria-hidden="true"></span> Publish</a>
                         <form method="post" asp-page-handler="DeleteRequest">
                             <input type="hidden" name="version" value="@version" />
-                            <button type="submit">Delete draft</button>
+                            <button type="submit"><span class="fa-icon fa-circle-xmark" aria-hidden="true"></span> Delete draft</button>
                         </form>
                     </div></td>
                 </tr>
             }
             </tbody>
         </table>
+        <div class="table-pagination policy-draft-count">@Model.DraftDefinitions.Count saved @(Model.DraftDefinitions.Count == 1 ? "draft" : "drafts")</div>
     </section>
 }
 @if (Model.PendingDeletion is { } deletion)
 {
     <section class="panel" role="region" aria-labelledby="policy-delete-heading">
         <h2 id="policy-delete-heading">Are you sure?</h2>
-        <p>Delete draft <strong>@deletion</strong>? It will no longer be loadable or publishable. Audit and policy history are retained. The current policy will not change.</p>
+        <p>Delete draft <strong>@deletion</strong>? You will no longer be able to load or publish it. Its history is kept, and your current policy will not change.</p>
         <form method="post" asp-page-handler="Delete">
             <input type="hidden" name="version" value="@deletion" />
             <input type="hidden" name="operationId" value="@(ViewData["OperationId"] ?? Guid.NewGuid().ToString("N"))" />
             <input type="hidden" name="confirmed" value="true" />
             <label class="field">Reason<input name="reason" required maxlength="4096" /></label>
-            <div class="policy-draft-actions"><button type="submit">Delete draft</button><a asp-page="./Index">Cancel</a></div>
+            <div class="policy-draft-actions"><button type="submit"><span class="fa-icon fa-circle-xmark" aria-hidden="true"></span> Delete draft</button><a class="policy-action-button" asp-page="./Index"><span class="fa-icon fa-circle-pause" aria-hidden="true"></span> Cancel</a></div>
         </form>
     </section>
 }
@@ -167,37 +185,37 @@ else if (ViewData["Error"] is null)
 {
     <div class="panel policy-editor-toolbar">
         <p data-policy-source>@Model.EditorSource</p>
-        <a asp-page="./Index" asp-route-editor="current" asp-fragment="policy-labels" data-policy-load="current">Load current policy</a>
+        <a class="policy-action-button" asp-page="./Index" asp-route-editor="current" asp-fragment="policy-labels" data-policy-load="current"><span class="fa-icon fa-download" aria-hidden="true"></span> Load current policy</a>
         @if (Model.DraftDefinition.ValueKind == JsonValueKind.Object)
         {
             <span>@(Model.DraftDefinitions.Count == 1 ? "A saved draft is available in Current State." : $"{Model.DraftDefinitions.Count} saved drafts are available in Current State.")</span>
         }
-        <a asp-page="./Index" asp-route-editor="clear" asp-fragment="policy-labels" data-policy-clear>Clear all</a>
-        <p class="muted">Loading or clearing replaces only the unsaved editor. Saved policies and the current policy are unchanged. Enter a new Policy ID when saving changes.</p>
+        <a class="policy-action-button" asp-page="./Index" asp-route-editor="clear" asp-fragment="policy-labels" data-policy-clear><span class="fa-icon fa-circle-xmark" aria-hidden="true"></span> Clear all</a>
+        <p class="muted">Loading or clearing replaces your unsaved edits, not your saved policies. Save changes with a new Policy ID.</p>
     </div>
     <textarea hidden data-policy-current>@(Model.CurrentDefinition.ValueKind == JsonValueKind.Object ? Model.CurrentDefinition.GetRawText() : "")</textarea>
     <textarea hidden data-policy-drafts>@("[" + string.Join(",", Model.DraftDefinitions.Select(draft => draft.GetRawText())) + "]")</textarea>
     <form method="post" asp-page-handler="Save" data-policy-editor data-policy-submitted="@Model.HasSubmittedDraft.ToString().ToLowerInvariant()">
         <input type="hidden" name="operationId" value="@(ViewData["OperationId"] ?? Guid.NewGuid().ToString("N"))" />
         <section class="panel" id="policy-labels" data-policy-panel>
-            <h2>Declared labels</h2>
-            <p>Declare label values and optionally define their client presentation, default behaviour and translated text. Removing a value does not revoke labels already issued.</p>
+            <h2>Available labels</h2>
+            <p>Choose the labels your service can apply, how apps display them, and their translations. Removing a label here only changes the draft. Publishing the draft also withdraws existing uses of that label.</p>
             <div data-policy-labels></div>
-            <button type="button" data-policy-add-label hidden>Add label</button>
+            <button type="button" data-policy-add-label hidden><span class="fa-icon fa-list" aria-hidden="true"></span> Add label</button>
             <noscript><p>Use the Advanced declaration JSON to edit label values and definitions without JavaScript.</p></noscript>
         </section>
         <section class="panel" id="policy-moderation" data-policy-panel>
         <h2>Moderation policy</h2>
         <fieldset data-policy-declaration-controls>
-            <legend>Accepted report subjects</legend>
+            <legend>What people can report</legend>
             <input type="hidden" name="structuredScope" value="true" />
             <label class="field-check"><input type="checkbox" name="reportSubjects" value="account" checked="@subjects.Contains("account")" /> Accounts</label>
-            <label class="field-check"><input type="checkbox" name="reportSubjects" value="record" checked="@subjects.Contains("record")" /> Records</label>
-            <label class="field-check"><input type="checkbox" name="reportAllCollections" value="true" checked="@reportAllCollections" /> Accept reports from all record collections</label>
-            <label class="field">Accepted report collections (comma-separated NSIDs)
+            <label class="field-check"><input type="checkbox" name="reportSubjects" value="record" checked="@subjects.Contains("record")" /> Content, such as posts and lists</label>
+            <label class="field-check"><input type="checkbox" name="reportAllCollections" value="true" checked="@reportAllCollections" /> Accept reports about all content types</label>
+            <label class="field">Allowed content types for reports (comma-separated identifiers)
                 <input name="reportCollections" value="@reportCollections" maxlength="2048" placeholder="app.bsky.feed.post, app.bsky.graph.list" />
             </label>
-            <p class="muted">When not accepting all collections, an empty list accepts no record collections.</p>
+            <p class="muted">For posts use app.bsky.feed.post; for lists use app.bsky.graph.list. If you uncheck all content types and leave this list empty, no content reports are accepted.</p>
         </fieldset>
         <fieldset data-policy-declaration-controls>
             <legend>Accepted report reasons</legend>
@@ -221,26 +239,26 @@ else if (ViewData["Error"] is null)
             <label class="field">Custom reason identifiers (optional, one per line)
                 <textarea name="customReasons" maxlength="32768" spellcheck="false">@string.Join("\n", (Model.ReasonTypes ?? []).Where(reason => !ReportReasonOptions.s_all.Any(option => option.Id == reason)))</textarea>
             </label>
-            <p>Selecting no reasons accepts none. Original and Ozone reason identifiers are separate; select both versions when you want to support both.</p>
+            <p>If you choose selected reasons but select none, no reasons are accepted. AT Protocol and Ozone use separate names for reasons; select both versions if your service supports both.</p>
         </fieldset>
         <fieldset>
-            <legend>Label issuance permissions</legend>
-            <p>These permissions are independent of accepted reports.</p>
-            <label class="field-check"><input type="checkbox" name="allowAccounts" value="true" checked="@editor.GetProperty("allowAccounts").GetBoolean()" /> Allow account targets</label>
-            <label class="field-check"><input type="checkbox" name="allowRecords" value="true" checked="@editor.GetProperty("allowRecords").GetBoolean()" /> Allow record targets</label>
+            <legend>Where moderators can apply labels</legend>
+            <p>Choose what moderators can label, separately from what people can report.</p>
+            <label class="field-check"><input type="checkbox" name="allowAccounts" value="true" checked="@editor.GetProperty("allowAccounts").GetBoolean()" /> Accounts</label>
+            <label class="field-check"><input type="checkbox" name="allowRecords" value="true" checked="@editor.GetProperty("allowRecords").GetBoolean()" /> Content, such as posts and lists</label>
             <input type="hidden" name="structuredIssuance" value="true" />
-            <label class="field-check"><input type="checkbox" name="issueAllCollections" value="true" checked="@issueAllCollections" /> Permit label issuance in all record collections</label>
-            <label class="field">Allowed record collections (comma-separated NSIDs)
+            <label class="field-check"><input type="checkbox" name="issueAllCollections" value="true" checked="@issueAllCollections" /> Allow labels on all content types</label>
+            <label class="field">Allowed content types for labels (comma-separated identifiers)
                 <input name="collections" maxlength="2048" value="@(editor.TryGetProperty("allowedRecordCollections", out JsonElement allowed) && allowed.ValueKind == JsonValueKind.Array ? string.Join(", ", allowed.EnumerateArray().Select(value => value.GetString())) : "")" />
             </label>
-            <p class="muted">When not permitting all collections, an empty list permits no record collections. Allow record targets must also be enabled.</p>
+            <p class="muted">Content must be checked above to allow content labels. If you uncheck all content types and leave this list empty, no content can be labeled.</p>
         </fieldset>
         <label class="field">Operator guidance<textarea name="rules" required maxlength="4096" aria-describedby="policy-guidance-help">@editor.GetProperty("rules").GetString()</textarea></label>
-        <p id="policy-guidance-help" class="muted">Instructions for moderators, such as evidence requirements and when to apply a label. Saved with this policy version; not executable and not part of the public declaration.</p>
+        <p id="policy-guidance-help" class="muted">Instructions for moderators, such as what evidence to look for and when to apply a label. These are saved with this policy but are not published or enforced automatically.</p>
         </section>
         <section class="panel" id="policy-advanced" data-policy-panel>
-            <h2>Advanced declaration JSON</h2>
-            <p>Edits to valid JSON update the structured controls. Structured edits update this declaration, preserving unknown extension fields. Issuance permissions and operator guidance are separate and do not appear in the public declaration.</p>
+            <h2>Public policy JSON</h2>
+            <p>For advanced editing, change the public policy here. Valid changes also update the Labels and Moderation Policy tabs; changes in those tabs update this JSON. Extra fields are kept. Moderator labeling permissions and guidance are saved separately, not published.</p>
             <label class="field">Declaration JSON<textarea name="declaration" required maxlength="32768" spellcheck="false" aria-describedby="policy-json-error">@Model.DeclarationText</textarea></label>
             <p id="policy-json-error" role="status" aria-live="polite"></p>
             <noscript><p>Without JavaScript, the Moderation Policy report controls replace their corresponding JSON fields when saving. Other declaration fields remain editable here.</p></noscript>
@@ -248,9 +266,9 @@ else if (ViewData["Error"] is null)
         <section class="panel" data-policy-save>
         <h2>Save a policy draft</h2>
         <label class="field">Policy ID<input name="version" required maxlength="256" value="@Model.Version" aria-describedby="policy-id-help" /></label>
-        <p id="policy-id-help" class="muted">Choose a unique Policy ID for this saved snapshot. The Policy ID is internal to this app and is not published as part of the policy. Use a new ID when changing policy contents.</p>
+        <p id="policy-id-help" class="muted">Give this draft a unique name, such as my-policy-v3. Use a new name each time you save changes. This ID is for your team and is not published.</p>
         <label class="field">Reason<input name="reason" required maxlength="4096" value="@Model.SaveReason" /></label>
-        <p class="form-actions"><button type="submit">Save draft</button></p>
+        <p class="form-actions"><button type="submit"><span class="fa-icon fa-clipboard-check" aria-hidden="true"></span> Save draft</button></p>
         </section>
     </form>
 }
@@ -258,18 +276,19 @@ else if (ViewData["Error"] is null)
 @if (policy is { ValueKind: JsonValueKind.Object } publication)
 {
     <section class="panel">
-        <h2>Begin policy publication</h2>
-        <p>Publication first withdraws existing applications of label values removed by the new policy, in restart-resumable batches of at most 250 history entries. New issuance is blocked during cleanup. The new declaration cannot be verified or published until all required negations are published. Cleanup runs in the background; you can close this page and return later.</p>
-        <p><strong>Negations are permanent moderation changes. If declaration publication fails or is abandoned, completed negations are not automatically undone.</strong></p>
+        <h2>Publish a policy</h2>
+        <p>If the new policy removes a label, Xenon first withdraws existing uses of that label. New labels cannot be applied during this step. Once the withdrawals are ready for distribution, you can sign in as the labeler to publish the new policy. Withdrawals continue even if you close this page or the service restarts.</p>
+        <p><strong>Completed withdrawals will not be undone if publication fails or you abandon it. Reapplying a withdrawn label requires a new labeling action.</strong></p>
         @if (publication.GetProperty("phase").GetString() == "Withdrawing" &&
             publication.TryGetProperty("withdrawal", out JsonElement withdrawal))
         {
             <h3>Label withdrawal in progress</h3>
             @await Html.PartialAsync("_PolicyWithdrawalStatus", withdrawal)
             <p>Removing: @string.Join(", ", withdrawal.GetProperty("values").EnumerateArray().Select(value => value.GetString()))</p>
-            <p>Timestamp scan: @withdrawal.GetProperty("scannedThrough") / @withdrawal.GetProperty("upperBound") history entries.
-                Withdrawal scan: @withdrawal.GetProperty("negatedThrough") / @withdrawal.GetProperty("upperBound") history entries.</p>
-            <p>Completion also waits for publication of the signed negations. <a asp-page="./Index" asp-fragment="policy-publication">Refresh status</a></p>
+            <p>Checking label history: @withdrawal.GetProperty("scannedThrough") / @withdrawal.GetProperty("upperBound") entries.
+                Processing withdrawals: @withdrawal.GetProperty("negatedThrough") / @withdrawal.GetProperty("upperBound") entries.</p>
+            <p>These counts track history entries, not the number of labels removed. Xenon also waits until withdrawals are ready for distribution; this does not prove other apps have received them.</p>
+            <p><a class="policy-action-button" asp-page="./Index" asp-fragment="policy-publication"><span class="fa-icon fa-eye" aria-hidden="true"></span> Refresh status</a></p>
             @if (withdrawal.TryGetProperty("pauseReason", out JsonElement pause) && pause.ValueKind == JsonValueKind.String)
             {
                 <p class="notice notice-error">@pause.GetString()</p>
@@ -278,48 +297,75 @@ else if (ViewData["Error"] is null)
                 <input type="hidden" name="resumeWithdrawal" value="true" />
                 <input type="hidden" name="operationId" value="@publication.GetProperty("publicationOperationId").GetString()" />
                 <label class="field">Reason<input name="reason" required maxlength="4096" /></label>
-                <label><input type="checkbox" name="confirmed" value="true" required /> Authorize continued irreversible withdrawal of these label values under my current administrator authority</label>
-                <p class="form-actions"><button type="submit">Resume cleanup</button></p>
+                <label><input type="checkbox" name="confirmed" value="true" required /> Continue withdrawing these labels. Labels already withdrawn will stay withdrawn.</label>
+                <p class="form-actions"><button type="submit"><span class="fa-icon fa-circle-play" aria-hidden="true"></span> Resume cleanup</button></p>
             </form>
         }
         else if (publication.GetProperty("phase").GetString() == "Publishing")
         {
-            <h3>Ready to publish the declaration</h3>
+            <h3>Ready to publish the policy</h3>
             <p>Next you must sign into the labeler account. <strong>Your administrator sign-in remains unchanged</strong>.</p>
-            <p>Xenon will ask for permission to publish the labeler's declaration, including its label definitions.</p>
+            <p>You will be asked to allow Xenon to update this account's public policy and label descriptions.</p>
             <p>Policy ID: <strong>@publication.GetProperty("definition").GetProperty("version").GetString()</strong></p>
-            <p>Xenon checks that the published declaration has not changed unexpectedly before replacing it. If publication of a policy has completed Xenon checks the public policy and will not attempt to replace it. If publication is interrupted, check its status before trying again; anything already published is not automatically undone.</p>
+            <p>Xenon stops if someone else changed the public policy since this attempt began. If the update already succeeded, Xenon checks the result rather than publishing it again. If something goes wrong, check the status before retrying.</p>
             <form method="post" asp-page-handler="SignInAndPublish">
                 <input type="hidden" name="operationId" value="@publication.GetProperty("publicationOperationId").GetString()" />
-                <label class="field">Labeler account handle<input name="labelerHandle" required maxlength="253" placeholder="labeler.example" autocomplete="off" /></label>
-                <p class="form-actions"><button type="submit">Sign in as the labeler and publish</button></p>
+                @if (ViewData["LabelerHandleError"] is string handleError)
+                {
+                    <p role="alert">@handleError</p>
+                }
+                <label class="field">Labeler account handle<input name="labelerHandle" value="@Model.LabelerHandle" required maxlength="253" placeholder="labeler.example" autocomplete="off" /></label>
+                <p class="form-actions"><button type="submit"><span class="fa-icon fa-globe" aria-hidden="true"></span> Sign in as the labeler and publish</button></p>
             </form>
         }
         else
         {
+        bool retrySelected = publication.GetProperty("phase").GetString() == "Conflict" &&
+            publication.TryGetProperty("definition", out JsonElement interruptedDefinition) && interruptedDefinition.ValueKind == JsonValueKind.Object;
+        int availableVersions = Model.DraftDefinitions.Count + (retrySelected ? 1 : 0);
         <form method="post" asp-page-handler="Publish">
             <input type="hidden" name="revision" value="@publication.GetProperty("revision").GetInt64()" />
             <input type="hidden" name="operationId" value="@(ViewData["OperationId"] ?? Guid.NewGuid().ToString("N"))" />
             <label class="field">Policy ID
-                <select name="version" required aria-describedby="publication-policy-id-help" disabled="@(Model.DraftDefinitions.Count == 0)">
+                <select name="version" required aria-describedby="publication-policy-id-help" disabled="@(availableVersions == 0)">
                     <option value="">Select a saved draft</option>
+                    @if (retrySelected)
+                    {
+                        string recoveryVersion = publication.GetProperty("definition").GetProperty("version").GetString()!;
+                        <option value="@recoveryVersion">@recoveryVersion (retry interrupted publication)</option>
+                    }
                     @foreach (JsonElement draft in Model.DraftDefinitions)
                     {
                         string draftId = draft.GetProperty("version").GetString()!;
-                        <option value="@draftId">@draftId</option>
+                        <option value="@draftId" selected="@(Request.Query["publish"] == draftId)">@draftId</option>
                     }
                 </select>
             </label>
-            <p id="publication-policy-id-help" class="muted">Select an unpublished saved draft. The ID is internal to this app and is not published as part of the policy; only the declaration JSON is published.</p>
-            @if (Model.DraftDefinitions.Count == 0)
+            <p id="publication-policy-id-help" class="muted">Choose a saved draft, or retry an interrupted publication. This ID is for your team and is not part of the public policy.</p>
+            @if (availableVersions == 0)
             {
                 <p>No saved drafts are available. Save a draft before beginning publication.</p>
             }
-            <label class="field">Previous declaration CID (optional)<input name="previousCid" maxlength="128" /></label>
+            <p>Xenon checks the policy currently stored by the labeler's account provider. It will not overwrite a policy that someone else changes during this attempt.</p>
             <label class="field">Reason<input name="reason" required maxlength="4096" /></label>
-            <label><input type="checkbox" name="confirmed" value="true" required /> Confirm publication and irreversible batched negation of existing applications of removed label values, even if publication later fails</label>
-            <p class="form-actions"><button type="submit" disabled="@(Model.DraftDefinitions.Count == 0)">Begin publication</button></p>
+            <label><input type="checkbox" name="confirmed" value="true" required /> Publish this policy and withdraw labels it no longer includes. If publication fails, labels already withdrawn will stay withdrawn.</label>
+            <p class="form-actions"><button type="submit" class="@(IndexModel.CanBeginPublication(availableVersions) ? null : "policy-unavailable-button")" disabled="@(!IndexModel.CanBeginPublication(availableVersions))"><span class="fa-icon fa-globe" aria-hidden="true"></span> @IndexModel.PublicationButtonText(availableVersions)</button></p>
         </form>
+        }
+        @if (publication.GetProperty("phase").GetString() is "Publishing" or "Withdrawing")
+        {
+            <section aria-labelledby="publication-recovery-title">
+                <h3 id="publication-recovery-title">Recover an interrupted publication</h3>
+                <p>If this attempt cannot continue, abandon it so you can start again. Abandoning does not change the public policy or restore an older policy.</p>
+                <p><strong>Completed withdrawals will not be undone. New reports and labels remain blocked until the selected policy passes the public policy check.</strong></p>
+                <form method="post" asp-page-handler="AbandonPublication">
+                    <input type="hidden" name="revision" value="@publication.GetProperty("revision").GetInt64()" />
+                    <input type="hidden" name="operationId" value="@Guid.NewGuid().ToString("N")" />
+                    <label class="field">Reason<input name="reason" required maxlength="4096" /></label>
+                    <label><input type="checkbox" name="confirmed" value="true" required /> Cancel this publication attempt. Labels already withdrawn will stay withdrawn.</label>
+                    <p class="form-actions"><button type="submit"><span class="fa-icon fa-circle-xmark" aria-hidden="true"></span> Abandon pending publication</button></p>
+                </form>
+            </section>
         }
     </section>
 }
@@ -330,10 +376,11 @@ else
 </div>
 <div id="policy-verification" data-policy-panel>
     <section class="panel">
-        <h2>Verify declaration</h2>
-        <p>Check that the public policy still matches Xenon's saved copy of the last published policy. If a new publication is pending, check against the policy being published instead. This does not change the public policy. A successful match can activate the policy and reopen reporting and label issuance. Verification remains blocked while label withdrawal is in progress.</p>
+        <h2>Check the public policy</h2>
+        <p><strong>@verificationStatus</strong></p>
+        <p>Compare the public policy with your selected saved policy, including any policy awaiting publication. This does not change the public policy. A matching result can activate the policy and allow new reports and labels again. This check must wait until label withdrawals finish.</p>
         <form method="post" asp-page-handler="Verify">
-            <p class="form-actions"><button type="submit">Verify declaration</button></p>
+            <p class="form-actions"><button type="submit" class="@(verificationCurrent ? "policy-verified-button" : null)" disabled="@verificationCurrent"><span class="fa-icon fa-circle-check" aria-hidden="true"></span> @(verificationCurrent ? "Already checked" : "Check public policy")</button></p>
         </form>
     </section>
 </div>

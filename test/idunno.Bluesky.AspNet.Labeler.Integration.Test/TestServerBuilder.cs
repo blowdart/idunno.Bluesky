@@ -72,7 +72,8 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
         ILabelSigningKeyRing? signingKeyRing = null,
         bool moderation = false,
         bool xenonUi = false,
-        bool controlDatabaseTime = false)
+        bool controlDatabaseTime = false,
+        bool ozoneAdministration = false)
     {
         TestServerBuilder fixture = new(database);
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
@@ -181,6 +182,10 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
             {
                 fixture._app.MapLabelerAdministration();
             }
+        }
+        if (ozoneAdministration)
+        {
+            fixture._app.MapOzoneCompatibility();
         }
         if (xenonUi)
         {
@@ -350,6 +355,8 @@ internal sealed class SignalClock : TimeProvider
     internal Channel<bool> WithdrawalRegistrations { get; } = Channel.CreateUnbounded<bool>();
     /// <summary>Signals completion of a verification iteration when its next default refresh delay is registered.</summary>
     internal Channel<bool> PolicyVerificationRegistrations { get; } = Channel.CreateUnbounded<bool>();
+    /// <summary>Signals completion of a deleted-post review batch before its next delay.</summary>
+    internal Channel<bool> DeletedPostReviewRegistrations { get; } = Channel.CreateUnbounded<bool>();
     public override DateTimeOffset GetUtcNow() => _clock.GetUtcNow();
     public override long GetTimestamp() => _clock.GetTimestamp();
     public override long TimestampFrequency => _clock.TimestampFrequency;
@@ -366,6 +373,10 @@ internal sealed class SignalClock : TimeProvider
             dueTime: dueTime,
             period: period);
         Registrations.Writer.TryWrite(dueTime);
+        if (dueTime == TimeSpan.FromMinutes(1) && period == Timeout.InfiniteTimeSpan)
+        {
+            DeletedPostReviewRegistrations.Writer.TryWrite(true);
+        }
         if (dueTime == TimeSpan.FromSeconds(5))
         {
             WithdrawalRegistrations.Writer.TryWrite(true);

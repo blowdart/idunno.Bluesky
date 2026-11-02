@@ -36,7 +36,7 @@ internal abstract partial class RelationalLabelStore
             permission: LabelAdministrationPermission.Maintain,
             token: token).ConfigureAwait(false))
         {
-            throw new InvalidOperationException("Current maintenance authority is required.");
+            throw new InvalidOperationException("You no longer have permission to manage this maintenance operation.");
         }
     }
 

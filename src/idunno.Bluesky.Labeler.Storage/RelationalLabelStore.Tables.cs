@@ -526,12 +526,20 @@ internal abstract partial class RelationalLabelStore
 
         if (query.Kind == LabelTableKind.Reports)
         {
-            return query.ReportHandled switch
+            string handled = query.ReportHandled switch
             {
                 false => UnhandledReportFilter(),
                 true => $"NOT ({UnhandledReportFilter()})",
                 null => "1=1"
             };
+            string workflow = query.Workflow switch
+            {
+                LabelCaseWorkflow.Unresolved => UnhandledReportFilter(),
+                LabelCaseWorkflow.InReview => $"({UnhandledReportFilter()}) AND EXISTS(SELECT 1 FROM label_cases c WHERE c.case_id=t.case_id AND c.status=1)",
+                LabelCaseWorkflow.Resolved => $"NOT ({UnhandledReportFilter()})",
+                _ => "1=1"
+            };
+            return $"({handled}) AND ({workflow})";
         }
 
         if (query.Kind == LabelTableKind.PendingReports)
@@ -541,7 +549,15 @@ internal abstract partial class RelationalLabelStore
 
         if (query.Kind == LabelTableKind.Appeals)
         {
-            return query.AppealStatus is null ? "1=1" : "t.status=@status";
+            string status = query.AppealStatus is null ? "1=1" : "t.status=@status";
+            string workflow = query.Workflow switch
+            {
+                LabelCaseWorkflow.Unresolved => "t.status=0",
+                LabelCaseWorkflow.InReview => "t.status=0 AND EXISTS(SELECT 1 FROM label_cases c WHERE c.case_id=t.case_id AND c.status=1)",
+                LabelCaseWorkflow.Resolved => "t.status<>0",
+                _ => "1=1"
+            };
+            return $"({status}) AND ({workflow})";
         }
 
         if (query.Kind != LabelTableKind.Cases)

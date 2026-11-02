@@ -5,7 +5,7 @@ using System.Net.Mail;
 
 namespace idunno.Bluesky.AspNet.Labeler;
 
-/// <summary>Configures optional authenticated SMTP delivery for policy-verification failure alerts.</summary>
+/// <summary>Configures optional authenticated SMTP delivery for policy-verification alerts and administration change notifications.</summary>
 public sealed class LabelerPolicyEmailOptions
 {
     /// <summary>Gets whether email alerts are enabled.</summary>
@@ -16,7 +16,7 @@ public sealed class LabelerPolicyEmailOptions
     /// <value>The SMTP server, required when alerts are enabled.</value>
     public string? Server { get; init; }
 
-    /// <summary>Gets the sender address used for policy alerts.</summary>
+    /// <summary>Gets the sender address used for administrator notifications.</summary>
     /// <value>A single email address, required when alerts are enabled.</value>
     public string? FromAddress { get; init; }
 

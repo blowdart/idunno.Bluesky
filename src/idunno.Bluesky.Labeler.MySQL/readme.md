@@ -9,5 +9,5 @@ Use a dedicated database and verified TLS in production.
 `.artifacts\Start-MySqlLabelerContainer.ps1`, which uses a named Docker data volume
 and returns a MySqlConnector connection string. It is not a production deployment script.
 
-See the [persistence guide](https://bluesky.idunno.dev/docs/labeller/persistence.html) for setup,
+See the [persistence guide](https://bluesky.idunno.dev/docs/labeler/persistence.html) for setup,
 upgrades, concurrency, monitoring and consistent backup/restore.

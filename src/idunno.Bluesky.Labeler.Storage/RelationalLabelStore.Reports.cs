@@ -17,6 +17,71 @@ namespace idunno.Bluesky.Labeler.Storage;
 
 internal abstract partial class RelationalLabelStore
 {
+    /// <summary>Records authenticated pre-intake denials without creating cases or retaining bearer assertions.</summary>
+    public Task<LabelServiceResult<LabelAdministrationReceipt>> AuditRejectedAppealAsync(
+        ModerationReportAuthenticationResult authentication,
+        string reason,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(authentication);
+        reason = LabelInput.ValidateText(reason, nameof(reason), 256);
+        return AdministrationAsync(async (connection, transaction, state) =>
+        {
+            long now = await DatabaseTimeAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+            if (state.Issuer != authentication.Labeler.Value ||
+                authentication.ExpiresAt.AddSeconds(5).ToUnixTimeMilliseconds() <= now)
+            {
+                return CaseFailure<LabelAdministrationReceipt>(
+                    LabelServiceErrorCode.Unauthorized, "The reporting token is expired or addressed to another labeler.");
+            }
+
+            byte[] replayKey = Encoding.UTF8.GetBytes(authentication.Reporter.Value + "\n" + authentication.TokenId);
+            byte[] replayHash = SHA256.HashData(replayKey);
+            byte[] tokenHash = Convert.FromHexString(authentication.TokenHash);
+            await ExecuteAsync(
+                connection: connection,
+                transaction: transaction,
+                sql: "DELETE FROM label_report_tokens WHERE expires_ms<=@now",
+                token: cancellationToken,
+                ("@now", now)).ConfigureAwait(false);
+            long used = Integer(await ScalarAsync(
+                connection: connection,
+                transaction: transaction,
+                sql: "SELECT COUNT(*) FROM label_report_tokens WHERE replay_hash=@replay OR token_hash=@token",
+                token: cancellationToken,
+                ("@replay", replayHash),
+                ("@token", tokenHash)).ConfigureAwait(false));
+            if (used != 0)
+            {
+                return CaseFailure<LabelAdministrationReceipt>(
+                    LabelServiceErrorCode.Unauthorized, "The reporting token has already been used.");
+            }
+
+            await ExecuteAsync(
+                connection: connection,
+                transaction: transaction,
+                sql: "INSERT INTO label_report_tokens(replay_hash,replay_key,token_hash,expires_ms) VALUES(@replay,@key,@token,@expires)",
+                token: cancellationToken,
+                ("@replay", replayHash),
+                ("@key", replayKey),
+                ("@token", tokenHash),
+                ("@expires", authentication.ExpiresAt.AddSeconds(5).ToUnixTimeMilliseconds())).ConfigureAwait(false);
+            AdministrationState team = await ReadAdministrationAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+            LabelAdministrationReceipt receipt = await AuditAdministrationAsync(
+                connection: connection,
+                transaction: transaction,
+                administration: team,
+                actor: authentication.Reporter,
+                localIdentity: null,
+                operationId: string.Empty,
+                action: "appeal-intake",
+                reason: reason,
+                succeeded: false,
+                token: cancellationToken).ConfigureAwait(false);
+            return LabelServiceResult<LabelAdministrationReceipt>.Success(receipt);
+        }, cancellationToken);
+    }
+
     /// <summary>Accepts a protocol report while retaining authenticated submissions that cannot yet be scoped.</summary>
     public Task<LabelServiceResult<LabelReportIntakeReceipt>> AcceptReportAsync(
         ModerationReportAuthenticationResult authentication,
@@ -362,7 +427,8 @@ internal abstract partial class RelationalLabelStore
                 state: state,
                 subject: submission.Subject,
                 now: now,
-                token: token).ConfigureAwait(false);
+                token: token,
+                appealLabelValue: submission.AppealLabelValue).ConfigureAwait(false);
             if (!capture.Succeeded)
             {
                 return LabelServiceResult<LabelReportIntakeReceipt>.Failure(capture.Error);
@@ -391,7 +457,8 @@ internal abstract partial class RelationalLabelStore
             TokenHash: authentication.TokenHash,
             ExpiresAt: authentication.ExpiresAt,
             AppealChallenges: challenges?.Select(challenge => new ModerationAppealChallenge(
-                challenge.Sequence, challenge.SignedLabel.GetJsonBytes())).ToArray());
+                challenge.Sequence, challenge.SignedLabel.GetJsonBytes())).ToArray(),
+            AppealLabelValue: submission.AppealLabelValue);
         await ExecuteAsync(
             connection: connection,
             transaction: transaction,
@@ -452,8 +519,9 @@ internal abstract partial class RelationalLabelStore
             return CaseFailure<LabelModerationReport>(LabelServiceErrorCode.TargetNotAllowed, "The declaration does not accept this report scope.");
         }
 
-        bool notApplicable = scope.ReasonTypes is { } reasons && !reasons.Contains(submission.ReasonType, StringComparer.Ordinal);
         bool appeal = submission.ReasonType is "com.atproto.moderation.defs#reasonAppeal" or "tools.ozone.report.defs#reasonAppeal";
+        bool notApplicable = !appeal && scope.ReasonTypes is { } reasons &&
+            !reasons.Contains(submission.ReasonType, StringComparer.Ordinal);
         Did reporter = authentication?.Reporter ?? new(pending!.Reporter);
         string audience = authentication?.Audience ?? pending!.Audience;
         string tokenHashValue = authentication?.TokenHash ?? pending!.TokenHash;
@@ -497,7 +565,8 @@ internal abstract partial class RelationalLabelStore
                     state: state,
                     subject: submission.Subject,
                     now: now,
-                    token: token).ConfigureAwait(false);
+                    token: token,
+                    appealLabelValue: submission.AppealLabelValue).ConfigureAwait(false);
                 if (!capture.Succeeded)
                 {
                     return LabelServiceResult<LabelModerationReport>.Failure(capture.Error);
@@ -552,7 +621,8 @@ internal abstract partial class RelationalLabelStore
             TokenHash: tokenHashValue,
             DecisionOperationId: notApplicable ? operation : null,
             HandledAt: notApplicable ? timestamp : null,
-            ResolutionReason: notApplicable ? "Not Applicable" : null);
+            ResolutionReason: notApplicable ? "Not Applicable" : null,
+            AppealLabelValue: submission.AppealLabelValue);
         byte[] payload = JsonSerializer.SerializeToUtf8Bytes(report, ModerationJsonContext.Default.ModerationReportData);
         LabelCaseAction reportAction = (notApplicable, current) switch
         {

@@ -11,11 +11,15 @@ namespace idunno.Bluesky.Labeler.Storage;
 internal sealed class AdministrationState
 {
     public bool Bootstrapped { get; set; }
+    public string? OwnerDid { get; set; }
     public long Sequence { get; set; }
+    public bool RemoteAdministrationEnabled { get; set; }
     public Dictionary<string, AdministrationMember> Members { get; set; } = new(StringComparer.Ordinal);
     public Dictionary<string, AdministrationBinding> Bindings { get; set; } = new(StringComparer.Ordinal);
     public bool PolicyVerificationFailureActive { get; set; }
     public PolicyFailureAlert? PendingPolicyAlert { get; set; }
+    public long ChangeNotificationThrough { get; set; }
+    public AdministrationChangeAlert? PendingChangeAlert { get; set; }
 }
 
 /// <summary>Retains generation tombstones so re-enrollment cannot revive old credentials.</summary>
@@ -37,6 +41,14 @@ internal sealed record PolicyFailureAlert(
     string? LeaseId = null,
     DateTimeOffset? LeaseUntil = null);
 
+/// <summary>Retains one audit-backed change notification and its recoverable SMTP lease.</summary>
+internal sealed record AdministrationChangeAlert(
+    long Sequence,
+    string Description,
+    DateTimeOffset OccurredAt,
+    string? LeaseId = null,
+    DateTimeOffset? LeaseUntil = null);
+
 /// <summary>Stores audit metadata without serializing authentication secrets or public DID internals.</summary>
 internal sealed record AdministrationAudit(
     long Sequence,
@@ -49,6 +61,9 @@ internal sealed record AdministrationAudit(
 {
     /// <summary>Gets the original database timestamp, absent from legacy persisted events.</summary>
     public DateTimeOffset? CreatedAt { get; init; }
+
+    /// <summary>Gets the credential-free change description, present only for eligible notification events.</summary>
+    public string? ChangeDescription { get; init; }
 
     /// <summary>Projects persisted primitive values into the typed public audit result.</summary>
     internal LabelAdministrationReceipt ToReceipt() => new(
@@ -68,5 +83,6 @@ internal sealed record AdministrationAudit(
 [JsonSerializable(typeof(AdministrationState))]
 [JsonSerializable(typeof(AdministrationAudit))]
 [JsonSerializable(typeof(PolicyFailureAlert))]
+[JsonSerializable(typeof(AdministrationChangeAlert))]
 [JsonSerializable(typeof(string[]))]
 internal sealed partial class AdministrationJsonContext : JsonSerializerContext;

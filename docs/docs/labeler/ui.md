@@ -6,6 +6,14 @@ manual account and record labels, audit, policy, team administration, and labele
 lifecycle operations. It uses the shared label administration dispatcher: it does not
 create a separate authorization, issuance, or audit path.
 
+Xenon uses the locally bundled Inter variable font, including its italic face,
+with system-font fallbacks and non-blocking font loading. No font requests go to
+Google Fonts or a CDN. The footer credits The Inter Project Authors and links to
+the bundled SIL Open Font License 1.1. JSON displays and editors, code blocks,
+and fixed-width identifiers use locally bundled Google Sans Code with programming
+ligatures disabled. Its normal and italic variable fonts, SIL Open Font License
+1.1, and trademark notice are also included and linked from the footer.
+
 On Team, select a member's handle (or DID when no handle is available) to fill the
 Change member form with their canonical DID and current role. Select an action,
 provide a reason, and choose **Update**. Enrollment and membership updates use the
@@ -21,6 +29,36 @@ when sorting. With JavaScript enabled, the role label and selector are hidden
 unless the selected membership action is Change role; without scripting, the
 role remains available and is used only for Change role.
 
+Policy pages describe checks, publication and label withdrawals in plain language.
+The publication confirmation explicitly warns that completed withdrawals are not
+undone if publishing the new policy fails. Technical identifiers remain available
+for troubleshooting; progress counts refer to label-history entries, not labels
+removed or confirmation that other apps have received them.
+
+Lifecycle uses plain-language retirement actions and calls the grace period the
+waiting period. Detailed progress counters are available under **Technical details**.
+Permanent retirement, label-history deletion and signing-key removal retain separate
+warnings and confirmation steps. Recording a stopped process or removed key is
+the operator's account of their checks, not independent verification by Xenon.
+
+Team and manual-label pages explain account permissions and account-versus-content
+labels in plain language. Content-version identifiers (CIDs) remain visible, with
+guidance distinguishing a specific version from labels applying across future edits.
+Case report choices and history use the same terminology. UI errors and
+confirmations explain the next action without changing confirmation requirements.
+Uncertain-result messages preserve instructions to retry unchanged requests with
+their original tracking IDs; completed account writes and withdrawals are not
+described as rolled back. Shared administration-service errors use the same
+plain-language terminology in Xenon and the CLI, retaining their error codes
+and diagnostic details.
+
+Home, search, report and appeal lists, and audit history use plain-language labels.
+Standard report reasons have readable names; custom reason identifiers are preserved.
+Audit actions have readable names with their original identifiers in tooltips.
+List counts use singular wording for one item. Terms and Privacy explain operator
+responsibilities, sign-in storage, external requests and data retention in plain
+language without replacing the operator's required service-specific disclosures.
+
 ## Enabling the UI in the standalone host
 
 The canonical labeler host keeps the UI disabled by default. Enable optional
@@ -34,6 +72,15 @@ LabelerUI__Enabled=true
 The UI requires `LabelerModeration__Enabled=true`; the host rejects a configuration
 that enables the UI without the moderation backend. Existing local administration
 and remote CLI administration remain independently configurable.
+
+Set `LabelerAdministration__RemoteMode=WebUiControlled` in the standalone host to let
+the owner control remote access from Xenon. In that mode, the **Team and
+membership** page displays the effective remote-access status and offers the durable
+switch only to the DID that completed the one-time local bootstrap. Administrator
+role alone is insufficient. Every change is committed with its audit event; protected
+local administration remains available when the switch is off. See the
+[remote administration control modes](administration.md#remote-administration-control-modes)
+for configuration precedence and owner identity details.
 
 The host registers Bluesky authentication and its sign-in pages only when the UI is
 enabled. Browse to `/Xenon` and sign in through the Bluesky authentication pages. The
@@ -158,6 +205,13 @@ The status column is globally sortable. Checks distinguish resolved/handled work
 an exclamation circle identifies unresolved work, and scales identify pending
 appeals; visible text carries the meaning without relying on color. Only Cases,
 Reports and Appeals display live open-work totals in the navigation.
+Every authorized page also prefixes its browser title with `C:<cases> R:<reports>
+A:<appeals>`. JavaScript refreshes these totals and the navigation every 30 seconds,
+including in background tabs, and when a tab becomes visible. Browsers may throttle
+or suspend background tabs, so updates are best effort rather than notifications.
+Failed refreshes mark the title and displayed counts as stale; expired sign-in or
+revoked team access stops updates and asks the operator to reload. Without JavaScript,
+counts reflect the last page load.
 The Appeals list defaults to Pending; selecting All includes completed appeals and
 is preserved when sorting or paging. Completed outcomes display as "Labels withdrawn",
 "Labels changed" and "Labels kept" rather than Withdrawn, Replaced and Upheld.
@@ -245,18 +299,34 @@ using the selected UTC/local time zone. Without JavaScript, the exact UTC date
 remains visible.
 In appeal review, changing the label selection selects **Remove labels** when
 all applicable labels are cleared, or **Replace labels** for any other changed
-selection, including partial removal. Returning to the original selection restores
-the previously chosen outcome; outcomes remain manually selectable.
+selection, including partial removal. **Replace labels** is omitted when the selected
+policy has only one distinct label. Returning to the original selection selects
+**Keep the existing decision**; outcomes remain manually selectable.
+The page compares each appeal's captured label sequences with current active labels.
+When any challenged label has changed, been removed or expired, it selects
+**Challenged labels changed** and explains why. Close that appeal without label
+changes; staged changes keep Submit disabled until the original selection is restored.
 Clicking Submit confirms the case/appeal decision; there is no separate confirmation
 checkbox. Opening an appeal from the Appeals list or search results preselects
 that appeal for review. Case/appeal decision and assignment reasons are optional;
 leaving one blank records "No reason provided." in the audit history.
+Resolved cases retain their recorded assignee but no longer show the assignment form.
+The form is also hidden when reviewing a handled report or resolved appeal, even
+if its case remains open for other work.
+Taking a case, report or appeal action assigns an unassigned case to the acting
+moderator as part of the same saved action. Existing assignments are retained.
+Opening a workflow or explicitly clearing its assignment does not claim it.
+Cases, Reports and Appeals share **Unresolved**, **In review**, **Resolved** and
+**All** workflow tabs. Reports and appeals are in review when they remain unresolved
+and their case is in review. Resolved includes all handled reports and all completed
+appeal outcomes, even if the case has other outstanding work. Appeal outcomes can
+also be filtered individually. Counts, sorting and pagination use the selected filters.
 If a submission is rejected, its label selections, appeal outcome,
 reason and report-handling choice remain visible while the observed case, policy
 and labels are unchanged. Incompatible outcomes produce a validation message, not
 an exception page. Changed observations require fresh review instead of silently
 rebasing the rejected decision.
-**Acknowledge a superseded decision** records that newer outcomes have overtaken
+**Challenged labels changed** records that newer outcomes have overtaken
 the appeal's captured labels, resolving that appeal without changing current labels.
 When an appeal decision commits, other pending appeals for the same subject and
 CID are automatically marked superseded only if every captured outcome is no
@@ -372,6 +442,11 @@ The manual page presents policy values as selectable label buttons rather than
 free-text values. Entering a target or changing its optional CID refreshes this
 labeler's active labels in the background; **Load labels** provides an explicit
 alternative and works without JavaScript.
+For records, **Look up current CID** beside the optional CID input fetches the
+current version from the account's data server and refreshes the label selection
+for that version. This is explicit: ordinary label lookup leaves an omitted CID
+blank, and fetching a CID does not issue labels. A failed version lookup displays
+an error and keeps submission disabled until labels are loaded again.
 The target type is inferred on the server: DID/handle means account, and a complete
 AT URI means record. With JavaScript, the optional CID field is shown only for record
 targets. Repository-only AT URIs such as `at://did:plc:example` or `at://handle.example`
@@ -441,13 +516,17 @@ translations; **Moderation Policy** edits report intake and independent issuance
 permissions; **Advanced** edits the complete declaration JSON;
 **Publication** contains publication actions; the final **Verification** tab
 checks the declaration published on the labeler's PDS against the selected policy.
+Switching tabs updates the URL fragment without reloading the page or adding a
+browser history entry, so refreshing restores the visible tab. This also applies
+to keyboard navigation and saved-draft Publish shortcuts.
 Verification does not write the remote declaration, but a successful match can
 activate the policy and reopen reporting and issuance. Clicking **Verify declaration**
 requires no reason field or confirmation checkbox; the shared service retains an
 automatic audit reason and enforces live administrator authorization.
 Its Policy ID dropdown lists all available unpublished drafts, excluding deleted
-and previously selected policies. If no drafts exist, publication is disabled
-until a draft is saved.
+and previously selected policies, except that the currently selected policy can
+be retried after publication enters a conflict state. If neither a draft nor a
+retryable selected policy exists, publication is disabled until a draft is saved.
 
 Starting publication explicitly confirms irreversible withdrawal of existing
 applications of label values removed by the selected draft. The host scans and
@@ -473,9 +552,30 @@ for independent verification; it does not hold labeler PDS credentials or
 perform that write. If publication fails or is abandoned, committed negations
 are not automatically undone, and reintroducing a value does not reapply it.
 
+The **Publication** tab shows **Abandon pending publication** during withdrawal
+and declaration publication. Enter a reason and explicitly confirm abandonment.
+The action is fenced to the displayed policy revision and requires current
+administrator authority. It makes no PDS write and does not undo completed
+negations; reporting and issuance remain blocked until independent verification.
+A stale or rejected submission redirects to refreshed state with an error,
+so reloading does not resubmit the form. After abandonment, select the interrupted
+Policy ID to begin a new operation, or save and select another draft. Xenon reads
+the authoritative PDS declaration and captures its CID automatically before
+beginning the operation; only an explicit `RecordNotFound` permits create intent.
+Lookup failures leave the policy unchanged. The post-login comparison and
+conditional write still reject a declaration changed after that observation.
+Updating an existing declaration requests both create and update permission for
+`app.bsky.labeler.service`, as required by the PDS `putRecord` endpoint. No delete
+permission is requested. The stored CID precondition still prevents creating a
+replacement for a disappeared record or overwriting an unexpectedly changed one.
+
 The editor starts from the current selected policy. **Current State** lists all
 saved, undeleted versions that have never been selected for publication, with
-**Load draft** and **Delete draft** actions on each row. Previously published
+icon-labelled **Load draft**, **Publish** and **Delete draft** buttons on each row.
+**Publish** opens the Publication tab with that saved Policy ID selected and the
+current revision filled in. It does not start publication: enter an audit reason
+and explicitly confirm the irreversible withdrawals before submitting.
+Previously published
 versions are not presented as drafts. **Load current policy** restores the selected definition; **Clear all**
 starts an empty editor without deleting any retained version or changing the
 publication gate. Enter a unique **Policy ID** for the new saved snapshot.
@@ -603,10 +703,10 @@ To exercise remote CLI OAuth through the tunnel:
 
 ```powershell
 dotnet run --project src\idunno.Bluesky.Labeler.Cli -- team `
-  --admin-url https://your-tunnel-host.example `
-  --audience "did:web:labeler.xenon.invalid#labeler_admin" `
-  --handle your-actual-handle.bsky.social `
-  --client-id https://your-tunnel-host.example/native-client-metadata.json
+  --labeler-url https://your-tunnel-host.example `
+  --admin-service "did:web:labeler.xenon.invalid#labeler_admin" `
+  --admin-handle your-actual-handle.bsky.social `
+  --oauth-client-id https://your-tunnel-host.example/native-client-metadata.json
 ```
 
 The CLI's native metadata is separate from the website's web metadata, but both

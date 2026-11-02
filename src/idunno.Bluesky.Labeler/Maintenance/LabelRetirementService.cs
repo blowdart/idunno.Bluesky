@@ -72,7 +72,7 @@ internal sealed class LabelRetirementService(
             batch = observed.Result;
             if (!batch.Publishing)
             {
-                return new(LabelServiceErrorCode.StaleDecision, "Retirement changed during publication; reload its checkpoint.");
+                return new(LabelServiceErrorCode.StaleDecision, "Retirement changed during publication. Reload its saved status.");
             }
         }
 
@@ -107,7 +107,7 @@ internal sealed class LabelRetirementService(
                 batch.Generation,
                 "SigningFailed: restore the selected key, then explicitly resume retirement.",
                 token).ConfigureAwait(false);
-            return new(LabelServiceErrorCode.SigningFailed, "Retirement signing failed; restore the selected key and resume.", exception: exception);
+            return new(LabelServiceErrorCode.SigningFailed, "Retirement could not sign withdrawals. Restore the selected signing key, then resume retirement.", exception: exception);
         }
 
         LabelServiceResult<LabelRetirementView> committed = await retirement.CommitRetirementBatchAsync(

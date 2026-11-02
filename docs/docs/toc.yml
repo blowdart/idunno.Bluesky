@@ -124,23 +124,25 @@ items:
       - name: Writing a labeler
         items:
           - name: What is a labeller?
-            href: labeller/overview.md
+            href: labeler/overview.md
           - name: Persistence
-            href: labeller/persistence.md
+            href: labeler/persistence.md
           - name: Issuing and withdrawing labels
-            href: labeller/issuance.md
+            href: labeler/issuance.md
           - name: Hosting public label distribution
-            href: labeller/hosting.md
+            href: labeler/hosting.md
           - name: Administrative authentication and teams
-            href: labeller/administration.md
+            href: labeler/administration.md
+          - name: Administration CLI
+            href: labeler/cli.md
           - name: Optional Xenon moderation
-            href: labeller/moderation.md
+            href: labeler/moderation.md
           - name: Xenon moderation web UI
-            href: labeller/ui.md
+            href: labeler/ui.md
           - name: Safe retirement and local cleanup
-            href: labeller/retirement.md
+            href: labeler/retirement.md
           - name: Standalone deployment and updates
-            href: labeller/deployment.md
+            href: labeler/deployment.md
 
   - name: Jetstream
     items:

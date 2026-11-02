@@ -340,7 +340,7 @@ Lifecycle operations use `retirement`, `grace`, `retired` and `purge` operation 
 recovery. Activity up/down counters require a listener that observes matching increments and decrements,
 not just the most recent delta.
 
-See [Standalone labeler persistence](labeller/persistence.md) for provider setup, transaction guarantees,
+See [Standalone labeler persistence](labeler/persistence.md) for provider setup, transaction guarantees,
 publication and lifecycle semantics, and backup guidance.
 
 ## idunno.AtProto.DidHandleCache

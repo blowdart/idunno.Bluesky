@@ -17,6 +17,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using Microsoft.Extensions.Logging.Testing;
+using Microsoft.Extensions.Time.Testing;
 
 namespace idunno.Bluesky.Labeler.Test;
 
@@ -761,7 +762,8 @@ public class ProviderConformanceTests
     [InlineData("mysql")]
     public async Task RecoversRetirementAndBoundedPurgeWithoutReusingSequences(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        FakeTimeProvider databaseClock = new(s_instant);
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine, databaseClock: databaseClock);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         await fixture.Store.AppendAsync("initial", [Sign(key), Sign(key, "did:plc:two")], cancellationToken: TestContext.Current.CancellationToken);
         LabelStoreState state = await fixture.Store.PublishAsync(cancellationToken: TestContext.Current.CancellationToken);
@@ -781,12 +783,10 @@ public class ProviderConformanceTests
         Assert.Equal(LabelerLifecyclePhase.Distributing, state.Phase);
         state = await restarted.BeginGracePeriodAsync(state.Revision, TimeSpan.FromDays(1), cancellationToken: TestContext.Current.CancellationToken);
         await Assert.ThrowsAsync<InvalidOperationException>(() => restarted.CompleteRetirementAsync(state.Revision, cancellationToken: TestContext.Current.CancellationToken));
-        await fixture.ExecuteAsync(engine switch
-        {
-            "sqlite" => "UPDATE label_state SET grace_deadline=CAST(unixepoch('subsec')*1000 AS INTEGER)-1",
-            "postgresql" => "UPDATE label_state SET grace_deadline=CAST(EXTRACT(EPOCH FROM clock_timestamp())*1000 AS BIGINT)-1",
-            _ => "UPDATE label_state SET grace_deadline=CAST(UNIX_TIMESTAMP(UTC_TIMESTAMP(3))*1000 AS SIGNED)-1"
-        });
+        Assert.NotNull(state.GraceDeadline);
+        databaseClock.SetUtcNow(state.GraceDeadline.Value.AddMilliseconds(-1));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => restarted.CompleteRetirementAsync(state.Revision, cancellationToken: TestContext.Current.CancellationToken));
+        databaseClock.Advance(TimeSpan.FromMilliseconds(1));
         state = await restarted.CompleteRetirementAsync(state.Revision, cancellationToken: TestContext.Current.CancellationToken);
         await Assert.ThrowsAsync<ArgumentException>(() => restarted.PurgeAsync(state.Revision, false, cancellationToken: TestContext.Current.CancellationToken));
         state = await restarted.PurgeAsync(state.Revision, true, 1, cancellationToken: TestContext.Current.CancellationToken);

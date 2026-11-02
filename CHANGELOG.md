@@ -6,6 +6,12 @@
 
 #### idunno.Bluesky.AspNet.Labeler
 
+* Shows “No maintenance in progress” on Lifecycle when no maintenance is active, hiding irrelevant maintenance warnings and technical details.
+
+* Uses plain-language shared administration errors while retaining error codes, permissions and recovery behavior.
+* Adds explicitly optional `MapOzoneCompatibility()` discovery, server configuration, live team/report/history inspection, label events and report resolution through the existing remote-mode, owner-switch and replay-protected administration boundary. Label/report updates commit atomically with durable event identities; unsupported capabilities fail explicitly. The canonical host opts in only with `LabelerOzone:Enabled`; Ozone itself is unchanged and end-to-end UI interoperability remains unverified.
+* Explicitly binds Ozone discovery to a request delegate so trimmed and Native AOT builds avoid an incompatible generated route interceptor.
+* Adds Disabled, Enabled and WebUiControlled remote-administration host modes, defaulting to disabled and preserving the legacy RemoteEnabled fallback; explicit modes take precedence without affecting protected local administration.
 * Runs durable retirement and optional local-purge batches independently of administration-client lifetime, retaining public distribution during grace and after retirement; supports explicitly keyless administration only on terminal retired storage.
 * Recovers retirement command receipts before phase-dependent signing checks, dispatches stopped-host confirmations consistently, and durably pauses failed worker epochs across uncertain batch commits without overriding later administrator recovery.
 * Shares retirement failure recovery between manual commands and the background worker, retains pending pauses after request cancellation, returns classified storage failures during publication inspection, and rejects label-producing case decisions on keyless hosts without blocking non-label completion.
@@ -15,11 +21,16 @@
 
 * Resumes bounded policy-label withdrawal batches in the background independently of browser lifetime and remote administration enablement, signing with the host's active key and waiting for durable stream publication.
 * Added durable, bounded pending report intake during policy-verification outages, with authenticated replay protection, moderator visibility, automatic verified-scope promotion, and retained out-of-scope outcomes without cases.
+* Supports Ozone `tools.ozone.inbox.appealActionedSubject` label appeals through the authenticated moderation intake path, including the record-URI `repoRef` shape used by Bluesky clients and bare-DID service-token audiences issued by PDS proxies.
+* Preserves CID-less record report and appeal subjects without inferring a CID from the PDS or signed label, through storage, pending promotion, review and retries.
+* Emits specific .NET moderation authentication, label-state and dependency diagnostics without credentials or report content; durably audits authenticated pre-intake appeal rejections with token replay protection.
+* Exempts authenticated owner appeals from ordinary report-reason filtering, including pending promotion, so a declaration accepting only Other does not silently close appeals as Not Applicable.
 * Added explicitly optional Xenon report intake, bounded service authentication/admission and independent declaration verification, plus shared local/HTTPS case, appeal, workflow-queue and policy-recovery administration. Public label distribution and remote CLI enablement remain independent.
 * Separates optional moderation policy health at `/health/labeler/moderation` from distribution readiness so policy failures do not remove recovery routes from traffic; malformed Unicode reports and policy inputs return classified input errors.
 * Rejects fractional-millisecond moderation verification freshness during registration so configured and persisted health-check intervals cannot disagree.
 * Adds a shared, restart-resumed background checker that resolves deleted-post reports and appeals only after an authoritative PDS `RecordNotFound`, with reason `Post deleted`, explicit system audit, revision fencing and no label changes.
 * Optionally sends deduplicated policy-verification failure alerts to active administrators who register an address, using authenticated SMTP with mandatory STARTTLS and durable retry state.
+* Emails registered active administrators after verified policy publication, team membership and role changes, and remote or local CLI access changes. These durable change notifications are suppressed when only one administrator remains active; existing policy-verification failure alerts remain enabled.
 
 * Added opt-in exact-audience, method-bound service-token administrative endpoints and protected Windows named-pipe/Linux Unix-socket administration, including explicit browserless root/SID setup and shared team authorization.
 * Remote administration is disabled by default and can be enabled or disabled through reloadable host options independently of protected local administration.
@@ -39,6 +50,36 @@
 
 #### idunno.Bluesky.AspNet.Labeler.UI
 
+* Adds matching Unresolved, In review, Resolved and All workflow tabs and filters to Reports and Appeals, with database-filtered totals and paging.
+* Adds left-arrow glyphs to detail-page back links and returns appeal reviews to the appeals list.
+* Hides the assignment form on resolved cases and when reviewing handled reports or resolved appeals, while retaining the recorded assignee.
+* Hides the Replace labels appeal outcome when the active policy does not declare multiple distinct labels.
+* Detects and explains changed appeal labels, uses the shorter Challenged labels changed outcome, constrains appeal dropdowns to their columns, and selects matching outcomes when label selections change.
+* Adds an explicit current-record CID lookup beside the optional manual-label CID input, refreshing label selections for that version without issuing labels.
+* Explains the separate manual removal of the labeler endpoint from the DID document after retirement and a permanent distribution shutdown, while preserving historical verification keys.
+* Keeps all Policy tab fragments in sync with the displayed tab so refresh restores the selection, including keyboard navigation and draft Publish shortcuts.
+* Gives report-summary tooltips equal top and bottom padding when no open reports precede the total.
+* Clarifies UI errors and confirmation text while preserving exact-action confirmations, retry identities, permission checks and warnings about completed writes and withdrawals.
+* Simplifies home, search, reports, appeals, audit and public legal notices; names standard report reasons and audit actions, and corrects singular list counts while preserving permissions, data disclosures and legal qualifications.
+* Simplifies team permissions, account/content labeling, report-version selection, moderation history and retirement progress feedback without changing errors or confirmation requirements.
+* Explains retirement, waiting periods, label-history deletion and signing-key removal in plain language, retaining permanent-change warnings and moving detailed progress counters under Technical details.
+* Explains policy editing, publication, withdrawal progress and recovery in plain language while retaining irreversible-change warnings and explicit confirmation.
+* Uses locally bundled Inter variable fonts by default, including italics, with footer attribution and the original SIL Open Font License.
+* Uses locally bundled Google Sans Code for JSON and fixed-width text, including italic support, footer attribution, and the original license and trademark notices.
+* Uses consistent icon-labelled policy action buttons and adds a saved-draft Publish shortcut that selects the draft in Publication without starting a write or bypassing confirmation.
+* Displays invalid remote-administration audit reasons as validation errors instead of unhandled server errors.
+* Redirects failed policy publication, cleanup-resume and authorization submissions back to the publication tab with retained errors, so refreshing does not resubmit a POST.
+* Prefills the publication authorization handle by resolving the labeler DID, with an explicit message and manual entry when resolution is unavailable.
+* Adds confirmed, revision-fenced abandonment of pending policy publication in Xenon, retaining permanent negations and allowing a new publication of the interrupted policy version.
+* Automatically captures the existing PDS declaration CID before web policy publication, failing closed on lookup errors and preserving conditional-write conflict protection.
+* Requests both declaration create and update permissions for conditional PDS updates in Xenon and the CLI, as required by `putRecord`, without granting delete or unrelated repository access.
+* Restores selected signing-key and registered-host context in retirement confirmation previews before the durable workflow has started.
+* Prefixes authorized page titles with open case, report and appeal totals, refreshing titles and navigation in the background on a best-effort basis with explicit stale/access feedback.
+* Displays the source commit ID in the Xenon footer when supplied by the container build.
+* Shows the effective remote CLI access state on Team and lets only the original bootstrap owner change the durable, audited switch when the host selects WebUiControlled mode; other Administrators cannot toggle it.
+* Correctly reviews and withdraws URI-wide record labels from CID-pinned cases and manual lookups, retaining signed scope and sequence fencing.
+* Provides a single report-handling choice for the selected report, the same submitted target, or all reports for a record URI, preserving pending appeals and recording affected case history.
+* Uses singular grammar when one manual label change completes.
 * Adds separately challenged per-host stopped-process attestation after retirement, without treating stale contact as proof or requiring a rotation after key removal is requested.
 * Adds phase-specific retirement progress/recovery and read-only immutable-intent previews with separate action-specific confirmation, explicit grace selection, availability attestation, and separate label-history cleanup and operator-attested key removal.
 
@@ -117,6 +158,9 @@
 
 #### idunno.Bluesky.Labeler.Host
 
+* Serves a public plain-text `/robots.txt` asking all crawlers not to crawl any path.
+* Includes the matching Linux administration CLI in the canonical image, with `labeler-admin` on `PATH`.
+* Advertises the method-bound `resumePolicyPublication` native OAuth permission required by CLI publication recovery.
 * Supports explicit `Labeler:SigningKeyProvider=none` for an initialized retired labeler with no pending signatures, publication or rotation, preserving keyless read-only distribution and authorized recovery administration.
 
 * Adds repeatable test-host policy drafts and fictional team/identity examples across roles, suspension, removal and a local CLI viewer binding; fresh databases also include an earlier verified policy publication, while existing operator edits and selected policies are retained.
@@ -135,6 +179,20 @@
 
 #### idunno.Bluesky.Labeler.Cli
 
+* Renames credential commands to `--remember-me` and `forget-me`; the previous spellings are no longer accepted.
+* Keeps sign-in and temporary-credential notices concise, reserving account-purpose warnings for labeler-account operations.
+* Adds Unicode icons with display-width-aware padding to human-readable progress, authentication, confirmations, errors and result fields, using BOM-free UTF-8 console output without altering verbose JSON output.
+* Capitalizes human-readable CLI result labels, shows Issuer followed by Phase, calls the totals “Labels issued” and “Labels published”, hides internal revisions, and hides retirement checkpoints while Active; verbose JSON remains unchanged.
+* Describes available label history in plain language instead of displaying the internal replay floor.
+* Adds `counts` to display unresolved case, report and appeal totals over local or remote administration, without an unnecessary `openCounts` heading in readable output.
+* Fixes remote policy publication sign-in by requesting one method-bound RPC scope per administrator session.
+* Adds clear success/failure confirmations on stderr and readable result details by default, with raw JSON stdout behind `--verbose`; explains each sign-in's account and purpose, and stops workflows explicitly on authentication failure, cancellation or callback timeout without logging OAuth callback secrets.
+* Adds a dedicated administration CLI reference covering installation, forced or owner-controlled remote access, command options, credential storage, and examples for every command.
+* Persists canonical PostgreSQL-hosted Xenon login sessions, OAuth callback state and Data Protection keys in the existing labeler database, retaining sessions across container replacement.
+* Shows report-admission explanations only for relevant policy, retained-report or retirement states instead of displaying an empty policy-verification warning.
+* Shows the current verification state on the policy verification tab and disables redundant manual verification while the selected policy remains current.
+* Brands the quiet loopback callback as Xenon and clarifies remote option names; native client metadata defaults to the labeler origin and can be overridden separately for labeler-account publication.
+* Adds opt-in `--remember-me` credential storage in `~/.xenon`, using current-user DPAPI on Windows and explicitly confirmed, owner-only unencrypted files on macOS/Linux, with account/client/scope/service binding and durable rotating-credential updates.
 * Adds `retire confirm-host-stopped` with exact registration GUID, independent operator evidence and its own preflight challenge; it records an attestation, not process detection or key deletion.
 
 * Adds retirement status/preflight, pause/resume, grace extension and separately confirmed external key-removal request/attestation. Irreversible actions require a server-issued challenge even with `--yes`; completion requires availability evidence and normal begin/resume uses the durable server worker.
@@ -153,6 +211,10 @@
 
 #### idunno.Bluesky.Labeler
 
+* Assigns previously unassigned cases to the moderator committing a case, report or appeal action, atomically with the action and without replacing existing assignments.
+* Refreshes an expired issuance policy before capturing the Ozone batch revision, avoiding rejection of valid label events after a successful declaration check while preserving transactional policy fencing.
+* Clarifies account verification, label decision, policy check and retirement errors, preserving original tracking IDs and detailed diagnostics for recovery.
+* Adds shared atomic Ozone event preparation and provider commits for multi-label actions and explicit cross-version report selection, retaining original CIDs, live authorization, policy fencing and pending appeals.
 * Adds irreversible, authorized retirement with action-bound confirmations, bounded timestamp-aware signed negations, resumable database checkpoints, live worker authority, explicit 1–365 day grace selection and distribution-availability attestation. Local history purge and operator-attested external key removal remain separate confirmations; moderation and audit history, backups and downstream copies are not erased.
 * Closes new label/report/appeal/policy workflows on retirement while retaining non-label case completion and explicitly coordinated recovery signing-key rotation without reopening issuance.
 
@@ -192,6 +254,11 @@
 
 #### idunno.Bluesky.Labeler.SQLite / PostgreSQL / MySQL
 
+* Clarifies shared team, case, appeal, policy and retirement errors without changing storage transactions, error codes or restart recovery.
+* Captures applicable URI-wide labels for CID-pinned all-label appeals and batches duplicate captured values per appeal page when checking superseded outcomes.
+* Resolves selected-label appeals on targets with large historical label sets by checking remaining captured outcomes directly, without reapplying the intake capture limit.
+* Filters selected appeal label values before bounded challenge capture, retains the selected value in accepted reports and pending promotion, and recovers legacy bootstrap owners even when earlier authentication denials occupy the first audit entries.
+* Adds schema-fourteen durable Ozone event identities and closure provenance, committed atomically with labels, reports, native case history and audit; upgrades remain additive and older writers reject the new schema.
 * Enforces Bluesky AppView label-service limits by default at the shared durable publication boundary: 5 labels per rolling second, 10,000 per rolling hour and 100,000 per rolling 24 hours, including negations. Schema thirteen persists accounting across hosts and restarts; excess remains pending rather than being discarded.
 * Preserves the longest-lived positive label when retirement encounters equal creation timestamps, regardless of insertion order.
 * Adds additive schema-twelve retirement state, exact-intent receipts, expiring confirmation challenges and bounded CID-slot selection across all three providers, preserving existing lifecycle checkpoints until explicitly adopted.
@@ -218,7 +285,8 @@
 
 #### idunno.AtProto
 
-* Added reporting-only service authentication for exact labeler service audiences and legacy bare issuer DIDs without relaxing administration. Added shared explicit label-policy publication validation without restricting remote DTO deserialization.
+* Adds separate Ozone administration service-token verification for exact labeler service and PDS bare-DID audiences, retaining method binding, replay identifiers and strict generic/native verification.
+* Added moderation-only service authentication for exact labeler service audiences and bare issuer DIDs used by PDS proxies, with exact-method verification for reports and Ozone label appeals without relaxing administration. Added shared explicit label-policy publication validation without restricting remote DTO deserialization.
 
 * Added exact `DID#service` token-acquisition overloads and strict AT Protocol service JWT verification. Production native loopback callbacks no longer implicitly permit insecure remote OAuth endpoints.
 * Service-authentication tokens request a 14-minute-55-second lifetime by default, leaving five seconds of client/PDS clock-skew headroom below the default 15-minute verifier maximum; callers can choose another lifetime, and verifiers can configure their maximum accepted lifetime.

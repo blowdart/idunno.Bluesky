@@ -86,7 +86,7 @@ internal static partial class Program
     {
         if (!IsStableReleaseTag(tag))
         {
-            await Console.Error.WriteLineAsync("Supply an exact stable release tag in vMAJOR.MINOR.PATCH form.").ConfigureAwait(false);
+            await Console.Error.WriteLineAsync("✖   Supply an exact stable release tag in vMAJOR.MINOR.PATCH form.").ConfigureAwait(false);
             return 2;
         }
 
@@ -98,9 +98,9 @@ internal static partial class Program
         try
         {
             string runtimeIdentifier = RuntimeInformation.RuntimeIdentifier;
-            if (runtimeIdentifier is not ("win-x64" or "linux-x64" or "linux-arm64"))
+            if (runtimeIdentifier is not ("win-x64" or "win-arm64" or "linux-x64" or "linux-arm64"))
             {
-                await Console.Error.WriteLineAsync($"Self-update is not supported for runtime '{runtimeIdentifier}'.").ConfigureAwait(false);
+                await Console.Error.WriteLineAsync($"✖   Self-update is not supported for runtime '{runtimeIdentifier}'.").ConfigureAwait(false);
                 return 2;
             }
 
@@ -111,7 +111,7 @@ internal static partial class Program
                 : "idunno.Bluesky.Labeler.Cli";
             if (!string.Equals(executableName, expectedExecutable, StringComparison.OrdinalIgnoreCase))
             {
-                await Console.Error.WriteLineAsync("Self-update requires the published self-contained CLI executable, not dotnet run or a renamed launcher.").ConfigureAwait(false);
+                await Console.Error.WriteLineAsync("✖   Self-update requires the published self-contained CLI executable, not dotnet run or a renamed launcher.").ConfigureAwait(false);
                 return 2;
             }
 
@@ -125,19 +125,19 @@ internal static partial class Program
             await StageExecutableAsync(archive, executableName, stagedPath, cancellationToken).ConfigureAwait(false);
             await VerifyExecutableStartsAsync(stagedPath, cancellationToken).ConfigureAwait(false);
             StartReplacementHelper(executablePath, stagedPath, backupPath, updateId);
-            await Console.Out.WriteLineAsync($"Verified SHA-256 {digest}. The update is staged and will be applied after this process exits; backup: {backupPath}").ConfigureAwait(false);
+            await Console.Out.WriteLineAsync($"✔   Verified SHA-256 {digest}. The update is staged and will be applied after this process exits; backup: {backupPath}").ConfigureAwait(false);
             return 0;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            await Console.Error.WriteLineAsync("Update cancelled.").ConfigureAwait(false);
+            await Console.Error.WriteLineAsync("⚠   Update cancelled.").ConfigureAwait(false);
             return 130;
         }
         catch (Exception exception) when (exception is HttpRequestException or IOException or UnauthorizedAccessException or
                                            InvalidDataException or JsonException or InvalidOperationException or
                                            CryptographicException or Win32Exception or NotSupportedException or TimeoutException)
         {
-            await Console.Error.WriteLineAsync($"CLI update failed ({exception.GetType().Name}).").ConfigureAwait(false);
+            await Console.Error.WriteLineAsync($"✖   CLI update failed ({exception.GetType().Name}).").ConfigureAwait(false);
             return 3;
         }
     }
@@ -350,7 +350,7 @@ internal static partial class Program
             timeoutSeconds is < 30 or > 600 ||
             drainSeconds is < 30 or > 600)
         {
-            await Console.Error.WriteLineAsync("Supply an existing Compose file, service, distinct pinned GHCR digests, readiness URL, backup/schema confirmations, and timeout from 30 through 600 seconds.").ConfigureAwait(false);
+            await Console.Error.WriteLineAsync("✖   Supply an existing Compose file, service, distinct pinned GHCR digests, readiness URL, backup/schema confirmations, and timeout from 30 through 600 seconds.").ConfigureAwait(false);
             return 2;
         }
 
@@ -377,7 +377,7 @@ internal static partial class Program
                 !services.StandardOutput.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
                     .Contains(service, StringComparer.Ordinal))
             {
-                await Console.Error.WriteLineAsync("The selected service is not present in the Compose project.").ConfigureAwait(false);
+                await Console.Error.WriteLineAsync("✖   The selected service is not present in the Compose project.").ConfigureAwait(false);
                 return 2;
             }
 
@@ -385,7 +385,7 @@ internal static partial class Program
             ProcessResult targetPull = await RunComposeAsync(composeFile, overridePath, projectDirectory, image!, ["pull", service], cancellationToken).ConfigureAwait(false);
             if (targetPull.ExitCode != 0)
             {
-                await Console.Error.WriteLineAsync("The target image could not be pulled; the running service was not changed.").ConfigureAwait(false);
+                await Console.Error.WriteLineAsync("✖   The target image could not be pulled; the running service was not changed.").ConfigureAwait(false);
                 return 5;
             }
 
@@ -393,7 +393,7 @@ internal static partial class Program
             ProcessResult rollbackPull = await RunComposeAsync(composeFile, overridePath, projectDirectory, previousImage!, ["pull", service], cancellationToken).ConfigureAwait(false);
             if (rollbackPull.ExitCode != 0)
             {
-                await Console.Error.WriteLineAsync("The previous image could not be pulled; deployment was not changed because rollback could not be guaranteed.").ConfigureAwait(false);
+                await Console.Error.WriteLineAsync("✖   The previous image could not be pulled; deployment was not changed because rollback could not be guaranteed.").ConfigureAwait(false);
                 return 5;
             }
 
@@ -408,7 +408,7 @@ internal static partial class Program
                 processTimeout: TimeSpan.FromSeconds(drainSeconds + 120)).ConfigureAwait(false);
             if (stop.ExitCode != 0)
             {
-                await Console.Error.WriteLineAsync("Compose could not gracefully stop the service; the update was not started.").ConfigureAwait(false);
+                await Console.Error.WriteLineAsync("✖   Compose could not gracefully stop the service; the update was not started.").ConfigureAwait(false);
                 return 5;
             }
 
@@ -421,7 +421,7 @@ internal static partial class Program
                 cancellationToken).ConfigureAwait(false);
             if (update.ExitCode != 0)
             {
-                await Console.Error.WriteLineAsync("Compose failed to redeploy the service; attempting to restore the previous image.").ConfigureAwait(false);
+                await Console.Error.WriteLineAsync("✖   Compose failed to redeploy the service; attempting to restore the previous image.").ConfigureAwait(false);
                 bool composeRollbackSucceeded = await RollbackComposeAsync(
                     composeFile,
                     overridePath,
@@ -432,18 +432,18 @@ internal static partial class Program
                     timeoutSeconds,
                     cancellationToken).ConfigureAwait(false);
                 await Console.Error.WriteLineAsync(composeRollbackSucceeded
-                    ? $"The previous image '{previousImage}' was restored and passed its readiness check."
-                    : "Rollback did not pass readiness; inspect the Compose service and preserve its external data before further action.").ConfigureAwait(false);
+                    ? $"✔   The previous image '{previousImage}' was restored and passed its readiness check."
+                    : "✖   Rollback did not pass readiness; inspect the Compose service and preserve its external data before further action.").ConfigureAwait(false);
                 return 5;
             }
 
             if (await WaitForReadinessAsync(readyUrl, TimeSpan.FromSeconds(timeoutSeconds), cancellationToken).ConfigureAwait(false))
             {
-                await Console.Out.WriteLineAsync($"Compose service '{service}' is ready on {image}.").ConfigureAwait(false);
+                await Console.Out.WriteLineAsync($"✔   Compose service '{service}' is ready on {image}.").ConfigureAwait(false);
                 return 0;
             }
 
-            await Console.Error.WriteLineAsync("The updated service did not become ready; restoring the previous image.").ConfigureAwait(false);
+            await Console.Error.WriteLineAsync("✖   The updated service did not become ready; restoring the previous image.").ConfigureAwait(false);
             bool rollbackSucceeded = await RollbackComposeAsync(
                 composeFile,
                 overridePath,
@@ -454,18 +454,18 @@ internal static partial class Program
                 timeoutSeconds,
                 cancellationToken).ConfigureAwait(false);
             await Console.Error.WriteLineAsync(rollbackSucceeded
-                ? $"The previous image '{previousImage}' was restored and passed its readiness check."
-                : "Rollback did not pass readiness; inspect the Compose service and preserve its external data before further action.").ConfigureAwait(false);
+                ? $"✔   The previous image '{previousImage}' was restored and passed its readiness check."
+                : "✖   Rollback did not pass readiness; inspect the Compose service and preserve its external data before further action.").ConfigureAwait(false);
             return 5;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            await Console.Error.WriteLineAsync("Service update cancelled. The deployment may have changed; inspect Compose status and the readiness endpoint before retrying.").ConfigureAwait(false);
+            await Console.Error.WriteLineAsync("⚠   Service update cancelled. The deployment may have changed; inspect Compose status and the readiness endpoint before retrying.").ConfigureAwait(false);
             return 130;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or Win32Exception or HttpRequestException or InvalidOperationException or TimeoutException)
         {
-            await Console.Error.WriteLineAsync($"Service update failed ({exception.GetType().Name}).").ConfigureAwait(false);
+            await Console.Error.WriteLineAsync($"✖   Service update failed ({exception.GetType().Name}).").ConfigureAwait(false);
             return 3;
         }
         finally

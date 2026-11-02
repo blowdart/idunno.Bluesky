@@ -45,4 +45,7 @@ public sealed class LabelCaseReceipt
     public DateTimeOffset CreatedAt { get; }
     /// <summary>Gets the historical case snapshot committed with this receipt.</summary>
     public LabelModerationCase Case { get; }
+
+    /// <summary>Gets a value that indicates whether storage verified this receipt as an Ozone event's case-history projection.</summary>
+    internal bool IsOzoneEvent { get; init; }
 }

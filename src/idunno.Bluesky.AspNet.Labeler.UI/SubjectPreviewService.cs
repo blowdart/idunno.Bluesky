@@ -30,6 +30,54 @@ internal sealed partial class SubjectPreviewService(
     /// <summary>Gets the fixed public read-only AppView origin; report data never selects the service.</summary>
     private static readonly Uri s_appView = new("https://public.api.bsky.app");
 
+    /// <summary>Reads the current version of an authorized canonical record through the bounded, SSRF-protected client.</summary>
+    internal async Task<(string? Cid, string? Error)> LookupRecordCidAsync(string target, CancellationToken cancellationToken)
+    {
+        if (!AtUri.TryParse(target, out AtUri? uri) || uri.Repo is not Did did ||
+            uri.Collection is null || uri.RecordKey is null)
+        {
+            return (null, "Enter a complete content address before looking up its current version.");
+        }
+
+        using HttpClient client = clients.CreateClient(ClientName);
+        using CancellationTokenSource deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        deadline.CancelAfter(TimeSpan.FromSeconds(8));
+        try
+        {
+            Uri? pds = await ResolvePersonalDataServerAsync(client, did, deadline.Token).ConfigureAwait(false);
+            if (pds is null)
+            {
+                return (null, "The server storing this account's data could not be found.");
+            }
+            AtProtoHttpResult<AtProtoRepositoryRecord> record = await AtProtoServer.GetRecord(
+                repo: did,
+                collection: uri.Collection,
+                rKey: uri.RecordKey,
+                cid: null,
+                service: pds,
+                accessCredentials: null,
+                httpClient: client,
+                loggerFactory: loggerFactory,
+                maximumResponseSize: 524_288,
+                cancellationToken: deadline.Token).ConfigureAwait(false);
+            if (!record.Succeeded || record.Result.Uri != uri)
+            {
+                return (null, "The current content version could not be loaded from the account server.");
+            }
+            return (record.Result.Cid.ToString(), null);
+        }
+        catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            PreviewUnavailable(loggerFactory.CreateLogger<SubjectPreviewService>(), "Record version", "The current content version lookup timed out.", exception);
+            return (null, "The content version lookup timed out. Try again.");
+        }
+        catch (Exception exception) when (exception is HttpRequestException or JsonException)
+        {
+            PreviewUnavailable(loggerFactory.CreateLogger<SubjectPreviewService>(), "Record version", "The current content version lookup failed.", exception);
+            return (null, "The current content version could not be loaded. Try again.");
+        }
+    }
+
     /// <summary>Loads current public content after the caller has been authorized to inspect the report or case.</summary>
     internal async Task<SubjectPreview> LoadAsync(JsonElement subject, CancellationToken cancellationToken)
     {
@@ -62,7 +110,7 @@ internal sealed partial class SubjectPreviewService(
         }
         else if (!Did.TryParse(subject.GetProperty("did").GetString()!, out did))
         {
-            return new("Profile", null, Error: "The report's profile identifier is invalid.");
+            return new("Profile", null, Error: "The report does not contain a valid profile address.");
         }
 
         string url = $"https://bsky.app/profile/{did.Value}";
@@ -83,7 +131,7 @@ internal sealed partial class SubjectPreviewService(
             Uri? pds = await ResolvePersonalDataServerAsync(client, did, deadline.Token).ConfigureAwait(false);
             if (pds is null)
             {
-                return Unavailable(kind, url, "The author's personal data server could not be resolved.");
+                return Unavailable(kind, url, "The server storing this account's data could not be found.");
             }
 
             AtUri recordUri = uri ?? new($"at://{did}/app.bsky.actor.profile/self");
@@ -102,7 +150,7 @@ internal sealed partial class SubjectPreviewService(
                 Text(value, "$type") != recordUri.Collection!.ToString() || post && Text(value, "text") is null ||
                 kind is "List" or "Starter pack" && Text(value, "name") is null)
             {
-                return Unavailable(kind, url, "The record is unavailable or the PDS returned a different record identity or type.");
+                return Unavailable(kind, url, "The content is unavailable, or the account server returned content that does not match this report.");
             }
 
             JsonObject? profileRecord = kind switch
@@ -365,7 +413,7 @@ internal sealed partial class SubjectPreviewService(
         if (!uri.IsAbsoluteUri || uri.Scheme != Uri.UriSchemeHttps || uri.UserInfo.Length != 0)
         {
             PreviewUnavailable(loggerFactory.CreateLogger<SubjectPreviewService>(), "Image", "The PDS image URL is not HTTPS.", null);
-            return new(null, alt, "Image unavailable: an HTTPS personal data server is required.");
+            return new(null, alt, "Image unavailable: the account server must have a secure HTTPS address.");
         }
 
         try
@@ -375,7 +423,7 @@ internal sealed partial class SubjectPreviewService(
             if (!response.IsSuccessStatusCode || mediaType is not ("image/jpeg" or "image/png" or "image/webp" or "image/gif"))
             {
                 PreviewUnavailable(loggerFactory.CreateLogger<SubjectPreviewService>(), "Image", "The PDS did not return a supported raster image.", null);
-                return new(null, alt, "Image unavailable: the PDS did not return a supported image.");
+                return new(null, alt, "Image unavailable: the account server did not return a supported image.");
             }
 
             using Stream content = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
@@ -387,7 +435,7 @@ internal sealed partial class SubjectPreviewService(
                 if (bytes.Length + count > 10_485_760)
                 {
                     PreviewUnavailable(loggerFactory.CreateLogger<SubjectPreviewService>(), "Image", "The preview image exceeds the size limit.", null);
-                    return new(null, alt, "Image unavailable: the preview exceeds the ten MiB limit.");
+                    return new(null, alt, "This image is too large to preview. The limit is 10 MiB.");
                 }
 
                 await bytes.WriteAsync(buffer.AsMemory(0, count), cancellationToken).ConfigureAwait(false);
@@ -398,7 +446,7 @@ internal sealed partial class SubjectPreviewService(
         catch (Exception exception) when (exception is HttpRequestException or IOException or OperationCanceledException)
         {
             PreviewUnavailable(loggerFactory.CreateLogger<SubjectPreviewService>(), "Image", "The PDS image transfer failed or timed out.", exception);
-            return new(null, alt, "Image unavailable: the PDS transfer failed or timed out.");
+            return new(null, alt, "Image unavailable: the transfer from the account server failed or timed out.");
         }
     }
 

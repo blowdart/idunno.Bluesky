@@ -128,7 +128,8 @@ internal abstract partial class RelationalLabelStore
         LabelStoreState state,
         LabelReportSubject subject,
         long now,
-        CancellationToken token) =>
+        CancellationToken token,
+        string? appealLabelValue = null) =>
         await ReadTargetLabelsAsync(
             connection: connection,
             transaction: transaction,
@@ -136,7 +137,8 @@ internal abstract partial class RelationalLabelStore
             target: subject.RecordUri is { } record ? LabelTarget.Record(record, subject.Cid) : LabelTarget.Account(subject.Repository),
             exactVersion: true,
             now: now,
-            token: token).ConfigureAwait(false);
+            token: token,
+            appealLabelValue: appealLabelValue).ConfigureAwait(false);
 
     /// <summary>Captures bounded active label values, optionally retaining other record versions for manual review.</summary>
     private static async Task<LabelServiceResult<StoredLabel[]>> ReadTargetLabelsAsync(
@@ -146,16 +148,19 @@ internal abstract partial class RelationalLabelStore
         LabelTarget target,
         bool exactVersion,
         long now,
-        CancellationToken token)
+        CancellationToken token,
+        string? appealLabelValue = null)
     {
         byte[] key = s_strictUtf8.GetBytes(target.Subject);
         List<string> values = [];
         DbCommand command = Command(
             connection: connection,
             transaction: transaction,
-            sql: "SELECT DISTINCT value FROM label_subject_index WHERE subject_hash=@hash AND subject_key=@key LIMIT 1001",
+            sql: "SELECT DISTINCT value FROM label_subject_index WHERE subject_hash=@hash AND subject_key=@key" +
+                (appealLabelValue is null ? "" : " AND value=@value") + " LIMIT 1001",
             ("@hash", SHA256.HashData(key)),
-            ("@key", key));
+            ("@key", key),
+            ("@value", appealLabelValue));
         await using (command.ConfigureAwait(false))
         {
             DbDataReader reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false);
@@ -170,7 +175,7 @@ internal abstract partial class RelationalLabelStore
 
         if (values.Count > 1000)
         {
-            return CaseFailure<StoredLabel[]>(LabelServiceErrorCode.PolicyUnavailable, "The label target requires explicit review beyond the bounded capture limit.");
+            return CaseFailure<StoredLabel[]>(LabelServiceErrorCode.PolicyUnavailable, "This account or content has too many labels for automatic appeal capture. An administrator must review it separately.");
         }
 
         if (values.Count == 0)
@@ -192,7 +197,9 @@ internal abstract partial class RelationalLabelStore
                 return LabelServiceResult<StoredLabel[]>.Failure(snapshot.Error);
             }
 
-            if (snapshot.Result.CurrentLabel is { } current && (!exactVersion || current.SignedLabel.Label.Cid == target.Cid) &&
+            if (snapshot.Result.CurrentLabel is { } current &&
+                (!exactVersion || target.Cid is null || current.SignedLabel.Label.Cid == target.Cid ||
+                    current.SignedLabel.Label.Cid is null) &&
                 LabelDecisionRules.IsActive(current.SignedLabel, DateTimeOffset.FromUnixTimeMilliseconds(now)))
             {
                 challenges.Add(current);
@@ -345,7 +352,7 @@ internal abstract partial class RelationalLabelStore
             ("@pending", (int)LabelAppealStatus.Pending)).ConfigureAwait(false)) != 0)
         {
             return CaseFailure<IReadOnlyList<ModerationAppealData>>(
-                LabelServiceErrorCode.CaseConflict, "Pending appeals require an explicit review outcome.");
+                LabelServiceErrorCode.CaseConflict, "Choose an outcome for each pending appeal.");
         }
 
         List<ModerationAppealData> appeals = [];
@@ -358,20 +365,22 @@ internal abstract partial class RelationalLabelStore
             if (appeal is null || appeal.CaseId != request.CaseId || appeal.Status != LabelAppealStatus.Pending)
             {
                 return CaseFailure<IReadOnlyList<ModerationAppealData>>(
-                    LabelServiceErrorCode.CaseConflict, "The appeal is not pending on this exact case.");
+                    LabelServiceErrorCode.CaseConflict, "This appeal is no longer pending or belongs to a different case.");
             }
 
             bool changed = false;
             if (appeal.Challenges.Length > 0)
             {
                 StoredLabel[] captured = [.. appeal.ToAppeal().Challenges];
+                LabelReportSubject subject = ModerationSubjectEncoding.Decode(appeal.Subject, appeal.Cid);
                 IReadOnlyList<LabelServiceResult<LabelDecisionSnapshot>> current = await DecisionSnapshotsAsync(
                     connection: connection,
                     transaction: transaction,
                     state: state,
                     queries: [.. captured.Select(challenge =>
-                        (appeal.Cid is null ? LabelTarget.Account(new Did(appeal.Subject)) :
-                            LabelTarget.Record(new(appeal.Subject), new(appeal.Cid)), challenge.SignedLabel.Label.Value))],
+                        (subject.RecordUri is { } uri
+                            ? LabelTarget.Record(uri, subject.Cid)
+                            : LabelTarget.Account(new Did(appeal.Subject)), challenge.SignedLabel.Label.Value))],
                     token: token).ConfigureAwait(false);
                 for (int index = 0; index < captured.Length; index++)
                 {
@@ -391,7 +400,7 @@ internal abstract partial class RelationalLabelStore
             {
                 return CaseFailure<IReadOnlyList<ModerationAppealData>>(
                     LabelServiceErrorCode.StaleDecision,
-                    changed ? "Newer or expired label outcomes require explicit superseded review." : "The captured label outcomes have not been superseded.");
+                    changed ? "The challenged labels have changed or expired. Review the appeal using 'Challenged labels changed'." : "The challenged labels are still in effect. Choose an outcome that reviews them.");
             }
 
             appeals.Add(appeal);
@@ -401,7 +410,7 @@ internal abstract partial class RelationalLabelStore
             action.Kind == LabelOperationKind.Negate && !challengedValues.Contains(action.Value)))
         {
             return CaseFailure<IReadOnlyList<ModerationAppealData>>(
-                LabelServiceErrorCode.TargetNotAllowed, "Appeal withdrawals must identify explicitly captured challenged labels.");
+                LabelServiceErrorCode.TargetNotAllowed, "Withdraw only labels recorded as challenged in this appeal.");
         }
 
         return LabelServiceResult<IReadOnlyList<ModerationAppealData>>.Success(appeals.AsReadOnly());
@@ -417,19 +426,9 @@ internal abstract partial class RelationalLabelStore
         DateTimeOffset completedAt,
         CancellationToken token)
     {
-        LabelServiceResult<StoredLabel[]> observed = await ReadAppealChallengesAsync(
-            connection: connection,
-            transaction: transaction,
-            state: state,
-            subject: subject,
-            now: completedAt.ToUnixTimeMilliseconds(),
-            token: token).ConfigureAwait(false);
-        if (!observed.Succeeded)
-        {
-            throw new InvalidDataException("Current appeal outcomes could not be inspected: " + observed.Error.Message);
-        }
-
-        HashSet<long> current = [.. observed.Result.Select(label => label.Sequence)];
+        LabelTarget target = subject.RecordUri is { } record
+            ? LabelTarget.Record(record, subject.Cid)
+            : LabelTarget.Account(subject.Repository);
         List<ModerationAppealData> superseded = [];
         long after = 0;
         while (true)
@@ -454,10 +453,42 @@ internal abstract partial class RelationalLabelStore
                 }
             }
 
+            string[] values = [.. page
+                .Where(appeal => appeal.Subject == subject.Subject && appeal.Cid == subject.Cid?.ToString())
+                .SelectMany(appeal => appeal.ToAppeal().Challenges)
+                .Select(challenge => challenge.SignedLabel.Label.Value)
+                .Distinct(StringComparer.Ordinal)];
+            IReadOnlyList<LabelServiceResult<LabelDecisionSnapshot>> observed = values.Length == 0 ? [] : await DecisionSnapshotsAsync(
+                connection: connection,
+                transaction: transaction,
+                state: state,
+                queries: [.. values.Select(value => (target, value))],
+                token: token).ConfigureAwait(false);
+            HashSet<long> current = [];
+            foreach (LabelServiceResult<LabelDecisionSnapshot> snapshot in observed)
+            {
+                if (!snapshot.Succeeded)
+                {
+                    throw new InvalidDataException("Current appeal outcomes could not be inspected: " + snapshot.Error.Message);
+                }
+
+                if (snapshot.Result.CurrentLabel is { } label &&
+                    LabelDecisionRules.IsActive(label.SignedLabel, completedAt))
+                {
+                    current.Add(label.Sequence);
+                }
+            }
+
             foreach (ModerationAppealData appeal in page)
             {
                 if (appeal.Subject != subject.Subject || appeal.Cid != subject.Cid?.ToString() ||
-                    appeal.Challenges.Length == 0 || appeal.Challenges.Any(challenge => current.Contains(challenge.Sequence)))
+                    appeal.Challenges.Length == 0)
+                {
+                    continue;
+                }
+
+                StoredLabel[] captured = [.. appeal.ToAppeal().Challenges];
+                if (captured.Any(challenge => current.Contains(challenge.Sequence)))
                 {
                     continue;
                 }

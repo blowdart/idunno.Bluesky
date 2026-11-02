@@ -30,7 +30,7 @@ public sealed class IndexModel : PageModel
         Table = TableNavigation.Read(Request, new(LabelTableKind.Audit, Sort: LabelTableSort.Received));
         if (Table is null)
         {
-            ViewData["Error"] = "Choose valid audit filters and a from time no later than the to time. Local times must exist and be unambiguous in the selected time zone; use UTC during a repeated daylight-saving hour.";
+            ViewData["Error"] = "Check the filters. The start time must not be after the end time. Local times must occur exactly once in the selected time zone; use UTC for times skipped or repeated when the clocks change.";
             return;
         }
 
@@ -44,7 +44,7 @@ public sealed class IndexModel : PageModel
                     token: HttpContext.RequestAborted).ConfigureAwait(false);
             if (!resolved.Succeeded)
             {
-                ViewData["Error"] = resolved.Message ?? "The actor handle could not be resolved.";
+                ViewData["Error"] = resolved.Message ?? "The account for that handle could not be found.";
                 return;
             }
 

@@ -44,6 +44,44 @@ public sealed class IndexModel : PageModel
             : Page();
     }
 
+    /// <summary>Fills the optional content version only after an explicit authorized request, without issuing labels.</summary>
+    /// <returns>The refreshed label controls or complete page, with the current CID or an explicit lookup error.</returns>
+    public async Task<IActionResult> OnPostCurrentCidAsync()
+    {
+        await ReadTargetAsync().ConfigureAwait(false);
+        string previousCid = Cid;
+        Cid = string.Empty;
+        await LoadLabelsAsync().ConfigureAwait(false);
+        if (Labels.State is not null && TargetKind == "Record")
+        {
+            (string? cid, string? error) = await HttpContext.RequestServices.GetRequiredService<SubjectPreviewService>()
+                .LookupRecordCidAsync(Target, HttpContext.RequestAborted).ConfigureAwait(false);
+            if (cid is not null)
+            {
+                Cid = cid;
+                await LoadLabelsAsync().ConfigureAwait(false);
+            }
+            else
+            {
+                ViewData["Error"] = error;
+                Labels = Labels with { State = null };
+            }
+        }
+        else if (TargetKind != "Record")
+        {
+            ViewData["Error"] = "Enter a content address to look up its current version.";
+            Labels = Labels with { State = null };
+        }
+        if (Labels.State is null && TargetKind == "Record")
+        {
+            Cid = previousCid;
+            Labels = Labels with { Cid = Cid };
+        }
+        return Request.Headers.XRequestedWith == "XMLHttpRequest"
+            ? Partial("_ManualLabelChoices", Labels with { Error = ViewData["Error"] as string })
+            : Page();
+    }
+
     /// <summary>Submits only staged changes through shared issuance, preserving immutable per-label retries on partial failure.</summary>
     /// <returns>A page showing the completed changes or an explicit recoverable failure.</returns>
     public async Task<IActionResult> OnPostAsync()
@@ -79,7 +117,7 @@ public sealed class IndexModel : PageModel
         if (selected.Any(value => !snapshot.Choices.Any(choice => choice.Value == value && !choice.OtherVersion)) ||
             string.IsNullOrWhiteSpace(Reason))
         {
-            ViewData["Error"] = "Choose available labels and enter a reason for labelling.";
+            ViewData["Error"] = "Choose from the available labels and enter a reason for your changes.";
             Labels = Labels with { Selected = selected };
             return Page();
         }
@@ -108,19 +146,19 @@ public sealed class IndexModel : PageModel
                     Reason: Reason,
                     Target: snapshot.Target,
                     Value: choice.Value,
-                    Cid: Cid.Length == 0 ? null : Cid,
+                    Cid: choice.UriWide || Cid.Length == 0 ? null : Cid,
                     ExpectedLabelSequence: choice.Sequence)).ConfigureAwait(false);
             if (!response.Succeeded)
             {
                 ViewData["Status"] = null;
-                ViewData["Error"] = $"{completed} of {changes.Length} changes confirmed. {response.Message ?? response.Error} Retry unchanged changes to recover their original operations, or load labels again to review the current state.";
+                ViewData["Error"] = $"{completed} of {changes.Length} label changes are confirmed. {response.Message ?? response.Error} Retry without changing your selections to recover the original results, or load the labels again to review their current state.";
                 return Page();
             }
 
             completed++;
         }
 
-        ViewData["Status"] = $"{completed} label changes completed.";
+        ViewData["Status"] = $"{completed} label {(completed == 1 ? "change" : "changes")} completed.";
         Reason = string.Empty;
         await LoadLabelsAsync().ConfigureAwait(false);
         return Page();
@@ -159,16 +197,20 @@ public sealed class IndexModel : PageModel
             Target = resolved;
         }
 
-        Labels = new(choices, response.Succeeded && response.Target is { } canonical
-            ? Protect(new(
-                Actor: User.FindFirst(AtProtoClaims.Did)!.Value,
-                TargetKind: TargetKind,
-                InputTarget: Target,
-                Target: canonical,
-                Cid: Cid,
-                OperationId: Guid.NewGuid().ToString("N"),
-                Choices: choices))
-            : null, Target: Target);
+        Labels = new(
+            Choices: choices,
+            State: response.Succeeded && response.Target is { } canonical
+                ? Protect(new(
+                    Actor: User.FindFirst(AtProtoClaims.Did)!.Value,
+                    TargetKind: TargetKind,
+                    InputTarget: Target,
+                    Target: canonical,
+                    Cid: Cid,
+                    OperationId: Guid.NewGuid().ToString("N"),
+                    Choices: choices))
+                : null,
+            Target: Target,
+            Cid: Cid);
     }
 
     /// <summary>Authenticates the actor, canonical target, observed baseline and any frozen retry intent.</summary>
@@ -199,7 +241,8 @@ internal sealed record ManualLabelFormDisplay(
     string[]? Selected = null,
     bool Retrying = false,
     string? Error = null,
-    string? Target = null);
+    string? Target = null,
+    string? Cid = null);
 
 /// <summary>Supplies trimming-safe serialization for protected manual label form state.</summary>
 [JsonSerializable(typeof(ManualLabelForm))]

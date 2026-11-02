@@ -9,10 +9,33 @@
         moderation.TryGetProperty("appeals", out JsonElement values) ? values : null;
 }
 <h1>Appeals</h1>
+<nav class="queue-tabs" aria-label="Appeal workflow queues">
+    @foreach ((LabelCaseWorkflow queue, string title) in new[]
+    {
+        (LabelCaseWorkflow.Unresolved, "Unresolved"),
+        (LabelCaseWorkflow.InReview, "In review"),
+        (LabelCaseWorkflow.Resolved, "Resolved"),
+        (LabelCaseWorkflow.All, "All")
+    })
+    {
+        <a asp-area="Xenon" asp-page="/Appeals/Index" asp-route-Queue="@queue" aria-current="@(Model.Queue == queue ? "page" : null)">@title</a>
+    }
+</nav>
 <form method="get" class="panel">
     <input type="hidden" name="Sort" value="@(Model.Table?.Query.Sort ?? LabelTableSort.Received)" />
     <input type="hidden" name="Ascending" value="@((Model.Table?.Query.Ascending ?? false).ToString())" />
-    <label for="status">Status</label>
+    <label for="queue">Show appeals</label>
+    <select id="queue" name="Queue">
+        @foreach ((LabelCaseWorkflow queue, string title) in new[]
+        {
+            (LabelCaseWorkflow.Unresolved, "Unresolved"), (LabelCaseWorkflow.InReview, "In review"),
+            (LabelCaseWorkflow.Resolved, "Resolved"), (LabelCaseWorkflow.All, "All")
+        })
+        {
+            <option value="@queue" selected="@(Model.Queue == queue)">@title</option>
+        }
+    </select>
+    <label for="status">Outcome</label>
     <select id="status" name="Status">
         <option value="">All</option>
         @foreach (LabelAppealStatus status in Enum.GetValues<LabelAppealStatus>())
@@ -22,6 +45,7 @@
                     LabelAppealStatus.Withdrawn => "Labels withdrawn",
                     LabelAppealStatus.Replaced => "Labels changed",
                     LabelAppealStatus.Upheld => "Labels kept",
+                    LabelAppealStatus.Superseded => "Challenged labels changed",
                     _ => status.ToString()
                 })</option>
         }
@@ -32,14 +56,14 @@
 {
     <section class="panel">
         <table>
-            <caption>@Model.Table!.Total appeal records</caption>
+            <caption>@Model.Table!.Total @(Model.Table.Total == 1 ? "appeal" : "appeals")</caption>
             <thead><tr>
                 @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Number, "Appeal", Numeric: true))
                 @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Case, "Case", Numeric: true))
                 @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Subject, "Subject"))
-                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Actor, "Initiator"))
+                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Actor, "Appealed by"))
                 @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Status, "Status"))
-                <th scope="col">Captured labels</th>
+                <th scope="col">Labels challenged in the appeal</th>
                 @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Received, "Received"))
             </tr></thead>
             <tbody>
@@ -61,12 +85,12 @@
                             {
                                 JsonElement label = challenge.GetProperty("label");
                                 <details>
-                                    <summary>Sequence @challenge.GetProperty("sequence").GetInt64(): @label.GetProperty("val").GetString()</summary>
-                                    <p>Subject: @await Html.PartialAsync("_Identity", new IdentityDisplayModel(label.GetProperty("uri").GetString(), Detailed: true))</p>
-                                    <p>Source: @await Html.PartialAsync("_Identity", new IdentityDisplayModel(label.GetProperty("src").GetString(), Detailed: true))</p>
+                                    <summary>@label.GetProperty("val").GetString() (history entry @challenge.GetProperty("sequence").GetInt64())</summary>
+                                    <p>Account or content: @await Html.PartialAsync("_Identity", new IdentityDisplayModel(label.GetProperty("uri").GetString(), Detailed: true))</p>
+                                    <p>Labeler: @await Html.PartialAsync("_Identity", new IdentityDisplayModel(label.GetProperty("src").GetString(), Detailed: true))</p>
                                     @if (label.TryGetProperty("cid", out JsonElement cid))
                                     {
-                                        <p>Record CID: <code>@cid.GetString()</code></p>
+                                        <p>Content version (CID): <code>@cid.GetString()</code></p>
                                     }
                                 </details>
                             }

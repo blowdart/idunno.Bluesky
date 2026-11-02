@@ -88,7 +88,7 @@ internal sealed partial class RetirementWorker(
         {
             if (_service is null || store is not ILabelRetirementStore retirement)
             {
-                return new(LabelServiceErrorCode.StorageUnavailable, "The provider does not implement durable retirement.");
+                return new(LabelServiceErrorCode.StorageUnavailable, "This database implementation does not support retirement that keeps its progress after a restart.");
             }
 
             if (_pendingPause is { } pending)

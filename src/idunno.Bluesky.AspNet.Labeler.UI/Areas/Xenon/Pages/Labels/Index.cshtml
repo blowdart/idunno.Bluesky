@@ -3,16 +3,21 @@
 @{
     ViewData["Title"] = "Manual labels";
 }
-<h1>Manual label operation</h1>
-<p>This workflow is independent of reports and cases. Account labels target a repository DID; record labels target one complete AT URI and may be scoped to an expected CID. A profile record is not the account itself.</p>
+<h1>Manual labels</h1>
+<p>Apply or withdraw labels without opening a report or case. An account label applies to the account; a content label applies to an item such as a post or list. Labeling the profile record labels that profile content, not the whole account.</p>
 <section class="panel">
     <form method="post" data-manual-labels>
-        <label class="field">Account DID/handle, record AT URI or Bluesky URL
+        <label class="field">Account handle or ID (DID), content address (AT URI), or Bluesky URL
             <input name="target" value="@Model.Target" required maxlength="2048" autocomplete="off" />
         </label>
-        <label class="field" data-record-cid>Expected record CID (optional; record targets only)
-            <input name="cid" value="@Model.Cid" maxlength="128" autocomplete="off" />
-        </label>
+        <div class="field" data-record-cid>
+            <label for="manual-label-cid">Specific content version (CID, optional)</label>
+            <div class="record-cid-input">
+                <input id="manual-label-cid" name="cid" value="@Model.Cid" maxlength="128" autocomplete="off" />
+                <button type="submit" asp-page-handler="CurrentCid" data-current-cid formnovalidate>Look up current CID</button>
+            </div>
+        </div>
+        <p>For content, enter a CID to label only that version. Leave it blank to apply the label across all versions, including future edits. This field does not apply to account labels.</p>
         <p><button type="submit" asp-page-handler="Lookup" data-load-labels formnovalidate>Load labels</button></p>
         <div data-manual-label-controls aria-live="polite" aria-busy="false">
             @await Html.PartialAsync("_ManualLabelChoices", Model.Labels)

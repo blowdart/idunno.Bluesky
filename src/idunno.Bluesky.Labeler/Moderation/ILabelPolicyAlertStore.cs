@@ -3,7 +3,7 @@
 
 namespace idunno.Bluesky.Labeler.Moderation;
 
-/// <summary>Persists deduplicated policy-verification alert state and delivery leases.</summary>
+/// <summary>Persists policy-verification alerts, administration change notifications and delivery leases.</summary>
 /// <remarks><para>This trusted infrastructure interface is for the host's notification worker, not a
 /// public administrative endpoint. Delivery is at-least-once because SMTP cannot participate in the
 /// database transaction.</para></remarks>
@@ -43,14 +43,14 @@ public interface ILabelPolicyAlertStore
         CancellationToken cancellationToken = default);
 }
 
-/// <summary>Contains one claimed verification alert and its eligible administrator recipients.</summary>
+/// <summary>Contains one claimed policy alert or administration change notification and its eligible administrator recipients.</summary>
 public sealed class LabelPolicyAlertDelivery
 {
     /// <summary>Initializes one durable alert delivery claim.</summary>
-    /// <param name="alertId">The stable failure-incident identity.</param>
+    /// <param name="alertId">The stable notification identity.</param>
     /// <param name="leaseId">The unique delivery-attempt identity.</param>
-    /// <param name="category">The bounded server-selected failure category.</param>
-    /// <param name="occurredAt">The first failure time from the database clock.</param>
+    /// <param name="category">The bounded server-selected notification category.</param>
+    /// <param name="occurredAt">The incident or change time from the database clock.</param>
     /// <param name="recipients">The active administrators' registered addresses.</param>
     internal LabelPolicyAlertDelivery(
         string alertId,
@@ -66,18 +66,21 @@ public sealed class LabelPolicyAlertDelivery
         Recipients = recipients;
     }
 
-    /// <summary>Gets the stable failure-incident identity.</summary>
+    /// <summary>Gets the stable notification identity.</summary>
     public string AlertId { get; }
 
     /// <summary>Gets the unique delivery-attempt identity.</summary>
     public string LeaseId { get; }
 
-    /// <summary>Gets the bounded server-selected failure category.</summary>
+    /// <summary>Gets the bounded server-selected notification category.</summary>
     public string Category { get; }
 
-    /// <summary>Gets the original failure time.</summary>
+    /// <summary>Gets the original incident or change time.</summary>
     public DateTimeOffset OccurredAt { get; }
 
     /// <summary>Gets active administrator addresses registered when the claim was created.</summary>
     public IReadOnlyList<string> Recipients { get; }
+
+    /// <summary>Gets the credential-free change description, or <see langword="null" /> for a policy-verification failure alert.</summary>
+    public string? ChangeDescription { get; init; }
 }

@@ -1,12 +1,12 @@
 @model idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Labels.ManualLabelFormDisplay
-<input type="hidden" name="labelState" value="@(Model.State ?? string.Empty)" data-target="@Model.Target" />
+<input type="hidden" name="labelState" value="@(Model.State ?? string.Empty)" data-target="@Model.Target" data-cid="@Model.Cid" />
 @if (Model.Error is { } error)
 {
     <p role="alert">@error</p>
 }
 else if (Model.State is null)
 {
-    <p>Enter a target and load its labels before selecting changes.</p>
+    <p>Enter an account or content address and load its labels before choosing changes.</p>
 }
 else
 {
@@ -16,10 +16,11 @@ else
     <legend>Labels</legend>
     @foreach (ModerationLabelChoiceView label in Model.Choices)
     {
-        string status = (label.OtherVersion, label.Applied) switch
+        string status = (label.OtherVersion, label.Applied, label.UriWide) switch
         {
-            (true, _) => "Applied to a different record version",
-            (_, true) => "Currently applied",
+            (true, _, _) => "Applied to a different version of this content",
+            (_, true, true) => "Applies across all versions of this content; withdrawing it affects all versions",
+            (_, true, _) => "Currently applied",
             _ => "Not applied"
         };
         <label class="label-chip" data-applied="@(label.Applied ? "true" : "false")">

@@ -4,7 +4,7 @@ The canonical deployable labeler application hosts public label queries and subs
 administration, and protected local administration against one of the SQLite, PostgreSQL,
 or MySQL label stores. It contains no live account, database, or signing-key secrets.
 
-See the [labeler deployment guide](../../docs/docs/labeller/deployment.md) for environment
+See the [labeler deployment guide](../../docs/docs/labeler/deployment.md) for environment
 configuration, initial local administrator bootstrap, key installation, container deployment,
 health checks, image verification, and update/recovery procedures.
 
@@ -39,9 +39,13 @@ Supply these deployment-specific environment variables separately:
 | `Labeler__SigningKeys__<index>__PrivateKeyBase64` | The protected base64-encoded private PEM for that ID |
 
 Explicitly set `Labeler__AllowAccountLabels=true` and/or `Labeler__AllowRecordLabels=true`
-for the target types your policy permits. Remote administration remains disabled unless
-`LabelerAdministration__RemoteEnabled=true`; enabling it does not bypass authentication
-or team authorization. Do not add private keys or database credentials to `appsettings.json`.
+for the target types your policy permits. Remote administration defaults to disabled. Set
+`LabelerAdministration__RemoteMode=Enabled` to make authenticated remote CLI administration
+available, or `WebUiControlled` to let only the bootstrap owner enable or disable it from Xenon.
+When `RemoteMode` is configured it takes precedence over legacy
+`LabelerAdministration__RemoteEnabled`; when omitted, the old Boolean remains supported.
+Neither setting bypasses authentication or team authorization. Protected local administration
+remains available in every mode. Do not add private keys or database credentials to `appsettings.json`.
 
 The host defaults to PostgreSQL for both direct runs and containers. Supply
 `Labeler__ConnectionString` through protected environment configuration; no database credentials
@@ -76,7 +80,7 @@ The application targets .NET 10 and is distributed as the labeler container imag
 NuGet library. SDK consumers can continue to compose their own hosts using the independent
 labeler libraries. This host does not include a moderation web UI.
 
-Optional [Xenon moderation](../../docs/docs/labeller/moderation.md) is disabled by
+Optional [Xenon moderation](../../docs/docs/labeler/moderation.md) is disabled by
 default. Set `LabelerModeration__Enabled=true` to add standard independent-labeler
 reports and shared case/appeal/policy administration. The same database, keys,
 roles and maintenance coordination are used. Persisted independently verified
@@ -87,5 +91,5 @@ or safe withdrawal. Remote administration remains independently opt-in.
 Build the container from the repository root:
 
 ```powershell
-docker build --file src\idunno.Bluesky.Labeler.Host\Dockerfile --tag idunno-bluesky-labeler .
+docker build --build-arg SOURCE_REVISION_ID=$(git rev-parse HEAD) --file src\idunno.Bluesky.Labeler.Host\Dockerfile --tag idunno-bluesky-labeler .
 ```

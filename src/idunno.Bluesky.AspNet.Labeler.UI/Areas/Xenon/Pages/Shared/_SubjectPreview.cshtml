@@ -20,7 +20,7 @@
     {
         @if (Model.ModerationUnavailable)
         {
-            <p class="notice notice-status" role="status">Bluesky moderation labels could not be fully checked. Images without a known warning are shown normally.</p>
+            <p class="notice notice-status" role="status">Some Bluesky content warnings could not be checked. Images may be shown without a warning.</p>
         }
         <div class="@(blurImages ? "media-warning media-blurred" : null)" data-media-warning="@blurImages.ToString().ToLowerInvariant()">
         <article class="@(Model.Kind == "Profile" ? "profile-preview" : null)" aria-label="Current @Model.Kind.ToLowerInvariant() content">

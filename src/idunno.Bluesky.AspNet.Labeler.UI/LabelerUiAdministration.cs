@@ -111,6 +111,42 @@ internal sealed class LabelerUiAdministration(
         return await dispatcher.DispatchAsync(caller.Result, command, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>Reads the durable remote-administration state and whether the caller is its owner.</summary>
+    internal async Task<LabelServiceResult<LabelRemoteAdministrationStatus>> GetRemoteAdministrationStatusAsync(
+        ClaimsPrincipal principal,
+        CancellationToken cancellationToken)
+    {
+        LabelServiceResult<LabelAdministrationCaller> caller = await AuthenticateAsync(principal, cancellationToken).ConfigureAwait(false);
+        if (!caller.Succeeded)
+        {
+            return LabelServiceResult<LabelRemoteAdministrationStatus>.Failure(caller.Error);
+        }
+
+        return await administration.GetRemoteAdministrationStatusAsync(caller.Result, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Changes remote administration only after authenticating the browser principal and store-confirming owner authority.</summary>
+    internal async Task<LabelServiceResult<LabelAdministrationReceipt>> SetRemoteAdministrationEnabledAsync(
+        ClaimsPrincipal principal,
+        string operationId,
+        bool enabled,
+        string reason,
+        CancellationToken cancellationToken)
+    {
+        LabelServiceResult<LabelAdministrationCaller> caller = await AuthenticateAsync(principal, cancellationToken).ConfigureAwait(false);
+        if (!caller.Succeeded)
+        {
+            return LabelServiceResult<LabelAdministrationReceipt>.Failure(caller.Error);
+        }
+
+        return await administration.SetRemoteAdministrationEnabledAsync(
+            caller: caller.Result,
+            operationId: operationId,
+            enabled: enabled,
+            reason: reason,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
     /// <summary>Validates the authenticated principal and obtains fresh, provider-backed caller evidence rather than trusting browser-supplied actor values.</summary>
     private Task<LabelServiceResult<LabelAdministrationCaller>> AuthenticateAsync(ClaimsPrincipal principal, CancellationToken token)
     {

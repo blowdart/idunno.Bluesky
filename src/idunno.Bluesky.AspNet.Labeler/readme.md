@@ -13,9 +13,9 @@ Readiness checks publication and durable storage. Hosting metrics use meter
 `AddBlueskyLabelerMetrics()` on `MeterProviderBuilder` (namespace
 `OpenTelemetry.Metrics`), then configure your application's readers and exporter.
 
-See the [hosting guide](https://bluesky.idunno.dev/docs/labeller/hosting.html) for
+See the [hosting guide](https://bluesky.idunno.dev/docs/labeler/hosting.html) for
 configuration, discovery, Ozone-compatible retained content, cursors and limits.
-See [administration](https://bluesky.idunno.dev/docs/labeller/administration.html) for bootstrap,
+See [administration](https://bluesky.idunno.dev/docs/labeler/administration.html) for bootstrap,
 native desktop OAuth, local channels, roles, revocation and audit.
 
 Explicit `AddLabelerModeration` / `MapLabelerModeration` opt into independent-labeler
@@ -26,6 +26,6 @@ declaration freshness. Use it for monitoring, not traffic routing: a closed poli
 gate must leave public distribution and authenticated recovery reachable.
 `/health/labeler/ready` continues to check only distribution readiness.
 This does not enable remote CLI administration, add a moderation UI, or change the
-distribution-only default. See [Xenon moderation](https://bluesky.idunno.dev/docs/labeller/moderation.html).
+distribution-only default. See [Xenon moderation](https://bluesky.idunno.dev/docs/labeler/moderation.html).
 `AddBlueskyLabelerMetrics()` also selects the optional
 `idunno.Bluesky.AspNet.Labeler.Moderation` meter; selecting it does not enable Xenon.

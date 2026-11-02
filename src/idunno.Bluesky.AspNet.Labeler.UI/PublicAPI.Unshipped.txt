@@ -1,4 +1,9 @@
 #nullable enable
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Reports.IndexModel.Queue.get -> idunno.Bluesky.Labeler.Moderation.LabelCaseWorkflow
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Reports.IndexModel.Queue.set -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Appeals.IndexModel.Queue.get -> idunno.Bluesky.Labeler.Moderation.LabelCaseWorkflow
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Appeals.IndexModel.Queue.set -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.IndexModel.OnGetCountsAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.ClientMetadataModel
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.ClientMetadataModel.ClientMetadataModel() -> void
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.ClientMetadataModel.OnGet() -> Microsoft.AspNetCore.Mvc.IActionResult!
@@ -8,6 +13,7 @@ idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.PublishCallbackModel.O
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.IndexModel.OnPostSignInAndPublishAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Audit.IndexModel.OnPostDownloadAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Team.IndexModel.OnPostNotificationEmailAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Team.IndexModel.OnPostRemoteAdministrationAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.MediaModel
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.MediaModel.MediaModel() -> void
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.MediaModel.OnGetAsync(string? token) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
@@ -58,6 +64,7 @@ idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Labels.IndexModel
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Labels.IndexModel.IndexModel() -> void
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Labels.IndexModel.OnGetAsync() -> System.Threading.Tasks.Task!
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Labels.IndexModel.OnPostLookupAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Labels.IndexModel.OnPostCurrentCidAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Labels.IndexModel.OnPostAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Lifecycle.IndexModel
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Lifecycle.IndexModel.IndexModel() -> void
@@ -69,6 +76,7 @@ idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.IndexModel.OnGetAsync(
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.IndexModel.OnPostDeleteRequestAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.IndexModel.OnPostDeleteAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.IndexModel.OnPostPublishAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.IndexModel.OnPostAbandonPublicationAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.IndexModel.OnPostSaveAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.IndexModel.OnPostVerifyAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Reports.IndexModel

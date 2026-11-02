@@ -7,17 +7,55 @@
     ViewData["WideLayout"] = true;
     JsonElement? members = Model.Data.ValueKind == JsonValueKind.Object &&
         Model.Data.TryGetProperty("members", out JsonElement values) ? values : null;
+    string remoteAccessIcon = Model.RemoteAdministrationEnabled switch
+    {
+        true => "circle-check",
+        false => "circle-xmark",
+        null => "circle-exclamation"
+    };
 }
 <h1>Team and membership</h1>
-<p>Team authority is persisted by DID. Suspension, removal and role changes take effect on the next server-side authorization check.</p>
+<p>Permissions belong to the member's account, even if their handle changes. Suspension, removal and role changes apply the next time the service checks their permissions; they do not undo completed actions.</p>
+<section class="panel">
+    <h2>Remote CLI administration</h2>
+    <p>Choose whether team members can use the administration command-line tool over HTTPS. Their usual account permissions still apply. This setting does not disable Xenon or local administration on the server.</p>
+    @if (ViewData["RemoteAdministrationError"] is string remoteAdministrationError)
+    {
+        <p role="alert">@remoteAdministrationError</p>
+    }
+    @if (Model.RemoteAdministrationControlMode == RemoteAdministrationMode.WebUiControlled)
+    {
+        <p><span class="fa-icon fa-@remoteAccessIcon" aria-hidden="true"></span> Remote CLI access is <strong>@(Model.RemoteAdministrationEnabled switch { true => "enabled", false => "disabled", null => "unavailable" })</strong>.</p>
+        @if (Model.CanControlRemoteAdministration && Model.RemoteAdministrationEnabled is bool currentRemoteEnabled)
+        {
+            <form method="post" asp-page-handler="RemoteAdministration">
+                <input type="hidden" name="operationId" value="@(ViewData["OperationId"] ?? Guid.NewGuid().ToString("N"))" />
+                <input type="hidden" name="enabled" value="@((!currentRemoteEnabled).ToString().ToLowerInvariant())" />
+                <label class="field" for="remote-administration-reason">Audit reason
+                    <input id="remote-administration-reason" name="reason" required maxlength="4096" />
+                </label>
+                <p class="form-actions"><button type="submit">@(currentRemoteEnabled ? "Disable remote CLI access" : "Enable remote CLI access")</button></p>
+            </form>
+        }
+        else
+        {
+            <p>Only the account that originally set up this labeler can change this setting.</p>
+        }
+    }
+    else
+    {
+        <p><span class="fa-icon fa-@remoteAccessIcon" aria-hidden="true"></span> Remote CLI access is <strong>@(Model.RemoteAdministrationEnabled switch { true => "enabled", false => "disabled", null => "unavailable" })</strong> in the server settings.</p>
+    }
+</section>
 @if (Model.CanManagePolicyEmail)
 {
     <section class="panel">
-        <h2>Policy verification alerts</h2>
+        <h2>Administrator email notifications</h2>
         <p>@(Model.CurrentNotificationEmail is null
-            ? "Register an address for alerts when background policy verification fails."
-            : "Update your email address for alerts when background policy verification fails.")
+            ? "Add an email address for administrator notifications."
+            : "Update your email address for administrator notifications.")
             Notifications go only to active administrators with a registered address. Leave the field blank to clear your address.</p>
+        <p>When email is enabled on the server, notifications cover published policies, team membership and role changes, and remote or local CLI access changes. These change notifications are not sent when only one administrator is active. Automatic public policy check failure alerts are still sent, even to a single administrator. No emails are sent to moderators.</p>
         <form method="post" asp-page-handler="NotificationEmail">
             <input type="hidden" name="operationId" value="@(ViewData["OperationId"] ?? Guid.NewGuid().ToString("N"))" />
             <label class="field" for="notification-email">Your alert email address
@@ -28,7 +66,7 @@
     </section>
 }
 <form method="get" class="panel team-search">
-    <label class="field" for="team-search">Team member DID or handle
+    <label class="field" for="team-search">Member handle or account ID (DID)
         <input id="team-search" name="Search" value="@Request.Query["Search"]" maxlength="256" placeholder="DID or handle" />
     </label>
     <div class="team-search-actions"><button type="submit">Search</button><a asp-page="./Index">Clear</a></div>
@@ -37,7 +75,7 @@
 {
     <section class="panel">
         <table class="team-members">
-            <caption>@Model.Table!.Total members, including retained tombstones</caption>
+            <caption>@Model.Table!.Total @(Model.Table.Total == 1 ? "member" : "members"), including removed members</caption>
             <thead><tr>
                 @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Subject, "Member"))
                 @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Role, "Role"))
@@ -84,22 +122,22 @@
 }
 <div class="grid">
     <section class="panel">
-        <h2>Enroll member</h2>
+        <h2>Add a team member</h2>
         <form method="post" asp-page-handler="Enroll">
             <input type="hidden" name="operationId" value="@(ViewData["OperationId"] ?? Guid.NewGuid().ToString("N"))" />
-            <label class="field">Verified DID or handle<input name="target" required maxlength="256" /></label>
+            <label class="field">Handle or account ID (DID)<input name="target" required maxlength="256" /></label>
             <label class="field">Role
                 <select name="role"><option value="Viewer">Viewer</option><option value="Moderator">Moderator</option><option value="Administrator">Administrator</option></select>
             </label>
             <label class="field">Reason<input name="reason" required maxlength="4096" /></label>
-            <p class="form-actions"><button type="submit">Enroll</button></p>
+            <p class="form-actions"><button type="submit">Add member</button></p>
         </form>
     </section>
     <section class="panel" id="change-member">
         <h2>Change member</h2>
         <form method="post" asp-page-handler="Change" data-team-change>
             <input type="hidden" name="operationId" value="@(ViewData["OperationId"] ?? Guid.NewGuid().ToString("N"))" />
-            <label class="field">Member DID<input name="target" value="@Model.SelectedMember" required maxlength="256" /></label>
+            <label class="field">Member account ID (DID)<input name="target" value="@Model.SelectedMember" required maxlength="256" /></label>
             <label class="field">Action
                 <select name="action"><option value="SetRole">Change role</option><option value="Suspend">Suspend</option><option value="Reinstate">Reinstate</option><option value="Remove">Remove</option></select>
             </label>

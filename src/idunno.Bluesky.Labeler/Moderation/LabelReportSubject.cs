@@ -5,11 +5,11 @@ using idunno.AtProto;
 
 namespace idunno.Bluesky.Labeler.Moderation;
 
-/// <summary>Identifies an account or an exact record version submitted for review.</summary>
+/// <summary>Identifies the submitted account, record URI or explicit record version without inferring missing identity.</summary>
 /// <remarks>
 /// <para>A report is evidence about the submitted identity, not proof that the account or record currently
-/// exists. Record subjects require a CID and a DID repository; intake does not resolve mutable handles.</para>
-/// <para>Case grouping includes the record CID. This differs from label reconciliation, whose identity
+/// exists. Record subjects require a DID repository; an omitted CID remains absent.</para>
+/// <para>Case grouping includes whether a record CID was supplied and its value. This differs from label reconciliation, whose identity
 /// remains issuer, subject URI and label value.</para>
 /// </remarks>
 public sealed class LabelReportSubject
@@ -32,16 +32,15 @@ public sealed class LabelReportSubject
         return new(account, null, null);
     }
 
-    /// <summary>Creates an exact record-version report subject.</summary>
+    /// <summary>Creates a record subject, retaining an explicit version only when submitted.</summary>
     /// <param name="uri">The complete record AT URI with a DID repository.</param>
-    /// <param name="cid">The submitted record CID.</param>
+    /// <param name="cid">The submitted record CID, or <see langword="null"/> when no version was supplied.</param>
     /// <returns>The record subject.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException"><paramref name="uri"/> is incomplete or uses a handle repository.</exception>
-    public static LabelReportSubject Record(AtUri uri, Cid cid)
+    public static LabelReportSubject Record(AtUri uri, Cid? cid = null)
     {
         ArgumentNullException.ThrowIfNull(uri);
-        ArgumentNullException.ThrowIfNull(cid);
         if (uri.Repo is not Did repository || uri.Collection is null || uri.RecordKey is null)
         {
             throw new ArgumentException("A report requires a complete record URI with a DID repository.", nameof(uri));
@@ -56,7 +55,7 @@ public sealed class LabelReportSubject
     /// <summary>Gets the record URI, or <see langword="null"/> for an account.</summary>
     public AtUri? RecordUri { get; }
 
-    /// <summary>Gets the record CID, or <see langword="null"/> for an account.</summary>
+    /// <summary>Gets the submitted record CID, or <see langword="null"/> for an account or an unversioned record subject.</summary>
     public Cid? Cid { get; }
 
     /// <summary>Gets the account DID or record AT URI.</summary>

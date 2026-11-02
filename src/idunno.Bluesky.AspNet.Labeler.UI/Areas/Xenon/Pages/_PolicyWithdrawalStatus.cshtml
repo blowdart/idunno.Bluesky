@@ -16,7 +16,7 @@
         (_, true, true, _) => "Waiting for withdrawal completion",
         (_, true, false, _) => "Waiting for label publication",
         (_, _, _, true) => "Withdrawal in progress",
-        _ => "Waiting for worker activity"
+        _ => "Waiting for withdrawals to start"
     };
 }
 <p><span class="fa-icon @(pauseReason is null ? "fa-globe" : "fa-circle-pause")" aria-hidden="true"></span> <strong>@status</strong>
@@ -25,7 +25,7 @@
     <br /><span class="muted">@pauseReason</span>
 }
 </p>
-<p>Last worker activity:
+<p>Last withdrawal attempt:
 @if (hasActivity)
 {
     <time datetime="@activity.GetDateTimeOffset().ToString("O")">@activity.GetDateTimeOffset().ToUniversalTime().ToString("u")</time>
@@ -44,4 +44,4 @@ else
     <span>No progress recorded yet</span>
 }
 </p>
-<p class="muted">Activity records a worker attempt, not proof that a worker is still running. Progress records an advanced scan checkpoint, published labels or completed withdrawal. These timestamps survive restarts; refresh this page to see the latest values.</p>
+<p class="muted">An attempt does not always make progress. Progress means more history was checked, withdrawals became ready for distribution, or this step finished. These times are kept after a restart; refresh to see the latest update.</p>

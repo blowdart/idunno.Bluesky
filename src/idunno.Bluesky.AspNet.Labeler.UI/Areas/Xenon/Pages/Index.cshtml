@@ -12,12 +12,12 @@
     </section>
     <section class="panel">
         <h2>Manual labels</h2>
-        <p>Issue or negate an account label or a record label independently of a report or case.</p>
+        <p>Add or withdraw labels on accounts or content without opening a report or case.</p>
         <p><a asp-area="Xenon" asp-page="/Labels/Index">Open manual labeling</a></p>
     </section>
     <section class="panel">
         <h2>Administration</h2>
-        <p>Review the audit history and inspect policy, team membership and lifecycle state.</p>
+        <p>See who did what, manage the policy and team, and check the labeler's retirement status.</p>
         <p><a asp-area="Xenon" asp-page="/Audit/Index">Audit</a></p>
         @if (Model.Role == "Administrator")
         {

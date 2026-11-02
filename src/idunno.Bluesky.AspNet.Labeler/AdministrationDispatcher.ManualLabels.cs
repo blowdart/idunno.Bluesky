@@ -30,7 +30,7 @@ internal sealed partial class AdministrationDispatcher
 
         if (gate.Result.Policy is not { } definition || store is not ILabelTableStore labels)
         {
-            return new(false, "PolicyUnavailable", "The current label choices are unavailable.");
+            return new(false, "PolicyUnavailable", "Available labels could not be loaded.");
         }
 
         if (command.Target.Length == 0)
@@ -46,7 +46,7 @@ internal sealed partial class AdministrationDispatcher
         if (command.Target.Length > 2048 || command.Cid is { Length: > 128 } ||
             command.Cid is not null && !Cid.TryParse(command.Cid, out _))
         {
-            return new(false, "InvalidRequest", "Enter a valid target and optional record CID.");
+            return new(false, "InvalidRequest", "Enter a valid account or content address, and a content version (CID) if needed.");
         }
 
         LabelTarget target;
@@ -54,7 +54,7 @@ internal sealed partial class AdministrationDispatcher
         {
             if (!AtUri.TryParse(command.Target, out AtUri? uri) || uri.Collection is null || uri.RecordKey is null)
             {
-                return new(false, "InvalidRequest", "Enter a complete record AT URI.");
+                return new(false, "InvalidRequest", "Enter a complete content address (AT URI).");
             }
 
             target = LabelTarget.Record(uri, command.Cid is { } cid ? new Cid(cid) : null);
@@ -63,7 +63,7 @@ internal sealed partial class AdministrationDispatcher
         {
             if (!AtIdentifier.TryParse(command.Target, out AtIdentifier? account) || command.Cid is not null)
             {
-                return new(false, "InvalidRequest", "Enter a valid account DID or handle, without a record CID.");
+                return new(false, "InvalidRequest", "Enter an account ID (DID) or handle. Do not specify a content version for an account label.");
             }
 
             target = LabelTarget.Account(account);
@@ -108,9 +108,10 @@ internal sealed partial class AdministrationDispatcher
                     (label.ExpiresAt is null || label.ExpiresAt > gate.Result.DatabaseTime);
                 choices.Add(new(
                     Value: values[index],
-                    Applied: active && (target.Cid is null || label!.Cid == target.Cid),
+                    Applied: active && (target.Cid is null || label!.Cid is null || label.Cid == target.Cid),
                     Sequence: current?.Sequence ?? 0,
-                    OtherVersion: active && target.Cid is not null && label!.Cid != target.Cid));
+                    OtherVersion: active && target.Cid is not null && label!.Cid is not null && label.Cid != target.Cid,
+                    UriWide: active && target.RecordUri is not null && label!.Cid is null));
             }
         }
 

@@ -5,6 +5,7 @@ using System.Data.Common;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 
 using idunno.AtProto;
 using idunno.AtProto.Labels;
@@ -211,8 +212,14 @@ public class LabelAdministrationTests
         Assert.Equal(first.Result, (await store.BootstrapAsync(s_administrator, "uid:0", "bootstrap", TestContext.Current.CancellationToken)).Result);
         Assert.False((await store.BootstrapAsync(s_member, "uid:1", "bootstrap", TestContext.Current.CancellationToken)).Succeeded);
         ILabelAdministrationStore restarted = (ILabelAdministrationStore)fixture.NewStore();
-        Assert.False((await restarted.BootstrapAsync(s_member, "uid:1", "other-bootstrap", TestContext.Current.CancellationToken)).Succeeded);
-        Assert.False((await restarted.AuthenticateLocalAsync("uid:1", TestContext.Current.CancellationToken)).Succeeded);
+        LabelServiceResult<LabelAdministrationReceipt> repeatedSetup = await restarted.BootstrapAsync(s_member, "uid:1", "other-bootstrap", TestContext.Current.CancellationToken);
+        Assert.False(repeatedSetup.Succeeded);
+        Assert.Equal(LabelServiceErrorCode.Unauthorized, repeatedSetup.Error.Code);
+        Assert.Equal("Initial setup has already been completed and cannot be repeated.", repeatedSetup.Error.Message);
+        LabelServiceResult<LabelAdministrationCaller> unlinked = await restarted.AuthenticateLocalAsync("uid:1", TestContext.Current.CancellationToken);
+        Assert.False(unlinked.Succeeded);
+        Assert.Equal(LabelServiceErrorCode.Unauthorized, unlinked.Error.Code);
+        Assert.Equal("This operating-system account is not linked to an active team member.", unlinked.Error.Message);
         LabelAdministrationCaller caller = (await restarted.AuthenticateLocalAsync("uid:0", TestContext.Current.CancellationToken)).Result!;
         Assert.Equal(s_administrator, caller.Actor);
         Assert.Equal("uid:0", caller.LocalIdentity);
@@ -302,6 +309,131 @@ public class LabelAdministrationTests
     }
 
     [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task RemoteAdministrationSwitchIsDurableAuditedAndBootstrapOwnerOnly(string engine)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        ILabelAdministrationStore store = (ILabelAdministrationStore)fixture.Store;
+        LabelAdministrationCaller owner = await BootstrapAsync(store);
+        LabelRemoteAdministrationStatus initial = (await store.GetRemoteAdministrationStatusAsync(owner, token)).Result!;
+        Assert.False(initial.Enabled);
+        Assert.True(initial.IsOwner);
+
+        await EnrollAndBindAsync(store, owner, LabelTeamRole.Administrator);
+        LabelAdministrationCaller administrator = (await store.AuthenticateLocalAsync("uid:1", token)).Result!;
+        LabelRemoteAdministrationStatus administratorStatus =
+            (await store.GetRemoteAdministrationStatusAsync(administrator, token)).Result!;
+        Assert.False(administratorStatus.IsOwner);
+        Assert.False((await store.SetRemoteAdministrationEnabledAsync(
+            caller: administrator,
+            operationId: "non-owner-enable",
+            enabled: true,
+            reason: "A non-owner must not control remote administration.",
+            cancellationToken: token)).Succeeded);
+
+        LabelServiceResult<LabelAdministrationReceipt> enabled = await store.SetRemoteAdministrationEnabledAsync(
+            caller: owner,
+            operationId: "owner-enable",
+            enabled: true,
+            reason: "Enable remote access for a controlled maintenance window.",
+            cancellationToken: token);
+        Assert.True(enabled.Succeeded, enabled.Error?.Message);
+        Assert.Equal(enabled.Result, (await store.SetRemoteAdministrationEnabledAsync(
+            caller: owner,
+            operationId: "owner-enable",
+            enabled: true,
+            reason: "Enable remote access for a controlled maintenance window.",
+            cancellationToken: token)).Result);
+
+        ILabelAdministrationStore restarted = (ILabelAdministrationStore)fixture.NewStore();
+        LabelAdministrationCaller currentOwner = (await restarted.AuthenticateLocalAsync("uid:0", token)).Result!;
+        LabelRemoteAdministrationStatus afterRestart =
+            (await restarted.GetRemoteAdministrationStatusAsync(currentOwner, token)).Result!;
+        Assert.True(afterRestart.Enabled);
+        Assert.True(afterRestart.IsOwner);
+
+        IReadOnlyList<LabelAdministrationReceipt> audit =
+            (await restarted.GetAdministrationAuditAsync(currentOwner, cancellationToken: token)).Result!;
+        Assert.Contains(audit, receipt =>
+            receipt.Action == "remote-administration-enable" &&
+            receipt.Actor == s_member &&
+            !receipt.Succeeded);
+        Assert.Contains(audit, receipt =>
+            receipt.Action == "remote-administration-enabled" &&
+            receipt.OperationId == "owner-enable" &&
+            receipt.Actor == s_administrator &&
+            receipt.Succeeded);
+    }
+
+    [Theory]
+    [InlineData("sqlite", 0)]
+    [InlineData("sqlite", 101)]
+    [InlineData("postgresql", 0)]
+    [InlineData("postgresql", 101)]
+    [InlineData("mysql", 0)]
+    [InlineData("mysql", 101)]
+    public async Task LegacyOwnerRecoveryFindsSuccessfulBootstrapAfterEarlierDenials(string engine, int denials)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        ILabelAdministrationStore store = (ILabelAdministrationStore)fixture.Store;
+        for (int index = 0; index < denials; index++)
+        {
+            Assert.True((await store.RecordAdministrationDenialAsync(
+                reason: "Pre-bootstrap authentication denial.",
+                cancellationToken: token)).Succeeded);
+        }
+        LabelAdministrationCaller owner = await BootstrapAsync(store);
+        Assert.False((await store.BootstrapAsync(s_member, "uid:1", "failed-bootstrap", token)).Succeeded);
+        await EnrollAndBindAsync(store, owner, LabelTeamRole.Administrator);
+        await using (DbConnection connection = fixture.Connection())
+        {
+            await connection.OpenAsync(token);
+            await using DbCommand read = connection.CreateCommand();
+            read.CommandText = "SELECT payload FROM label_team WHERE id=1";
+            byte[] payload = (byte[])(await read.ExecuteScalarAsync(token))!;
+            using JsonDocument document = JsonDocument.Parse(payload);
+            using MemoryStream legacy = new();
+            using (Utf8JsonWriter writer = new(legacy))
+            {
+                writer.WriteStartObject();
+                foreach (JsonProperty property in document.RootElement.EnumerateObject())
+                {
+                    if (property.Name != "OwnerDid")
+                    {
+                        property.WriteTo(writer);
+                    }
+                }
+                writer.WriteEndObject();
+            }
+            await using DbCommand update = connection.CreateCommand();
+            update.CommandText = "UPDATE label_team SET payload=@payload WHERE id=1";
+            DbParameter parameter = update.CreateParameter();
+            parameter.ParameterName = "@payload";
+            parameter.Value = legacy.ToArray();
+            update.Parameters.Add(parameter);
+            await update.ExecuteNonQueryAsync(token);
+        }
+        ILabelAdministrationStore restarted = (ILabelAdministrationStore)fixture.NewStore();
+        LabelAdministrationCaller administrator = (await restarted.AuthenticateLocalAsync("uid:1", token)).Result!;
+        Assert.False((await restarted.GetRemoteAdministrationStatusAsync(administrator, token)).Result!.IsOwner);
+        LabelAdministrationCaller recovered = (await restarted.AuthenticateLocalAsync("uid:0", token)).Result!;
+        Assert.True((await restarted.GetRemoteAdministrationStatusAsync(recovered, token)).Result!.IsOwner);
+        Assert.True((await restarted.SetRemoteAdministrationEnabledAsync(
+            caller: recovered,
+            operationId: "recovered-owner-enable",
+            enabled: true,
+            reason: "Verify recovered bootstrap owner authority.",
+            cancellationToken: token)).Succeeded);
+        ILabelAdministrationStore again = (ILabelAdministrationStore)fixture.NewStore();
+        LabelAdministrationCaller persisted = (await again.AuthenticateLocalAsync("uid:0", token)).Result!;
+        Assert.True((await again.GetRemoteAdministrationStatusAsync(persisted, token)).Result!.Enabled);
+    }
+
+    [Theory]
     [InlineData("sqlite", LabelTeamAction.Remove)]
     [InlineData("sqlite", LabelTeamAction.Suspend)]
     [InlineData("sqlite", LabelTeamAction.SetRole)]
@@ -316,8 +448,17 @@ public class LabelAdministrationTests
         await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
         ILabelAdministrationStore first = (ILabelAdministrationStore)fixture.Store;
         LabelAdministrationCaller administrator = await BootstrapAsync(first);
-        Assert.False((await first.ChangeTeamAsync(administrator, new(
-            operationId: "last-admin", action: action, target: s_administrator, reason: "Cannot remove final administrator."), TestContext.Current.CancellationToken)).Succeeded);
+        LabelServiceResult<LabelAdministrationReceipt> protectedAdministrator = await first.ChangeTeamAsync(
+            caller: administrator,
+            change: new(
+                operationId: "last-admin",
+                action: action,
+                target: s_administrator,
+                reason: "Cannot remove final administrator."),
+            cancellationToken: TestContext.Current.CancellationToken);
+        Assert.False(protectedAdministrator.Succeeded);
+        Assert.Equal(LabelServiceErrorCode.Unauthorized, protectedAdministrator.Error.Code);
+        Assert.Equal("You cannot remove, suspend or reduce the permissions of the last active administrator.", protectedAdministrator.Error.Message);
         await EnrollAndBindAsync(first, administrator, LabelTeamRole.Administrator);
         ILabelAdministrationStore second = (ILabelAdministrationStore)fixture.NewStore();
         LabelAdministrationCaller member = (await second.AuthenticateLocalAsync("uid:1", TestContext.Current.CancellationToken)).Result!;

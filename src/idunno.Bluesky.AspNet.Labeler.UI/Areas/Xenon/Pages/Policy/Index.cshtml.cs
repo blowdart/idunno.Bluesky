@@ -50,6 +50,9 @@ public sealed class IndexModel : PageModel
     /// <summary>Gets the submitted audit reason after a failed save.</summary>
     internal string SaveReason { get; private set; } = string.Empty;
 
+    /// <summary>Gets the resolved labeler handle for separate publication authorization.</summary>
+    internal string LabelerHandle { get; private set; } = string.Empty;
+
     /// <summary>Gets the active editor source description.</summary>
     internal string EditorSource { get; private set; } = "New policy";
 
@@ -73,6 +76,20 @@ public sealed class IndexModel : PageModel
         if (!response.Succeeded)
         {
             return;
+        }
+
+        if (response.Moderation?.Policy is { Phase: "Publishing" } publication)
+        {
+            Handle handle = await HttpContext.RequestServices.GetRequiredService<IDidHandleResolver>()
+                .ResolveHandleAsync(new Did(publication.Issuer), HttpContext.RequestAborted).ConfigureAwait(false);
+            if (handle != Handle.Invalid)
+            {
+                LabelerHandle = handle.Value;
+            }
+            else
+            {
+                ViewData["LabelerHandleError"] = "The labeler account handle could not be resolved. Enter its current handle to authorize publication.";
+            }
         }
 
         if (response.Moderation?.Policy?.Definition is { } definition)
@@ -190,9 +207,62 @@ public sealed class IndexModel : PageModel
         return System.Text.Encoding.UTF8.GetString(buffer.ToArray());
     }
 
-    /// <summary>Separates lower-to-upper-case word boundaries in persisted phase names.</summary>
-    internal static string FormatPhase(string value) => string.Concat(value.Select((letter, index) =>
-        index > 0 && char.IsUpper(letter) && char.IsLower(value[index - 1]) ? $" {letter}" : letter.ToString()));
+    /// <summary>Describes persisted policy phases in administrator-facing language.</summary>
+    internal static string FormatPhase(string value) => value switch
+    {
+        "VerifiedActive" => "Active and checked",
+        "Unverified" => "Not checked",
+        "Withdrawing" => "Withdrawing removed labels",
+        "Publishing" => "Publication pending",
+        "Conflict" => "Needs attention",
+        _ => "Unknown status"
+    };
+
+    /// <summary>Describes whether the current policy is verified, expired, or in another publication phase.</summary>
+    internal static string DescribeVerificationStatus(
+        string phase,
+        DateTimeOffset? verifiedUntil,
+        DateTimeOffset databaseTime,
+        long freshnessMilliseconds)
+    {
+        if (phase == "VerifiedActive" && verifiedUntil is { } deadline && deadline <= databaseTime)
+        {
+            return "The public policy check has expired. Check it again to allow new reports and labels.";
+        }
+
+        if (IsVerificationCurrent(phase, verifiedUntil, databaseTime, freshnessMilliseconds))
+        {
+            return "The public policy check is up to date.";
+        }
+
+        return phase switch
+        {
+            "VerifiedActive" => "The public policy needs to be checked again.",
+            "Unverified" => "No policy has passed the public policy check yet.",
+            "Publishing" => "Publication is pending. Check the result or open Publication for the next step.",
+            "Withdrawing" => "Wait for label withdrawals to finish before checking the policy.",
+            "Conflict" => "Publication needs attention. Open Publication to recover.",
+            _ => "Policy status is unknown. Reload before continuing."
+        };
+    }
+
+    /// <summary>Determines whether manual verification is unnecessary because the selected policy remains current.</summary>
+    internal static bool IsVerificationCurrent(
+        string phase,
+        DateTimeOffset? verifiedUntil,
+        DateTimeOffset databaseTime,
+        long freshnessMilliseconds) =>
+        phase == "VerifiedActive" &&
+        verifiedUntil is { } deadline &&
+        deadline > databaseTime &&
+        databaseTime >= deadline.AddMilliseconds(-freshnessMilliseconds);
+
+    /// <summary>Determines whether an unpublished draft is available to begin publication.</summary>
+    internal static bool CanBeginPublication(int draftCount) => draftCount > 0;
+
+    /// <summary>Describes the publication action or explains why it is unavailable.</summary>
+    internal static string PublicationButtonText(int draftCount) =>
+        CanBeginPublication(draftCount) ? "Begin publication" : "No drafts to publish";
 
     /// <summary>Shows an explicit server-rendered confirmation without deleting or changing policy state.</summary>
     /// <returns>The current page with a confirmation for an available unpublished draft.</returns>
@@ -219,7 +289,7 @@ public sealed class IndexModel : PageModel
         string version = await UiPageHelpers.FormValueAsync(this, "version", 256).ConfigureAwait(false);
         if (!await UiPageHelpers.ConfirmedAsync(this).ConfigureAwait(false))
         {
-            ViewData["Error"] = "Confirm draft deletion before submitting.";
+            ViewData["Error"] = "Confirm that you want to delete this draft.";
             await OnGetAsync().ConfigureAwait(false);
             return Page();
         }
@@ -233,7 +303,7 @@ public sealed class IndexModel : PageModel
                 Moderation: new(PolicyVersion: version))).ConfigureAwait(false);
         if (response.Succeeded)
         {
-            TempData["Status"] = $"Draft {version} deleted. Its audit and policy history are retained.";
+            TempData["Status"] = $"Draft {version} deleted. Its history is kept.";
             return RedirectToPage();
         }
 
@@ -287,7 +357,7 @@ public sealed class IndexModel : PageModel
         if (ReasonTypes is { } selectedReasons && (selectedReasons.Length > 1000 ||
             selectedReasons.Any(value => value.Length > 1024 || string.IsNullOrWhiteSpace(value))))
         {
-            ViewData["Error"] = "Choose at most 1,000 report reasons, with at most 1,024 characters per identifier.";
+            ViewData["Error"] = "You can include up to 1,000 report reasons. Each reason ID can contain up to 1,024 characters.";
             await OnGetAsync().ConfigureAwait(false);
             return Page();
         }
@@ -328,13 +398,13 @@ public sealed class IndexModel : PageModel
                         Rules: rules))).ConfigureAwait(false);
             if (response.Succeeded)
             {
-                TempData["Status"] = $"Policy save operation {operationId} completed.";
+                TempData["Status"] = $"Policy draft {version} saved. It has not been published.";
                 return RedirectToPage();
             }
         }
         catch (JsonException)
         {
-            ViewData["Error"] = "The policy declaration must be valid JSON.";
+            ViewData["Error"] = "The public policy JSON is invalid. Correct it before saving.";
         }
 
         await OnGetAsync().ConfigureAwait(false);
@@ -347,7 +417,7 @@ public sealed class IndexModel : PageModel
         if (declaration.ValueKind != JsonValueKind.Object ||
             declaration.EnumerateObject().Select(property => property.Name).Distinct(StringComparer.Ordinal).Count() != declaration.EnumerateObject().Count())
         {
-            throw new JsonException("The declaration must be an object with unique property names.");
+            throw new JsonException("The public policy JSON must contain one object, with no repeated field names.");
         }
         using MemoryStream buffer = new();
         using (Utf8JsonWriter writer = new(buffer))
@@ -381,13 +451,11 @@ public sealed class IndexModel : PageModel
     {
         if (!await UiPageHelpers.ConfirmedAsync(this).ConfigureAwait(false))
         {
-            ViewData["Error"] = "Confirm policy publication before submitting.";
-            await OnGetAsync().ConfigureAwait(false);
-            return Page();
+            TempData["PublicationError"] = "Select the confirmation checkbox before publishing.";
+            return RedirectToPage(pageName: "./Index", pageHandler: null, routeValues: null, fragment: "policy-publication");
         }
 
         string version = await UiPageHelpers.FormValueAsync(this, "version", 256).ConfigureAwait(false);
-        string previousCid = await UiPageHelpers.FormValueAsync(this, "previousCid", 128).ConfigureAwait(false);
         string reason = await UiPageHelpers.FormValueAsync(this, "reason", 4096).ConfigureAwait(false);
         string operationId = await UiPageHelpers.FormValueAsync(this, "operationId", 256).ConfigureAwait(false);
         if (await UiPageHelpers.ConfirmedFieldAsync(this, "resumeWithdrawal").ConfigureAwait(false))
@@ -397,17 +465,33 @@ public sealed class IndexModel : PageModel
                 new AdministrationCommand(Method: "resumePolicyPublication", OperationId: operationId, Reason: reason)).ConfigureAwait(false);
             if (resumed.Succeeded)
             {
-                TempData["Status"] = "Publication cleanup authorization renewed. Durable batches will continue in the background.";
+                TempData["Status"] = "Label withdrawals can continue. You can close this page and return later.";
                 return RedirectToPage(pageName: "./Index", pageHandler: null, routeValues: null, fragment: "policy-publication");
             }
-            await OnGetAsync().ConfigureAwait(false);
-            return Page();
+            TempData["PublicationError"] = resumed.Message;
+            return RedirectToPage(pageName: "./Index", pageHandler: null, routeValues: null, fragment: "policy-publication");
         }
-        if (!long.TryParse(await UiPageHelpers.FormValueAsync(this, "revision", 24).ConfigureAwait(false), out long revision))
+        if (!long.TryParse(await UiPageHelpers.FormValueAsync(this, "revision", 24).ConfigureAwait(false), out long revision) || revision <= 0)
         {
-            ViewData["Error"] = "Reload the policy state to get its current revision.";
-            await OnGetAsync().ConfigureAwait(false);
-            return Page();
+            TempData["PublicationError"] = "The submitted policy information was invalid. The page now shows the latest state; review it before trying again.";
+            return RedirectToPage(pageName: "./Index", pageHandler: null, routeValues: null, fragment: "policy-publication");
+        }
+
+        string? previousCid;
+        try
+        {
+            previousCid = await HttpContext.RequestServices.GetRequiredService<PolicyPublicationService>()
+                .ReadPreviousCidAsync(HttpContext, revision, reason).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or HttpRequestException or InvalidDataException or
+            OperationCanceledException or System.Text.Json.JsonException or ArgumentException)
+        {
+            PolicyPublicationService.Failed(
+                HttpContext.RequestServices.GetRequiredService<ILogger<PolicyPublicationService>>(),
+                exception.GetType().Name);
+            TempData["PublicationError"] = exception is InvalidOperationException or ArgumentException ? exception.Message :
+                "The public policy could not be read from the account provider. No publication was started.";
+            return RedirectToPage(pageName: "./Index", pageHandler: null, routeValues: null, fragment: "policy-publication");
         }
 
         AdministrationResponse response = await UiPageHelpers.DispatchAsync(
@@ -416,15 +500,56 @@ public sealed class IndexModel : PageModel
                 Method: "beginPolicyPublication",
                 OperationId: operationId,
                 Reason: reason,
-                Moderation: new(PolicyVersion: version, ExpectedRevision: revision, PreviousCid: previousCid.Length == 0 ? null : previousCid))).ConfigureAwait(false);
+                Moderation: new(PolicyVersion: version, ExpectedRevision: revision, PreviousCid: previousCid))).ConfigureAwait(false);
         if (response.Succeeded)
         {
-            TempData["Status"] = $"Policy publication operation {operationId} started. Removed-label cleanup, when required, runs in durable background batches before declaration publication can continue.";
+            TempData["Status"] = $"Publication started for {version}. Any removed labels will be withdrawn first. Check the status below for your next step.";
             return RedirectToPage(pageName: "./Index", pageHandler: null, routeValues: null, fragment: "policy-publication");
         }
 
-        await OnGetAsync().ConfigureAwait(false);
-        return Page();
+        TempData["PublicationError"] = response.Message;
+        return RedirectToPage(pageName: "./Index", pageHandler: null, routeValues: null, fragment: "policy-publication");
+    }
+
+    /// <summary>Abandons only the observed pending publication without undoing completed label withdrawals.</summary>
+    /// <returns>A redirect to refreshed publication state with an explicit outcome.</returns>
+    public async Task<IActionResult> OnPostAbandonPublicationAsync()
+    {
+        if (!await UiPageHelpers.ConfirmedAsync(this).ConfigureAwait(false))
+        {
+            TempData["PublicationError"] = "Select the confirmation checkbox before cancelling this publication attempt.";
+        }
+        else if (!long.TryParse(await UiPageHelpers.FormValueAsync(this, "revision", 24).ConfigureAwait(false), out long revision) || revision <= 0)
+        {
+            TempData["PublicationError"] = "The submitted policy information was invalid. Review the refreshed state before cancelling this publication attempt.";
+        }
+        else
+        {
+            try
+            {
+                AdministrationResponse response = await UiPageHelpers.DispatchAsync(
+                    this,
+                    new AdministrationCommand(
+                        Method: "abandonPolicyPublication",
+                        OperationId: await UiPageHelpers.FormValueAsync(this, "operationId", 256).ConfigureAwait(false),
+                        Reason: await UiPageHelpers.FormValueAsync(this, "reason", 4096).ConfigureAwait(false),
+                        Moderation: new(ExpectedRevision: revision))).ConfigureAwait(false);
+                if (response.Succeeded)
+                {
+                    TempData["Status"] = "Publication abandoned. Completed label withdrawals will not be undone. Check the public policy before starting again.";
+                }
+                else
+                {
+                    TempData["PublicationError"] = response.Message;
+                }
+            }
+            catch (ArgumentException exception)
+            {
+                TempData["PublicationError"] = exception.Message;
+            }
+        }
+
+        return RedirectToPage(pageName: "./Index", pageHandler: null, routeValues: null, fragment: "policy-publication");
     }
 
     /// <summary>Starts separate labeler-account authorization only after background withdrawal is complete.</summary>
@@ -435,9 +560,8 @@ public sealed class IndexModel : PageModel
         string operation = await UiPageHelpers.FormValueAsync(this, "operationId", 256).ConfigureAwait(false);
         if (!Handle.TryParse(handle, out Handle? labeler))
         {
-            ViewData["Error"] = "Enter the labeler account's handle to authorize publication.";
-            await OnGetAsync().ConfigureAwait(false);
-            return Page();
+            TempData["PublicationError"] = "Enter the labeler account's handle to authorize publication.";
+            return RedirectToPage(pageName: "./Index", pageHandler: null, routeValues: null, fragment: "policy-publication");
         }
         try
         {
@@ -451,10 +575,9 @@ public sealed class IndexModel : PageModel
             PolicyPublicationService.Failed(
                 HttpContext.RequestServices.GetRequiredService<ILogger<PolicyPublicationService>>(),
                 exception.GetType().Name);
-            ViewData["Error"] = exception is InvalidOperationException ? exception.Message :
-                "Labeler authorization could not start. No PDS write was attempted. Reload policy state before trying again.";
-            await OnGetAsync().ConfigureAwait(false);
-            return Page();
+            TempData["PublicationError"] = exception is InvalidOperationException ? exception.Message :
+                "Labeler authorization could not start. No account write was attempted. Refresh the policy page before trying again.";
+            return RedirectToPage(pageName: "./Index", pageHandler: null, routeValues: null, fragment: "policy-publication");
         }
     }
 
@@ -467,7 +590,7 @@ public sealed class IndexModel : PageModel
             new AdministrationCommand(Method: "verifyPolicy", Reason: "Verify published declaration from Xenon.")).ConfigureAwait(false);
         if (response.Succeeded)
         {
-            TempData["Status"] = "Policy declaration verification completed.";
+            TempData["Status"] = "The public policy check passed.";
             return RedirectToPage(pageName: "./Index", pageHandler: null, routeValues: null, fragment: "policy-verification");
         }
 

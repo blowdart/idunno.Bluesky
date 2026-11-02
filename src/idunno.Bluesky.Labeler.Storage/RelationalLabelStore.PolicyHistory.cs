@@ -151,7 +151,7 @@ internal abstract partial class RelationalLabelStore
                 ModerationPolicyHistory history = DecodePolicyHistory(bytes);
                 return history.OperationId == operationId
                     ? LabelServiceResult<LabelPolicyHistoryEntry>.Success(history.ToEntry())
-                    : CaseFailure<LabelPolicyHistoryEntry>(LabelServiceErrorCode.IdempotencyConflict, "The indexed policy operation has a different identity.");
+                    : CaseFailure<LabelPolicyHistoryEntry>(LabelServiceErrorCode.IdempotencyConflict, "The saved tracking information does not match this request. Preserve the diagnostics and ask an administrator to investigate.");
             },
             token: cancellationToken,
             auditAction: "policy-inspection");

@@ -33,7 +33,7 @@ public sealed class IndexModel : PageModel
     {
         if (!ModelState.IsValid || !Enum.IsDefined(Queue) || Cursor?.Length > 512)
         {
-            ViewData["Error"] = "Choose a valid workflow queue and reload a valid continuation cursor.";
+            ViewData["Error"] = "Choose an available case filter and refresh the page before trying again.";
             return;
         }
 

@@ -10,7 +10,7 @@ public sealed class LabelCaseQuery
 {
     /// <summary>Initializes a new instance of the <see cref="LabelCaseQuery"/> class.</summary>
     /// <param name="queue">One of the fixed workflow views.</param>
-    /// <param name="subject">The optional exact account or record version.</param>
+    /// <param name="subject">The optional exact submitted account, record URI or record version.</param>
     /// <param name="reasonType">The optional exact reason of an associated report.</param>
     /// <param name="assignee">The optional manually assigned moderator.</param>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="queue"/> is undefined or text is too long.</exception>
@@ -41,7 +41,7 @@ public sealed class LabelCaseQuery
     /// <value>The selected workflow state or assignment view.</value>
     public LabelCaseWorkflow Queue { get; }
     /// <summary>Gets the optional exact subject filter.</summary>
-    /// <value>An account DID or record URI and CID, or <see langword="null"/>.</value>
+    /// <value>An account DID or record URI with its submitted optional CID, or <see langword="null"/>.</value>
     public LabelReportSubject? Subject { get; }
     /// <summary>Gets the optional report reason filter.</summary>
     /// <value>The exact reason identifier, or <see langword="null"/>.</value>

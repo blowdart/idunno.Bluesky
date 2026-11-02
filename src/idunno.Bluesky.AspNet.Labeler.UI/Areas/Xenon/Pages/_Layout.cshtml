@@ -6,15 +6,21 @@
     string? error = ViewData["Error"] as string;
     Assembly uiAssembly = typeof(Microsoft.Extensions.DependencyInjection.LabelerUIExtensions).Assembly;
     string? version = uiAssembly.GetName().Version?.ToString(3);
-    string? build = uiAssembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+    string? build = uiAssembly.GetCustomAttributes<AssemblyMetadataAttribute>()
+        .FirstOrDefault(attribute => attribute.Key == "BuildCommitId")?.Value
+        ?? uiAssembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
     ModerationOpenCountsView? counts = ViewData["OpenCounts"] as ModerationOpenCountsView;
+    string pageTitle = $"{ViewData["Title"]} · Xenon";
+    string title = role is not null && counts is not null
+        ? $"C:{counts.Cases} R:{counts.Reports} A:{counts.Appeals} · {pageTitle}"
+        : pageTitle;
 }
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>@ViewData["Title"] · Xenon</title>
+    <title>@title</title>
     <link rel="icon" type="image/svg+xml" sizes="any" href="~/Xenon/images/xenon.svg" asp-append-version="true" />
     <script src="~/Xenon/js/theme.js" asp-append-version="true"></script>
     <link rel="stylesheet" href="~/Xenon/css/xenon.css" asp-append-version="true" />
@@ -25,10 +31,11 @@
         <a class="brand" asp-area="Xenon" asp-page="/Index" aria-label="Xenon home"><img src="~/Xenon/images/xenon.svg" asp-append-version="true" width="36" height="36" alt="" /></a>
         @if (role is not null)
         {
-            <nav aria-label="Primary navigation">
-                <a asp-area="Xenon" asp-page="/Cases/Index">Cases@(counts is null ? "" : $" ({counts.Cases})")</a>
-                <a asp-area="Xenon" asp-page="/Reports/Index">Reports@(counts is null ? "" : $" ({counts.Reports})")</a>
-                <a asp-area="Xenon" asp-page="/Appeals/Index">Appeals@(counts is null ? "" : $" ({counts.Appeals})")</a>
+            <nav aria-label="Primary navigation" data-workflow-counts
+                 data-counts-url="@Url.Page("/Index", "Counts", new { area = "Xenon" })" data-page-title="@pageTitle">
+                <a asp-area="Xenon" asp-page="/Cases/Index" data-workflow-count="cases">Cases@(counts is null ? "" : $" ({counts.Cases})")</a>
+                <a asp-area="Xenon" asp-page="/Reports/Index" data-workflow-count="reports">Reports@(counts is null ? "" : $" ({counts.Reports})")</a>
+                <a asp-area="Xenon" asp-page="/Appeals/Index" data-workflow-count="appeals">Appeals@(counts is null ? "" : $" ({counts.Appeals})")</a>
                 <a asp-area="Xenon" asp-page="/Labels/Index">Labels</a>
                 <a asp-area="Xenon" asp-page="/Audit/Index">Audit</a>
                 @if (role == LabelTeamRole.Administrator)
@@ -38,6 +45,7 @@
                     <a asp-area="Xenon" asp-page="/Lifecycle/Index">Lifecycle</a>
                 }
             </nav>
+            <p data-workflow-count-status role="status" hidden></p>
         }
         <div class="header-actions">
             @if (role is not null)
@@ -120,10 +128,12 @@
                 <noscript><p>Theme selection requires JavaScript. Appearance follows your operating system.</p></noscript>
             </div>
             <p>&copy; 2026 Barry Dorrans</p>
+            <p><a asp-area="Xenon" asp-page="/Terms">Terms and conditions</a> &middot; <a asp-area="Xenon" asp-page="/Privacy">Privacy</a></p>
             <p>V@(version ?? "Unknown")</p>
             <p><a href="https://github.com/blowdart/idunno.Bluesky">Get the source on GitHub</a></p>
             <p>Icons by <a href="https://fontawesome.com/">Font Awesome Free</a> &middot; <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></p>
-            <p><a asp-area="Xenon" asp-page="/Terms">Terms and conditions</a> &middot; <a asp-area="Xenon" asp-page="/Privacy">Privacy</a></p>
+            <p>Inter font by <a href="https://rsms.me/inter/">The Inter Project Authors</a> &middot; <a href="~/Xenon/vendor/inter/LICENSE.txt">SIL Open Font License 1.1</a></p>
+            <p>Google Sans Code font by <a href="https://github.com/googlefonts/googlesans-code">The Google Sans Code Project Authors</a> &middot; <a href="~/Xenon/vendor/google-sans-code/TRADEMARKS.md">Trademark notice</a> &middot; <a href="~/Xenon/vendor/google-sans-code/OFL.txt">SIL Open Font License 1.1</a></p>
             <p class="build-number">Build number <code>@(build ?? "Unknown")</code></p>
         </div>
     </footer>
@@ -136,5 +146,6 @@
 <script src="~/Xenon/js/team.js" asp-append-version="true" defer></script>
 <script src="~/Xenon/js/policy.js" asp-append-version="true" defer></script>
 <script src="~/Xenon/js/manual-labels.js" asp-append-version="true" defer></script>
+<script src="~/Xenon/js/workflow-counts.js" asp-append-version="true" defer></script>
 </body>
 </html>

@@ -8,5 +8,5 @@ The provider requires WAL, FULL synchronization and bounded immediate write tran
 creates a new database through the SQLite CLI without overwriting an existing database.
 Run `InitializeAsync` to bind that database to its issuer before use.
 
-See the [persistence guide](https://bluesky.idunno.dev/docs/labeller/persistence.html) for setup,
+See the [persistence guide](https://bluesky.idunno.dev/docs/labeler/persistence.html) for setup,
 upgrades, concurrency, monitoring and consistent backup/restore.

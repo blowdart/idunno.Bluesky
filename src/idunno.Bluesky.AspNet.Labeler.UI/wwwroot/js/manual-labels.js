@@ -10,6 +10,7 @@
         const reason = form.elements.namedItem("reason");
         const controls = form.querySelector("[data-manual-label-controls]");
         const load = form.querySelector("[data-load-labels]");
+        const currentCid = form.querySelector("[data-current-cid]");
         const submit = form.querySelector("[data-submit-labels]");
         let timer;
         let pending;
@@ -21,6 +22,7 @@
                 /^https:\/\/bsky\.app\/(?:profile\/[^/?#]+\/(?:post|lists|feed)\/|starter-pack\/[^/?#]+\/)/i.test(value);
             cidField.hidden = !record;
             cid.disabled = !record;
+            currentCid.disabled = !record;
             if (!record) cid.value = "";
         }
 
@@ -42,14 +44,14 @@
             load.hidden = true;
         }
 
-        async function lookup() {
+        async function lookup(action = load.formAction) {
             invalidate();
             if (!target.value.trim()) return;
             const current = generation;
             pending = new AbortController();
             controls.setAttribute("aria-busy", "true");
             try {
-                const response = await fetch(load.formAction, {
+                const response = await fetch(action, {
                     method: "POST",
                     body: new FormData(form),
                     credentials: "same-origin",
@@ -68,6 +70,7 @@
                 submit.disabled = !state.value;
                 if (!submit.disabled && state.dataset.target) {
                     target.value = state.dataset.target;
+                    if (action === currentCid.formAction) cid.value = state.dataset.cid;
                     updateTarget();
                 }
                 load.hidden = !submit.disabled;
@@ -96,6 +99,10 @@
         load.addEventListener("click", event => {
             event.preventDefault();
             return lookup();
+        });
+        currentCid.addEventListener("click", event => {
+            event.preventDefault();
+            return lookup(currentCid.formAction);
         });
         form.addEventListener("submit", event => {
             if (submit.disabled) event.preventDefault();

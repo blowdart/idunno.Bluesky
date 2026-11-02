@@ -43,6 +43,14 @@ internal sealed class LabelerUiPageFilter(LabelerUiAdministration administration
 
         context.HttpContext.Items["Xenon.CurrentRole"] = member.Role;
         PageModel page = (PageModel)context.HandlerInstance;
+        bool countsRequest = page is Areas.Xenon.Pages.IndexModel &&
+            context.HandlerMethod?.MethodInfo.Name == nameof(Areas.Xenon.Pages.IndexModel.OnGetCountsAsync);
+        if (countsRequest)
+        {
+            context.HttpContext.Response.Headers.CacheControl = "private, no-store";
+            await next().ConfigureAwait(false);
+            return;
+        }
         page.ViewData["CurrentRole"] = member.Role;
         page.ViewData["AvailableModerators"] = response.Members
             .Where(candidate => candidate.Active && !candidate.Removed && candidate.Role >= idunno.Bluesky.Labeler.Administration.LabelTeamRole.Moderator)
@@ -64,7 +72,7 @@ internal sealed class LabelerUiPageFilter(LabelerUiAdministration administration
         }
         else
         {
-            page.ViewData["Error"] = totals.Message ?? "Open workflow counts could not be loaded.";
+            page.ViewData["Error"] = totals.Message ?? "Case, report and appeal counts could not be loaded.";
         }
     }
 }

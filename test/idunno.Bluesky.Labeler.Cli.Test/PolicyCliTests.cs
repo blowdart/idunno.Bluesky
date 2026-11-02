@@ -40,12 +40,14 @@ public class PolicyCliTests
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public void PublicationSignInRequestsOnlyTheSelectedRecordWriteAction(bool create)
+    public void PublicationSignInRequestsOnlyTheRequiredRecordWriteActions(bool create)
     {
         Uri metadata = new("https://labeler.example/native-client-metadata.json");
         OAuthOptions options = Program.CreatePolicyOAuthOptions(metadata, create);
         Assert.Equal(metadata.AbsoluteUri, options.ClientId);
-        Assert.Equal(["atproto", $"repo:app.bsky.labeler.service?action={(create ? "create" : "update")}"], options.Scopes);
+        Assert.Equal(create
+            ? ["atproto", "repo:app.bsky.labeler.service?action=create"]
+            : new[] { "atproto", "repo:app.bsky.labeler.service?action=create", "repo:app.bsky.labeler.service?action=update" }, options.Scopes);
     }
 
     [Theory]

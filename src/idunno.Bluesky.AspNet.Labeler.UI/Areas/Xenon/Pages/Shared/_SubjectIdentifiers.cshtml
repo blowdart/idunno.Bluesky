@@ -2,10 +2,14 @@
 @if (Model.TryGetProperty("uri", out System.Text.Json.JsonElement uri))
 {
     <dl class="subject-identifiers">
-        <dt>AT URI:</dt><dd><code>@uri.GetString()</code></dd>
+        <dt>Content address (AT URI):</dt><dd><code>@uri.GetString()</code></dd>
         @if (Model.TryGetProperty("cid", out System.Text.Json.JsonElement cid))
         {
-            <dt>CID:</dt><dd><code>@cid.GetString()</code></dd>
+            <dt>Reported version (CID):</dt><dd><code>@cid.GetString()</code></dd>
+        }
+        else
+        {
+            <dt>Reported version:</dt><dd>No specific content version was supplied.</dd>
         }
     </dl>
 }

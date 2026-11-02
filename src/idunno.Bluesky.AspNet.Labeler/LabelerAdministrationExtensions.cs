@@ -222,13 +222,15 @@ public static class LabelerAdministrationExtensions
 
     /// <summary>Maps HTTPS administration methods using exact-audience service authentication.</summary>
     /// <param name="endpoints">The endpoint route builder.</param>
-    /// <param name="remoteEnabled">An optional fixed route setting. When <see langword="null"/>, the current reloadable <see cref="LabelerAdministrationOptions.RemoteEnabled"/> setting controls access.</param>
+    /// <param name="remoteEnabled">An optional fixed route setting. When <see langword="null"/>, the current monitored <see cref="LabelerAdministrationOptions.RemoteMode"/> setting takes precedence over the legacy <see cref="LabelerAdministrationOptions.RemoteEnabled"/> setting.</param>
     /// <returns>The endpoint route builder.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="endpoints"/> is <see langword="null"/>.</exception>
     /// <remarks><para>Remote administration is disabled by default. When <paramref name="remoteEnabled"/> is <see langword="false"/>,
-    /// no remote routes are mapped. When it is <see langword="null"/>, mapped remote routes consult the current
-    /// <see cref="IOptionsMonitor{TOptions}"/> value on each request, so reloadable host configuration can enable or disable access.
-    /// Local administration remains available in either case.
+    /// no remote routes are mapped. When it is <see langword="null"/>, mapped remote routes consult monitored options on each request:
+    /// a configured <see cref="RemoteAdministrationMode"/> takes precedence, otherwise the legacy
+    /// <see cref="LabelerAdministrationOptions.RemoteEnabled"/> value controls access. The
+    /// <see cref="RemoteAdministrationMode.WebUiControlled"/> mode additionally requires the durable owner-controlled switch.
+    /// Local administration remains available in every mode.
     /// Only service JWTs on requests where <see cref="HttpRequest.IsHttps"/> is <see langword="true"/> are accepted.
     /// For TLS-terminating proxies, call ASP.NET Core's <c>UseForwardedHeaders</c> before mapping endpoints and
     /// configure its trusted proxies and forward limit. Browser OAuth cookies and PDS OAuth
@@ -287,8 +289,50 @@ public static class LabelerAdministrationExtensions
         ILabelAdministrationStore store,
         TimeProvider clock,
         ILogger logger)
+        => await HandleRemoteRequestAsync(
+            context: context,
+            method: new("dev.idunno.labeler.admin." + method),
+            ozone: false,
+            configuration: configuration,
+            remoteOptions: remoteOptions,
+            fixedRemoteEnabled: fixedRemoteEnabled,
+            store: store,
+            clock: clock,
+            logger: logger,
+            dispatch: caller => ReadAndDispatchAsync(
+                context: context,
+                method: method,
+                isPost: isPost,
+                dispatcher: dispatcher,
+                caller: caller),
+            write: WriteResponseAsync).ConfigureAwait(false);
+
+    /// <summary>Shares transport, replay, live remote-switch and denial-audit enforcement between native and Ozone routes.</summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S6667:Logging in a catch clause should pass the caught exception as a parameter",
+        Justification = "Untrusted authentication and JSON exceptions may contain sensitive input; log only their category.")]
+    internal static async Task HandleRemoteRequestAsync(
+        HttpContext context,
+        Nsid method,
+        bool ozone,
+        AdministrationConfiguration configuration,
+        IOptionsMonitor<LabelerAdministrationOptions> remoteOptions,
+        bool? fixedRemoteEnabled,
+        ILabelAdministrationStore store,
+        TimeProvider clock,
+        ILogger logger,
+        Func<LabelAdministrationCaller, Task<AdministrationResponse>> dispatch,
+        Func<HttpContext, AdministrationResponse, int, Task> write)
     {
-        if (!(fixedRemoteEnabled ?? remoteOptions.CurrentValue.RemoteEnabled))
+        LabelerAdministrationOptions currentOptions = remoteOptions.CurrentValue;
+        RemoteAdministrationMode mode = fixedRemoteEnabled switch
+        {
+            true => RemoteAdministrationMode.Enabled,
+            false => RemoteAdministrationMode.Disabled,
+            null => currentOptions.RemoteMode ?? (currentOptions.RemoteEnabled
+                ? RemoteAdministrationMode.Enabled
+                : RemoteAdministrationMode.Disabled)
+        };
+        if (!Enum.IsDefined(mode) || mode == RemoteAdministrationMode.Disabled)
         {
             context.Response.StatusCode = StatusCodes.Status404NotFound;
             context.Response.Headers.CacheControl = "no-store";
@@ -310,7 +354,7 @@ public static class LabelerAdministrationExtensions
                 transportStatus = StatusCodes.Status503ServiceUnavailable;
             }
 
-            await WriteResponseAsync(context, transportResponse, transportStatus).ConfigureAwait(false);
+            await write(context, transportResponse, transportStatus).ConfigureAwait(false);
             return;
         }
 
@@ -325,14 +369,23 @@ public static class LabelerAdministrationExtensions
                 throw new InvalidDataException("A service authentication token is required.");
             }
 
-            ServiceAuthenticationResult authentication = await ServiceAuthentication.VerifyAsync(
-                token: header[7..],
-                audience: configuration.Audience,
-                method: new Nsid("dev.idunno.labeler.admin." + method),
-                httpClient: configuration.HttpClient,
-                timeProvider: clock,
-                cancellationToken: context.RequestAborted,
-                maximumLifetime: configuration.MaximumServiceTokenLifetime).ConfigureAwait(false);
+            ServiceAuthenticationResult authentication = ozone
+                ? await ServiceAuthentication.VerifyOzoneAdministrationAsync(
+                    token: header[7..],
+                    labeler: configuration.Audience.Did,
+                    method: method,
+                    httpClient: configuration.HttpClient,
+                    timeProvider: clock,
+                    cancellationToken: context.RequestAborted,
+                    maximumLifetime: configuration.MaximumServiceTokenLifetime).ConfigureAwait(false)
+                : await ServiceAuthentication.VerifyAsync(
+                    token: header[7..],
+                    audience: configuration.Audience,
+                    method: method,
+                    httpClient: configuration.HttpClient,
+                    timeProvider: clock,
+                    cancellationToken: context.RequestAborted,
+                    maximumLifetime: configuration.MaximumServiceTokenLifetime).ConfigureAwait(false);
             LabelServiceResult<LabelAdministrationCaller> caller = await store.AuthenticateServiceAsync(authentication, context.RequestAborted).ConfigureAwait(false);
             if (!caller.Succeeded)
             {
@@ -341,39 +394,28 @@ public static class LabelerAdministrationExtensions
             else
             {
                 authenticatedCaller = caller.Result;
-                AdministrationCommand command;
-                if (isPost)
+                if (mode == RemoteAdministrationMode.WebUiControlled)
                 {
-                    byte[] body = await AdministrationWire.ReadAsync(
-                        context.Request.Body, AdministrationWire.MaximumRequestBytes, context.RequestAborted).ConfigureAwait(false);
-                    command = JsonSerializer.Deserialize(body, AdministrationJsonContext.Default.AdministrationCommand)
-                        ?? throw new JsonException("The command is null.");
-                    command.Validate();
-                    if (command.Method.Length != 0 && command.Method != method)
+                    LabelServiceResult<LabelRemoteAdministrationStatus> remoteStatus = await store.GetRemoteAdministrationStatusAsync(
+                        caller: caller.Result,
+                        cancellationToken: context.RequestAborted).ConfigureAwait(false);
+                    if (!remoteStatus.Succeeded)
                     {
-                        throw new JsonException("The body method does not match the authenticated endpoint.");
+                        response = new(false, remoteStatus.Error.Code.ToString(), remoteStatus.Error.Message);
                     }
-
-                    command = command with { Method = method };
+                    else if (!remoteStatus.Result.Enabled)
+                    {
+                        response = new(false, "RemoteAdministrationDisabled", "Remote administration is disabled by the labeler owner.");
+                    }
+                    else
+                    {
+                        response = await dispatch(caller.Result).ConfigureAwait(false);
+                    }
                 }
                 else
                 {
-                    if (context.Request.QueryString.Value?.Length > 2048 ||
-                        context.Request.Query.Any(pair => pair.Value.Count != 1 ||
-                            pair.Key is not ("afterSequence" or "limit" or "operationId" or "reason")))
-                    {
-                        throw new JsonException("The query parameters are invalid.");
-                    }
-
-                    command = new(
-                        Method: method,
-                        OperationId: context.Request.Query["operationId"].ToString(),
-                        Reason: context.Request.Query["reason"].ToString() is { Length: > 0 } reason ? reason : "Administrative inspection.",
-                        AfterSequence: context.Request.Query.ContainsKey("afterSequence") ? long.Parse(context.Request.Query["afterSequence"].ToString(), System.Globalization.CultureInfo.InvariantCulture) : 0,
-                        Limit: context.Request.Query.ContainsKey("limit") ? int.Parse(context.Request.Query["limit"].ToString(), System.Globalization.CultureInfo.InvariantCulture) : AdministrationCommand.MaximumAuditPageSize);
+                    response = await dispatch(caller.Result).ConfigureAwait(false);
                 }
-
-                response = await dispatcher.DispatchAsync(caller.Result, command, context.RequestAborted).ConfigureAwait(false);
             }
 
             status = ResponseStatus(response);
@@ -417,7 +459,50 @@ public static class LabelerAdministrationExtensions
             }
         }
 
-        await WriteResponseAsync(context, response, status).ConfigureAwait(false);
+        await write(context, response, status).ConfigureAwait(false);
+    }
+
+    /// <summary>Reads one method-bound request only after its caller has been authenticated.</summary>
+    private static async Task<AdministrationResponse> ReadAndDispatchAsync(
+        HttpContext context,
+        string method,
+        bool isPost,
+        AdministrationDispatcher dispatcher,
+        LabelAdministrationCaller caller)
+    {
+        AdministrationCommand command;
+        if (isPost)
+        {
+            byte[] body = await AdministrationWire.ReadAsync(
+                context.Request.Body, AdministrationWire.MaximumRequestBytes, context.RequestAborted).ConfigureAwait(false);
+            command = JsonSerializer.Deserialize(body, AdministrationJsonContext.Default.AdministrationCommand)
+                ?? throw new JsonException("The command is null.");
+            command.Validate();
+            if (command.Method.Length != 0 && command.Method != method)
+            {
+                throw new JsonException("The body method does not match the authenticated endpoint.");
+            }
+
+            command = command with { Method = method };
+        }
+        else
+        {
+            if (context.Request.QueryString.Value?.Length > 2048 ||
+                context.Request.Query.Any(pair => pair.Value.Count != 1 ||
+                    pair.Key is not ("afterSequence" or "limit" or "operationId" or "reason")))
+            {
+                throw new JsonException("The query parameters are invalid.");
+            }
+
+            command = new(
+                Method: method,
+                OperationId: context.Request.Query["operationId"].ToString(),
+                Reason: context.Request.Query["reason"].ToString() is { Length: > 0 } reason ? reason : "Administrative inspection.",
+                AfterSequence: context.Request.Query.ContainsKey("afterSequence") ? long.Parse(context.Request.Query["afterSequence"].ToString(), System.Globalization.CultureInfo.InvariantCulture) : 0,
+                Limit: context.Request.Query.ContainsKey("limit") ? int.Parse(context.Request.Query["limit"].ToString(), System.Globalization.CultureInfo.InvariantCulture) : AdministrationCommand.MaximumAuditPageSize);
+        }
+
+        return await dispatcher.DispatchAsync(caller, command, context.RequestAborted).ConfigureAwait(false);
     }
 
     /// <summary>Writes a bounded administrative response with no-store caching.</summary>
@@ -449,6 +534,7 @@ public static class LabelerAdministrationExtensions
     {
         null => StatusCodes.Status200OK,
         "ModerationDisabled" => StatusCodes.Status404NotFound,
+        "RemoteAdministrationDisabled" => StatusCodes.Status404NotFound,
         "Unauthorized" => StatusCodes.Status403Forbidden,
         "StorageUnavailable" or "OutcomeUnknown" or "ServiceUnavailable" or "ResponseTooLarge" => StatusCodes.Status503ServiceUnavailable,
         _ => StatusCodes.Status400BadRequest

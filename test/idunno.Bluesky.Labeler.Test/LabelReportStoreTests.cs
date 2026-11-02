@@ -196,10 +196,13 @@ public class LabelReportStoreTests
     }
 
     [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task PendingReportSurvivesRestartAndPromotesOnlyAfterVerifiedPolicyRecovery(string engine)
+    [InlineData("sqlite", false)]
+    [InlineData("sqlite", true)]
+    [InlineData("postgresql", false)]
+    [InlineData("postgresql", true)]
+    [InlineData("mysql", false)]
+    [InlineData("mysql", true)]
+    public async Task PendingReportSurvivesRestartAndPromotesOnlyAfterVerifiedPolicyRecovery(string engine, bool uriOnly)
     {
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
@@ -207,7 +210,10 @@ public class LabelReportStoreTests
         ILabelReportStore store = (ILabelReportStore)fixture.Store;
         ModerationReportAuthenticationResult authentication = await ReportTestAuthentication.CreateAsync(
             s_reporter, policy.DatabaseTime, "pending-report");
-        LabelReportSubmission submission = new(s_account, Reason, "Policy verification is temporarily unavailable.");
+        LabelReportSubject subject = uriOnly
+            ? LabelReportSubject.Record(new($"at://{s_account.Repository}/app.bsky.feed.post/example"))
+            : s_account;
+        LabelReportSubmission submission = new(subject, Reason, "Policy verification is temporarily unavailable.");
 
         LabelReportIntakeReceipt receipt = Success(await store.AcceptReportAsync(
             authentication: authentication,
@@ -230,6 +236,9 @@ public class LabelReportStoreTests
         LabelPendingModerationReport pendingReport = Assert.Single(pending.PendingReports!);
         Assert.Equal(receipt.Id, pendingReport.Id);
         Assert.True(pendingReport.PendingVerification);
+        Assert.Equal(subject.Subject, pendingReport.Submission.Subject.Subject);
+        Assert.Equal(subject.RecordUri, pendingReport.Submission.Subject.RecordUri);
+        Assert.Null(pendingReport.Submission.Subject.Cid);
         Assert.Empty(Success(await restarted.GetReportsAsync(administrator, cancellationToken: token)));
         Assert.Empty(Success(await ((ILabelModerationStore)fixture.NewStore()).GetCasesAsync(administrator, cancellationToken: token)));
 
@@ -239,12 +248,19 @@ public class LabelReportStoreTests
         LabelModerationReport promoted = Assert.Single(Success(await restarted.GetReportsAsync(administrator, cancellationToken: token)));
         Assert.Equal(receipt.Id, promoted.Id);
         Assert.Equal(submission.Reason, promoted.Submission.Reason);
+        Assert.Equal(subject.RecordUri, promoted.Submission.Subject.RecordUri);
+        Assert.Null(promoted.Submission.Subject.Cid);
         Assert.Equal("v1", promoted.PolicyVersion);
         Assert.NotEqual(0, promoted.CaseId);
         Assert.Equal(promoted.CaseId, Success(await ((ILabelModerationStore)fixture.NewStore())
             .GetCaseAsync(administrator, promoted.CaseId, token)).Id);
         Assert.Empty(Success(await table.ReadTableAsync(administrator, new(LabelTableKind.PendingReports), token)).PendingReports!);
         Assert.Equal(0, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
+        LabelCasePage filtered = Success(await ((ILabelModerationStore)fixture.NewStore()).GetCaseQueueAsync(
+            caller: administrator,
+            query: new(subject: subject),
+            cancellationToken: token));
+        Assert.Equal(promoted.CaseId, Assert.Single(filtered.Cases).Id);
     }
 
     [Theory]
@@ -582,8 +598,75 @@ public class LabelReportStoreTests
             s_account.Repository, policy.DatabaseTime, "owner-appeal");
         LabelModerationReport report = Success(await reports.SubmitReportAsync(
             owner, new(s_account, "tools.ozone.report.defs#reasonAppeal"), policy.Revision, token));
-        Assert.Equal("Not Applicable", report.ResolutionReason);
-        Assert.Empty(Success(await ((ILabelAppealStore)fixture.Store).GetAppealsAsync(administrator, cancellationToken: token)));
+        Assert.Null(report.ResolutionReason);
+        Assert.Null(report.HandledAt);
+        Assert.Equal(LabelAppealStatus.Pending,
+            Assert.Single(Success(await ((ILabelAppealStore)fixture.Store)
+                .GetAppealsAsync(administrator, cancellationToken: token))).Status);
+    }
+
+    [Theory]
+    [InlineData("sqlite", false, "com.atproto.moderation.defs#reasonAppeal")]
+    [InlineData("sqlite", true, "com.atproto.moderation.defs#reasonAppeal")]
+    [InlineData("sqlite", false, "tools.ozone.report.defs#reasonAppeal")]
+    [InlineData("sqlite", true, "tools.ozone.report.defs#reasonAppeal")]
+    [InlineData("postgresql", false, "com.atproto.moderation.defs#reasonAppeal")]
+    [InlineData("postgresql", true, "com.atproto.moderation.defs#reasonAppeal")]
+    [InlineData("postgresql", false, "tools.ozone.report.defs#reasonAppeal")]
+    [InlineData("postgresql", true, "tools.ozone.report.defs#reasonAppeal")]
+    [InlineData("mysql", false, "com.atproto.moderation.defs#reasonAppeal")]
+    [InlineData("mysql", true, "com.atproto.moderation.defs#reasonAppeal")]
+    [InlineData("mysql", false, "tools.ozone.report.defs#reasonAppeal")]
+    [InlineData("mysql", true, "tools.ozone.report.defs#reasonAppeal")]
+    public async Task OwnerAppealsBypassReportReasonFiltersIncludingPendingPromotion(string engine, bool queued, string reason)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        (LabelAdministrationCaller administrator, LabelPolicyState policy) = await ActivateAsync(
+            fixture, ""","reasonTypes":[]""");
+        ILabelReportStore reports = (ILabelReportStore)fixture.Store;
+        ModerationReportAuthenticationResult authentication = await ReportTestAuthentication.CreateAsync(
+            s_account.Repository, policy.DatabaseTime, "owner-filtered-appeal");
+        LabelReportSubmission submission = new(
+            subject: s_account,
+            reasonType: reason,
+            appealLabelValue: "spam");
+        LabelReportIntakeReceipt receipt = Success(await reports.AcceptReportAsync(
+            authentication: authentication,
+            submission: submission,
+            expectedPolicyRevision: queued ? null : policy.Revision,
+            maximumPendingReports: 10,
+            cancellationToken: token));
+        Assert.Equal(queued, receipt.PendingVerification);
+        if (!queued)
+        {
+            Assert.Equal("spam", Success(await reports.GetReportAsync(administrator, receipt.Id, token)).Submission.AppealLabelValue);
+        }
+        if (queued)
+        {
+            LabelPendingReportBatchResult promoted = Success(await ((ILabelReportStore)fixture.NewStore()).ProcessPendingReportsAsync(
+                expectedPolicyRevision: policy.Revision,
+                limit: 10,
+                cancellationToken: token));
+            Assert.Equal(1, promoted.Processed);
+        }
+
+        ILabelReportStore restarted = (ILabelReportStore)fixture.NewStore();
+        LabelModerationReport report = Success(await restarted.GetReportAsync(administrator, receipt.Id, token));
+        Assert.Equal("spam", report.Submission.AppealLabelValue);
+        Assert.Null(report.HandledAt);
+        Assert.Null(report.ResolutionReason);
+        LabelAppeal appeal = Assert.Single(Success(await ((ILabelAppealStore)fixture.NewStore())
+            .GetAppealsAsync(administrator, cancellationToken: token)));
+        Assert.Equal(report.CaseId, appeal.CaseId);
+        Assert.Equal(LabelAppealStatus.Pending, appeal.Status);
+        Assert.Equal(LabelServiceErrorCode.Unauthorized,
+            (await restarted.AcceptReportAsync(
+                authentication: authentication,
+                submission: submission,
+                expectedPolicyRevision: policy.Revision,
+                maximumPendingReports: 10,
+                cancellationToken: token)).Error!.Code);
     }
 
     /// <summary>Requires successful classified outcomes without hiding diagnostic messages.</summary>

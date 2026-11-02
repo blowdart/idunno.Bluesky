@@ -11,9 +11,34 @@ labeler container image, not a NuGet library. The independent SDK libraries rema
 for custom hosts. This application hosts the administration backend and an
 [optional Xenon web UI](ui.md), disabled by default.
 Build the image from the repository root with
-`docker build --file src\idunno.Bluesky.Labeler.Host\Dockerfile --tag idunno-bluesky-labeler .`.
+`docker build --build-arg SOURCE_REVISION_ID=$(git rev-parse HEAD) --file src\idunno.Bluesky.Labeler.Host\Dockerfile --tag idunno-bluesky-labeler .`.
+The source revision is embedded in the Xenon UI footer as the build identifier.
+The image also includes the matching Linux CLI in `/opt/labeler-cli`, which is on
+`PATH`. Run `docker exec <container> labeler-admin --help` for its commands. The
+CLI runs as the container's configured user; existing local identity authorization
+and remote-administration restrictions still apply.
+
+The host serves `/robots.txt` anonymously as plain text with `User-agent: *` and
+`Disallow: /`, asking crawlers not to crawl any path. This is advisory and does not
+replace authentication or access controls.
 
 ## Required configuration
+
+When Xenon is enabled with PostgreSQL storage, the canonical host also uses
+`Labeler:ConnectionString` for website identities, refresh locks, single-use OAuth
+login state and the append-only `labeler_data_protection_keys` key ring.
+Authentication tables are initialized additively before serving requests.
+The Data Protection application name is stable and bound to the configured public
+origin, so signed-in sessions survive container replacement at that origin.
+Changing the origin intentionally changes the protection boundary.
+
+Identity and OAuth state payloads are protected with Data Protection. The database
+key ring is not separately encrypted by default: database access and backups must
+be restricted as secrets, because access to both keys and payloads permits
+decryption. Back up these tables together with the labeler database; do not delete
+old keys or revocation records. Existing sessions lost by the earlier ephemeral
+configuration require one new sign-in. SQLite/MySQL canonical hosts do not use
+this PostgreSQL authentication persistence.
 
 Set the following configuration values through environment variables, a protected secret
 provider, or a host-owned configuration file:
@@ -34,7 +59,9 @@ provider, or a host-owned configuration file:
 | `Labeler:DeclaredLabels` | Comma-separated declared label values |
 | `Labeler:AllowAccountLabels` | Whether the issuance policy permits account labels |
 | `Labeler:AllowRecordLabels` | Whether the issuance policy permits record labels |
-| `LabelerAdministration:RemoteEnabled` | Whether HTTPS administration is enabled; defaults to `false` |
+| `LabelerAdministration:RemoteMode` | `Disabled` (default), `Enabled`, or `WebUiControlled`; overrides the legacy Boolean |
+| `LabelerAdministration:RemoteEnabled` | Legacy fallback only when `RemoteMode` is absent; defaults to `false` |
+| `LabelerOzone:Enabled` | Startup opt-in to `MapOzoneCompatibility()` discovery and labeler-focused administration; defaults to `false` and does not enable remote administration |
 | `LabelerModeration:Enabled` | Optional Xenon report/case/policy backend; defaults to `false` |
 | `LabelerModeration:VerificationFreshness` | Persisted declaration-observation lifetime; defaults to `00:30:00`; active policies are checked in the background every five minutes |
 | `Labeler:TrustedProxies` | Optional array of exact proxy IP addresses trusted to forward client IP and HTTPS scheme |
@@ -47,6 +74,14 @@ requires exact-audience method-bound service authentication and live team author
 administration requires the service process's OS identity to have an explicit active team binding.
 Neither localhost nor container placement is an authorization boundary.
 
+`RemoteMode=Disabled` keeps remote CLI routes unavailable; `Enabled` allows them subject to those
+existing checks. `WebUiControlled` additionally requires the durable switch to be enabled by the
+bootstrap owner in Xenon. The owner is the DID that completed the initial OS-authorized bootstrap,
+not any Administrator. The durable switch defaults off, is transactionally audited, and does not
+affect protected local administration. An explicitly configured `RemoteMode` always takes
+precedence over `RemoteEnabled`. If `RemoteMode` is omitted, the old Boolean continues to apply,
+so existing deployments are not silently enabled.
+
 ### Native OAuth and TLS forwarding
 
 The host serves `/native-client-metadata.json` publicly without authentication or redirects.
@@ -57,8 +92,8 @@ superset for `Labeler:AdministrationAudience`, plus `identity:*` for PLC identit
 and recovery, and create/update permission for `app.bsky.labeler.service` publication.
 Only PLC commands request identity mutation permission. Policy publication uses a separate
 labeler-account sign-in with only its selected declaration write action. Use this HTTPS metadata URL as the CLI's
-`--client-id`; ordinary commands request only their method, and policy publication requests its three
-specific administration methods. The headless host does not
+`--oauth-client-id`; ordinary commands request only their method, and policy publication requests
+each publication/recovery method separately as needed. The headless host does not
 run the desktop callback listener or distribute an OAuth client secret.
 
 For TLS termination at a reverse proxy, configure the proxy's **actual immediate peer IP**
@@ -363,7 +398,8 @@ If the command is interrupted during deployment, inspect `docker compose ps`, th
 digest and readiness endpoint before taking action. Never run an older binary against a database
 already migrated by a newer release.
 
-The CLI ZIPs are self-contained per-platform releases. Verify their GitHub release attestation
+The CLI ZIPs contain trimmed, self-contained single-file executables for each supported platform;
+they bundle the runtime and do not require a separate .NET installation. Verify their GitHub release attestation
 before first installation or replacement. Keep configuration and secrets outside the executable
 directory. For a supported direct installation, `labeler-admin update --tag v9.0.1` performs that
 attestation verification, checks the staged executable, and atomically replaces it after the

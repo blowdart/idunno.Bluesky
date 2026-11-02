@@ -7,7 +7,14 @@
         Model.Data.TryGetProperty("moderation", out JsonElement moderation) &&
         moderation.TryGetProperty("case", out JsonElement value) ? value : null;
 }
-<p><a asp-area="Xenon" asp-page="/Cases/Index">Back to cases</a></p>
+@if (Model.AppealId is not null)
+{
+    <p><a asp-area="Xenon" asp-page="/Appeals/Index"><span aria-hidden="true">&larr;</span> Back to appeals</a></p>
+}
+else
+{
+    <p><a asp-area="Xenon" asp-page="/Cases/Index"><span aria-hidden="true">&larr;</span> Back to cases</a></p>
+}
 <h1>Case #@Model.Id</h1>
 <div class="moderation-review">
 <div class="moderation-workspace">
@@ -31,7 +38,7 @@
         }
         else
         {
-            <p role="status">Active labels could not be loaded. Reload before reviewing this subject.</p>
+            <p role="status">Current labels could not be loaded. Refresh before reviewing this account or content.</p>
         }
         <p class="case-status"><span>Status:</span> @await Html.PartialAsync("_WorkflowStatus", Model.Appeals.Length > 0 ? "Appealed" : item.GetProperty("status").GetString()!)</p>
         <p>Assignee: @if (item.TryGetProperty("assignee", out JsonElement assignee) && assignee.GetString() is string assigned)
@@ -43,7 +50,9 @@
                 <span>Unassigned</span>
             }</p>
     </section>
-    @if ((ViewData["CurrentRole"] as LabelTeamRole?) >= LabelTeamRole.Administrator && Model.Assignees.Count > 1)
+    @if ((ViewData["CurrentRole"] as LabelTeamRole?) >= LabelTeamRole.Administrator &&
+        Model.Assignees.Count > 1 && item.GetProperty("status").GetString() != "Resolved" &&
+        !Model.SelectedReviewCompleted)
     {
         <section class="panel">
             <h2>Assignment</h2>
@@ -62,7 +71,7 @@
                 </label>
                 <label class="field">Reason (optional)<input name="reason" maxlength="4096" aria-describedby="assignment-reason-help" /></label>
                 <p id="assignment-reason-help">If left blank, the audit history records &ldquo;No reason provided.&rdquo;</p>
-                <label><input type="checkbox" name="confirmed" value="true" required /> Confirm this assignment change</label>
+                <label><input type="checkbox" name="confirmed" value="true" required /> Change who is assigned to this case.</label>
                 <div class="form-actions"><button type="submit">Save assignment</button></div>
             </form>
         </section>
@@ -116,10 +125,11 @@
                     <legend><span class="subject-icon fa-@subjectIcon" aria-hidden="true"></span> Labels for this @subjectKind</legend>
                     @foreach (ModerationLabelChoiceView label in Model.LabelChoices)
                     {
-                        string labelStatus = (label.OtherVersion, label.Applied) switch
+                        string labelStatus = (label.OtherVersion, label.Applied, label.UriWide) switch
                         {
-                            (true, _) => "Applied to a different record version",
-                            (_, true) => "Currently applied",
+                            (true, _, _) => "Applied to a different version of this content",
+                            (_, true, true) => "Applies across all versions of this content; withdrawing it affects all versions",
+                            (_, true, _) => "Currently applied",
                             _ => "Not applied"
                         };
                         <label class="label-chip" data-applied="@(label.Applied ? "true" : "false")">
@@ -130,12 +140,15 @@
                 </fieldset>
                 @if (Model.Appeals.Length > 0)
                 {
+                    string selectedAppeal = Model.SubmittedDecision?["appealId"].ToString() ?? Model.AppealId?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
+                    bool challengedLabelsChanged = Model.ChangedAppealIds.Any(id => id.ToString(System.Globalization.CultureInfo.InvariantCulture) == selectedAppeal);
+                    string selectedOutcome = challengedLabelsChanged ? "Superseded" : Model.SubmittedDecision?["appealOutcome"].ToString() ?? string.Empty;
                     <div class="grid">
                         <label class="field">Appeal reviewed
                             <select name="appealId"><option value="">No appeal reviewed</option>
                                 @foreach (long appealId in Model.Appeals.Select(appeal => appeal.Id))
                                 {
-                                    <option value="@appealId" selected="@(Model.SubmittedDecision is { } submittedAppeal ? submittedAppeal["appealId"].ToString() == appealId.ToString(System.Globalization.CultureInfo.InvariantCulture) : Model.AppealId == appealId)">Appeal #@appealId</option>
+                                    <option value="@appealId" data-changed="@(Model.ChangedAppealIds.Contains(appealId) ? "true" : "false")" selected="@(selectedAppeal == appealId.ToString(System.Globalization.CultureInfo.InvariantCulture))">Appeal #@appealId</option>
                                 }
                             </select>
                         </label>
@@ -145,21 +158,43 @@
                                 @foreach ((string outcome, string title) in new[]
                                 {
                                     ("Upheld", "Keep the existing decision"), ("Replaced", "Replace labels"),
-                                    ("Withdrawn", "Remove labels"), ("Superseded", "Acknowledge a superseded decision")
+                                    ("Withdrawn", "Remove labels"), ("Superseded", "Challenged labels changed")
                                 })
                                 {
-                                    <option value="@outcome" selected="@(Model.SubmittedDecision?["appealOutcome"].ToString() == outcome)">@title</option>
+                                    if (outcome == "Replaced" && !Model.CanReplaceLabels)
+                                    {
+                                        continue;
+                                    }
+                                    <option value="@outcome" selected="@(selectedOutcome == outcome)">@title</option>
                                 }
                             </select>
                         </label>
                     </div>
+                    <p role="status" data-appeal-changed hidden="@(!challengedLabelsChanged)">At least one challenged label has changed, been removed or expired since this appeal. Close this appeal without changing labels; review current labels separately.</p>
                     <p>Other appeals will close automatically when the labels they challenged are no longer in effect.</p>
                 }
                 <label class="field">Reason (optional)<textarea name="reason" maxlength="4096" aria-describedby="decision-reason-help">@Model.SubmittedDecision?["reason"]</textarea></label>
                 <p id="decision-reason-help">If left blank, the audit history records &ldquo;No reason provided.&rdquo;</p>
-                <label class="field-check"><input type="checkbox" name="handleOtherReports" value="true" checked="@(Model.SubmittedDecision is null || Model.SubmittedDecision["handleOtherReports"] == "true")" />
-                    Mark other open reports for this exact subject and CID as handled.</label>
-                <p>@(Model.ReportId is null ? "Without this option, a case-level decision does not mark reports as handled." : $"Report #{Model.ReportId} is handled by this decision even when this option is unchecked.") Reports are handled by this decision, not dismissed as unfounded.</p>
+                string handling = Model.SubmittedDecision?["reportHandling"].ToString() ?? "same-target";
+                bool recordSubject = subject.TryGetProperty("uri", out _);
+                bool versionedSubject = subject.TryGetProperty("cid", out _);
+                string matchingReports = (recordSubject, versionedSubject) switch
+                {
+                    (true, true) => "Reports for this exact content version",
+                    (true, false) => "Reports for this content with no specific version supplied",
+                    _ => "Reports for this account"
+                };
+                <label class="field">Reports to mark as handled
+                    <select name="reportHandling">
+                        <option value="selected" selected="@(handling == "selected")">@(Model.ReportId is { } selectedReport ? $"Only report #{selectedReport}" : "None")</option>
+                        <option value="same-target" selected="@(handling == "same-target")">@matchingReports</option>
+                        @if (recordSubject)
+                        {
+                            <option value="all-records" selected="@(handling == "all-records")">All reports for this content, across every version</option>
+                        }
+                    </select>
+                </label>
+                <p>This marks the selected reports as reviewed. Appeals still need their own review. Withdrawing a label that applies across all versions removes it from every version of this content.</p>
                 <div class="form-actions"><button type="submit">Submit</button></div>
                 }
             </form>

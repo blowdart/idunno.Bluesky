@@ -57,10 +57,34 @@ comments are preserved, and the upstream license notice is distributed at
 wwwroot/vendor/fontawesome/LICENSE.txt within the UI package.
 Source: https://github.com/FortAwesome/Font-Awesome
 
+The idunno.Bluesky.AspNet.Labeler.UI package bundles unmodified Inter variable
+WOFF2 fonts, including the italic face, by The Inter Project Authors.
+Copyright (c) 2016 The Inter Project Authors (https://github.com/rsms/inter).
+The fonts are licensed under the SIL Open Font License, Version 1.1 (OFL-1.1),
+and are served locally rather than from Google Fonts or a CDN. The original
+copyright notice and full license are distributed at
+wwwroot/vendor/inter/LICENSE.txt within the UI package.
+Source: https://github.com/rsms/inter
+
+The idunno.Bluesky.AspNet.Labeler.UI package bundles unmodified Google Sans Code
+variable TrueType fonts, including the italic face.
+Copyright 2025 The Google Sans Code Project Authors
+(github.com/googlefonts/googlesans-code).
+The fonts are licensed under the SIL Open Font License, Version 1.1 (OFL-1.1),
+and are served locally. The original copyright notice and full license are
+distributed at wwwroot/vendor/google-sans-code/OFL.txt within the UI package,
+alongside the upstream TRADEMARKS.md notice. Google Sans Code is a trademark
+of Google LLC; use of the font does not imply affiliation or sponsorship.
+Source: https://github.com/google/fonts/tree/9e108e1439daa51f8dddeb8834e9617816b50c01/ofl/googlesanscode
+
 The idunno.Bluesky.Labeler provider packages use Microsoft.Extensions.DependencyInjection
 and Microsoft.Extensions.Logging (MIT). The SQLite provider uses Microsoft.Data.Sqlite
 (MIT), the PostgreSQL provider uses Npgsql (PostgreSQL license), and the MySQL
 provider uses MySqlConnector (MIT), listed below.
+
+The canonical labeler host also uses idunno.Bluesky.AspNet.Authentication.PostgreSQL
+and Npgsql (PostgreSQL license) for retained website authentication state and
+Data Protection keys in PostgreSQL deployments.
 
 The idunno.Bluesky.AspNet.Labeler hosting package uses the ASP.NET Core shared
 framework (MIT) and System.Formats.Cbor (MIT), as well as the shared labeler

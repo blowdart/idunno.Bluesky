@@ -26,7 +26,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace idunno.Bluesky.AspNet.Labeler.Integration.Test;
 
-public class AdministrationTests
+public partial class AdministrationTests
 {
     [Theory]
     [InlineData(false, false)]
@@ -827,6 +827,79 @@ public class AdministrationTests
     }
 
     [Theory]
+    [InlineData(RemoteAdministrationMode.Disabled)]
+    [InlineData((RemoteAdministrationMode)999)]
+    public async Task DisabledOrUndefinedModeNeverFallsBackToLegacyEnabled(RemoteAdministrationMode mode)
+    {
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
+            configureAdministration: services =>
+            {
+                services.Configure<LabelerAdministrationOptions>(options =>
+                {
+                    options.RemoteEnabled = true;
+                    options.RemoteMode = mode;
+                });
+                services.AddSingleton<ILabelIssuancePolicyProvider, Policy>();
+                services.AddLabelerAdministration(s_audience, key, identity);
+            },
+            remoteAdministrationEnabled: null);
+        using HttpResponseMessage response = await GetTeamAsync(
+            fixture,
+            Token(key, fixture.Clock.GetUtcNow()));
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task WebUiControlledModeRequiresTheDurableOwnerSwitchAndOverridesLegacyBoolean()
+    {
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
+            configureAdministration: services =>
+            {
+                services.Configure<LabelerAdministrationOptions>(options =>
+                {
+                    options.RemoteEnabled = true;
+                    options.RemoteMode = RemoteAdministrationMode.WebUiControlled;
+                });
+                services.AddSingleton<ILabelIssuancePolicyProvider, Policy>();
+                services.AddLabelerAdministration(s_audience, key, identity);
+            },
+            remoteAdministrationEnabled: null);
+        ILabelAdministrationStore store = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        Assert.True((await store.BootstrapAsync(s_actor, "uid:0", "bootstrap", TestContext.Current.CancellationToken)).Succeeded);
+        DateTimeOffset now = await DatabaseNowAsync(fixture);
+        fixture.Clock.SetUtcNow(now);
+
+        using HttpResponseMessage initiallyDisabled = await GetTeamAsync(fixture, Token(key, now));
+        Assert.Equal(HttpStatusCode.NotFound, initiallyDisabled.StatusCode);
+
+        LabelAdministrationCaller owner = (await store.AuthenticateLocalAsync("uid:0", TestContext.Current.CancellationToken)).Result!;
+        LabelServiceResult<LabelAdministrationReceipt> enable = await store.SetRemoteAdministrationEnabledAsync(
+            caller: owner,
+            operationId: "owner-enable",
+            enabled: true,
+            reason: "Enable remote access for integration testing.",
+            cancellationToken: TestContext.Current.CancellationToken);
+        Assert.True(enable.Succeeded, enable.Error?.Message);
+
+        using HttpResponseMessage enabled = await GetTeamAsync(fixture, Token(key, now.AddSeconds(1)));
+        Assert.Equal(HttpStatusCode.OK, enabled.StatusCode);
+
+        LabelServiceResult<LabelAdministrationReceipt> disable = await store.SetRemoteAdministrationEnabledAsync(
+            caller: owner,
+            operationId: "owner-disable",
+            enabled: false,
+            reason: "Disable remote access after integration testing.",
+            cancellationToken: TestContext.Current.CancellationToken);
+        Assert.True(disable.Succeeded, disable.Error?.Message);
+        using HttpResponseMessage disabledAgain = await GetTeamAsync(fixture, Token(key, now.AddSeconds(2)));
+        Assert.Equal(HttpStatusCode.NotFound, disabledAgain.StatusCode);
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task LocalRetirementAdvancesWithSignedNegationsAndDurableCheckpoints(bool tiedCidTimestamps)
@@ -1222,7 +1295,8 @@ public class AdministrationTests
         TimeSpan? lifetime = null,
         DateTimeOffset? notBefore = null)
     {
-        string header = Base64Url(Encoding.UTF8.GetBytes("""{"typ":"JWT","alg":"ES256"}"""));
+        string algorithm = key.Curve == LabelSigningCurve.P256 ? "ES256" : "ES256K";
+        string header = Base64Url(Encoding.UTF8.GetBytes($$"""{"typ":"JWT","alg":"{{algorithm}}"}"""));
         string payload = $$"""
             {"iss":"{{actor ?? s_actor.Value}}","aud":"{{audience ?? s_audience.ToString()}}",
              "lxm":"{{method}}","iat":{{now.ToUnixTimeSeconds()}},"exp":{{(now + (lifetime ?? TimeSpan.FromSeconds(60))).ToUnixTimeSeconds()}},

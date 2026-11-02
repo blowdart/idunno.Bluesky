@@ -140,6 +140,20 @@ public class LabelReportScopeTests
         Assert.NotEqual(account.Subject, profile.Subject);
     }
 
+    [Fact]
+    public void MissingRecordCidRemainsAbsentWithoutTurningTheSubjectIntoAnAccount()
+    {
+        AtUri uri = new($"at://{s_repository}/app.bsky.feed.post/example");
+        LabelReportSubject record = LabelReportSubject.Record(uri);
+        Assert.Equal(uri, record.RecordUri);
+        Assert.Equal(s_repository, record.Repository);
+        Assert.Equal(uri.ToString(), record.Subject);
+        Assert.Equal("record", record.SubjectType);
+        Assert.Null(record.Cid);
+        Assert.True(new LabelReportScope(["record"]).Accepts(record, "com.atproto.moderation.defs#reasonOther"));
+        Assert.False(new LabelReportScope(["account"]).Accepts(record, "com.atproto.moderation.defs#reasonOther"));
+    }
+
     /// <summary>Creates valid subjects without resolving them or substituting a current record version.</summary>
     private static LabelReportSubject Subject(string kind) => kind == "account"
         ? LabelReportSubject.Account(s_repository)

@@ -125,16 +125,17 @@
     <File Path="docs/docs/video.md" />
     <File Path="docs/docs/windowsOAuth.md" />
   </Folder>
-  <Folder Name="/docs/docs/labeller/">
-    <File Path="docs/docs/labeller/administration.md" />
-    <File Path="docs/docs/labeller/deployment.md" />
-    <File Path="docs/docs/labeller/hosting.md" />
-    <File Path="docs/docs/labeller/issuance.md" />
-    <File Path="docs/docs/labeller/moderation.md" />
-    <File Path="docs/docs/labeller/overview.md" />
-    <File Path="docs/docs/labeller/persistence.md" />
-    <File Path="docs/docs/labeller/retirement.md" />
-    <File Path="docs/docs/labeller/ui.md" />
+  <Folder Name="/docs/docs/labeler/">
+    <File Path="docs/docs/labeler/administration.md" />
+    <File Path="docs/docs/labeler/cli.md" />
+    <File Path="docs/docs/labeler/deployment.md" />
+    <File Path="docs/docs/labeler/hosting.md" />
+    <File Path="docs/docs/labeler/issuance.md" />
+    <File Path="docs/docs/labeler/moderation.md" />
+    <File Path="docs/docs/labeler/overview.md" />
+    <File Path="docs/docs/labeler/persistence.md" />
+    <File Path="docs/docs/labeler/retirement.md" />
+    <File Path="docs/docs/labeler/ui.md" />
   </Folder>
   <Folder Name="/docs/docs/includes/">
     <File Path="docs/docs/includes/production-configuration.md" />

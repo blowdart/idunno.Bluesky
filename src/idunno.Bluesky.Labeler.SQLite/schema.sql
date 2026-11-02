@@ -190,6 +190,11 @@ CREATE TABLE IF NOT EXISTS label_case_decisions (
     intent BLOB NOT NULL,
     payload BLOB NOT NULL
 );
+CREATE TABLE IF NOT EXISTS label_ozone_events (
+    event_id INTEGER PRIMARY KEY CHECK(event_id>0),
+    operation_hash BLOB NOT NULL UNIQUE CHECK(length(operation_hash)=32),
+    payload BLOB NOT NULL
+);
 CREATE TABLE IF NOT EXISTS label_search_handles (
     subject_hash BLOB PRIMARY KEY CHECK(length(subject_hash)=32),
     subject_key BLOB NOT NULL,
@@ -206,4 +211,4 @@ CREATE TABLE IF NOT EXISTS label_post_review_checks (
     case_id INTEGER PRIMARY KEY REFERENCES label_cases(case_id),
     checked_ms INTEGER NOT NULL
 );
-INSERT OR IGNORE INTO label_schema(id, version) VALUES(1, 13);
+INSERT OR IGNORE INTO label_schema(id, version) VALUES(1, 14);

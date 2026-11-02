@@ -63,7 +63,7 @@ the granular `app.bsky.feed.getTimeline` RPC scope with the Bluesky AppView audi
 `repo:app.bsky.feed.post?action=create&action=delete`. It does not request transition scopes, blob permissions or
 permission to write other record types. Servers must support granular OAuth scopes.
 The localhost client is public, not confidential. For production metadata and confidential client configuration,
-see [ASP.NET authentication](asp.net.md) and the [tunnel sample](../../samples/Samples.AspNetTunnelAuthentication/readme.md).
+see [ASP.NET authentication](asp.net.md) and the [tunnel sample](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.AspNetTunnelAuthentication).
 
 ## Optional React development server
 

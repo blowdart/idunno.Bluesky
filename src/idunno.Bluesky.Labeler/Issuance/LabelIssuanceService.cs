@@ -154,7 +154,7 @@ public sealed partial class LabelIssuanceService(
             {
                 return Failure<LabelOperationReceipt>(
                     LabelServiceErrorCode.OutcomeUnknown,
-                    "The operation committed but receipt authorization was cancelled; recover the original operation ID.");
+                    "The change was saved, but access to its result could not be confirmed because the request was cancelled. Recover the result using the original tracking ID.");
             }
         }
 
@@ -201,7 +201,7 @@ public sealed partial class LabelIssuanceService(
             {
                 return Failure<LabelDecisionCommit>(
                     LabelServiceErrorCode.InvalidTarget,
-                    "Withdrawal requires a stable DID target and does not resolve handles.");
+                    "Use the account ID (DID), not a handle, when withdrawing a label.");
             }
 
             resolved = request.Target;
@@ -245,7 +245,7 @@ public sealed partial class LabelIssuanceService(
             {
                 return Failure<LabelDecisionCommit>(
                     LabelServiceErrorCode.ValueNotDeclared,
-                    "The requested label value is not declared by the active policy.");
+                    "This label is not included in the active policy.");
             }
 
             if ((resolved.Kind == LabelTargetKind.Account && !policy.Result.AllowAccounts) ||
@@ -254,7 +254,7 @@ public sealed partial class LabelIssuanceService(
             {
                 return Failure<LabelDecisionCommit>(
                     LabelServiceErrorCode.TargetNotAllowed,
-                    "The active issuance policy does not allow this target.");
+                    "The active policy does not allow labels on this account or type of content.");
             }
         }
 
@@ -269,7 +269,7 @@ public sealed partial class LabelIssuanceService(
         {
             return Failure<LabelDecisionCommit>(
                 LabelServiceErrorCode.IssuanceClosed,
-                "Ordinary issuance and negation are closed by the labeler lifecycle.");
+                "The labeler's retirement status prevents ordinary label additions and withdrawals.");
         }
 
         StoredLabel? current = snapshot.Result.CurrentLabel;
@@ -286,7 +286,7 @@ public sealed partial class LabelIssuanceService(
             {
                 return Failure<LabelDecisionCommit>(
                     LabelServiceErrorCode.StaleDecision,
-                    "The withdrawal CID does not match the current stored decision.");
+                    "The content version selected for withdrawal does not match the current label. Load the labels again and review your selection.");
             }
 
             if (resolved.RecordUri is { } uri &&
@@ -325,7 +325,7 @@ public sealed partial class LabelIssuanceService(
                 {
                     return Failure<LabelDecisionCommit>(
                         LabelServiceErrorCode.TimestampExhausted,
-                        "No representable creation instant is later than the current decision.");
+                        "The service cannot assign a valid time later than the current label. An administrator must investigate the stored timestamps.");
                 }
 
                 // One tick beyond the truncated value is also strictly beyond any retained sub-tick
@@ -337,7 +337,7 @@ public sealed partial class LabelIssuanceService(
             {
                 return Failure<LabelDecisionCommit>(
                     LabelServiceErrorCode.InvalidExpiry,
-                    "Expiry must be later than the final service-assigned creation timestamp.");
+                    "The expiry time must be after the creation time assigned by the service.");
             }
 
             try
@@ -364,7 +364,7 @@ public sealed partial class LabelIssuanceService(
                 return LabelServiceResult<LabelDecisionCommit>.Failure(
                     new(
                         code: LabelServiceErrorCode.SigningFailed,
-                        message: "The established signing key could not sign this decision.",
+                        message: "The configured signing key could not sign this label change.",
                         exception: exception));
             }
         }
@@ -411,7 +411,7 @@ public sealed partial class LabelIssuanceService(
         return receipt.Result.Request.SemanticallyEquals(request) ? receipt :
             Failure<LabelOperationReceipt>(
                 LabelServiceErrorCode.IdempotencyConflict,
-                "The operation ID already identifies different intent; recover its original receipt.");
+                "This tracking ID was already used for a different request. Recover that request's original result before submitting different work.");
     }
 
     /// <summary>Recovers a retained service receipt after authorizing the current caller to inspect it.</summary>
@@ -501,7 +501,7 @@ public sealed partial class LabelIssuanceService(
                 LabelServiceResult<LabelStoreState>.Failure(
                     new(
                         code: LabelServiceErrorCode.StorageUnavailable,
-                        message: "Publication state could not be read; restore database availability.",
+                        message: "Publication status could not be read. Restore database access before continuing.",
                         exception: exception)),
                 "inspect-publication");
         }

@@ -53,6 +53,9 @@ public sealed class DetailModel : PageModel
     /// <summary>Gets pending appeals available for explicit review.</summary>
     internal ModerationAppealView[] Appeals { get; private set; } = [];
 
+    /// <summary>Gets whether the selected report or appeal has already been handled.</summary>
+    internal bool SelectedReviewCompleted { get; private set; }
+
     /// <summary>Gets the case detail response.</summary>
     internal JsonElement Data { get; private set; }
 
@@ -77,13 +80,31 @@ public sealed class DetailModel : PageModel
     /// <summary>Gets the currently selected immutable moderation policy version.</summary>
     internal string? PolicyVersion { get; private set; }
 
+    /// <summary>Gets whether the selected policy declares more than one distinct label value.</summary>
+    internal bool CanReplaceLabels { get; private set; }
+
+    /// <summary>Gets appeals whose captured label outcomes are no longer active and current.</summary>
+    internal HashSet<long> ChangedAppealIds { get; private set; } = [];
+
+    /// <summary>Compares captured appeal sequences with the active exact-subject label observations.</summary>
+    internal static bool HasChangedChallenges(ModerationAppealView appeal, ModerationLabelChoiceView[] choices) =>
+        appeal.Challenges.Any(challenge => !choices.Any(choice =>
+            choice.Value == challenge.Label.GetProperty("val").GetString() &&
+            choice.Sequence == challenge.Sequence && choice.Applied));
+
+    /// <summary>Determines replacement availability from declared policy values rather than retained applied labels.</summary>
+    internal static bool HasReplacementLabels(JsonElement declaration) =>
+        declaration.TryGetProperty("policies", out JsonElement policies) &&
+        policies.TryGetProperty("labelValues", out JsonElement values) &&
+        values.EnumerateArray().Select(value => value.GetString()).Distinct(StringComparer.Ordinal).Take(2).Count() > 1;
+
     /// <summary>Loads case detail and immutable workflow history.</summary>
     /// <returns>An action result that displays the case.</returns>
     public async Task<IActionResult> OnGetAsync()
     {
         if (!ModelState.IsValid || Id <= 0 || ReportId is <= 0 || AppealId is <= 0 || HistoryPage <= 0)
         {
-            ViewData["Error"] = "Choose a valid case, report and history page.";
+            ViewData["Error"] = "Check the case number, report number and history page, then try again.";
             return Page();
         }
         AdministrationMemberView[] moderators = ViewData["AvailableModerators"] as AdministrationMemberView[] ?? [];
@@ -129,6 +150,8 @@ public sealed class DetailModel : PageModel
                 Reason: "Xenon case label selection.",
                 Moderation: new(CaseId: Id))).ConfigureAwait(false);
         PolicyVersion = labels.Moderation?.Policy?.Definition?.Version;
+        CanReplaceLabels = labels.Moderation?.Policy?.Definition is { } definition &&
+            HasReplacementLabels(definition.Declaration);
         LabelChoices = labels.Moderation?.LabelChoices ?? [];
         AccountLabels = labels.Moderation?.AccountLabels ?? [];
         LabelsAvailable = labels.Succeeded;
@@ -154,6 +177,7 @@ public sealed class DetailModel : PageModel
                 ViewData["Error"] = "The selected report does not belong to this case.";
                 return Page();
             }
+            SelectedReviewCompleted = CurrentReport.HandledAt is not null || CurrentReport.DecisionOperationId is not null;
         }
 
         AdministrationResponse appeals = await UiPageHelpers.DispatchAsync(
@@ -175,7 +199,7 @@ public sealed class DetailModel : PageModel
             ModerationAppealView? selectedAppeal = selected.Moderation?.Appeals?.SingleOrDefault();
             if (!selected.Succeeded || selectedAppeal?.CaseId != Id)
             {
-                ViewData["Error"] = "The selected appeal could not be loaded or does not belong to this case.";
+                ViewData["Error"] = "This appeal is unavailable or belongs to a different case.";
                 return Page();
             }
 
@@ -183,6 +207,14 @@ public sealed class DetailModel : PageModel
             {
                 Appeals = [.. Appeals, selectedAppeal];
             }
+            else
+            {
+                SelectedReviewCompleted = true;
+            }
+        }
+        if (labels.Succeeded)
+        {
+            ChangedAppealIds = [.. Appeals.Where(appeal => HasChangedChallenges(appeal, LabelChoices)).Select(appeal => appeal.Id)];
         }
         if (labels.Succeeded && reports.Succeeded && appeals.Succeeded &&
             PolicyVersion is not null && response.Moderation?.Case is { } current &&
@@ -202,7 +234,7 @@ public sealed class DetailModel : PageModel
     {
         if (!await UiPageHelpers.ConfirmedAsync(this).ConfigureAwait(false))
         {
-            ViewData["Error"] = "Confirm the assignment change before submitting.";
+            ViewData["Error"] = "Select the confirmation checkbox before changing the assignment.";
             return await OnGetAsync().ConfigureAwait(false);
         }
 
@@ -210,13 +242,13 @@ public sealed class DetailModel : PageModel
         if (assignee.Length > 0 &&
             !(ViewData["AvailableModerators"] is AdministrationMemberView[] moderators && moderators.Any(candidate => candidate.Did == assignee)))
         {
-            ViewData["Error"] = "Select an active moderator or administrator. Reload if team membership changed.";
+            ViewData["Error"] = "Choose an active moderator or administrator. Refresh the page if the team has changed.";
             return await OnGetAsync().ConfigureAwait(false);
         }
         if (!long.TryParse(await UiPageHelpers.FormValueAsync(this, "revision", 24).ConfigureAwait(false), out long revision) ||
             !long.TryParse(await UiPageHelpers.FormValueAsync(this, "caseId", 24).ConfigureAwait(false), out long caseId))
         {
-            ViewData["Error"] = "The case revision is invalid. Reload the case before retrying.";
+            ViewData["Error"] = "The case information submitted is invalid. Refresh the case and review it before trying again.";
             return await OnGetAsync().ConfigureAwait(false);
         }
 
@@ -262,7 +294,7 @@ public sealed class DetailModel : PageModel
                 Protector().Unprotect(protectedState), CaseDecisionFormContext.Default.CaseDecisionForm);
             if (decoded is null)
             {
-                ViewData["Error"] = "The observed decision state is missing. Reload before submitting.";
+                ViewData["Error"] = "The information needed to submit this decision is missing. Refresh the case and review your choices again.";
                 return await OnGetAsync().ConfigureAwait(false);
             }
 
@@ -270,18 +302,25 @@ public sealed class DetailModel : PageModel
         }
         catch (Exception exception) when (exception is CryptographicException or JsonException)
         {
-            ViewData["Error"] = "The observed decision state is invalid or expired. Reload before submitting.";
+            ViewData["Error"] = "This decision form is invalid or has expired. Refresh the case and review your choices again.";
             return await OnGetAsync().ConfigureAwait(false);
         }
 
         if (snapshot.CaseId != Id)
         {
-            ViewData["Error"] = "The decision belongs to another case. Reload before submitting.";
+            ViewData["Error"] = "This decision form belongs to a different case. Refresh this case before submitting.";
             return await OnGetAsync().ConfigureAwait(false);
         }
 
         ReportId = snapshot.ReportId;
         Microsoft.AspNetCore.Http.IFormCollection form = await Request.ReadFormAsync(HttpContext.RequestAborted).ConfigureAwait(false);
+        string reportHandling = form["reportHandling"].ToString();
+        if (reportHandling is not ("selected" or "same-target" or "all-records"))
+        {
+            ViewData["Error"] = "Choose which reports to mark as reviewed.";
+            return await ReloadDecisionAsync(snapshot, form).ConfigureAwait(false);
+        }
+
         HashSet<string> selectedLabels = form["selectedLabels"].Select(value => value ?? string.Empty).ToHashSet(StringComparer.Ordinal);
         if (selectedLabels.Any(value => !snapshot.Choices.Any(choice => choice.Value == value && !choice.OtherVersion)))
         {
@@ -313,7 +352,7 @@ public sealed class DetailModel : PageModel
                 !Enum.TryParse(appealOutcomeText, ignoreCase: false, out LabelAppealStatus outcome) ||
                 !Enum.IsDefined(outcome) || outcome == LabelAppealStatus.Pending)
             {
-                ViewData["Error"] = "Select a valid appeal ID and a resolved appeal outcome.";
+                ViewData["Error"] = "Choose an appeal and how to resolve it.";
                 return await ReloadDecisionAsync(snapshot, form).ConfigureAwait(false);
             }
 
@@ -335,7 +374,8 @@ public sealed class DetailModel : PageModel
                     AppealIds: appealIds,
                     AppealOutcome: appealOutcome,
                     ReportId: snapshot.ReportId ?? 0,
-                    HandleOtherReports: form["handleOtherReports"] == "true"))).ConfigureAwait(false);
+                    HandleOtherReports: reportHandling == "same-target",
+                    HandleReportsAcrossRecordVersions: reportHandling == "all-records"))).ConfigureAwait(false);
         if (response.Succeeded)
         {
             TempData["Status"] = "Moderation decision saved.";
@@ -346,8 +386,8 @@ public sealed class DetailModel : PageModel
         if (response.Error == "OutcomeUnknown")
         {
             DecisionState = protectedState;
-            RetryFields = [.. form.Where(field => field.Key is "reason" or "selectedLabels" or "handleOtherReports" or "appealId" or "appealOutcome").SelectMany(field => field.Value.Select(value => new KeyValuePair<string, string>(field.Key, value ?? string.Empty)))];
-            ViewData["Error"] = "The decision outcome could not be confirmed. Retry the unchanged decision to recover its original result; do not start a new decision.";
+            RetryFields = [.. form.Where(field => field.Key is "reason" or "selectedLabels" or "reportHandling" or "appealId" or "appealOutcome").SelectMany(field => field.Value.Select(value => new KeyValuePair<string, string>(field.Key, value ?? string.Empty)))];
+            ViewData["Error"] = "We could not confirm whether the decision completed. Retry without changing your choices so the service can recover the original result. Do not submit a new decision.";
         }
 
         return page;

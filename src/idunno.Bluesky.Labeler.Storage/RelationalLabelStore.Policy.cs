@@ -108,13 +108,13 @@ internal abstract partial class RelationalLabelStore
                     action: "deleteDraft",
                     token: cancellationToken).ConfigureAwait(false))
                 {
-                    return CaseFailure<LabelPolicyDefinition>(LabelServiceErrorCode.IdempotencyConflict, "Deleted policy version identifiers cannot be reused.");
+                    return CaseFailure<LabelPolicyDefinition>(LabelServiceErrorCode.IdempotencyConflict, "This policy ID belonged to a deleted version and cannot be reused. Choose a new ID.");
                 }
                 byte[] payload = JsonSerializer.SerializeToUtf8Bytes(draft, ModerationJsonContext.Default.ModerationPolicyData);
                 if (existing is not null && !JsonSerializer.SerializeToUtf8Bytes(
                     existing, ModerationJsonContext.Default.ModerationPolicyData).AsSpan().SequenceEqual(payload))
                 {
-                    return CaseFailure<LabelPolicyDefinition>(LabelServiceErrorCode.IdempotencyConflict, "Policy versions are immutable.");
+                    return CaseFailure<LabelPolicyDefinition>(LabelServiceErrorCode.IdempotencyConflict, "A saved policy version cannot be changed. Save your changes under a new policy ID.");
                 }
 
                 if (existing is null)
@@ -180,14 +180,14 @@ internal abstract partial class RelationalLabelStore
                 ModerationPolicyGate? gate = await ReadPolicyGateAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
                 if (gate is null || gate.Revision != expectedRevision || gate.Phase is LabelPolicyPhase.Publishing or LabelPolicyPhase.Withdrawing)
                 {
-                    return CaseFailure<LabelPolicyState>(LabelServiceErrorCode.StaleDecision, "Reload or recover the pending policy publication.");
+                    return CaseFailure<LabelPolicyState>(LabelServiceErrorCode.StaleDecision, "The policy changed or a publication attempt is already pending. Reload the policy and review the current attempt before continuing.");
                 }
 
                 LabelStoreState state = await StateAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
                 if (state.Phase != LabelerLifecyclePhase.Active ||
                     (await ReadMaintenanceAsync(connection, transaction, cancellationToken).ConfigureAwait(false)).IsActive)
                 {
-                    return CaseFailure<LabelPolicyState>(LabelServiceErrorCode.IssuanceClosed, "Publication conflicts with lifecycle or maintenance.");
+                    return CaseFailure<LabelPolicyState>(LabelServiceErrorCode.IssuanceClosed, "The labeler's retirement or maintenance status prevents policy publication.");
                 }
 
                 ModerationPolicyData? draft = await ReadPolicyDraftAsync(connection, transaction, version, cancellationToken).ConfigureAwait(false);
@@ -290,7 +290,7 @@ internal abstract partial class RelationalLabelStore
                 if (gate is null || gate.Revision != expectedRevision ||
                     gate.Phase is not (LabelPolicyPhase.Publishing or LabelPolicyPhase.Withdrawing))
                 {
-                    return CaseFailure<LabelPolicyState>(LabelServiceErrorCode.StaleDecision, "Only the observed pending publication may be abandoned.");
+                    return CaseFailure<LabelPolicyState>(LabelServiceErrorCode.StaleDecision, "The publication attempt changed. Reload it before cancelling.");
                 }
 
                 ModerationPolicyGate next = gate with
@@ -380,7 +380,7 @@ internal abstract partial class RelationalLabelStore
             if (gate.Phase == LabelPolicyPhase.Withdrawing)
             {
                 return CaseFailure<LabelPolicyState>(LabelServiceErrorCode.PolicyUnavailable,
-                    "Removed-label withdrawal must finish and its negations must be published before declaration verification.");
+                    "Label withdrawals must finish and be available from the public label service before the new policy can be checked.");
             }
 
             if (started > now)
@@ -392,7 +392,7 @@ internal abstract partial class RelationalLabelStore
 
             if (started <= now - gate.FreshnessMilliseconds)
             {
-                return CaseFailure<LabelPolicyState>(LabelServiceErrorCode.StaleDecision, "The verification window expired during lookup.");
+                return CaseFailure<LabelPolicyState>(LabelServiceErrorCode.StaleDecision, "The policy check expired before the lookup finished. Check it again.");
             }
 
             bool matching = gate.Policy.Declaration == observed;
@@ -428,7 +428,10 @@ internal abstract partial class RelationalLabelStore
                 await AuditAdministrationAsync(
                     connection: connection, transaction: transaction, administration: team, actor: null, localIdentity: null,
                     operationId: string.Empty, action: "policy-observation", reason: matching ? "Declaration verified." : "Declaration drift detected.",
-                    succeeded: phase == LabelPolicyPhase.VerifiedActive, token: cancellationToken).ConfigureAwait(false);
+                    succeeded: phase == LabelPolicyPhase.VerifiedActive, token: cancellationToken,
+                    changeDescription: gate.Phase == LabelPolicyPhase.Publishing && phase == LabelPolicyPhase.VerifiedActive
+                        ? $"Policy {gate.Policy.Version} was published and its public policy was checked."
+                        : null).ConfigureAwait(false);
             }
 
             return LabelServiceResult<LabelPolicyState>.Success(next.ToState(now));
@@ -537,7 +540,7 @@ internal abstract partial class RelationalLabelStore
 
         if (reader.GetString(0) != operationId || !((byte[])reader.GetValue(1)).AsSpan().SequenceEqual(intent))
         {
-            return CaseFailure<ModerationPolicyOperation>(LabelServiceErrorCode.IdempotencyConflict, "The policy operation identifies different intent.");
+            return CaseFailure<ModerationPolicyOperation>(LabelServiceErrorCode.IdempotencyConflict, "This policy tracking ID was already used for a different request.");
         }
 
         return LabelServiceResult<ModerationPolicyOperation>.Success(
@@ -642,7 +645,7 @@ internal abstract partial class RelationalLabelStore
                         action: "publication",
                         token: cancellationToken).ConfigureAwait(false))
                 {
-                    return CaseFailure<LabelPolicyDefinition>(LabelServiceErrorCode.StaleDecision, "Selected or previously published policies cannot be deleted.");
+                    return CaseFailure<LabelPolicyDefinition>(LabelServiceErrorCode.StaleDecision, "You cannot delete the selected policy or a policy that has been published.");
                 }
 
                 ModerationPolicyData? draft = await ReadPolicyDraftAsync(

@@ -17,8 +17,9 @@ public sealed class LabelReportSubmission
     /// <param name="reason">The optional report context.</param>
     /// <param name="modToolName">The optional reporting tool name.</param>
     /// <param name="modToolMetadata">The optional bounded tool metadata.</param>
+    /// <param name="appealLabelValue">The optional exact label selected by an authenticated label appeal.</param>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">A field is invalid or metadata is supplied without a tool name.</exception>
+    /// <exception cref="ArgumentException">A field is invalid, metadata is supplied without a tool name, or an appeal label is supplied for a non-appeal reason.</exception>
     /// <exception cref="ArgumentOutOfRangeException">A text or metadata field exceeds its limit.</exception>
     /// <exception cref="JsonException">The tool metadata exceeds the nesting limit.</exception>
     /// <remarks><para>Context is limited to 2,000 graphemes and 20,000 UTF-8 bytes. Tool names are
@@ -28,7 +29,8 @@ public sealed class LabelReportSubmission
         string reasonType,
         string? reason = null,
         string? modToolName = null,
-        JsonElement? modToolMetadata = null)
+        JsonElement? modToolMetadata = null,
+        string? appealLabelValue = null)
     {
         ArgumentNullException.ThrowIfNull(subject);
         Subject = subject;
@@ -40,6 +42,16 @@ public sealed class LabelReportSubmission
         }
 
         Reason = reason;
+        if (appealLabelValue is not null)
+        {
+            if (reasonType is not ("com.atproto.moderation.defs#reasonAppeal" or "tools.ozone.report.defs#reasonAppeal"))
+            {
+                throw new ArgumentException("An appeal label value requires an appeal reason.", nameof(appealLabelValue));
+            }
+
+            AppealLabelValue = LabelInput.ValidateText(appealLabelValue, nameof(appealLabelValue), 128);
+        }
+
         if (modToolName is not null)
         {
             ModToolName = LabelInput.ValidateText(modToolName, nameof(modToolName), 1024);
@@ -68,6 +80,9 @@ public sealed class LabelReportSubmission
     /// <summary>Gets the optional confidential context.</summary>
     /// <value>The reporter's retained text.</value>
     public string? Reason { get; }
+    /// <summary>Gets the exact label selected by an authenticated label appeal.</summary>
+    /// <value>The selected label value, or <see langword="null"/> when the submission appeals all active labels.</value>
+    public string? AppealLabelValue { get; }
     /// <summary>Gets the optional reporting tool name.</summary>
     /// <value>The bounded tool identifier.</value>
     public string? ModToolName { get; }

@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Text.Json;
 
 using idunno.AtProto;
 using idunno.AtProto.Labels;
@@ -11,6 +12,7 @@ using idunno.Bluesky.Labeler;
 using idunno.Bluesky.Labeler.Administration;
 using idunno.Bluesky.Labeler.Issuance;
 using idunno.Bluesky.Labeler.Maintenance;
+using idunno.Bluesky.Labeler.Moderation;
 using idunno.Bluesky.Labeler.Signing;
 using idunno.Bluesky.Labeler.Storage;
 
@@ -23,6 +25,207 @@ public class XenonUiTests
     private static readonly Did s_administrator = new("did:plc:xenon-admin");
     private static readonly Did s_member = new("did:plc:xenon-member");
     private static readonly AtProtoServiceReference s_audience = new(TestServerBuilder.s_issuer, "labeler_admin");
+
+    [Theory]
+    [InlineData(false, false, false)]
+    [InlineData(true, false, false)]
+    [InlineData(false, true, false)]
+    [InlineData(true, true, false)]
+    [InlineData(false, false, true)]
+    [InlineData(true, false, true)]
+    public async Task AppealOutcomesReflectDeclaredPolicyAndChangedChallenges(bool multipleLabels, bool expired, bool reissued)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new AppealIdentityHandler());
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
+            configureAdministration: services =>
+            {
+                services.AddLabelerModeration(issuer: TestServerBuilder.s_issuer, httpClient: identity);
+                services.AddSingleton<IDidHandleResolver, TestHandles>();
+                services.AddLabelerAdministration(s_audience, key, identity);
+            },
+            moderation: true,
+            xenonUi: true,
+            controlDatabaseTime: true);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        Assert.True((await team.BootstrapAsync(
+            administrator: s_administrator,
+            localIdentity: "uid:0",
+            operationId: "appeal-bootstrap",
+            cancellationToken: token)).Succeeded);
+        LabelAdministrationCaller caller = Assert.IsType<LabelAdministrationCaller>((await team.AuthenticateLocalAsync("uid:0", token)).Result);
+        ILabelPolicyStore policies = fixture.Services.GetRequiredService<ILabelPolicyStore>();
+        string values = multipleLabels ? """["spam","scam"]""" : """["spam"]""";
+        using JsonDocument declaration = JsonDocument.Parse(
+            $$"""{"$type":"app.bsky.labeler.service","createdAt":"2026-01-01T00:00:00Z","policies":{"labelValues":{{values}}},"subjectTypes":["account"]}""");
+        Assert.True((await policies.SavePolicyAsync(
+            caller: caller,
+            operationId: "appeal-policy",
+            policy: new(
+                version: "xenon-ui-test",
+                declaration: declaration.RootElement,
+                allowAccounts: true,
+                allowRecords: false,
+                rules: "Test appeal controls."),
+            reason: "Configure appeal controls.",
+            cancellationToken: token)).Succeeded);
+        LabelPolicyState initial = (await policies.ReadPolicyStateAsync(token))!;
+        LabelPolicyState publishing = Assert.IsType<LabelPolicyState>((await policies.BeginPolicyPublicationAsync(
+            caller: caller,
+            operationId: "publish-appeal-policy",
+            version: "xenon-ui-test",
+            expectedRevision: initial.Revision,
+            previousCid: null,
+            reason: "Publish test policy.",
+            cancellationToken: token)).Result);
+        Assert.True((await policies.ObservePolicyAsync(
+            expectedRevision: publishing.Revision,
+            verificationStartedAt: publishing.DatabaseTime,
+            observedCid: new("bafyreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku"),
+            declaration: declaration.RootElement,
+            cancellationToken: token)).Succeeded);
+        LabelIssuanceService issuance = new(
+            issuer: TestServerBuilder.s_issuer,
+            signingKey: key,
+            store: fixture.Store,
+            authorizer: new LabelTeamAuthorizer(team, caller),
+            policyProvider: new UiPolicy(),
+            httpClient: identity,
+            timeProvider: fixture.DatabaseClock);
+        LabelServiceResult<LabelOperationReceipt> issued = await issuance.ExecuteAsync(
+            LabelOperationRequest.Issue(
+                operationId: "appealed-label",
+                target: LabelTarget.Account(s_member),
+                value: "spam",
+                context: new(s_administrator, "Apply a test label."),
+                expiresAt: fixture.DatabaseClock.GetUtcNow().AddMinutes(1)),
+            token);
+        Assert.True(issued.Succeeded, issued.Error?.Message);
+        LabelCaseReceipt opened = Assert.IsType<LabelCaseReceipt>((await fixture.Services.GetRequiredService<ILabelModerationStore>().ChangeCaseAsync(
+            caller: caller,
+            change: new(
+                operationId: "test-appeal",
+                subject: LabelReportSubject.Account(s_member),
+                action: LabelCaseAction.OpenAppeal,
+                reason: "Review the test label."),
+            cancellationToken: token)).Result);
+        LabelServiceResult<IReadOnlyList<LabelAppeal>> appeals = await fixture.Services.GetRequiredService<ILabelAppealStore>()
+            .GetAppealsAsync(caller: caller, caseId: opened.Case.Id, cancellationToken: token);
+        Assert.True(appeals.Succeeded);
+        LabelAppeal appeal = Assert.Single(appeals.Result);
+        if (expired)
+        {
+            fixture.DatabaseClock.Advance(TimeSpan.FromMinutes(1));
+        }
+        if (reissued)
+        {
+            Assert.True((await issuance.ExecuteAsync(
+                LabelOperationRequest.Negate(
+                    operationId: "remove-appealed-label",
+                    target: LabelTarget.Account(s_member),
+                    value: "spam",
+                    context: new(s_administrator, "Remove the test label.")),
+                token)).Succeeded);
+            Assert.True((await issuance.ExecuteAsync(
+                LabelOperationRequest.Issue(
+                    operationId: "reissue-appealed-label",
+                    target: LabelTarget.Account(s_member),
+                    value: "spam",
+                    context: new(s_administrator, "Apply a new label outcome.")),
+                token)).Succeeded);
+        }
+        using HttpResponseMessage response = await GetAsAsync(fixture, s_administrator, $"/Xenon/Cases/Detail/{opened.Case.Id}?AppealId={appeal.Id}");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        string html = await response.Content.ReadAsStringAsync(token);
+        Assert.Equal(multipleLabels, html.Contains("value=\"Replaced\"", StringComparison.Ordinal));
+        Assert.Contains("Challenged labels changed", html, StringComparison.Ordinal);
+        bool changed = expired || reissued;
+        Assert.Equal(changed, html.Contains("value=\"Superseded\" selected", StringComparison.Ordinal));
+        Assert.Contains($"data-changed=\"{changed.ToString().ToLowerInvariant()}\" selected", html, StringComparison.Ordinal);
+        Assert.Contains(changed ? "data-appeal-changed>" : "data-appeal-changed hidden", html, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("/Xenon/Terms")]
+    [InlineData("/Xenon/Privacy")]
+    public async Task PublicNoticesRetainOperatorResponsibilitiesAndDataLimitations(string path)
+    {
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new();
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
+            configureAdministration: services =>
+            {
+                services.AddSingleton<ILabelIssuancePolicyProvider, UiPolicy>();
+                services.AddSingleton<IDidHandleResolver, TestHandles>();
+                services.AddLabelerAdministration(s_audience, key, identity);
+            },
+            xenonUi: true);
+        using HttpResponseMessage response = await fixture.Client.GetAsync(path, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        string html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        Assert.Contains("person or organization", html, StringComparison.Ordinal);
+        Assert.Contains("operator", html, StringComparison.Ordinal);
+        if (path.EndsWith("Terms", StringComparison.Ordinal))
+        {
+            Assert.Contains("A report is not proof of wrongdoing", html, StringComparison.Ordinal);
+            Assert.Contains("does not guarantee that copies elsewhere will be removed", html, StringComparison.Ordinal);
+            Assert.Contains("do not remove any rights or obligations", html, StringComparison.Ordinal);
+            Assert.Contains("MIT license", html, StringComparison.Ordinal);
+        }
+        else
+        {
+            Assert.Contains("not a complete privacy policy", html, StringComparison.Ordinal);
+            Assert.Contains("legal reasons for using personal information", html, StringComparison.Ordinal);
+            Assert.Contains("not promise that there is no additional tracking", html, StringComparison.Ordinal);
+            Assert.Contains("without embedded third-party pages or your browser fetching remote images directly", html, StringComparison.Ordinal);
+            Assert.Contains("not a saved copy", html, StringComparison.Ordinal);
+            Assert.Contains("do not include report text or private case notes", html, StringComparison.Ordinal);
+            Assert.Contains("data protection authority", html, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public async Task WorkflowCountsRefreshUsesAuthorizedUncachedTotalsAndCountedPageTitles()
+    {
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new();
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
+            configureAdministration: services =>
+            {
+                services.AddLabelerModeration(issuer: TestServerBuilder.s_issuer, httpClient: identity);
+                services.AddSingleton<IDidHandleResolver, TestHandles>();
+                services.AddLabelerAdministration(s_audience, key, identity);
+            },
+            moderation: true,
+            xenonUi: true);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        Assert.True((await team.BootstrapAsync(
+            s_administrator,
+            "uid:0",
+            "counts-bootstrap",
+            TestContext.Current.CancellationToken)).Succeeded);
+        using HttpResponseMessage counts = await GetAsAsync(fixture, s_administrator, "/Xenon?handler=Counts");
+        Assert.Equal(HttpStatusCode.OK, counts.StatusCode);
+        Assert.Equal("application/json", counts.Content.Headers.ContentType?.MediaType);
+        Assert.True(counts.Headers.CacheControl?.NoStore);
+        Assert.Equal("""{"cases":0,"reports":0,"appeals":0}""", await counts.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        foreach (string path in new[] { "/Xenon", "/Xenon/Cases", "/Xenon/Reports", "/Xenon/Appeals", "/Xenon/Team" })
+        {
+            using HttpResponseMessage countedPage = await GetAsAsync(fixture, s_administrator, path);
+            Assert.Equal(HttpStatusCode.OK, countedPage.StatusCode);
+            string html = await countedPage.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+            Assert.Contains("<title>C:0 R:0 A:0", html, StringComparison.Ordinal);
+            Assert.Contains("data-counts-url=\"/Xenon?handler=Counts\"", html, StringComparison.Ordinal);
+            Assert.Contains("/Xenon/js/workflow-counts.js", html, StringComparison.Ordinal);
+            Assert.Contains("Inter font by", html, StringComparison.Ordinal);
+            Assert.Contains("The Inter Project Authors", html, StringComparison.Ordinal);
+            Assert.Contains("href=\"/Xenon/vendor/inter/LICENSE.txt\"", html, StringComparison.Ordinal);
+            Assert.Contains("The Google Sans Code Project Authors", html, StringComparison.Ordinal);
+            Assert.Contains("href=\"/Xenon/vendor/google-sans-code/OFL.txt\"", html, StringComparison.Ordinal);
+            Assert.Contains("href=\"/Xenon/vendor/google-sans-code/TRADEMARKS.md\"", html, StringComparison.Ordinal);
+        }
+    }
 
     [Theory]
     [InlineData("confirmed")]
@@ -59,10 +262,23 @@ public class XenonUiTests
         using HttpResponseMessage initial = await GetAsAsync(fixture, s_administrator, "/Xenon/Lifecycle");
         Assert.Equal(HttpStatusCode.OK, initial.StatusCode);
         string html = await initial.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        Assert.Contains("Preview beginRetirement", html, StringComparison.Ordinal);
-        Assert.DoesNotContain("Preview purgeRetiredData", html, StringComparison.Ordinal);
-        Assert.DoesNotContain("Preview requestKeyRemoval", html, StringComparison.Ordinal);
-        Assert.DoesNotContain("Preview stopped-host attestation", html, StringComparison.Ordinal);
+        Assert.Matches(
+            """(?s)<form method="post">\s*<input type="hidden" name="stage" value="preview" />\s*<input type="hidden" name="method" value="beginRetirement" />.*?<button type="submit">Review: Start permanent retirement</button>""",
+            html);
+        Assert.DoesNotContain("name=\"method\" value=\"purgeRetiredData\"", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("name=\"method\" value=\"requestKeyRemoval\"", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Review your stopped-process check", html, StringComparison.Ordinal);
+        Assert.Contains("Retiring this labeler is permanent.", html, StringComparison.Ordinal);
+        Assert.Contains("pausing does not reopen the labeler", html, StringComparison.Ordinal);
+        Assert.Contains("Xenon cannot confirm that every app has received them", html, StringComparison.Ordinal);
+        Assert.Contains("remove its labeler service address", html, StringComparison.Ordinal);
+        Assert.Contains("Xenon does not update the DID document for you", html, StringComparison.Ordinal);
+        Assert.Contains("Keep the public verification keys", html, StringComparison.Ordinal);
+        Assert.Contains("You do not need to delete the account", html, StringComparison.Ordinal);
+        Assert.Contains("No maintenance in progress.", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Key replacement and server shutdown status:", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("An unreachable server is not proof that its signing process has stopped.", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("<summary>Technical details</summary>", html, StringComparison.Ordinal);
         Assert.DoesNotContain("value=\"30\"", html, StringComparison.Ordinal);
         (string token, string cookie) = await CsrfAsync(initial);
         Dictionary<string, string> fields = new()
@@ -91,22 +307,24 @@ public class XenonUiTests
         string preparedHtml = await prepared.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         if (scenario == "missing-host")
         {
-            Assert.Contains("Choose the exact host registration independently verified as stopped.", preparedHtml, StringComparison.Ordinal);
+            Assert.Contains("Select the server process you have checked and confirmed has stopped.", preparedHtml, StringComparison.Ordinal);
             Assert.DoesNotContain("name=\"confirmationText\"", preparedHtml, StringComparison.Ordinal);
             return;
         }
 
         if (scenario == "missing-grace")
         {
-            Assert.Contains("Choose a grace period from 1 to 365 days.", preparedHtml, StringComparison.Ordinal);
+            Assert.Contains("Enter a waiting period between 1 and 365 days.", preparedHtml, StringComparison.Ordinal);
             Assert.DoesNotContain("name=\"confirmationText\"", preparedHtml, StringComparison.Ordinal);
             return;
         }
 
-        Assert.Contains("Read-only preflight prepared.", preparedHtml, StringComparison.Ordinal);
+        Assert.Contains("Ready for review. Nothing has changed yet.", preparedHtml, StringComparison.Ordinal);
+        Assert.Contains("Review and confirm permanent retirement", preparedHtml, StringComparison.Ordinal);
+        Assert.Contains("Confirm permanent retirement</button>", preparedHtml, StringComparison.Ordinal);
         Assert.Contains("name=\"confirmationText\"", preparedHtml, StringComparison.Ordinal);
         Assert.Contains(key.ExportPublicKeyMultibase(), preparedHtml, StringComparison.Ordinal);
-        Assert.Contains("Registered hosts", preparedHtml, StringComparison.Ordinal);
+        Assert.Contains("Registered servers", preparedHtml, StringComparison.Ordinal);
         const string proofPrefix = "name=\"confirmation\" value=\"";
         int proofStart = preparedHtml.IndexOf(proofPrefix, StringComparison.Ordinal);
         Assert.NotEqual(-1, proofStart);
@@ -171,16 +389,33 @@ public class XenonUiTests
         if (scenario == "changed-intent")
         {
             string failedHtml = await executed.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-            Assert.Contains("retry preflight for the same immutable intent", failedHtml, StringComparison.Ordinal);
+            Assert.Contains("review the same action again without changing its details", failedHtml, StringComparison.Ordinal);
         }
         if (scenario == "confirmed")
         {
             using HttpResponseMessage gracePage = await GetAsAsync(fixture, s_administrator, "/Xenon/Lifecycle");
             string graceHtml = await gracePage.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-            Assert.Contains("Preview beginGracePeriod", graceHtml, StringComparison.Ordinal);
+            Assert.Contains("Review: Start the waiting period", graceHtml, StringComparison.Ordinal);
+            Assert.Contains("name=\"method\" value=\"beginGracePeriod\"", graceHtml, StringComparison.Ordinal);
             Assert.DoesNotContain("Preview beginRetirement", graceHtml, StringComparison.Ordinal);
             Assert.Matches("<input[^>]*name=\"graceDays\"[^>]*required", graceHtml);
             Assert.DoesNotMatch("<input[^>]*name=\"graceDays\"[^>]*value=", graceHtml);
+        }
+        if (scenario == "generic-checkbox")
+        {
+            using LabelSigningKey replacement = LabelSigningKey.Generate(LabelSigningCurve.P256);
+            await fixture.Services.GetRequiredService<ILabelMaintenanceStore>().BeginRotationAsync(
+                operationId: "ui-maintenance",
+                previousKeyId: keyRing.ActiveKeyId,
+                replacementKeyId: "replacement",
+                replacementPublicKey: replacement.ExportPublicKeyMultibase(),
+                cancellationToken: TestContext.Current.CancellationToken);
+            using HttpResponseMessage maintenancePage = await GetAsAsync(fixture, s_administrator, "/Xenon/Lifecycle");
+            string maintenanceHtml = await maintenancePage.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+            Assert.DoesNotContain("No maintenance in progress.", maintenanceHtml, StringComparison.Ordinal);
+            Assert.Contains("Key replacement and server shutdown status:", maintenanceHtml, StringComparison.Ordinal);
+            Assert.Contains("An unreachable server is not proof that its signing process has stopped.", maintenanceHtml, StringComparison.Ordinal);
+            Assert.Contains("<summary>Technical details</summary>", maintenanceHtml, StringComparison.Ordinal);
         }
     }
 
@@ -201,6 +436,8 @@ public class XenonUiTests
 
         using HttpResponseMessage unauthenticated = await fixture.Client.GetAsync("/Xenon", TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Unauthorized, unauthenticated.StatusCode);
+        using HttpResponseMessage anonymousCounts = await fixture.Client.GetAsync("/Xenon?handler=Counts", TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Unauthorized, anonymousCounts.StatusCode);
 
         ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
         Assert.True((await team.BootstrapAsync(
@@ -214,6 +451,8 @@ public class XenonUiTests
 
         using HttpResponseMessage outsider = await GetAsAsync(fixture, new("did:plc:xenon-outsider"));
         Assert.Equal(HttpStatusCode.Forbidden, outsider.StatusCode);
+        using HttpResponseMessage outsiderCounts = await GetAsAsync(fixture, new("did:plc:xenon-outsider"), "/Xenon?handler=Counts");
+        Assert.Equal(HttpStatusCode.Forbidden, outsiderCounts.StatusCode);
         using HttpResponseMessage outsiderVideo = await GetAsAsync(fixture, new("did:plc:xenon-outsider"), "/Xenon/Media?token=invalid");
         Assert.Equal(HttpStatusCode.Forbidden, outsiderVideo.StatusCode);
         foreach (string notice in new[] { "/Xenon/Terms", "/Xenon/Privacy" })
@@ -235,13 +474,16 @@ public class XenonUiTests
             TestContext.Current.CancellationToken)).Succeeded);
         using HttpResponseMessage activeMember = await GetAsAsync(fixture, s_member);
         Assert.Equal(HttpStatusCode.OK, activeMember.StatusCode);
+        using HttpResponseMessage activeCounts = await GetAsAsync(fixture, s_member, "/Xenon?handler=Counts");
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, activeCounts.StatusCode);
+        Assert.True(activeCounts.Headers.CacheControl?.NoStore);
         using HttpResponseMessage invalidVideo = await GetAsAsync(fixture, s_member, "/Xenon/Media?token=invalid");
         Assert.Equal(HttpStatusCode.BadRequest, invalidVideo.StatusCode);
 
         using HttpResponseMessage teamPage = await GetAsAsync(fixture, s_administrator, "/Xenon/Team");
         Assert.Equal(HttpStatusCode.OK, teamPage.StatusCode);
         string teamHtml = await teamPage.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        Assert.DoesNotContain("Policy verification alerts", teamHtml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Administrator email notifications", teamHtml, StringComparison.Ordinal);
         Assert.Contains("@admin.example", teamHtml, StringComparison.Ordinal);
         Assert.Contains("role=\"tooltip\"", teamHtml, StringComparison.Ordinal);
         Assert.Contains("aria-describedby=\"identity-", teamHtml, StringComparison.Ordinal);
@@ -288,6 +530,8 @@ public class XenonUiTests
             TestContext.Current.CancellationToken)).Succeeded);
         using HttpResponseMessage suspendedMember = await GetAsAsync(fixture, s_member);
         Assert.Equal(HttpStatusCode.Forbidden, suspendedMember.StatusCode);
+        using HttpResponseMessage suspendedCounts = await GetAsAsync(fixture, s_member, "/Xenon?handler=Counts");
+        Assert.Equal(HttpStatusCode.Forbidden, suspendedCounts.StatusCode);
         using HttpResponseMessage suspendedVideo = await GetAsAsync(fixture, s_member, "/Xenon/Media?token=invalid");
         Assert.Equal(HttpStatusCode.Forbidden, suspendedVideo.StatusCode);
     }
@@ -338,7 +582,7 @@ public class XenonUiTests
         using HttpResponseMessage administratorPage = await GetAsAsync(fixture, s_administrator, "/Xenon/Team");
         Assert.Equal(HttpStatusCode.OK, administratorPage.StatusCode);
         string initialHtml = await administratorPage.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        Assert.Contains("Register an address for alerts when background policy verification fails.", initialHtml, StringComparison.Ordinal);
+        Assert.Contains("Add an email address for administrator notifications.", initialHtml, StringComparison.Ordinal);
         Assert.Contains(">Save alert email</button>", initialHtml, StringComparison.Ordinal);
         (string token, string cookie) = await CsrfAsync(administratorPage);
         const string address = "admin@example.invalid";
@@ -359,12 +603,12 @@ public class XenonUiTests
         using HttpResponseMessage updatedPage = await GetAsAsync(fixture, s_administrator, "/Xenon/Team");
         string updatedHtml = await updatedPage.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.Contains(address, updatedHtml, StringComparison.Ordinal);
-        Assert.Contains("Update your email address for alerts when background policy verification fails.", updatedHtml, StringComparison.Ordinal);
+        Assert.Contains("Update your email address for administrator notifications.", updatedHtml, StringComparison.Ordinal);
         Assert.Contains(">Update email</button>", updatedHtml, StringComparison.Ordinal);
         Assert.Contains("Notifications go only to active administrators with a registered address. Leave the field blank to clear your address.", updatedHtml, StringComparison.Ordinal);
         using HttpResponseMessage moderatorPage = await GetAsAsync(fixture, s_member, "/Xenon/Team");
         string moderatorHtml = await moderatorPage.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        Assert.DoesNotContain("Policy verification alerts", moderatorHtml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Administrator email notifications", moderatorHtml, StringComparison.Ordinal);
         Assert.DoesNotContain(address, moderatorHtml, StringComparison.Ordinal);
 
         using HttpResponseMessage moderatorCsrfPage = await GetAsAsync(fixture, s_member, "/Xenon/Team");
@@ -389,6 +633,20 @@ public class XenonUiTests
         using HttpRequestMessage request = new(HttpMethod.Get, path);
         request.Headers.Add("X-Test-Did", actor.Value);
         return await fixture.Client.SendAsync(request, TestContext.Current.CancellationToken);
+    }
+
+    /// <summary>Confirms the fictional appeal subject's DID without accessing public infrastructure.</summary>
+    private sealed class AppealIdentityHandler : HttpMessageHandler
+    {
+        /// <inheritdoc/>
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    $$"""{"id":"{{s_member}}","service":[]}""",
+                    System.Text.Encoding.UTF8,
+                    "application/json")
+            });
     }
 
     /// <summary>Publishes the selected label verification key and configured endpoint without external requests.</summary>

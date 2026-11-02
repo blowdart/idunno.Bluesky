@@ -252,7 +252,7 @@ internal abstract partial class RelationalLabelStore : ILabelRetirementStore
                 token: cancellationToken).ConfigureAwait(false);
             if (!allowed)
             {
-                return AdminFailure<LabelRetirementView>("Current retirement authority is required.");
+                return AdminFailure<LabelRetirementView>("You no longer have permission to manage retirement.");
             }
 
             RetirementData? data = await ReadRetirementDataAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
@@ -281,7 +281,7 @@ internal abstract partial class RelationalLabelStore : ILabelRetirementStore
 
             if (hosts.Count > 1000)
             {
-                return CaseFailure<LabelRetirementView>(LabelServiceErrorCode.StorageUnavailable, "More than 1000 registered hosts require operator reconciliation before retirement.");
+                return CaseFailure<LabelRetirementView>(LabelServiceErrorCode.StorageUnavailable, "More than 1,000 server registrations were found. The operator must review them before retirement can continue.");
             }
 
             view = view with
@@ -293,10 +293,10 @@ internal abstract partial class RelationalLabelStore : ILabelRetirementStore
             LabelMaintenanceState maintenance = await ReadMaintenanceAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             ModerationPolicyGate? policy = await ReadPolicyGateAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             string? blocker = policy?.Phase is LabelPolicyPhase.Publishing or LabelPolicyPhase.Withdrawing
-                ? "Recover pending policy publication before retirement." : null;
+                ? "Finish or cancel the pending policy publication before starting retirement." : null;
             view = view with
             {
-                Blocker = maintenance.IsActive ? "Recover the active rotation before retirement administration." : blocker
+                Blocker = maintenance.IsActive ? "Finish or recover the signing-key change before managing retirement." : blocker
             };
             if (preview is null || view.Blocker is not null)
             {
@@ -326,7 +326,7 @@ internal abstract partial class RelationalLabelStore : ILabelRetirementStore
                 sql: "SELECT COUNT(*) FROM label_retirement_confirmations",
                 token: cancellationToken).ConfigureAwait(false)) >= 1000)
             {
-                return CaseFailure<LabelRetirementView>(LabelServiceErrorCode.StorageUnavailable, "Confirmation capacity reached; allow outstanding confirmations to expire.");
+                return CaseFailure<LabelRetirementView>(LabelServiceErrorCode.StorageUnavailable, "Too many confirmations are pending. Wait for some to expire, then try again.");
             }
 
             await ExecuteAsync(
@@ -368,7 +368,7 @@ internal abstract partial class RelationalLabelStore : ILabelRetirementStore
             ?? throw new InvalidDataException("The retirement receipt is null.");
         return receipt.OperationId == command.OperationId && receipt.Intent == RetirementIntent(caller, command)
             ? LabelServiceResult<LabelRetirementRecovery>.Success(new(receipt.View))
-            : CaseFailure<LabelRetirementRecovery>(LabelServiceErrorCode.IdempotencyConflict, "The operation ID identifies different retirement intent.");
+            : CaseFailure<LabelRetirementRecovery>(LabelServiceErrorCode.IdempotencyConflict, "This retirement tracking ID was already used for a different action or different details.");
     }
 
     /// <summary>Checks current authority before returning an existing command outcome without executing new work.</summary>
@@ -395,7 +395,7 @@ internal abstract partial class RelationalLabelStore : ILabelRetirementStore
                     connection: connection, transaction: transaction, team: team, caller: caller,
                     operationId: command.OperationId, action: command.Action, reason: command.Reason,
                     succeeded: false, token: cancellationToken).ConfigureAwait(false);
-                return AdminFailure<LabelRetirementRecovery>("Current retirement authority is required.");
+                return AdminFailure<LabelRetirementRecovery>("You no longer have permission to manage retirement.");
             }
 
             return await RecoverRetirementReceiptAsync(
@@ -431,7 +431,7 @@ internal abstract partial class RelationalLabelStore : ILabelRetirementStore
                     connection: connection, transaction: transaction, team: team, caller: caller,
                     operationId: command.OperationId, action: command.Action, reason: command.Reason,
                     succeeded: false, token: cancellationToken).ConfigureAwait(false);
-                return AdminFailure<LabelRetirementView>("Current retirement authority is required.");
+                return AdminFailure<LabelRetirementView>("You no longer have permission to manage retirement.");
             }
 
             string intent = RetirementIntent(caller, command);
@@ -471,7 +471,7 @@ internal abstract partial class RelationalLabelStore : ILabelRetirementStore
                         data: data,
                         token: cancellationToken).ConfigureAwait(false))
                 {
-                    return CaseFailure<LabelRetirementView>(LabelServiceErrorCode.StaleDecision, "Obtain and explicitly confirm a fresh action-specific retirement preview.");
+                    return CaseFailure<LabelRetirementView>(LabelServiceErrorCode.StaleDecision, "Review this retirement action again and complete its confirmation.");
                 }
             }
 
@@ -541,13 +541,13 @@ internal abstract partial class RelationalLabelStore : ILabelRetirementStore
     {
         if ((await ReadMaintenanceAsync(connection, transaction, token).ConfigureAwait(false)).IsActive)
         {
-            return "Recover the active rotation before retirement administration.";
+            return "Finish or recover the signing-key change before managing retirement.";
         }
 
         if ((await ReadPolicyGateAsync(connection, transaction, token).ConfigureAwait(false))?.Phase is
             LabelPolicyPhase.Publishing or LabelPolicyPhase.Withdrawing)
         {
-            return "Recover pending policy publication before retirement.";
+            return "Finish or cancel the pending policy publication before starting retirement.";
         }
 
         DateTimeOffset timestamp = DateTimeOffset.FromUnixTimeMilliseconds(now);
@@ -569,7 +569,7 @@ internal abstract partial class RelationalLabelStore : ILabelRetirementStore
             case "beginRetirement" when state.Phase == LabelerLifecyclePhase.Active:
                 if (command.VerifiedSigningPublicKey is null && state.IssuedThrough != 0)
                 {
-                    return "Verify the selected label signing key and public DID publication before beginning retirement.";
+                    return "Check that the selected signing key matches the labeler account's published identity information before starting retirement.";
                 }
 
                 state = state with
@@ -639,7 +639,7 @@ internal abstract partial class RelationalLabelStore : ILabelRetirementStore
                     sql: "SELECT COUNT(*) FROM label_hosts h JOIN label_host_roles r ON r.host_id=h.host_id WHERE h.stopped=0 AND r.requires_signing_key=1",
                     token: token).ConfigureAwait(false)) != 0)
                 {
-                    return "Stop and independently verify every signing host before attesting removal. Keyless administration may remain running.";
+                    return "Check that every server process able to use the signing key has stopped before recording key removal. Administration processes without signing keys may keep running.";
                 }
 
                 next = next with { KeyRemoval = "Attested", RemovalAttestation = command.Attestation };
@@ -652,7 +652,7 @@ internal abstract partial class RelationalLabelStore : ILabelRetirementStore
                     token: token,
                     ("@host", command.HostInstanceId!.Value.ToString("N"))).ConfigureAwait(false)) != 1)
                 {
-                    return "The selected host is not an unstopped registration. Refresh the retirement inventory.";
+                    return "This server registration is missing or already recorded as stopped. Refresh the server list.";
                 }
 
                 await ExecuteAsync(
@@ -663,7 +663,7 @@ internal abstract partial class RelationalLabelStore : ILabelRetirementStore
                     ("@host", command.HostInstanceId.Value.ToString("N"))).ConfigureAwait(false);
                 break;
             default:
-                return "The current lifecycle does not permit this action. Inspect progress and recover the existing operation.";
+                return "This action is not available at the current retirement stage. Check progress and recover the existing request if needed.";
         }
 
         next = next with

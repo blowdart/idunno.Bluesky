@@ -107,10 +107,10 @@ test("Other tabs update the selection and clearing storage restores System", () 
 test("Storage failures keep the selector working and explicitly explain that preference cannot persist", () => {
     const page = browser(null, true);
     page.ready();
-    assert.match(page.status.textContent, /this page only/);
+    assert.match(page.status.textContent, /only to this page/);
     page.choose("dark");
     assert.equal(page.attributes.get("data-theme"), "dark");
-    assert.match(page.status.textContent, /could not save or read/);
+    assert.match(page.status.textContent, /could not remember this setting/);
     page.choose("system");
     assert.equal(page.attributes.has("data-theme"), false);
 });

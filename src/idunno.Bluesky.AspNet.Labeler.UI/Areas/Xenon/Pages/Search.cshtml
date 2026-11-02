@@ -5,18 +5,18 @@
     ViewData["WideLayout"] = true;
 }
 <h1>Search reports and appeals</h1>
-<p>Find partial subject handles, canonical DIDs/record URIs, report text and appeal messages. Matches are case-insensitive; punctuation is literal.</p>
+<p>Search by part of a handle, an account ID (DID), a content address (AT URI), or words in reports and appeal messages. Capitalization does not matter. Punctuation is matched as typed, not used as a search command.</p>
 @if (Model.Results is { } results)
 {
     @if (results.PendingHandleCases > 0)
     {
-        <p class="notice notice-status" role="status">Handle indexing is updating for @results.PendingHandleCases cases. Text and canonical-identifier search remain available; handle matches may be incomplete until refresh finishes.</p>
+        <p class="notice notice-status" role="status">Handles are being updated for @results.PendingHandleCases @(results.PendingHandleCases == 1 ? "case" : "cases"). Some handle matches may be missing for now. You can still search report text, appeal messages, account IDs and content addresses.</p>
     }
     @if (results.UnavailableHandleCases > 0)
     {
-        <p class="notice notice-status" role="status">Handles could not be verified for @results.UnavailableHandleCases cases. Their stored text and canonical identifiers are still searchable.</p>
+        <p class="notice notice-status" role="status">Handles could not be checked for @results.UnavailableHandleCases @(results.UnavailableHandleCases == 1 ? "case" : "cases"). You can still search their report text, appeal messages, account IDs and content addresses.</p>
     }
-    <p>@results.Total results for <strong>@Model.Q</strong></p>
+    <p>@results.Total @(results.Total == 1 ? "result" : "results") for <strong>@Model.Q</strong></p>
     <ol class="search-results">
         @foreach (ModerationSearchHitView hit in results.Hits)
         {
@@ -29,7 +29,7 @@
                     <p class="preview-text">@report.Report.Reason</p>
                     @if (report.ResolutionReason is { } reportResolution)
                     {
-                        <p>Resolution: @reportResolution</p>
+                        <p>Review outcome: @reportResolution</p>
                     }
                     <p>Received <time data-relative-time datetime="@report.Report.CreatedAt.ToString("O")">@report.Report.CreatedAt.ToUniversalTime().ToString("u")</time></p>
                 }
@@ -44,7 +44,7 @@
                     }
                     @if (appeal.ResolutionReason is { } appealResolution)
                     {
-                        <p>Resolution: @appealResolution</p>
+                        <p>Review outcome: @appealResolution</p>
                     }
                     <p>Received <time data-relative-time datetime="@appeal.CreatedAt.ToString("O")">@appeal.CreatedAt.ToUniversalTime().ToString("u")</time></p>
                 }

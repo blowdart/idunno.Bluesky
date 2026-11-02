@@ -60,7 +60,7 @@ public static class ServiceAuthentication
             httpClient: httpClient,
             timeProvider: timeProvider,
             maximumLifetime: maximumLifetime,
-            allowLegacyReportAudience: false,
+            allowLegacyModerationAudience: false,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
     /// <summary>
@@ -81,7 +81,8 @@ public static class ServiceAuthentication
     /// <remarks>
     /// <para>Accepts only <c>com.atproto.moderation.createReport</c>, addressed either to the exact
     /// <c>labeler#atproto_labeler</c> service or to the same bare labeler DID for legacy PDS proxies.
-    /// This compatibility does not apply to <see cref="VerifyAsync"/> or administrative authentication.</para>
+    /// This intake verifier grants no administrative authority, and <see cref="VerifyAsync"/> remains exact-audience.
+    /// Ozone administration uses the separate <see cref="VerifyOzoneAdministrationAsync"/> boundary.</para>
     /// <para>Uses the same signature, key, lifetime and required replay-identifier validation as
     /// <see cref="VerifyAsync"/>. The caller must durably prevent replay before accepting the report.
     /// A verified reporter does not need labeler team membership.</para>
@@ -102,14 +103,110 @@ public static class ServiceAuthentication
             httpClient: httpClient,
             timeProvider: timeProvider,
             maximumLifetime: maximumLifetime,
-            allowLegacyReportAudience: true,
+            allowLegacyModerationAudience: true,
             cancellationToken: cancellationToken).ConfigureAwait(false);
         return new(verified);
     }
 
     /// <summary>
-    /// Applies common token validation with legacy audience compatibility restricted to report intake.
+    /// Verifies an authenticated Ozone appeal submission addressed to an independent labeler.
     /// </summary>
+    /// <param name="token">The compact signed service JWT.</param>
+    /// <param name="labeler">The destination labeler DID.</param>
+    /// <param name="httpClient">The hardened HTTP client used to resolve the reporter's DID document.</param>
+    /// <param name="timeProvider">An optional clock used to validate the lifetime.</param>
+    /// <param name="maximumLifetime">The maximum accepted service-token lifetime.</param>
+    /// <param name="cancellationToken">A cancellation token for DID resolution.</param>
+    /// <returns>The authenticated reporter and replay identifiers, not an administrative caller.</returns>
+    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="maximumLifetime"/> is zero or negative.</exception>
+    /// <exception cref="InvalidDataException">The token, claims, DID document or signature is invalid.</exception>
+    /// <exception cref="HttpRequestException">DID resolution fails at the transport layer.</exception>
+    /// <exception cref="OperationCanceledException">The operation is canceled.</exception>
+    /// <remarks>
+    /// <para>Requires the <c>tools.ozone.inbox.appealActionedSubject</c> method claim and accepts either the exact
+    /// <c>labeler#atproto_labeler</c> audience or the same bare labeler DID used by PDS proxies.
+    /// This intake verifier grants no administrative authority, and <see cref="VerifyAsync"/> remains exact-audience.
+    /// Ozone administration uses the separate <see cref="VerifyOzoneAdministrationAsync"/> boundary.</para>
+    /// <para>Uses the same signature, key, lifetime and replay-identifier validation as
+    /// <see cref="VerifyAsync"/>. The caller must durably prevent replay before accepting the appeal.</para>
+    /// </remarks>
+    public static async Task<ModerationReportAuthenticationResult> VerifyModerationAppealAsync(
+        string token,
+        Did labeler,
+        HttpClient httpClient,
+        TimeProvider? timeProvider = null,
+        TimeSpan? maximumLifetime = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(labeler);
+        ServiceAuthenticationResult verified = await VerifyCoreAsync(
+            token: token,
+            audience: new(labeler, "atproto_labeler"),
+            method: new("tools.ozone.inbox.appealActionedSubject"),
+            httpClient: httpClient,
+            timeProvider: timeProvider,
+            maximumLifetime: maximumLifetime,
+            allowLegacyModerationAudience: true,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        return new(verified);
+    }
+
+    /// <summary>Verifies a method-bound Ozone administration assertion for an independent labeler.</summary>
+    /// <param name="token">The compact signed service JWT.</param>
+    /// <param name="labeler">The destination labeler DID.</param>
+    /// <param name="method">The exact Ozone administration method receiving the assertion.</param>
+    /// <param name="httpClient">The hardened identity-resolution client.</param>
+    /// <param name="timeProvider">An optional validation clock.</param>
+    /// <param name="maximumLifetime">The maximum accepted service-token lifetime. The default is 15 minutes.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The verified caller evidence and identifiers for durable replay protection.</returns>
+    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="method"/> is not a supported Ozone administration namespace.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="maximumLifetime"/> is zero or negative.</exception>
+    /// <exception cref="InvalidDataException">The token, claims, identity or signature is invalid.</exception>
+    /// <exception cref="HttpRequestException">Identity resolution fails at the transport layer.</exception>
+    /// <exception cref="OperationCanceledException">The operation is canceled.</exception>
+    /// <remarks>
+    /// <para>Accepts the exact <c>labeler#atproto_labeler</c> audience or the same bare labeler DID
+    /// used by Ozone's PDS proxy. This does not change <see cref="VerifyAsync"/> or accept native
+    /// <c>dev.idunno.labeler.admin</c> assertions.</para>
+    /// <para>Verification grants no permission. The trusted adapter must consume the replay identifiers
+    /// through <c>ILabelAdministrationStore.AuthenticateServiceAsync</c> and check live team authority
+    /// for every operation. Public report and appeal intake must use their separate verification methods.</para>
+    /// </remarks>
+    public static Task<ServiceAuthenticationResult> VerifyOzoneAdministrationAsync(
+        string token,
+        Did labeler,
+        Nsid method,
+        HttpClient httpClient,
+        TimeProvider? timeProvider = null,
+        TimeSpan? maximumLifetime = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(labeler);
+        ArgumentNullException.ThrowIfNull(method);
+        string nsid = method.ToString();
+        if (!nsid.StartsWith("tools.ozone.server.", StringComparison.Ordinal) &&
+            !nsid.StartsWith("tools.ozone.team.", StringComparison.Ordinal) &&
+            !nsid.StartsWith("tools.ozone.moderation.", StringComparison.Ordinal) &&
+            !nsid.StartsWith("tools.ozone.report.", StringComparison.Ordinal))
+        {
+            throw new ArgumentException("An Ozone administration method is required.", nameof(method));
+        }
+
+        return VerifyCoreAsync(
+            token: token,
+            audience: new(labeler, "atproto_labeler"),
+            method: method,
+            httpClient: httpClient,
+            timeProvider: timeProvider,
+            maximumLifetime: maximumLifetime,
+            allowLegacyModerationAudience: true,
+            cancellationToken: cancellationToken);
+    }
+
+    /// <summary>Applies common token validation with explicitly selected labeler audience compatibility.</summary>
     private static async Task<ServiceAuthenticationResult> VerifyCoreAsync(
         string token,
         AtProtoServiceReference audience,
@@ -117,7 +214,7 @@ public static class ServiceAuthentication
         HttpClient httpClient,
         TimeProvider? timeProvider,
         TimeSpan? maximumLifetime,
-        bool allowLegacyReportAudience,
+        bool allowLegacyModerationAudience,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(token);
@@ -128,6 +225,7 @@ public static class ServiceAuthentication
         TimeSpan lifetimeLimit = maximumLifetime ?? s_defaultMaximumLifetime;
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(lifetimeLimit, TimeSpan.Zero);
 
+        string failureCategory = "token-malformed";
         try
         {
             if (token.Length is 0 or > MaximumTokenLength)
@@ -156,6 +254,7 @@ public static class ServiceAuthentication
             ValidateObject(header);
             ValidateObject(payload);
 
+            failureCategory = "token-header-invalid";
             if (ReadString(header, "typ") != "JWT" ||
                 ReadString(header, "alg") is not ("ES256" or "ES256K") ||
                 (header.TryGetProperty("kid", out JsonElement kid) && (kid.ValueKind != JsonValueKind.String || kid.GetString() != "#atproto")) ||
@@ -168,30 +267,38 @@ public static class ServiceAuthentication
 
             JsonWebTokenHandler handler = new() { MaximumTokenSizeInBytes = MaximumTokenLength };
             JsonWebToken jwt = handler.ReadJsonWebToken(token);
+            failureCategory = "token-audience-mismatch";
             string tokenAudience = ReadString(payload, "aud");
-            bool legacyReportAudience = allowLegacyReportAudience &&
-                method.ToString() == "com.atproto.moderation.createReport" &&
+            bool legacyModerationAudience = allowLegacyModerationAudience &&
                 audience.Fragment == "atproto_labeler" &&
                 tokenAudience == audience.Did.Value;
             if (jwt.IsEncrypted ||
-                (tokenAudience != audience.ToString() && !legacyReportAudience) ||
-                ReadString(payload, "lxm") != method.ToString())
+                (tokenAudience != audience.ToString() && !legacyModerationAudience))
             {
-                throw new InvalidDataException("The service token audience or method does not match the request.");
+                throw new InvalidDataException("The service token audience does not match the request.");
             }
 
+            failureCategory = "token-method-mismatch";
+            if (ReadString(payload, "lxm") != method.ToString())
+            {
+                throw new InvalidDataException("The service token method does not match the request.");
+            }
+
+            failureCategory = "token-issuer-invalid";
             string issuer = ReadString(payload, "iss");
             if (!Did.TryParse(issuer, out Did? did))
             {
                 throw new InvalidDataException("The service token issuer must be a bare DID.");
             }
 
+            failureCategory = "token-replay-identifier-invalid";
             string tokenId = ReadString(payload, "jti");
             if (string.IsNullOrWhiteSpace(tokenId) || tokenId.Length > 256)
             {
                 throw new InvalidDataException("The service token identifier must contain between 1 and 256 nonblank characters.");
             }
 
+            failureCategory = "token-lifetime-invalid";
             DateTimeOffset issuedAt = ReadTimestamp(payload, "iat");
             DateTimeOffset expiresAt = ReadTimestamp(payload, "exp");
             DateTimeOffset? notBefore = payload.TryGetProperty("nbf", out _) ? ReadTimestamp(payload, "nbf") : null;
@@ -202,12 +309,25 @@ public static class ServiceAuthentication
                 did: did,
                 httpClient: httpClient,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
-            SigningKey key = SigningKeyVerifier.GetKey(document, did, SigningKeyVerifier.RepositorySigningKeyFragment);
+            SigningKey key;
+            try
+            {
+                key = SigningKeyVerifier.GetKey(document, did, SigningKeyVerifier.RepositorySigningKeyFragment);
+            }
+            catch (Exception exception) when (exception is InvalidDataException or ArgumentException or FormatException or CryptographicException)
+            {
+                InvalidDataException failure = new("The issuer's service signing key could not be verified.", exception);
+                failure.Data["ServiceAuthenticationFailure"] = "token-signing-key-invalid";
+                throw failure;
+            }
+
+            failureCategory = "token-algorithm-mismatch";
             if (key.JwtAlgorithm != jwt.Alg)
             {
                 throw new InvalidDataException("The service token algorithm does not match the issuer's signing key.");
             }
 
+            failureCategory = "token-signature-invalid";
             key.Verify(Encoding.ASCII.GetBytes($"{parts[0]}.{parts[1]}"), signature, "service token");
             ValidateLifetime(
                 issuedAt: issuedAt,
@@ -226,9 +346,17 @@ public static class ServiceAuthentication
                 TokenAudience = tokenAudience
             };
         }
+        catch (InvalidDataException exception)
+        {
+            // Share only a server-selected category with transport logging, never claim or exception text.
+            exception.Data["ServiceAuthenticationFailure"] ??= failureCategory;
+            throw;
+        }
         catch (Exception exception) when (exception is JsonException or ArgumentException or FormatException or CryptographicException or SecurityTokenException)
         {
-            throw new InvalidDataException("The service token could not be verified.", exception);
+            InvalidDataException failure = new("The service token could not be verified.", exception);
+            failure.Data["ServiceAuthenticationFailure"] = failureCategory;
+            throw failure;
         }
     }
 
@@ -346,7 +474,19 @@ public static class ServiceAuthentication
             issuedAt - now > TimeSpan.FromSeconds(5) || now - expiresAt > TimeSpan.FromSeconds(5) ||
             notBefore is { } earliest && (earliest >= expiresAt || earliest - now > TimeSpan.FromSeconds(5)))
         {
-            throw new InvalidDataException("The service token lifetime is invalid or has expired.");
+            InvalidDataException failure = new("The service token lifetime is invalid or has expired.");
+            string category = "token-lifetime-invalid";
+            if (now - expiresAt > TimeSpan.FromSeconds(5))
+            {
+                category = "token-expired";
+            }
+            else if (issuedAt - now > TimeSpan.FromSeconds(5) || notBefore is { } start && start - now > TimeSpan.FromSeconds(5))
+            {
+                category = "token-not-yet-valid";
+            }
+
+            failure.Data["ServiceAuthenticationFailure"] = category;
+            throw failure;
         }
     }
 }

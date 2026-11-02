@@ -4,7 +4,7 @@
 @{
     ViewData["Title"] = $"Report {Model.Id}";
 }
-<p><a asp-area="Xenon" asp-page="/Reports/Index">Back to reports</a></p>
+<p><a asp-area="Xenon" asp-page="/Reports/Index"><span aria-hidden="true">&larr;</span> Back to reports</a></p>
 <h1>Report #@Model.Id</h1>
 @if (Model.Data.ValueKind == JsonValueKind.Object &&
     Model.Data.TryGetProperty("moderation", out JsonElement moderation) &&
@@ -31,7 +31,7 @@
         }
         else
         {
-            <p role="status">Active labels could not be loaded. Reload before reviewing this subject.</p>
+            <p role="status">Current labels could not be loaded. Refresh before reviewing this account or content.</p>
         }
     </section>
     <section class="panel">
@@ -53,7 +53,7 @@
             <dd>@await Html.PartialAsync("_Identity", new IdentityDisplayModel(report.GetProperty("reportedBy").GetString(), Detailed: true))</dd>
             <dt>Received (UTC)</dt>
             <dd><time datetime="@report.GetProperty("createdAt").GetDateTimeOffset().ToString("O")">@report.GetProperty("createdAt").GetDateTimeOffset().ToUniversalTime().ToString("u")</time></dd>
-            <dt>Reason type</dt><dd>@report.GetProperty("reasonType").GetString()</dd>
+            <dt>Report category</dt><dd>@ReportReasonOptions.Format(report.GetProperty("reasonType").GetString())</dd>
             <dt>Reason</dt><dd class="preview-text">@report.GetProperty("reason").GetString()</dd>
         </dl>
     </section>

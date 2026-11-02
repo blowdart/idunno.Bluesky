@@ -28,7 +28,7 @@
         const status = document.getElementById("theme-status");
         if (!control || !status) return;
         const showStorageError = () => {
-            status.textContent = "Your browser could not save or read the theme preference. Changes apply to this page only.";
+            status.textContent = "Your browser could not remember this setting. The change applies only to this page.";
         };
         control.value = preference;
         control.disabled = false;

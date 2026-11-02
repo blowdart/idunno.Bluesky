@@ -160,7 +160,7 @@ internal sealed class TableNavigation(LabelTableQuery query, HttpRequest request
         };
         string[] retainedParameters = Query.Kind switch
         {
-            LabelTableKind.PendingReports => ["PageNumber", "Sort", "Ascending", "Status", "PendingPageNumber", "PendingSort", "PendingAscending"],
+            LabelTableKind.PendingReports => ["PageNumber", "Sort", "Ascending", "Status", "Queue", "PendingPageNumber", "PendingSort", "PendingAscending"],
             LabelTableKind.Reports => ["PendingPageNumber", "PendingSort", "PendingAscending"],
             _ => []
         };
@@ -178,10 +178,12 @@ internal sealed class TableNavigation(LabelTableQuery query, HttpRequest request
         }
         else if (Query.Kind == LabelTableKind.Reports)
         {
+            values["Queue"] = Query.Workflow?.ToString();
             values["Status"] = Query.ReportHandled switch { false => "Unresolved", true => "Handled", null => "All" };
         }
         else if (Query.Kind == LabelTableKind.Appeals)
         {
+            values["Queue"] = Query.Workflow?.ToString();
             values["Status"] = Query.AppealStatus?.ToString() ?? string.Empty;
         }
         else if (Query.Kind == LabelTableKind.Audit)

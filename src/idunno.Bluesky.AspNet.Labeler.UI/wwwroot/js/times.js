@@ -67,7 +67,7 @@
             }, 60000);
         }
         const storageError = () => {
-            if (status) status.textContent = "Your browser could not save or read the time zone preference. Changes apply to this page only.";
+            if (status) status.textContent = "Your browser could not remember this setting. The change applies only to this page.";
         };
         apply(false);
         try {
