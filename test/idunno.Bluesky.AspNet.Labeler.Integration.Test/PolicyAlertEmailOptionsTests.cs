@@ -1,8 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using idunno.Bluesky.AspNet.Labeler;
 using idunno.AtProto;
+using idunno.Bluesky.AspNet.Labeler;
 using idunno.Bluesky.Labeler.Administration;
 using idunno.Bluesky.Labeler.Moderation;
 

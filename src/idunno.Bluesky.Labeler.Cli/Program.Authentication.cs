@@ -5,11 +5,11 @@ using System.CommandLine;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
-using Microsoft.Extensions.Logging.Abstractions;
-
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.AtProto.OAuthCallback;
+
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace idunno.Bluesky.Labeler.Cli;
 

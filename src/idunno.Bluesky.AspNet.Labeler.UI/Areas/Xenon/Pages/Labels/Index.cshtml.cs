@@ -197,16 +197,20 @@ public sealed class IndexModel : PageModel
             Target = resolved;
         }
 
-        Labels = new(choices, response.Succeeded && response.Target is { } canonical
-            ? Protect(new(
-                Actor: User.FindFirst(AtProtoClaims.Did)!.Value,
-                TargetKind: TargetKind,
-                InputTarget: Target,
-                Target: canonical,
-                Cid: Cid,
-                OperationId: Guid.NewGuid().ToString("N"),
-                Choices: choices))
-            : null, Target: Target, Cid: Cid);
+        Labels = new(
+            Choices: choices,
+            State: response.Succeeded && response.Target is { } canonical
+                ? Protect(new(
+                    Actor: User.FindFirst(AtProtoClaims.Did)!.Value,
+                    TargetKind: TargetKind,
+                    InputTarget: Target,
+                    Target: canonical,
+                    Cid: Cid,
+                    OperationId: Guid.NewGuid().ToString("N"),
+                    Choices: choices))
+                : null,
+            Target: Target,
+            Cid: Cid);
     }
 
     /// <summary>Authenticates the actor, canonical target, observed baseline and any frozen retry intent.</summary>

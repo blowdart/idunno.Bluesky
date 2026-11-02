@@ -214,8 +214,7 @@ public sealed class DetailModel : PageModel
         }
         if (labels.Succeeded)
         {
-            ChangedAppealIds = Appeals.Where(appeal => HasChangedChallenges(appeal, LabelChoices))
-                .Select(appeal => appeal.Id).ToHashSet();
+            ChangedAppealIds = [.. Appeals.Where(appeal => HasChangedChallenges(appeal, LabelChoices)).Select(appeal => appeal.Id)];
         }
         if (labels.Succeeded && reports.Succeeded && appeals.Succeeded &&
             PolicyVersion is not null && response.Moderation?.Case is { } current &&

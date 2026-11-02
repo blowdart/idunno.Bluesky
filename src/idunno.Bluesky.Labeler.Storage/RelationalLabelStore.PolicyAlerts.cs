@@ -84,12 +84,11 @@ internal abstract partial class RelationalLabelStore
             {
                 AdministrationState team = await ReadAdministrationAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
                 long now = await DatabaseTimeAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
-                string[] recipients = team.Members.Values
+                string[] recipients = [.. team.Members.Values
                     .Where(member => member is { Active: true, Removed: false, Role: LabelTeamRole.Administrator, NotificationEmail: not null })
                     .Select(member => member.NotificationEmail!)
                     .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .OrderBy(address => address, StringComparer.OrdinalIgnoreCase)
-                    .ToArray();
+                    .OrderBy(address => address, StringComparer.OrdinalIgnoreCase)];
                 if (team.PendingPolicyAlert is { } alert && recipients.Length > 0 &&
                     (alert.LeaseUntil is null || alert.LeaseUntil.Value.ToUnixTimeMilliseconds() <= now))
                 {

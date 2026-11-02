@@ -59,9 +59,11 @@ internal static class CliCredentialProtection
     private struct DataBlob
     {
         /// <summary>Contains the buffer length in bytes.</summary>
+        [SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "Keeps descriptive interop field names together in the native buffer representation.")]
         internal int Length;
 
         /// <summary>Contains the buffer address.</summary>
+        [SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "Keeps descriptive interop field names together in the native buffer representation.")]
         internal IntPtr Data;
     }
 

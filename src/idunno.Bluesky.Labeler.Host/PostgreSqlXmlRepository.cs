@@ -1,9 +1,9 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Xml;
 using System.Xml.Linq;
-using System.Diagnostics.CodeAnalysis;
 
 using Microsoft.AspNetCore.DataProtection.Repositories;
 

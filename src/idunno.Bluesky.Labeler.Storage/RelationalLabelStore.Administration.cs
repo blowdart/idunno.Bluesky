@@ -754,6 +754,7 @@ internal abstract partial class RelationalLabelStore
         }, cancellationToken);
     }
 
+    /// <inheritdoc/>
     public Task<LabelServiceResult<LabelRemoteAdministrationStatus>> GetRemoteAdministrationStatusAsync(
         LabelAdministrationCaller caller,
         CancellationToken cancellationToken = default)
@@ -788,6 +789,7 @@ internal abstract partial class RelationalLabelStore
         }, cancellationToken);
     }
 
+    /// <inheritdoc/>
     public Task<LabelServiceResult<LabelAdministrationReceipt>> SetRemoteAdministrationEnabledAsync(
         LabelAdministrationCaller caller,
         string operationId,
