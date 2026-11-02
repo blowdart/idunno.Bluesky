@@ -24,7 +24,7 @@
 <form method="get" class="panel">
     <input type="hidden" name="Sort" value="@(Model.Table?.Query.Sort ?? LabelTableSort.Received)" />
     <input type="hidden" name="Ascending" value="@((Model.Table?.Query.Ascending ?? false).ToString())" />
-    <label for="queue">Workflow queue</label>
+    <label for="queue">Show cases</label>
     <select id="queue" name="Queue">
         @foreach (LabelCaseWorkflow queue in Enum.GetValues<LabelCaseWorkflow>())
         {
@@ -44,7 +44,7 @@
 {
     <section class="panel">
         <table class="cases-table">
-            <caption class="sr-only">@Model.Table!.Total cases in the @Model.Queue queue</caption>
+            <caption class="sr-only">@Model.Table!.Total @(Model.Table.Total == 1 ? "case" : "cases") matching this filter</caption>
             <thead><tr>
                 @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Number, "Case", Numeric: true))
                 @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Subject, "Subject"))

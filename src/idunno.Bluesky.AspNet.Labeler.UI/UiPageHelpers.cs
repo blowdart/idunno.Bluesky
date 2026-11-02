@@ -29,7 +29,7 @@ internal static class UiPageHelpers
             .DispatchAsync(page.User, command, page.HttpContext.RequestAborted).ConfigureAwait(false);
         if (!response.Succeeded)
         {
-            page.ViewData["Error"] = response.Message ?? response.Error ?? "The operation was not completed.";
+            page.ViewData["Error"] = response.Message ?? response.Error ?? "The request did not complete.";
         }
         else if (ShouldShowOperationCompletion(command.Method, response.OperationId))
         {
@@ -48,6 +48,54 @@ internal static class UiPageHelpers
             "getCaseLabels" or "getReports" or "getReport" or "getAppeals" or "getAppeal" or
             "getManualLabelChoices" or "searchModeration" or "getPolicy" or "getPolicyHistory" or
             "getPolicyVersion" or "getPolicyVersions");
+
+    /// <summary>Names administrative actions without hiding their original identifiers from callers.</summary>
+    internal static string FormatAuditAction(string? action) => action switch
+    {
+        null => string.Empty,
+        "bootstrap" => "Initial setup",
+        "authenticate" => "Account sign-in",
+        "authenticate-browser" => "Browser sign-in",
+        "authenticate-local" => "Local administrator sign-in",
+        "invocation-denied" => "Request denied",
+        "audit-export-started" => "Audit download started",
+        "audit-read" => "Audit log viewed",
+        "team-read" => "Team viewed",
+        "set-team-notification-email" => "Policy alert email updated",
+        "policy-observation" => "Public policy checked",
+        "policy-verification-failed" => "Public policy check failed",
+        "policy-issuance-denied" => "Label change blocked by policy",
+        "policy-withdrawal-paused" => "Policy label withdrawals paused",
+        "report-intake" => "Report received",
+        "appeal-intake" => "Appeal received",
+        "report-policy-verified" => "Report checked against policy",
+        "report-policy-not-applicable" or "report-not-applicable" => "Report outside policy",
+        "automatic-assignment" => "Case assigned automatically",
+        "moderation-case" => "Case action",
+        "post-deleted" => "Deleted post review",
+        "publication" => "Policy publication",
+        "deleteDraft" => "Draft deletion",
+        "retirement-inspection" => "Retirement status viewed",
+        "retirement-paused" => "Retirement paused",
+        "retirement-purge-batch" => "Retained label history deletion batch",
+        _ => FormatEnumLabel(action.Replace('-', ' '))
+    };
+
+    /// <summary>Names retirement actions consistently in review headings and confirmation buttons.</summary>
+    internal static string FormatRetirementAction(string method) => method switch
+    {
+        "beginRetirement" => "permanent retirement",
+        "pauseRetirement" => "pausing retirement",
+        "resumeRetirement" => "resuming retirement",
+        "beginGracePeriod" => "starting the waiting period",
+        "extendGracePeriod" => "extending the waiting period",
+        "completeRetirement" => "finishing retirement",
+        "purgeRetiredData" => "deleting retained label history",
+        "requestKeyRemoval" => "starting signing-key removal",
+        "attestKeyRemoval" => "recording signing-key removal",
+        "confirmRetirementHostStopped" => "recording that this server process has stopped",
+        _ => FormatEnumLabel(method)
+    };
 
     /// <summary>Separates PascalCase words for readable enum labels.</summary>
     internal static string FormatEnumLabel(string? value)
@@ -81,7 +129,7 @@ internal static class UiPageHelpers
     {
         if (navigation is null || !page.ModelState.IsValid)
         {
-            page.ViewData["Error"] = "Choose a valid page, sort column, direction and filter.";
+            page.ViewData["Error"] = "Choose an available page, sort order and filter.";
             return default;
         }
 

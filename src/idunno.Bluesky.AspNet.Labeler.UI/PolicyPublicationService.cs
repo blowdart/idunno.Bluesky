@@ -38,7 +38,7 @@ internal sealed partial class PolicyPublicationService(
             token: context.RequestAborted).ConfigureAwait(false);
         if (!authorized.Succeeded)
         {
-            throw new InvalidOperationException(authorized.Message ?? "Current administrator publication authority is required.");
+            throw new InvalidOperationException(authorized.Message ?? "You must still be an active administrator with permission to publish this policy.");
         }
         AdministrationResponse observed = await administration.DispatchAsync(
             principal: context.User,
@@ -48,14 +48,14 @@ internal sealed partial class PolicyPublicationService(
             throw new InvalidOperationException("The current policy state could not be loaded. No publication was started.");
         if (policy.Revision != revision || policy.Phase is "Publishing" or "Withdrawing")
         {
-            throw new InvalidOperationException("Reload or recover the pending policy publication.");
+            throw new InvalidOperationException("The policy changed or a publication attempt is already pending. Refresh the policy page and review the current attempt before continuing.");
         }
         using HttpClient client = clients.CreateClient(SubjectPreviewService.ClientName);
         using CancellationTokenSource deadline = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted);
         deadline.CancelAfter(TimeSpan.FromSeconds(8));
         Did issuer = new(policy.Issuer);
         Uri pds = await SubjectPreviewService.ResolvePersonalDataServerAsync(client, issuer, deadline.Token).ConfigureAwait(false) ??
-            throw new InvalidOperationException("The labeler's PDS could not be resolved. No publication was started.");
+            throw new InvalidOperationException("The server storing the labeler account's data could not be found. Publication has not started.");
         AtProtoHttpResult<AtProtoRepositoryRecord> existing = await AtProtoServer.GetRecord(
             repo: issuer,
             collection: new("app.bsky.labeler.service"),
@@ -75,20 +75,20 @@ internal sealed partial class PolicyPublicationService(
         {
             return null;
         }
-        throw new InvalidOperationException("The existing PDS declaration could not be read. No publication was started.");
+        throw new InvalidOperationException("The account's current public policy could not be read. Publication has not started.");
     }
 
     /// <summary>Builds a separate web client from configured origins, never request host headers or moderator scopes.</summary>
     internal OAuthOptions CreateOptions(bool? create = null)
     {
         OAuthOptions website = options.CurrentValue.OAuthOptions ??
-            throw new InvalidOperationException("Configure website OAuth before publishing a declaration.");
+            throw new InvalidOperationException("Website sign-in is not configured for publication. The server administrator must configure website OAuth before you can publish.");
         Uri callback = website.ReturnUri ??
-            throw new InvalidOperationException("Configure the website OAuth callback before publishing a declaration.");
+            throw new InvalidOperationException("Website sign-in is not configured correctly for publication. The server administrator must configure the OAuth return address before you can publish.");
         Uri origin = new(callback.GetLeftPart(UriPartial.Authority));
         if (origin.Scheme != Uri.UriSchemeHttps)
         {
-            throw new InvalidOperationException("Web declaration publication requires a configured public HTTPS origin.");
+            throw new InvalidOperationException("Website sign-in is not configured correctly for publication. The server administrator must configure a public HTTPS address before you can publish.");
         }
         OAuthOptions publication = new()
         {
@@ -124,7 +124,7 @@ internal sealed partial class PolicyPublicationService(
         ModerationPolicyView policy = await ReadAuthorizedPolicyAsync(context, operationId).ConfigureAwait(false);
         if (policy.Phase != "Publishing")
         {
-            throw new InvalidOperationException("Finish label withdrawal before signing in to publish the declaration.");
+            throw new InvalidOperationException("Wait for label withdrawals to finish before signing in to publish the public policy.");
         }
         OAuthOptions oauth = CreateOptions(policy.PreviousCid is null);
         using BlueskyAgent agent = CreateAgent(oauth);
@@ -147,7 +147,7 @@ internal sealed partial class PolicyPublicationService(
             cancellationToken: context.RequestAborted).ConfigureAwait(false);
         BlueskySignInManager manager = CorrelationManager(context);
         await manager.SaveStateAndCreateCorrelationCookie(
-            state: client.State ?? throw new InvalidOperationException("Publication OAuth state could not be prepared."),
+            state: client.State ?? throw new InvalidOperationException("Publication sign-in could not be prepared. Return to the policy page and try again."),
             correlationId: null,
             markCookieAsSecure: true).ConfigureAwait(false);
         return redirect;
@@ -157,25 +157,25 @@ internal sealed partial class PolicyPublicationService(
     internal async Task<string> CompleteAsync(HttpContext context)
     {
         OAuthLoginState state = await CorrelationManager(context).LoadState().ConfigureAwait(false) ??
-            throw new InvalidOperationException("The publication sign-in expired or was already used. Inspect policy state and start a new sign-in.");
+            throw new InvalidOperationException("This publication sign-in has expired or has already been used. Check the policy page, then start a new sign-in.");
         IDictionary<string, string> saved = state.ExtraProperties ??
-            throw new InvalidOperationException("Publication sign-in has no bound operation.");
+            throw new InvalidOperationException("This sign-in is not linked to a publication request. Return to the policy page and start again.");
         if (!saved.TryGetValue("flow", out string? flow) || flow != Scheme ||
             !saved.TryGetValue("actor", out string? actor) || actor != context.User.FindFirst(AtProtoClaims.Did)?.Value ||
             !saved.TryGetValue("browser", out string? browser) || browser != BrowserBinding(context) ||
             !saved.TryGetValue("operation", out string? operation))
         {
-            throw new InvalidOperationException("Publication sign-in does not belong to this administrator browser session.");
+            throw new InvalidOperationException("This publication sign-in belongs to a different browser session. Return to the policy page in the browser where you started.");
         }
         ModerationPolicyView policy = await ReadAuthorizedPolicyAsync(context, operation).ConfigureAwait(false);
         if (!Matches(policy, saved) || policy.Phase != "Publishing")
         {
-            throw new InvalidOperationException("Publication was abandoned, superseded or completed during sign-in. No PDS write was attempted.");
+            throw new InvalidOperationException("This publication attempt was cancelled, replaced or completed while you were signing in. This sign-in did not write to the account.");
         }
         OAuthOptions oauth = CreateOptions(policy.PreviousCid is null);
         if (state.RedirectUri != oauth.ReturnUri!.AbsoluteUri)
         {
-            throw new InvalidOperationException("Publication callback configuration changed. Start a new sign-in.");
+            throw new InvalidOperationException("The publication sign-in settings changed. Return to the policy page and start a new sign-in.");
         }
         using BlueskyAgent agent = CreateAgent(oauth);
         OAuthClient client = agent.CreateOAuthClient(state);
@@ -185,7 +185,7 @@ internal sealed partial class PolicyPublicationService(
             expectedDid: new(policy.Issuer),
             cancellationToken: context.RequestAborted).ConfigureAwait(false))
         {
-            throw new InvalidOperationException("The labeler account did not authorize publication. No PDS write was attempted.");
+            throw new InvalidOperationException("The labeler account did not approve publication. No account write was attempted.");
         }
         return await PublishAsync(context, operation, saved, agent).ConfigureAwait(false);
     }
@@ -197,7 +197,7 @@ internal sealed partial class PolicyPublicationService(
             context.User, AuditReason, context.RequestAborted).ConfigureAwait(false);
         if (!authority.Succeeded)
         {
-            throw new InvalidOperationException(authority.Message ?? "Current administrator publication authority is required.");
+            throw new InvalidOperationException(authority.Message ?? "You must still be an active administrator with permission to publish this policy.");
         }
         AdministrationResponse response = await administration.DispatchAsync(
             principal: context.User,
@@ -207,7 +207,7 @@ internal sealed partial class PolicyPublicationService(
             throw new InvalidOperationException(response.Message ?? "Policy state is unavailable.");
         if (!response.Succeeded || policy.PublicationOperationId != operation || policy.Definition is null)
         {
-            throw new InvalidOperationException("The selected publication changed. Reload policy state before continuing.");
+            throw new InvalidOperationException("The selected publication attempt changed. Refresh the policy page before continuing.");
         }
         return policy;
     }
@@ -222,7 +222,7 @@ internal sealed partial class PolicyPublicationService(
         ModerationPolicyView policy = await ReadAuthorizedPolicyAsync(context, operation).ConfigureAwait(false);
         if (!Matches(policy, saved) || policy.Phase != "Publishing" || agent.Did?.Value != policy.Issuer)
         {
-            throw new InvalidOperationException("Publication selection or labeler identity changed. No PDS write was attempted.");
+            throw new InvalidOperationException("The publication attempt or labeler account changed. No account write was attempted.");
         }
         JsonElement declaration = policy.Definition!.Declaration;
         AtProtoHttpResult<AtProtoRepositoryRecord> existing = await agent.GetRawRecord(
@@ -239,17 +239,17 @@ internal sealed partial class PolicyPublicationService(
             ? existing.Result.Cid.ToString() != policy.PreviousCid
             : existing.AtErrorDetail?.Error != "RecordNotFound" || policy.PreviousCid is not null))
         {
-            throw new InvalidOperationException("The PDS declaration does not match the expected previous CID. No overwrite was attempted.");
+            throw new InvalidOperationException("The account's public policy has changed since this attempt started. It was not overwritten. Refresh and review the current policy.");
         }
         ModerationPolicyView current = await ReadAuthorizedPolicyAsync(context, operation).ConfigureAwait(false);
         if (!Matches(current, saved) || current.Phase != "Publishing")
         {
-            throw new InvalidOperationException("Publication selection changed during the PDS read. No write was attempted.");
+            throw new InvalidOperationException("The publication attempt changed while the account's public policy was being read. No account write was attempted.");
         }
         if (!matches)
         {
             AtProtoRecord record = JsonSerializer.Deserialize(declaration.GetRawText(), PublicationJsonContext.Default.AtProtoRecord) ??
-                throw new InvalidDataException("The selected declaration could not be encoded.");
+                throw new InvalidDataException("The selected public policy could not be prepared for publication.");
             bool succeeded;
             HttpStatusCode status;
             if (policy.PreviousCid is null)
@@ -279,13 +279,13 @@ internal sealed partial class PolicyPublicationService(
             }
             if (!succeeded)
             {
-                throw new InvalidOperationException($"The conditional PDS write did not confirm success (HTTP {(int)status}). Inspect the selected operation and remote declaration before retrying; no unconditional overwrite is allowed.");
+                throw new InvalidOperationException($"The account server did not confirm whether publication succeeded (HTTP {(int)status}). Check this attempt and the account's public policy before retrying. The service will not overwrite an unexpected policy.");
             }
         }
         current = await ReadAuthorizedPolicyAsync(context, operation).ConfigureAwait(false);
         if (!Matches(current, saved) || current.Phase != "Publishing")
         {
-            throw new InvalidOperationException("Publication state changed after the PDS operation. Inspect current state; a completed PDS write is not rolled back.");
+            throw new InvalidOperationException("The publication state changed after the account write was attempted. Check the current state. Any completed account write remains in place.");
         }
         AdministrationResponse verified = await administration.DispatchAsync(
             principal: context.User,
@@ -295,7 +295,7 @@ internal sealed partial class PolicyPublicationService(
             !Matches(active, saved))
         {
             throw new InvalidOperationException(verified.Message ??
-                "The PDS operation completed but independent verification did not activate this policy. Inspect state and use Verify declaration; do not assume rollback.");
+                "The account operation completed, but the public policy check did not activate this policy. Check the policy page and use Check public policy. Any completed account write remains in place.");
         }
         return "The selected declaration is published and independently verified.";
     }
@@ -321,7 +321,7 @@ internal sealed partial class PolicyPublicationService(
     private static string BrowserBinding(HttpContext context)
     {
         string proof = context.User.FindFirst(AtProtoClaims.DPoPProof)?.Value ??
-            throw new InvalidOperationException("A current Bluesky OAuth browser session is required to publish.");
+            throw new InvalidOperationException("Sign in to Xenon with Bluesky before publishing.");
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(proof)));
     }
 

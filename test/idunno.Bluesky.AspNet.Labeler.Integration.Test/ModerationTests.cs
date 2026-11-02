@@ -38,6 +38,71 @@ public partial class ModerationTests
         """;
 
     [Theory]
+    [InlineData("")]
+    [InlineData("v2")]
+    [InlineData("v3")]
+    [InlineData("unavailable")]
+    public async Task SavedDraftPublicationButtonsSelectOnlyAvailableDraftsWithoutStartingPublication(string requested)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(key: key, identity: identity, remoteEnabled: false, xenonUi: true);
+        await fixture.Clock.PolicyVerificationRegistrations.Reader.ReadAsync(token);
+        LabelPolicyState active = (await fixture.Services.GetRequiredService<LabelPolicyService>()
+            .GetVerifiedStateAsync(cancellationToken: token)).Result!;
+        LabelAdministrationCaller administrator = (await fixture.Services.GetRequiredService<ILabelAdministrationStore>()
+            .AuthenticateLocalAsync("uid:0", token)).Result!;
+        AdministrationDispatcher dispatcher = fixture.Services.GetRequiredService<AdministrationDispatcher>();
+        using JsonDocument declaration = JsonDocument.Parse(Declaration);
+        foreach (string version in new[] { "v2", "v3" })
+        {
+            AdministrationResponse saved = await dispatcher.DispatchAsync(
+                caller: administrator,
+                command: new(
+                    Method: "savePolicy",
+                    OperationId: "save-button-" + version,
+                    Reason: "Save a publication navigation fixture.",
+                    Moderation: new(
+                        PolicyVersion: version,
+                        Declaration: declaration.RootElement,
+                        AllowAccounts: true,
+                        AllowRecords: true,
+                        Rules: "Keep the existing label.")),
+                token: token);
+            Assert.True(saved.Succeeded, saved.Message);
+        }
+
+        using HttpRequestMessage request = new(HttpMethod.Get, "/Xenon/Policy?publish=" + Uri.EscapeDataString(requested));
+        request.Headers.Add("X-Test-Did", s_administrator.Value);
+        using HttpResponseMessage response = await fixture.Client.SendAsync(request, token);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        string html = await response.Content.ReadAsStringAsync(token);
+        foreach (string version in new[] { "v2", "v3" })
+        {
+            Assert.Contains($"href=\"/Xenon/Policy?publish={version}#policy-publication\"", html, StringComparison.Ordinal);
+            Assert.Contains($"data-policy-publish=\"{version}\"", html, StringComparison.Ordinal);
+            Assert.Contains(requested == version
+                ? $"<option value=\"{version}\" selected=\"selected\">"
+                : $"<option value=\"{version}\">", html, StringComparison.Ordinal);
+        }
+        Assert.Contains("class=\"policy-action-button\"", html, StringComparison.Ordinal);
+        Assert.Contains("fa-icon fa-download", html, StringComparison.Ordinal);
+        Assert.Contains("fa-icon fa-globe", html, StringComparison.Ordinal);
+        Assert.Contains("fa-icon fa-circle-xmark", html, StringComparison.Ordinal);
+        Assert.Contains("name=\"confirmed\" value=\"true\" required", html, StringComparison.Ordinal);
+        Assert.Contains("Publish this policy and withdraw labels it no longer includes.", html, StringComparison.Ordinal);
+        Assert.Contains("If publication fails, labels already withdrawn will stay withdrawn.", html, StringComparison.Ordinal);
+        Assert.Contains("class=\"table-pagination policy-draft-count\">2 saved drafts", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("irreversible batched negation", html, StringComparison.Ordinal);
+        Assert.True(html.IndexOf("policy-draft-count", StringComparison.Ordinal) >
+            html.IndexOf("data-policy-publish=\"v2\"", StringComparison.Ordinal));
+        LabelPolicyState unchanged = (await fixture.Services.GetRequiredService<ILabelPolicyStore>().ReadPolicyStateAsync(token))!;
+        Assert.Equal(active.Revision, unchanged.Revision);
+        Assert.Equal(LabelPolicyPhase.VerifiedActive, unchanged.Phase);
+    }
+
+    [Theory]
     [InlineData(false, true, "token-audience-mismatch")]
     [InlineData(false, false, "token-method-mismatch")]
     [InlineData(true, true, "token-audience-mismatch")]
@@ -215,13 +280,13 @@ public partial class ModerationTests
             .Select(cookie => cookie.Split(';')[0])));
         using HttpResponseMessage errorPage = await fixture.Client.SendAsync(redirected, token);
         Assert.Equal(HttpStatusCode.OK, errorPage.StatusCode);
-        Assert.Contains("Confirm policy publication before submitting.", await errorPage.Content.ReadAsStringAsync(token), StringComparison.Ordinal);
+        Assert.Contains("Select the confirmation checkbox before publishing.", await errorPage.Content.ReadAsStringAsync(token), StringComparison.Ordinal);
 
         foreach ((string pageHandler, string field, string value, string expected) in new[]
         {
-            ("Publish", "revision", "invalid", "The policy revision was invalid."),
-            ("Publish", "revision", "-1", "The policy revision was invalid."),
-            ("Publish", "revision", "999", "Reload or recover the pending policy publication."),
+            ("Publish", "revision", "invalid", "The submitted policy information was invalid."),
+            ("Publish", "revision", "-1", "The submitted policy information was invalid."),
+            ("Publish", "revision", "999", "The policy changed or a publication attempt is already pending."),
             ("Publish", "resumeWithdrawal", "true", "publication"),
             ("SignInAndPublish", "labelerHandle", "invalid handle", "Enter the labeler account"),
             ("SignInAndPublish", "labelerHandle", "beanslabeltest.bsky.social", "publication")
@@ -273,11 +338,11 @@ public partial class ModerationTests
         Assert.Equal(HttpStatusCode.OK, page.StatusCode);
         Assert.Contains("Label withdrawal in progress", html, StringComparison.Ordinal);
         Assert.Contains("Removing: spam", html, StringComparison.Ordinal);
-        Assert.Contains("completed negations are not automatically undone", html, StringComparison.Ordinal);
+        Assert.Contains("Labels already withdrawn will stay withdrawn.", html, StringComparison.Ordinal);
         Assert.Contains("Resume cleanup", html, StringComparison.Ordinal);
-        Assert.Contains("Last worker activity:", html, StringComparison.Ordinal);
+        Assert.Contains("Last withdrawal attempt:", html, StringComparison.Ordinal);
         Assert.Contains("Last progress:", html, StringComparison.Ordinal);
-        Assert.Contains("Waiting for worker activity", html, StringComparison.Ordinal);
+        Assert.Contains("Waiting for withdrawals to start", html, StringComparison.Ordinal);
         Assert.DoesNotContain("Cleanup may be running or paused.", html, StringComparison.Ordinal);
         int reads = handler.DeclarationReads;
         handler.Declaration = declaration.RootElement.GetRawText();
@@ -387,7 +452,7 @@ public partial class ModerationTests
         using HttpResponseMessage page = await fixture.Client.SendAsync(get, token);
         string html = await page.Content.ReadAsStringAsync(token);
         Assert.Contains("Abandon pending publication", html, StringComparison.Ordinal);
-        Assert.Contains("Already committed label negations are permanent", html, StringComparison.Ordinal);
+        Assert.Contains("Labels already withdrawn will stay withdrawn.", html, StringComparison.Ordinal);
         const string prefix = "name=\"__RequestVerificationToken\" type=\"hidden\" value=\"";
         int start = html.IndexOf(prefix, StringComparison.Ordinal);
         Assert.NotEqual(-1, start);
@@ -395,9 +460,9 @@ public partial class ModerationTests
         string cookies = string.Join("; ", page.Headers.GetValues("Set-Cookie").Select(cookie => cookie.Split(';')[0]));
         foreach ((string confirmed, string revision, string reason, string expected) in new[]
         {
-            ("false", pending.Revision.ToString(), "Cancel.", "Confirm abandonment"),
-            ("true", "invalid", "Cancel.", "policy revision was invalid"),
-            ("true", active.Revision.ToString(), "Cancel.", "Only the observed pending publication"),
+            ("false", pending.Revision.ToString(), "Cancel.", "Select the confirmation checkbox before cancelling"),
+            ("true", "invalid", "Cancel.", "submitted policy information was invalid"),
+            ("true", active.Revision.ToString(), "Cancel.", "The publication attempt changed. Reload it before cancelling."),
             ("true", pending.Revision.ToString(), " ", "reason"),
             ("true", pending.Revision.ToString(), string.Concat(Enumerable.Repeat("\u754c", 1400)), "reason"),
             ("true", pending.Revision.ToString(), "Restart with a correct declaration CID.", "Publication abandoned")
@@ -527,7 +592,7 @@ public partial class ModerationTests
                 reload.Headers.Add("X-Test-Did", s_administrator.Value);
                 reload.Headers.Add("Cookie", string.Join("; ", response.Headers.GetValues("Set-Cookie").Select(cookie => cookie.Split(';')[0])));
                 using HttpResponseMessage refreshed = await fixture.Client.SendAsync(reload, token);
-                Assert.Contains("No publication was started.", await refreshed.Content.ReadAsStringAsync(token), StringComparison.Ordinal);
+                Assert.Contains("Publication has not started.", await refreshed.Content.ReadAsStringAsync(token), StringComparison.Ordinal);
             }
         }
     }
@@ -1438,7 +1503,7 @@ public partial class ModerationTests
         AdministrationResponse local = await dispatcher.DispatchAsync(administrator, command, token);
         Assert.False(local.Succeeded);
         Assert.Equal("InvalidRequest", local.Error);
-        Assert.Contains("does not match the label selection", local.Message, StringComparison.Ordinal);
+        Assert.Contains("Your label choices do not match the appeal outcome.", local.Message, StringComparison.Ordinal);
         using HttpRequestMessage request = AdministrativeRequest(
             key: key,
             now: fixture.Clock.GetUtcNow(),

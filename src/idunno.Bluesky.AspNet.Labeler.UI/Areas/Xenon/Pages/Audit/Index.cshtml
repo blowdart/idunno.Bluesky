@@ -8,7 +8,7 @@
         Model.Data.TryGetProperty("audit", out JsonElement values) ? values : null;
 }
 <div class="audit-page-heading">
-    <h1>Administrative audit</h1>
+    <h1>Administration history</h1>
     @if (Model.Table is not null && ViewData["Error"] is null)
     {
         <form method="post" asp-page-handler="Download"
@@ -23,7 +23,7 @@
 <form method="get" class="panel" data-audit-filters>
     <input type="hidden" name="Sort" value="@(Model.Table?.Query.Sort ?? LabelTableSort.Received)" />
     <input type="hidden" name="Ascending" value="@((Model.Table?.Query.Ascending ?? false).ToString())" />
-    <label for="actor">Actor DID or handle</label>
+    <label for="actor">Who took the action (handle or account ID)</label>
     <input id="actor" name="Actor" value="@Request.Query["Actor"]" maxlength="2048" placeholder="DID or handle" />
     <label for="outcome">Outcome</label>
     <select id="outcome" name="Outcome">
@@ -33,11 +33,11 @@
     </select>
     <div class="audit-date-limits">
         <div>
-            <label for="from">From (inclusive)</label>
+            <label for="from">On or after</label>
             <input id="from" type="datetime-local" name="From" value="@Request.Query["From"]" step="any" aria-describedby="audit-time-help" />
         </div>
         <div>
-            <label for="to">To (inclusive)</label>
+            <label for="to">On or before</label>
             <input id="to" type="datetime-local" name="To" value="@Request.Query["To"]" step="any" aria-describedby="audit-time-help" />
         </div>
         <fieldset class="audit-filter-zone">
@@ -47,7 +47,7 @@
             <input type="hidden" name="TimeZone" value="@Request.Query["TimeZone"]" data-audit-zone />
         </fieldset>
     </div>
-    <p id="audit-time-help" class="muted">Dates use the selected filter zone, independently of the display time zone. Events without a timestamp are excluded when either date is set. For repeated daylight-saving hours, use UTC.</p>
+    <p id="audit-time-help" class="muted">These dates use the time zone selected here, even if the log is displayed in another time zone. Setting either date hides entries with no recorded time. Use UTC when the clocks go back and the same local time occurs twice.</p>
     <noscript><p>Local-time filtering requires JavaScript to identify your browser's time zone. UTC filtering remains available.</p></noscript>
     <button type="submit" aria-label="Filter audit events" title="Filter audit events"><span class="fa-icon fa-filter" aria-hidden="true"></span></button>
     <a asp-area="Xenon" asp-page="/Audit/Index">Clear filters</a>
@@ -56,11 +56,11 @@
 {
     <section class="panel">
         <table class="audit-table">
-            <caption>@Model.Table!.Total audit events</caption>
+            <caption>@Model.Table!.Total @(Model.Table.Total == 1 ? "audit event" : "audit events")</caption>
             <thead><tr>
                 @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Received, "Time"))
-                <th scope="col">Operation</th>
-                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Actor, "Actor"))
+                <th scope="col">Tracking ID</th>
+                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Actor, "Who"))
                 @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Action, "Action"))
                 @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Outcome, "Outcome"))
                 <th scope="col">Reason</th>
@@ -88,7 +88,7 @@
                                 <span class="muted">Automatic</span>
                             }
                         </td>
-                        <td>@entry.GetProperty("action").GetString()</td>
+                        <td><span title="@entry.GetProperty("action").GetString()">@UiPageHelpers.FormatAuditAction(entry.GetProperty("action").GetString())</span></td>
                         <td>@(entry.GetProperty("succeeded").GetBoolean() ? "Succeeded" : "Denied/failed")</td>
                         <td>@entry.GetProperty("reason").GetString()</td>
                     </tr>

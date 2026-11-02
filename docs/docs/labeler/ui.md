@@ -6,6 +6,14 @@ manual account and record labels, audit, policy, team administration, and labele
 lifecycle operations. It uses the shared label administration dispatcher: it does not
 create a separate authorization, issuance, or audit path.
 
+Xenon uses the locally bundled Inter variable font, including its italic face,
+with system-font fallbacks and non-blocking font loading. No font requests go to
+Google Fonts or a CDN. The footer credits The Inter Project Authors and links to
+the bundled SIL Open Font License 1.1. JSON displays and editors, code blocks,
+and fixed-width identifiers use locally bundled Google Sans Code with programming
+ligatures disabled. Its normal and italic variable fonts, SIL Open Font License
+1.1, and trademark notice are also included and linked from the footer.
+
 On Team, select a member's handle (or DID when no handle is available) to fill the
 Change member form with their canonical DID and current role. Select an action,
 provide a reason, and choose **Update**. Enrollment and membership updates use the
@@ -20,6 +28,36 @@ removed members. Filtering applies before counting and paging and is retained
 when sorting. With JavaScript enabled, the role label and selector are hidden
 unless the selected membership action is Change role; without scripting, the
 role remains available and is used only for Change role.
+
+Policy pages describe checks, publication and label withdrawals in plain language.
+The publication confirmation explicitly warns that completed withdrawals are not
+undone if publishing the new policy fails. Technical identifiers remain available
+for troubleshooting; progress counts refer to label-history entries, not labels
+removed or confirmation that other apps have received them.
+
+Lifecycle uses plain-language retirement actions and calls the grace period the
+waiting period. Detailed progress counters are available under **Technical details**.
+Permanent retirement, label-history deletion and signing-key removal retain separate
+warnings and confirmation steps. Recording a stopped process or removed key is
+the operator's account of their checks, not independent verification by Xenon.
+
+Team and manual-label pages explain account permissions and account-versus-content
+labels in plain language. Content-version identifiers (CIDs) remain visible, with
+guidance distinguishing a specific version from labels applying across future edits.
+Case report choices and history use the same terminology. UI errors and
+confirmations explain the next action without changing confirmation requirements.
+Uncertain-result messages preserve instructions to retry unchanged requests with
+their original tracking IDs; completed account writes and withdrawals are not
+described as rolled back. Shared administration-service errors use the same
+plain-language terminology in Xenon and the CLI, retaining their error codes
+and diagnostic details.
+
+Home, search, report and appeal lists, and audit history use plain-language labels.
+Standard report reasons have readable names; custom reason identifiers are preserved.
+Audit actions have readable names with their original identifiers in tooltips.
+List counts use singular wording for one item. Terms and Privacy explain operator
+responsibilities, sign-in storage, external requests and data retention in plain
+language without replacing the operator's required service-specific disclosures.
 
 ## Enabling the UI in the standalone host
 
@@ -457,6 +495,9 @@ translations; **Moderation Policy** edits report intake and independent issuance
 permissions; **Advanced** edits the complete declaration JSON;
 **Publication** contains publication actions; the final **Verification** tab
 checks the declaration published on the labeler's PDS against the selected policy.
+Switching tabs updates the URL fragment without reloading the page or adding a
+browser history entry, so refreshing restores the visible tab. This also applies
+to keyboard navigation and saved-draft Publish shortcuts.
 Verification does not write the remote declaration, but a successful match can
 activate the policy and reopen reporting and issuance. Clicking **Verify declaration**
 requires no reason field or confirmation checkbox; the shared service retains an
@@ -509,7 +550,11 @@ replacement for a disappeared record or overwriting an unexpectedly changed one.
 
 The editor starts from the current selected policy. **Current State** lists all
 saved, undeleted versions that have never been selected for publication, with
-**Load draft** and **Delete draft** actions on each row. Previously published
+icon-labelled **Load draft**, **Publish** and **Delete draft** buttons on each row.
+**Publish** opens the Publication tab with that saved Policy ID selected and the
+current revision filled in. It does not start publication: enter an audit reason
+and explicitly confirm the irreversible withdrawals before submitting.
+Previously published
 versions are not presented as drafts. **Load current policy** restores the selected definition; **Clear all**
 starts an empty editor without deleting any retained version or changing the
 publication gate. Enter a unique **Policy ID** for the new saved snapshot.

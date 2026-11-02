@@ -38,7 +38,7 @@ internal sealed class LabelTargetResolver(HttpClient httpClient, ILoggerFactory 
                     loggerFactory: loggerFactory,
                     cancellationToken: token).ConfigureAwait(false))
                 {
-                    return Failure("The handle and DID could not be verified in both directions.");
+                    return Failure("The handle and account ID could not be confirmed as belonging to each other.");
                 }
             }
 
@@ -54,7 +54,7 @@ internal sealed class LabelTargetResolver(HttpClient httpClient, ILoggerFactory 
                 cancellationToken: token).ConfigureAwait(false);
             if (document is null || document.Id != did)
             {
-                return Failure("A matching DID document could not be resolved.");
+                return Failure("The account's public identity information could not confirm this account ID.");
             }
 
             LabelTarget resolved = target.WithRepository(did);
@@ -93,7 +93,7 @@ internal sealed class LabelTargetResolver(HttpClient httpClient, ILoggerFactory 
                 return LabelServiceResult<LabelTarget>.Failure(
                     new(
                         code: missing ? LabelServiceErrorCode.TargetNotFound : LabelServiceErrorCode.TargetResolutionFailed,
-                        message: missing ? "The requested record version was not found." : "The target record could not be retrieved.",
+                        message: missing ? "The specified content version was not found." : "The content could not be loaded from the account server.",
                         statusCode: response.StatusCode,
                         atErrorDetail: response.AtErrorDetail));
             }
@@ -118,7 +118,7 @@ internal sealed class LabelTargetResolver(HttpClient httpClient, ILoggerFactory 
             return LabelServiceResult<LabelTarget>.Failure(
                 new(
                     code: LabelServiceErrorCode.TargetResolutionFailed,
-                    message: "The target lookup failed; inspect the HTTP diagnostic and retry the same request.",
+                    message: "The account or content lookup failed. Check the HTTP error details and retry the same request.",
                     statusCode: exception.StatusCode,
                     exception: exception));
         }

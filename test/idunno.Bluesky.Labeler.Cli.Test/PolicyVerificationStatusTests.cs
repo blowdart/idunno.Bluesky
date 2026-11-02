@@ -19,14 +19,15 @@ public class PolicyVerificationStatusTests
     }
 
     [Theory]
-    [InlineData("VerifiedActive", 10, "The current policy is already verified.", true)]
-    [InlineData("VerifiedActive", 0, "Policy verification has expired.", false)]
-    [InlineData("VerifiedActive", 31, "The current policy verification is no longer current.", false)]
-    [InlineData("VerifiedActive", null, "The current policy verification is no longer current.", false)]
-    [InlineData("Unverified", 10, "The current policy is Unverified.", false)]
-    [InlineData("Publishing", 10, "The current policy is Publishing.", false)]
-    [InlineData("Withdrawing", 10, "The current policy is Withdrawing.", false)]
-    [InlineData("Conflict", 10, "The current policy is Conflict.", false)]
+    [InlineData("VerifiedActive", 10, "The public policy check is up to date.", true)]
+    [InlineData("VerifiedActive", 0, "The public policy check has expired. Check it again to allow new reports and labels.", false)]
+    [InlineData("VerifiedActive", 31, "The public policy needs to be checked again.", false)]
+    [InlineData("VerifiedActive", null, "The public policy needs to be checked again.", false)]
+    [InlineData("Unverified", 10, "No policy has passed the public policy check yet.", false)]
+    [InlineData("Publishing", 10, "Publication is pending. Check the result or open Publication for the next step.", false)]
+    [InlineData("Withdrawing", 10, "Wait for label withdrawals to finish before checking the policy.", false)]
+    [InlineData("Conflict", 10, "Publication needs attention. Open Publication to recover.", false)]
+    [InlineData("Unexpected", null, "Policy status is unknown. Reload before continuing.", false)]
     public void VerificationTabDescribesStateAndOnlyDisablesCurrentVerification(
         string phase,
         int? remainingMinutes,

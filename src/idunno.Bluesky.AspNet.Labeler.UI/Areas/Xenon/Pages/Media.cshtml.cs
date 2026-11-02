@@ -36,13 +36,13 @@ public sealed partial class MediaModel : PageModel
             if (reference.Length != 2 || !Did.TryParse(reference[0], out did) || !Cid.TryParse(reference[1], out cid))
             {
                 MediaFailure(logger, "The video reference is invalid.", null);
-                return BadRequest("Invalid video reference. Reload the details page.");
+                return BadRequest("This video link is invalid. Refresh the details page and try again.");
             }
         }
         catch (CryptographicException exception)
         {
             MediaFailure(logger, "The video reference is invalid or expired.", exception);
-            return BadRequest("Invalid or expired video reference. Reload the details page.");
+            return BadRequest("This video link is invalid or has expired. Refresh the details page and try again.");
         }
 
         using CancellationTokenSource deadline = CancellationTokenSource.CreateLinkedTokenSource(HttpContext.RequestAborted);

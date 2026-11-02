@@ -31,7 +31,7 @@
         }
         else
         {
-            <p role="status">Active labels could not be loaded. Reload before reviewing this subject.</p>
+            <p role="status">Current labels could not be loaded. Refresh before reviewing this account or content.</p>
         }
         <p class="case-status"><span>Status:</span> @await Html.PartialAsync("_WorkflowStatus", Model.Appeals.Length > 0 ? "Appealed" : item.GetProperty("status").GetString()!)</p>
         <p>Assignee: @if (item.TryGetProperty("assignee", out JsonElement assignee) && assignee.GetString() is string assigned)
@@ -62,7 +62,7 @@
                 </label>
                 <label class="field">Reason (optional)<input name="reason" maxlength="4096" aria-describedby="assignment-reason-help" /></label>
                 <p id="assignment-reason-help">If left blank, the audit history records &ldquo;No reason provided.&rdquo;</p>
-                <label><input type="checkbox" name="confirmed" value="true" required /> Confirm this assignment change</label>
+                <label><input type="checkbox" name="confirmed" value="true" required /> Change who is assigned to this case.</label>
                 <div class="form-actions"><button type="submit">Save assignment</button></div>
             </form>
         </section>
@@ -118,8 +118,8 @@
                     {
                         string labelStatus = (label.OtherVersion, label.Applied, label.UriWide) switch
                         {
-                            (true, _, _) => "Applied to a different record version",
-                            (_, true, true) => "Currently applied to all versions of this record; removal affects all versions",
+                            (true, _, _) => "Applied to a different version of this content",
+                            (_, true, true) => "Applies across all versions of this content; withdrawing it affects all versions",
                             (_, true, _) => "Currently applied",
                             _ => "Not applied"
                         };
@@ -146,7 +146,7 @@
                                 @foreach ((string outcome, string title) in new[]
                                 {
                                     ("Upheld", "Keep the existing decision"), ("Replaced", "Replace labels"),
-                                    ("Withdrawn", "Remove labels"), ("Superseded", "Acknowledge a superseded decision")
+                                    ("Withdrawn", "Remove labels"), ("Superseded", "The challenged labels are no longer in effect")
                                 })
                                 {
                                     <option value="@outcome" selected="@(Model.SubmittedDecision?["appealOutcome"].ToString() == outcome)">@title</option>
@@ -163,8 +163,8 @@
                 bool versionedSubject = subject.TryGetProperty("cid", out _);
                 string matchingReports = (recordSubject, versionedSubject) switch
                 {
-                    (true, true) => "Reports for this exact URI and CID",
-                    (true, false) => "Reports for this URI with no CID supplied",
+                    (true, true) => "Reports for this exact content version",
+                    (true, false) => "Reports for this content with no specific version supplied",
                     _ => "Reports for this account"
                 };
                 <label class="field">Reports to mark as handled
@@ -173,11 +173,11 @@
                         <option value="same-target" selected="@(handling == "same-target")">@matchingReports</option>
                         @if (recordSubject)
                         {
-                            <option value="all-records" selected="@(handling == "all-records")">All reports for this record URI, with or without a CID</option>
+                            <option value="all-records" selected="@(handling == "all-records")">All reports for this content, across every version</option>
                         }
                     </select>
                 </label>
-                <p>This closes reports as reviewed. Appeals still require review. Removing a URI-wide label affects all versions of the record.</p>
+                <p>This marks the selected reports as reviewed. Appeals still need their own review. Withdrawing a label that applies across all versions removes it from every version of this content.</p>
                 <div class="form-actions"><button type="submit">Submit</button></div>
                 }
             </form>

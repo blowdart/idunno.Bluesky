@@ -62,7 +62,7 @@ internal sealed partial class SubjectPreviewService(
         }
         else if (!Did.TryParse(subject.GetProperty("did").GetString()!, out did))
         {
-            return new("Profile", null, Error: "The report's profile identifier is invalid.");
+            return new("Profile", null, Error: "The report does not contain a valid profile address.");
         }
 
         string url = $"https://bsky.app/profile/{did.Value}";
@@ -83,7 +83,7 @@ internal sealed partial class SubjectPreviewService(
             Uri? pds = await ResolvePersonalDataServerAsync(client, did, deadline.Token).ConfigureAwait(false);
             if (pds is null)
             {
-                return Unavailable(kind, url, "The author's personal data server could not be resolved.");
+                return Unavailable(kind, url, "The server storing this account's data could not be found.");
             }
 
             AtUri recordUri = uri ?? new($"at://{did}/app.bsky.actor.profile/self");
@@ -102,7 +102,7 @@ internal sealed partial class SubjectPreviewService(
                 Text(value, "$type") != recordUri.Collection!.ToString() || post && Text(value, "text") is null ||
                 kind is "List" or "Starter pack" && Text(value, "name") is null)
             {
-                return Unavailable(kind, url, "The record is unavailable or the PDS returned a different record identity or type.");
+                return Unavailable(kind, url, "The content is unavailable, or the account server returned content that does not match this report.");
             }
 
             JsonObject? profileRecord = kind switch
@@ -365,7 +365,7 @@ internal sealed partial class SubjectPreviewService(
         if (!uri.IsAbsoluteUri || uri.Scheme != Uri.UriSchemeHttps || uri.UserInfo.Length != 0)
         {
             PreviewUnavailable(loggerFactory.CreateLogger<SubjectPreviewService>(), "Image", "The PDS image URL is not HTTPS.", null);
-            return new(null, alt, "Image unavailable: an HTTPS personal data server is required.");
+            return new(null, alt, "Image unavailable: the account server must have a secure HTTPS address.");
         }
 
         try
@@ -375,7 +375,7 @@ internal sealed partial class SubjectPreviewService(
             if (!response.IsSuccessStatusCode || mediaType is not ("image/jpeg" or "image/png" or "image/webp" or "image/gif"))
             {
                 PreviewUnavailable(loggerFactory.CreateLogger<SubjectPreviewService>(), "Image", "The PDS did not return a supported raster image.", null);
-                return new(null, alt, "Image unavailable: the PDS did not return a supported image.");
+                return new(null, alt, "Image unavailable: the account server did not return a supported image.");
             }
 
             using Stream content = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
@@ -387,7 +387,7 @@ internal sealed partial class SubjectPreviewService(
                 if (bytes.Length + count > 10_485_760)
                 {
                     PreviewUnavailable(loggerFactory.CreateLogger<SubjectPreviewService>(), "Image", "The preview image exceeds the size limit.", null);
-                    return new(null, alt, "Image unavailable: the preview exceeds the ten MiB limit.");
+                    return new(null, alt, "This image is too large to preview. The limit is 10 MiB.");
                 }
 
                 await bytes.WriteAsync(buffer.AsMemory(0, count), cancellationToken).ConfigureAwait(false);
@@ -398,7 +398,7 @@ internal sealed partial class SubjectPreviewService(
         catch (Exception exception) when (exception is HttpRequestException or IOException or OperationCanceledException)
         {
             PreviewUnavailable(loggerFactory.CreateLogger<SubjectPreviewService>(), "Image", "The PDS image transfer failed or timed out.", exception);
-            return new(null, alt, "Image unavailable: the PDS transfer failed or timed out.");
+            return new(null, alt, "Image unavailable: the transfer from the account server failed or timed out.");
         }
     }
 

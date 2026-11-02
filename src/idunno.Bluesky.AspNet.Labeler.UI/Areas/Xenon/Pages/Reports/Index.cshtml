@@ -17,8 +17,8 @@
     <input type="hidden" name="Ascending" value="@((Model.Table?.Query.Ascending ?? false).ToString())" />
     <label for="status">Status</label>
     <select id="status" name="Status">
-        <option value="Unresolved" selected="@(Model.Status == "Unresolved")">Unresolved</option>
-        <option value="Handled" selected="@(Model.Status == "Handled")">Handled</option>
+        <option value="Unresolved" selected="@(Model.Status == "Unresolved")">Awaiting review</option>
+        <option value="Handled" selected="@(Model.Status == "Handled")">Reviewed</option>
         <option value="All" selected="@(Model.Status == "All")">All</option>
     </select>
     <button type="submit" aria-label="Filter reports" title="Filter reports"><span class="fa-icon fa-filter" aria-hidden="true"></span></button>
@@ -31,7 +31,7 @@
 {
     <section class="panel">
         <table>
-            <caption>@Model.Table!.Total accepted reports</caption>
+            <caption>@Model.Table!.Total @(Model.Table.Total == 1 ? "report" : "reports") accepted for case review</caption>
             <thead><tr>
                 @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Number, "Report", Numeric: true))
                 @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Case, "Case", Numeric: true))
@@ -50,7 +50,7 @@
                         <td class="numeric"><a asp-area="Xenon" asp-page="/Reports/Detail" asp-route-id="@submitted.GetProperty("id").GetInt64()" aria-label="View report @submitted.GetProperty("id").GetInt64()">#@submitted.GetProperty("id").GetInt64()</a></td>
                         <td class="numeric"><a asp-area="Xenon" asp-page="/Cases/Detail" asp-route-id="@report.GetProperty("caseId").GetInt64()" asp-route-ReportId="@submitted.GetProperty("id").GetInt64()">#@report.GetProperty("caseId").GetInt64()</a></td>
                         <td>@await Html.PartialAsync("_Identity", new IdentityDisplayModel(target, Subject: true))</td>
-                        <td>@submitted.GetProperty("reasonType").GetString()<br />@submitted.GetProperty("reason").GetString()</td>
+                        <td>@ReportReasonOptions.Format(submitted.GetProperty("reasonType").GetString())<br />@submitted.GetProperty("reason").GetString()</td>
                         <td>@await Html.PartialAsync("_WorkflowStatus", report.TryGetProperty("decisionOperationId", out _) ? "Handled" : "Open")
                             @if (report.TryGetProperty("resolutionReason", out JsonElement resolution))
                             {
@@ -81,7 +81,7 @@ else if (ViewData["Error"] is null)
     {
         if (Model.PolicyVerificationNeedsRefresh && Model.PolicyNotice.Contains("no longer current", StringComparison.Ordinal))
         {
-            <p>@notice <a asp-area="Xenon" asp-page="/Policy/Index" asp-fragment="policy-verification">Go to policy verification</a>.</p>
+            <p>@notice <a asp-area="Xenon" asp-page="/Policy/Index" asp-fragment="policy-verification">Check the public policy</a>.</p>
         }
         else
         {
@@ -90,12 +90,12 @@ else if (ViewData["Error"] is null)
     }
     @if (Model.HasOutOfScopeReports)
     {
-        <p>The reports marked Not Applicable below were outside the policy's accepted subject types or collections. They did not become cases.</p>
+        <p>Reports marked Not Applicable are about accounts or types of content this policy does not accept for review. They were saved, but no cases were opened for them.</p>
     }
     @if (pendingReports is { ValueKind: JsonValueKind.Array } pendingList && pendingList.GetArrayLength() > 0)
     {
         <table>
-            <caption>@Model.PendingTable!.Total retained reports</caption>
+            <caption>@Model.PendingTable!.Total @(Model.PendingTable.Total == 1 ? "report" : "reports") outside case review</caption>
             <thead><tr>
                 @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.PendingTable!, LabelTableSort.Number, "Report", Numeric: true))
                 @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.PendingTable!, LabelTableSort.Subject, "Subject"))
@@ -112,8 +112,8 @@ else if (ViewData["Error"] is null)
                     <tr>
                         <td class="numeric">#@submitted.GetProperty("id").GetInt64()</td>
                         <td>@await Html.PartialAsync("_Identity", new IdentityDisplayModel(target, Subject: true))</td>
-                        <td>@submitted.GetProperty("reasonType").GetString()<br />@submitted.GetProperty("reason").GetString()</td>
-                        <td>@(item.GetProperty("status").GetString() == "PendingVerification" ? "Awaiting verification" : "Not Applicable")
+                        <td>@ReportReasonOptions.Format(submitted.GetProperty("reasonType").GetString())<br />@submitted.GetProperty("reason").GetString()</td>
+                        <td>@(item.GetProperty("status").GetString() == "PendingVerification" ? "Waiting for the public policy check" : "Not Applicable")
                             @if (item.TryGetProperty("resolutionReason", out JsonElement resolution))
                             {
                                 <p>@resolution.GetString()</p>

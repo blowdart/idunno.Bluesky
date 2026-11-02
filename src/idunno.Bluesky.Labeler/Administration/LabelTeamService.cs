@@ -93,32 +93,32 @@ public sealed class LabelTeamService(ILabelAdministrationStore store, HttpClient
                 if (did is null || !await IdentityResolution.VerifyHandleAsync(
                     handle: handle, did: did, httpClient: _httpClient, cancellationToken: token).ConfigureAwait(false))
                 {
-                    return InvalidIdentity("The handle is not verified in both directions.");
+                    return InvalidIdentity("The handle and account ID could not be confirmed as belonging to each other.");
                 }
             }
 
             if (did is null)
             {
-                return InvalidIdentity("The account identifier is not supported.");
+                return InvalidIdentity("This type of account ID is not supported.");
             }
 
             DidDocument? document = await IdentityResolution.ResolveDidDocumentAsync(
                 did: did, httpClient: _httpClient, cancellationToken: token).ConfigureAwait(false);
             return document?.Id == did ? LabelServiceResult<Did>.Success(did) :
-                InvalidIdentity("The DID document does not establish the requested identity.");
+                InvalidIdentity("The account's public identity information could not confirm this account ID.");
         }
         catch (HttpRequestException exception)
         {
             return LabelServiceResult<Did>.Failure(new(
                 code: LabelServiceErrorCode.TargetResolutionFailed,
-                message: "Member identity verification failed.",
+                message: "The member's account could not be verified.",
                 exception: exception));
         }
         catch (OperationCanceledException exception) when (!token.IsCancellationRequested)
         {
             return LabelServiceResult<Did>.Failure(new(
                 code: LabelServiceErrorCode.TargetResolutionFailed,
-                message: "Member identity verification timed out.",
+                message: "Checking the member's account took too long. Try again.",
                 exception: exception));
         }
     }

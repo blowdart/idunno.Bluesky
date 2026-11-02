@@ -28,7 +28,7 @@ internal abstract partial class RelationalLabelStore
         {
             return CaseFailure<LabelDecisionSnapshot>(
                 LabelServiceErrorCode.StaleDecision,
-                "The store revision changed; reload and reauthorize the original decision.");
+                "The stored information changed. Reload and review the original decision before trying again.");
         }
 
         if (request.Kind == LabelOperationKind.Issue &&
@@ -36,14 +36,14 @@ internal abstract partial class RelationalLabelStore
         {
             return CaseFailure<LabelDecisionSnapshot>(
                 LabelServiceErrorCode.PolicyUnavailable,
-                "The independently verified moderation policy no longer permits this issuance.");
+                "The checked public policy no longer allows this label change.");
         }
 
         if (state.Phase != LabelerLifecyclePhase.Active)
         {
             return CaseFailure<LabelDecisionSnapshot>(
                 LabelServiceErrorCode.IssuanceClosed,
-                "Ordinary issuance and negation are closed by the labeler lifecycle.");
+                "The labeler's retirement status prevents ordinary label additions and withdrawals.");
         }
 
         LabelMaintenanceState maintenance = await ReadMaintenanceAsync(connection, transaction, token).ConfigureAwait(false);
@@ -51,7 +51,7 @@ internal abstract partial class RelationalLabelStore
         {
             return CaseFailure<LabelDecisionSnapshot>(
                 LabelServiceErrorCode.IssuanceClosed,
-                "Ordinary issuance and negation are closed during coordinated maintenance.");
+                "Ordinary label additions and withdrawals are paused during signing-key maintenance.");
         }
 
         if (decision.SignedLabel is not null &&
@@ -60,7 +60,7 @@ internal abstract partial class RelationalLabelStore
         {
             return CaseFailure<LabelDecisionSnapshot>(
                 LabelServiceErrorCode.StaleDecision,
-                "The selected signing key was replaced; recreate the issuance service with the active key.");
+                "The signing key changed. The server administrator must reload the label service with the active key.");
         }
 
         IReadOnlyList<LabelServiceResult<LabelDecisionSnapshot>> snapshots = await DecisionSnapshotsAsync(
@@ -81,7 +81,7 @@ internal abstract partial class RelationalLabelStore
         {
             return CaseFailure<LabelDecisionSnapshot>(
                 LabelServiceErrorCode.StaleDecision,
-                "The requested withdrawal CID is not the current stored decision.");
+                "The content version selected for withdrawal does not match the current label. Load the labels again and review your selection.");
         }
 
         if (request.Kind == LabelOperationKind.Negate && decision.ResolvedTarget.Cid != current?.SignedLabel.Label.Cid)

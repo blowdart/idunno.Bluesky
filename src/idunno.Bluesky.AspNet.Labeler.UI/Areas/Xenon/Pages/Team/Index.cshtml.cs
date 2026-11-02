@@ -86,7 +86,7 @@ public sealed class IndexModel : PageModel
         Table = TableNavigation.Read(Request, new(LabelTableKind.Team, Sort: LabelTableSort.Subject, Ascending: true));
         if (Table is null)
         {
-            ViewData["Error"] = "Choose valid team sorting and paging options.";
+            ViewData["Error"] = "Choose an available sort order and page.";
             return;
         }
 
@@ -185,7 +185,7 @@ public sealed class IndexModel : PageModel
             !Enum.IsDefined(action) || action is LabelTeamAction.Enroll or LabelTeamAction.BindLocal or LabelTeamAction.RevokeLocal ||
             !Enum.TryParse(roleText, ignoreCase: false, out LabelTeamRole role) || !Enum.IsDefined(role))
         {
-            ViewData["Error"] = "Choose a valid membership action and role.";
+            ViewData["Error"] = "Choose an available team action and, when changing permissions, a valid role.";
             await OnGetAsync().ConfigureAwait(false);
             return Page();
         }

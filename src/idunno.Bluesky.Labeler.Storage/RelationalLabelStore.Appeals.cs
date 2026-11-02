@@ -175,7 +175,7 @@ internal abstract partial class RelationalLabelStore
 
         if (values.Count > 1000)
         {
-            return CaseFailure<StoredLabel[]>(LabelServiceErrorCode.PolicyUnavailable, "The label target requires explicit review beyond the bounded capture limit.");
+            return CaseFailure<StoredLabel[]>(LabelServiceErrorCode.PolicyUnavailable, "This account or content has too many labels for automatic appeal capture. An administrator must review it separately.");
         }
 
         if (values.Count == 0)
@@ -352,7 +352,7 @@ internal abstract partial class RelationalLabelStore
             ("@pending", (int)LabelAppealStatus.Pending)).ConfigureAwait(false)) != 0)
         {
             return CaseFailure<IReadOnlyList<ModerationAppealData>>(
-                LabelServiceErrorCode.CaseConflict, "Pending appeals require an explicit review outcome.");
+                LabelServiceErrorCode.CaseConflict, "Choose an outcome for each pending appeal.");
         }
 
         List<ModerationAppealData> appeals = [];
@@ -365,7 +365,7 @@ internal abstract partial class RelationalLabelStore
             if (appeal is null || appeal.CaseId != request.CaseId || appeal.Status != LabelAppealStatus.Pending)
             {
                 return CaseFailure<IReadOnlyList<ModerationAppealData>>(
-                    LabelServiceErrorCode.CaseConflict, "The appeal is not pending on this exact case.");
+                    LabelServiceErrorCode.CaseConflict, "This appeal is no longer pending or belongs to a different case.");
             }
 
             bool changed = false;
@@ -400,7 +400,7 @@ internal abstract partial class RelationalLabelStore
             {
                 return CaseFailure<IReadOnlyList<ModerationAppealData>>(
                     LabelServiceErrorCode.StaleDecision,
-                    changed ? "Newer or expired label outcomes require explicit superseded review." : "The captured label outcomes have not been superseded.");
+                    changed ? "The challenged labels have changed or expired. Review the appeal using 'The challenged labels are no longer in effect'." : "The challenged labels are still in effect. Choose an outcome that reviews them.");
             }
 
             appeals.Add(appeal);
@@ -410,7 +410,7 @@ internal abstract partial class RelationalLabelStore
             action.Kind == LabelOperationKind.Negate && !challengedValues.Contains(action.Value)))
         {
             return CaseFailure<IReadOnlyList<ModerationAppealData>>(
-                LabelServiceErrorCode.TargetNotAllowed, "Appeal withdrawals must identify explicitly captured challenged labels.");
+                LabelServiceErrorCode.TargetNotAllowed, "Withdraw only labels recorded as challenged in this appeal.");
         }
 
         return LabelServiceResult<IReadOnlyList<ModerationAppealData>>.Success(appeals.AsReadOnly());

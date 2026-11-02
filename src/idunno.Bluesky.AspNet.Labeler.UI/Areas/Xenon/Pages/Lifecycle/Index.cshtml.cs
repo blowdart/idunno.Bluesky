@@ -58,7 +58,7 @@ public sealed class IndexModel : PageModel
         {
             if (!Guid.TryParse(hostText, out Guid host) || host == Guid.Empty)
             {
-                LifecycleError = "Choose the exact host registration independently verified as stopped.";
+                LifecycleError = "Select the server process you have checked and confirmed has stopped.";
                 await OnGetAsync().ConfigureAwait(false);
                 return Page();
             }
@@ -72,7 +72,7 @@ public sealed class IndexModel : PageModel
             (!int.TryParse(await UiPageHelpers.FormValueAsync(this, "graceDays", 8).ConfigureAwait(false), out graceDays) ||
                 graceDays is < 1 or > 365))
         {
-            LifecycleError = "Choose a grace period from 1 to 365 days.";
+            LifecycleError = "Enter a waiting period between 1 and 365 days.";
             await OnGetAsync().ConfigureAwait(false);
             return Page();
         }
@@ -82,7 +82,7 @@ public sealed class IndexModel : PageModel
             keys && string.IsNullOrWhiteSpace(inventory) ||
             attests && string.IsNullOrWhiteSpace(attestation))
         {
-            LifecycleError = "Choose a supported action, stable operation ID, reason and required inventory/attestation.";
+            LifecycleError = "Choose an available action, enter a tracking ID and reason, and complete any required key-location or checks fields.";
             await OnGetAsync().ConfigureAwait(false);
             return Page();
         }
@@ -90,7 +90,7 @@ public sealed class IndexModel : PageModel
         if (!preview && (confirmationText != method ||
             RequiresChallenge(method) && string.IsNullOrWhiteSpace(confirmation)))
         {
-            LifecycleError = "Preview this exact action first, then type its method name and submit its action-specific challenge. A generic checkbox is not sufficient.";
+            LifecycleError = "Review this action first, then type its confirmation text exactly as shown. If the confirmation is missing or expired, review the action again.";
             await OnGetAsync().ConfigureAwait(false);
             return Page();
         }
@@ -112,18 +112,18 @@ public sealed class IndexModel : PageModel
             await OnGetAsync().ConfigureAwait(false);
             Retirement = UiPageHelpers.ToElement(response);
             Intent = intent;
-            ViewData["Status"] = "Read-only preflight prepared. No lifecycle action has been executed.";
+            ViewData["Status"] = "Ready for review. Nothing has changed yet.";
             return Page();
         }
 
         if (response.Succeeded)
         {
-            TempData["Status"] = $"Command {operationId} accepted. Background progress is durable; reload to inspect checkpoints.";
+            TempData["Status"] = $"Request {operationId} accepted. Refresh to see the latest status. Any background work keeps its progress after a restart.";
             return RedirectToPage();
         }
 
         await OnGetAsync().ConfigureAwait(false);
-        LifecycleError = $"{response.Message ?? response.Error} If the preview expired or state/generation changed, retry preflight for the same immutable intent. For an uncertain outcome, retry the same operation ID; do not start a new operation.";
+        LifecycleError = $"{response.Message ?? response.Error} If the review expired or the labeler changed, review the same action again without changing its details. If you cannot tell whether it completed, retry with the same tracking ID; do not create a new request.";
         return Page();
     }
 

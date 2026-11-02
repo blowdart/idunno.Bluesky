@@ -1,3 +1,35 @@
+@font-face {
+    font-family: "Inter";
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url("../vendor/inter/InterVariable.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Inter";
+    font-style: italic;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url("../vendor/inter/InterVariable-Italic.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Google Sans Code";
+    font-style: normal;
+    font-weight: 300 800;
+    font-display: swap;
+    src: url("../vendor/google-sans-code/GoogleSansCode.ttf") format("truetype");
+}
+
+@font-face {
+    font-family: "Google Sans Code";
+    font-style: italic;
+    font-weight: 300 800;
+    font-display: swap;
+    src: url("../vendor/google-sans-code/GoogleSansCode-Italic.ttf") format("truetype");
+}
+
 :root {
     color-scheme: light;
     --text: #20252c;
@@ -14,7 +46,8 @@
     --error-text: #7a1711;
     --status-background: #edf7ed;
     --status-border: #36843b;
-    font-family: system-ui, sans-serif;
+    font-family: "Inter", system-ui, sans-serif;
+    font-optical-sizing: auto;
     color: var(--text);
     background: var(--background);
 }
@@ -225,7 +258,7 @@ th a { white-space: nowrap; }
 .summary-badge .identity-tooltip { left: auto; right: 0; white-space: normal; }
 .report-summary-tooltip { text-align: left; }
 .report-summary-line, .report-summary-total { display: block; }
-.report-summary-total { margin-top: .6rem; }
+.report-summary-line + .report-summary-total { margin-top: .6rem; }
 .muted { color: var(--muted); }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 .time-zone-toggle { padding: .25rem .4rem; min-width: 2.75rem; min-height: 2.75rem; background: transparent; border: 0; color: white; white-space: nowrap; }
@@ -261,13 +294,18 @@ th a { white-space: nowrap; }
 [data-policy-panel][hidden], [data-policy-save][hidden], .policy-editor-toolbar[hidden], .policy-label [hidden] { display: none; }
 .policy-editor-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1.25rem; }
 .policy-editor-toolbar p { flex-basis: 100%; margin: 0; }
-.policy-editor-toolbar > a { display: inline-flex; padding: .55rem; background: var(--button); color: white; border-radius: .25rem; text-decoration: none; }
+.policy-action-button { display: inline-block; padding: .55rem; background: var(--button); color: white; border-radius: .25rem; text-decoration: none; }
 .policy-draft-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
 .policy-draft-actions form { margin: 0; }
+.policy-draft-count { display: flex; }
 .policy-label { margin: 1rem 0; padding: 1rem; min-width: 0; }
 .policy-label button { margin: .5rem .75rem .5rem 0; }
 .policy-label input:not([type="checkbox"]), .policy-label select { max-width: 100%; min-width: 0; }
-[data-policy-editor] textarea[name="declaration"] { min-height: 28rem; font-family: monospace; }
+pre, code, kbd, samp, [data-policy-editor] textarea[name="declaration"] {
+    font-family: "Google Sans Code", ui-monospace, monospace;
+    font-variant-ligatures: none;
+}
+[data-policy-editor] textarea[name="declaration"] { min-height: 28rem; }
 #policy-json-error:not(:empty) { color: var(--error-text); }
 #policy-current pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 .fa-eye-slash { --fa-icon: url("../vendor/fontawesome/eye-slash.svg"); }

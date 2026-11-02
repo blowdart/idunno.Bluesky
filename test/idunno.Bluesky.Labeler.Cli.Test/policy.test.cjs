@@ -26,6 +26,78 @@ const initial = () => ({
     extension: { retained: true }
 });
 
+test("Policy tabs retain their fragments on refresh and draft Publish shortcuts select without submitting", () => {
+    const callbacks = {};
+    const tabCallbacks = [];
+    const panels = ["policy-current", "policy-labels", "policy-moderation", "policy-advanced", "policy-publication", "policy-verification"]
+        .map(id => ({ id, setAttribute() {} }));
+    const tabs = panels.map((panel, index) => ({
+        getAttribute() { return "#" + panel.id; },
+        setAttribute() {},
+        focus() {},
+        addEventListener(event, callback) { (tabCallbacks[index] ??= {})[event] = callback; }
+    }));
+    const location = { hash: "#policy-publication" };
+    const history = {
+        state: { retained: true },
+        replaceState(state, unused, hash) {
+            assert.equal(state, this.state);
+            location.hash = hash;
+        }
+    };
+    const selection = { value: "", focus() { this.focused = true; } };
+    const link = {
+        dataset: { policyPublish: "v3" },
+        addEventListener(event, callback) { callbacks[event] = callback; }
+    };
+    const root = {
+        dataset: {},
+        addEventListener() {},
+        querySelectorAll(selector) {
+            if (selector === "[data-policy-tab]") return tabs;
+            if (selector === "[data-policy-panel]") return panels;
+            if (selector === "[data-policy-publish]") return [link];
+            return [];
+        },
+        querySelector(selector) {
+            if (selector === "nav") return { setAttribute() {} };
+            if (selector.startsWith("#")) return panels.find(panel => "#" + panel.id === selector);
+            if (selector === 'form[action*="handler=Publish"] select[name="version"]') return selection;
+            return null;
+        }
+    };
+    const pageContext = {
+        document: { querySelectorAll() { return [root]; } },
+        location,
+        history
+    };
+    runInNewContext(script, pageContext);
+    assert.equal(panels[4].hidden, false);
+    for (let index = 0; index < tabs.length; index++) {
+        tabCallbacks[index].click({ preventDefault() {} });
+        assert.equal(location.hash, "#" + panels[index].id);
+        runInNewContext(script, pageContext);
+        assert.equal(panels[index].hidden, false);
+        assert.equal(panels.filter(panel => !panel.hidden).length, 1);
+    }
+    tabCallbacks[0].click({ preventDefault() {} });
+    assert.equal(panels[0].hidden, false);
+    assert.equal(location.hash, "#policy-current");
+    tabCallbacks[0].keydown({ key: "ArrowRight", preventDefault() {} });
+    assert.equal(location.hash, "#policy-labels");
+    assert.equal(panels[1].hidden, false);
+    tabCallbacks[1].keydown({ key: "Home", preventDefault() {} });
+    assert.equal(location.hash, "#policy-current");
+    let prevented = false;
+    callbacks.click({ preventDefault() { prevented = true; } });
+    assert.equal(prevented, true);
+    assert.equal(selection.value, "v3");
+    assert.equal(selection.focused, true);
+    assert.equal(panels[4].hidden, false);
+    assert.equal(panels[0].hidden, true);
+    assert.equal(location.hash, "#policy-publication");
+});
+
 test("Valid declarations retain label metadata, translations and unknown extensions", () => {
     const value = initial();
     assert.equal(JSON.stringify(parse(JSON.stringify(value))), JSON.stringify(value));

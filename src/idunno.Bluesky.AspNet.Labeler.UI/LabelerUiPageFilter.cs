@@ -72,7 +72,7 @@ internal sealed class LabelerUiPageFilter(LabelerUiAdministration administration
         }
         else
         {
-            page.ViewData["Error"] = totals.Message ?? "Open workflow counts could not be loaded.";
+            page.ViewData["Error"] = totals.Message ?? "Case, report and appeal counts could not be loaded.";
         }
     }
 }

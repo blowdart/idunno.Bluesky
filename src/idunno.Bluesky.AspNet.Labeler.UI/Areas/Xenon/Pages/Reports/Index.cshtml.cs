@@ -58,7 +58,7 @@ public sealed class IndexModel : PageModel
 
         if (!ModelState.IsValid || AfterId < 0 || Status is not ("Unresolved" or "Handled" or "All"))
         {
-            ViewData["Error"] = "Choose a valid report status and non-negative continuation identifier.";
+            ViewData["Error"] = "Choose an available report status and refresh the page before trying again.";
             return;
         }
 
@@ -96,7 +96,7 @@ public sealed class IndexModel : PageModel
             new AdministrationCommand(Method: "getPublicationState", Reason: "Inspect report admission lifecycle.")).ConfigureAwait(false);
         if (!policy.Succeeded || !publication.Succeeded || publication.State is null)
         {
-            PolicyStatusError = "Policy or lifecycle status could not be loaded. Report admission status is unknown; reload the page.";
+            PolicyStatusError = "We could not check the policy or retirement status, so we cannot tell whether new reports can enter case review. Refresh the page.";
             return;
         }
 

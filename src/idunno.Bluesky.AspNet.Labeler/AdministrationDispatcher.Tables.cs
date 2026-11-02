@@ -18,7 +18,7 @@ internal sealed partial class AdministrationDispatcher
         string input = value.StartsWith('@') ? value[1..] : value;
         if (!AtIdentifier.TryParse(input, out AtIdentifier? identifier))
         {
-            return new(false, "InvalidRequest", "Enter a valid DID or handle.");
+            return new(false, "InvalidRequest", "Enter a valid account ID (DID) or handle.");
         }
 
         if (identifier is Did did)
@@ -41,7 +41,7 @@ internal sealed partial class AdministrationDispatcher
     {
         if (store is not ILabelTableStore tables)
         {
-            return new(false, "UnsupportedTable", "This storage provider does not support audit exports.");
+            return new(false, "UnsupportedTable", "This database implementation does not support audit downloads.");
         }
 
         LabelServiceResult<LabelAdministrationReceipt> result = await tables.BeginAuditExportAsync(caller, query, token).ConfigureAwait(false);
@@ -56,7 +56,7 @@ internal sealed partial class AdministrationDispatcher
     {
         if (store is not ILabelTableStore tables)
         {
-            return new(false, "UnsupportedTable", "This storage provider does not support audit exports.");
+            return new(false, "UnsupportedTable", "This database implementation does not support audit downloads.");
         }
 
         LabelServiceResult<IReadOnlyList<LabelAdministrationReceipt>> result = await tables.ReadAuditExportPageAsync(caller, query, token).ConfigureAwait(false);
@@ -71,7 +71,7 @@ internal sealed partial class AdministrationDispatcher
     {
         if (store is not ILabelTableStore tables)
         {
-            return new(false, "UnsupportedTable", "This storage provider does not support sorted, counted table pages.");
+            return new(false, "UnsupportedTable", "This database implementation does not support sorted lists with totals and pagination.");
         }
 
         LabelServiceResult<LabelTablePage> result = await tables.ReadTableAsync(caller, query, token).ConfigureAwait(false);

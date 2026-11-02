@@ -28,4 +28,31 @@ public class UiOperationFeedbackTests
     [InlineData("HTTPStatus", "HTTP Status")]
     public void EnumLabelsSeparatePascalCaseWords(string value, string expected) =>
         Assert.Equal(expected, UiPageHelpers.FormatEnumLabel(value));
+
+    [Theory]
+    [InlineData("tools.ozone.report.defs#reasonMisleadingSpam", "Spam")]
+    [InlineData("com.atproto.moderation.defs#reasonSpam", "Spam (legacy)")]
+    [InlineData("example.custom#reason", "example.custom#reason")]
+    [InlineData(null, "")]
+    public void ReportReasonNamesPreserveUnknownIdentifiers(string? value, string expected) =>
+        Assert.Equal(expected, ReportReasonOptions.Format(value));
+
+    [Theory]
+    [InlineData("audit-export-started", "Audit download started")]
+    [InlineData("policy-observation", "Public policy checked")]
+    [InlineData("authenticate-browser", "Browser sign-in")]
+    [InlineData("deleteDraft", "Draft deletion")]
+    [InlineData("maintenance-AwaitingHostAcknowledgement", "maintenance Awaiting Host Acknowledgement")]
+    [InlineData("custom-action", "custom action")]
+    [InlineData(null, "")]
+    public void AuditActionNamesRetainReadableUnknownActions(string? value, string expected) =>
+        Assert.Equal(expected, UiPageHelpers.FormatAuditAction(value));
+
+    [Theory]
+    [InlineData("beginRetirement", "permanent retirement")]
+    [InlineData("purgeRetiredData", "deleting retained label history")]
+    [InlineData("confirmRetirementHostStopped", "recording that this server process has stopped")]
+    [InlineData("attestKeyRemoval", "recording signing-key removal")]
+    public void RetirementConfirmationTitlesDescribeActions(string value, string expected) =>
+        Assert.Equal(expected, UiPageHelpers.FormatRetirementAction(value));
 }

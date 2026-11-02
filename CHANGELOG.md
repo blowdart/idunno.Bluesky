@@ -6,6 +6,7 @@
 
 #### idunno.Bluesky.AspNet.Labeler
 
+* Uses plain-language shared administration errors while retaining error codes, permissions and recovery behavior.
 * Adds explicitly optional `MapOzoneCompatibility()` discovery, server configuration, live team/report/history inspection, label events and report resolution through the existing remote-mode, owner-switch and replay-protected administration boundary. Label/report updates commit atomically with durable event identities; unsupported capabilities fail explicitly. The canonical host opts in only with `LabelerOzone:Enabled`; Ozone itself is unchanged and end-to-end UI interoperability remains unverified.
 * Explicitly binds Ozone discovery to a request delegate so trimmed and Native AOT builds avoid an incompatible generated route interceptor.
 * Adds Disabled, Enabled and WebUiControlled remote-administration host modes, defaulting to disabled and preserving the legacy RemoteEnabled fallback; explicit modes take precedence without affecting protected local administration.
@@ -46,6 +47,16 @@
 
 #### idunno.Bluesky.AspNet.Labeler.UI
 
+* Keeps all Policy tab fragments in sync with the displayed tab so refresh restores the selection, including keyboard navigation and draft Publish shortcuts.
+* Gives report-summary tooltips equal top and bottom padding when no open reports precede the total.
+* Clarifies UI errors and confirmation text while preserving exact-action confirmations, retry identities, permission checks and warnings about completed writes and withdrawals.
+* Simplifies home, search, reports, appeals, audit and public legal notices; names standard report reasons and audit actions, and corrects singular list counts while preserving permissions, data disclosures and legal qualifications.
+* Simplifies team permissions, account/content labeling, report-version selection, moderation history and retirement progress feedback without changing errors or confirmation requirements.
+* Explains retirement, waiting periods, label-history deletion and signing-key removal in plain language, retaining permanent-change warnings and moving detailed progress counters under Technical details.
+* Explains policy editing, publication, withdrawal progress and recovery in plain language while retaining irreversible-change warnings and explicit confirmation.
+* Uses locally bundled Inter variable fonts by default, including italics, with footer attribution and the original SIL Open Font License.
+* Uses locally bundled Google Sans Code for JSON and fixed-width text, including italic support, footer attribution, and the original license and trademark notices.
+* Uses consistent icon-labelled policy action buttons and adds a saved-draft Publish shortcut that selects the draft in Publication without starting a write or bypassing confirmation.
 * Displays invalid remote-administration audit reasons as validation errors instead of unhandled server errors.
 * Redirects failed policy publication, cleanup-resume and authorization submissions back to the publication tab with retained errors, so refreshing does not resubmit a POST.
 * Prefills the publication authorization handle by resolving the labeler DID, with an explicit message and manual entry when resolution is unavailable.
@@ -187,6 +198,7 @@
 
 #### idunno.Bluesky.Labeler
 
+* Clarifies account verification, label decision, policy check and retirement errors, preserving original tracking IDs and detailed diagnostics for recovery.
 * Adds shared atomic Ozone event preparation and provider commits for multi-label actions and explicit cross-version report selection, retaining original CIDs, live authorization, policy fencing and pending appeals.
 * Adds irreversible, authorized retirement with action-bound confirmations, bounded timestamp-aware signed negations, resumable database checkpoints, live worker authority, explicit 1–365 day grace selection and distribution-availability attestation. Local history purge and operator-attested external key removal remain separate confirmations; moderation and audit history, backups and downstream copies are not erased.
 * Closes new label/report/appeal/policy workflows on retirement while retaining non-label case completion and explicitly coordinated recovery signing-key rotation without reopening issuance.
@@ -227,6 +239,7 @@
 
 #### idunno.Bluesky.Labeler.SQLite / PostgreSQL / MySQL
 
+* Clarifies shared team, case, appeal, policy and retirement errors without changing storage transactions, error codes or restart recovery.
 * Captures applicable URI-wide labels for CID-pinned all-label appeals and batches duplicate captured values per appeal page when checking superseded outcomes.
 * Resolves selected-label appeals on targets with large historical label sets by checking remaining captured outcomes directly, without reapplying the intake capture limit.
 * Filters selected appeal label values before bounded challenge capture, retains the selected value in accepted reports and pending promotion, and recovers legacy bootstrap owners even when earlier authentication denials occupy the first audit entries.

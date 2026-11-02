@@ -74,7 +74,7 @@ public sealed partial class LabelIssuanceService
 
         if (current.Result.Revision != request.ExpectedRevision || current.Result.Status == LabelCaseStatus.Resolved)
         {
-            return Failure<LabelCaseDecisionReceipt>(LabelServiceErrorCode.CaseConflict, "Reload the unresolved case before deciding it.");
+            return Failure<LabelCaseDecisionReceipt>(LabelServiceErrorCode.CaseConflict, "The case changed or is already resolved. Reload it before submitting a decision.");
         }
 
         if (request.Actions.Any(action => action.Kind == LabelOperationKind.Issue))
@@ -106,7 +106,7 @@ public sealed partial class LabelIssuanceService
         if (request.HandleReportsAcrossRecordVersions && subject.RecordUri is null)
         {
             return Failure<LabelCaseDecisionReceipt>(
-                LabelServiceErrorCode.InvalidTarget, "All-versions report handling requires a record case.");
+                LabelServiceErrorCode.InvalidTarget, "You can review reports across all versions only for a content case, not an account case.");
         }
 
         LabelTarget target = subject.RecordUri is { } record
@@ -208,5 +208,5 @@ public sealed partial class LabelIssuanceService
         LabelServiceResult<LabelCaseDecisionReceipt> receipt) =>
         caller.Actor == receipt.Result!.Actor && request.SemanticallyEquals(receipt.Result.Request)
             ? receipt
-            : Failure<LabelCaseDecisionReceipt>(LabelServiceErrorCode.IdempotencyConflict, "The case decision ID identifies different intent.");
+            : Failure<LabelCaseDecisionReceipt>(LabelServiceErrorCode.IdempotencyConflict, "This decision tracking ID was already used for different choices.");
 }

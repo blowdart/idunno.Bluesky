@@ -79,7 +79,7 @@ public sealed class IndexModel : PageModel
         if (selected.Any(value => !snapshot.Choices.Any(choice => choice.Value == value && !choice.OtherVersion)) ||
             string.IsNullOrWhiteSpace(Reason))
         {
-            ViewData["Error"] = "Choose available labels and enter a reason for labelling.";
+            ViewData["Error"] = "Choose from the available labels and enter a reason for your changes.";
             Labels = Labels with { Selected = selected };
             return Page();
         }
@@ -113,7 +113,7 @@ public sealed class IndexModel : PageModel
             if (!response.Succeeded)
             {
                 ViewData["Status"] = null;
-                ViewData["Error"] = $"{completed} of {changes.Length} changes confirmed. {response.Message ?? response.Error} Retry unchanged changes to recover their original operations, or load labels again to review the current state.";
+                ViewData["Error"] = $"{completed} of {changes.Length} label changes are confirmed. {response.Message ?? response.Error} Retry without changing your selections to recover the original results, or load the labels again to review their current state.";
                 return Page();
             }
 

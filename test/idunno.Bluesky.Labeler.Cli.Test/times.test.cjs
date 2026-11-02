@@ -143,7 +143,7 @@ test("Time zone preference remains available on pages without valid dates", () =
 test("Pages without dates report blocked storage and still allow switching", () => {
     const current = page(null, true, false);
     assert.equal(current.controls.hidden, false);
-    assert.match(current.status.textContent, /Changes apply to this page only/);
+    assert.match(current.status.textContent, /The change applies only to this page/);
     current.click();
     assert.equal(current.zone.textContent, "Local");
     assert.equal(current.warnings.length, 2);
@@ -172,11 +172,11 @@ for (const saved of [null, "", "invalid", "utc"]) {
 
 test("Blocked storage reports the failure and leaves page-only toggling available", () => {
     const current = page(null, true);
-    assert.match(current.status.textContent, /Changes apply to this page only/);
+    assert.match(current.status.textContent, /The change applies only to this page/);
     assert.equal(current.warnings.length, 1);
     current.click();
     assert.equal(current.attributes.get("aria-pressed"), "true");
-    assert.match(current.status.textContent, /Changes apply to this page only/);
+    assert.match(current.status.textContent, /The change applies only to this page/);
     assert.equal(current.warnings.length, 2);
     current.click();
     assert.equal(current.time.textContent, "2026-01-01 00:00:00Z");

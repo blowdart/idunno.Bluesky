@@ -35,7 +35,7 @@ internal abstract partial class RelationalLabelStore
                     byte[] previousIntent = JsonSerializer.SerializeToUtf8Bytes(previous.Intent, ModerationJsonContext.Default.ModerationDecisionIntent);
                     return previous.OperationId == request.OperationId && previousIntent.AsSpan().SequenceEqual(intentBytes)
                         ? LabelServiceResult<LabelCaseDecisionReceipt>.Success(previous.ToReceipt())
-                        : CaseFailure<LabelCaseDecisionReceipt>(LabelServiceErrorCode.IdempotencyConflict, "The case decision ID identifies different intent.");
+                        : CaseFailure<LabelCaseDecisionReceipt>(LabelServiceErrorCode.IdempotencyConflict, "This decision tracking ID was already used for different choices.");
                 }
 
                 ModerationCaseData? current = await ReadCaseAsync(connection, transaction, request.CaseId, cancellationToken).ConfigureAwait(false);
@@ -46,13 +46,13 @@ internal abstract partial class RelationalLabelStore
 
                 if (current.Revision != request.ExpectedRevision || current.Status == LabelCaseStatus.Resolved)
                 {
-                    return CaseFailure<LabelCaseDecisionReceipt>(LabelServiceErrorCode.CaseConflict, "Reload the unresolved case before deciding it.");
+                    return CaseFailure<LabelCaseDecisionReceipt>(LabelServiceErrorCode.CaseConflict, "The case changed or is already resolved. Reload it before submitting a decision.");
                 }
 
                 if (request.HandleReportsAcrossRecordVersions && current.ToCase().Subject.RecordUri is null)
                 {
                     return CaseFailure<LabelCaseDecisionReceipt>(
-                        LabelServiceErrorCode.InvalidTarget, "All-versions report handling requires a record case.");
+                        LabelServiceErrorCode.InvalidTarget, "You can review reports across all versions only for a content case, not an account case.");
                 }
 
                 ModerationPolicyGate? gate = await ReadPolicyGateAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
@@ -76,7 +76,7 @@ internal abstract partial class RelationalLabelStore
                         report.DecisionOperationId is not null)
                     {
                         return CaseFailure<LabelCaseDecisionReceipt>(
-                            LabelServiceErrorCode.CaseConflict, "The selected report is not open in this exact-subject case. Reload the report.");
+                            LabelServiceErrorCode.CaseConflict, "The selected report is already reviewed or belongs to a different account or content version. Reload the report.");
                     }
                 }
                 LabelServiceResult<IReadOnlyList<ModerationAppealData>> appeals = await ValidateAppealDecisionAsync(
@@ -102,7 +102,7 @@ internal abstract partial class RelationalLabelStore
                         token: cancellationToken).ConfigureAwait(false) is not null)
                     {
                         return CaseFailure<LabelCaseDecisionReceipt>(
-                            LabelServiceErrorCode.IdempotencyConflict, "A case action identity already exists outside this atomic decision.");
+                            LabelServiceErrorCode.IdempotencyConflict, "One of this decision's action IDs is already in use by another request. Recover the existing request before continuing.");
                     }
 
                     LabelServiceResult<LabelDecisionSnapshot> validated = await ValidatePreparedDecisionAsync(
@@ -120,7 +120,7 @@ internal abstract partial class RelationalLabelStore
                     if (action.ExpectedLabelSequence is { } sequence && (observations[index]?.Sequence ?? 0) != sequence)
                     {
                         return CaseFailure<LabelCaseDecisionReceipt>(
-                            LabelServiceErrorCode.StaleDecision, "The challenged label is no longer the current decision.");
+                            LabelServiceErrorCode.StaleDecision, "The label challenged in this appeal has changed. Reload the case and review the current label.");
                     }
                     ValidateCaseActionIntent(current, decision, index, observations[index]);
                 }

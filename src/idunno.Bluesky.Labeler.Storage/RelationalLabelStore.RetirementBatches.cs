@@ -119,7 +119,7 @@ internal abstract partial class RelationalLabelStore
                 transaction: transaction,
                 state: state,
                 data: data,
-                error: "Unauthorized: saved authority expired or was revoked. An active administrator must explicitly resume.",
+                error: "Unauthorized: permission expired or was removed. An active administrator must resume retirement.",
                 token: token).ConfigureAwait(false);
         }
 
@@ -135,7 +135,7 @@ internal abstract partial class RelationalLabelStore
             RetirementData? data = await ReadRetirementDataAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             if (checkpoint is not null && (data is null || data.ControlId != checkpoint.ControlId || data.Generation != checkpoint.Generation))
             {
-                return CaseFailure<LabelRetirementBatch>(LabelServiceErrorCode.StaleDecision, "Retirement changed after worker admission; reload its recovery checkpoint.");
+                return CaseFailure<LabelRetirementBatch>(LabelServiceErrorCode.StaleDecision, "Retirement changed after background work was allowed to start. Reload its saved status.");
             }
 
             if (data is null || !data.Running ||
@@ -151,7 +151,7 @@ internal abstract partial class RelationalLabelStore
                 data: data,
                 token: cancellationToken).ConfigureAwait(false))
             {
-                return AdminFailure<LabelRetirementBatch>("Retirement paused because saved authority is no longer valid.");
+                return AdminFailure<LabelRetirementBatch>("Retirement paused because its saved permission is no longer valid.");
             }
 
             if ((await ReadMaintenanceAsync(connection, transaction, cancellationToken).ConfigureAwait(false)).IsActive)
@@ -235,9 +235,9 @@ internal abstract partial class RelationalLabelStore
                             transaction: transaction,
                             state: state,
                             data: data,
-                            error: "TimestampExhausted: no timestamp can supersede retained history.",
+                            error: "TimestampExhausted: the service cannot assign valid withdrawal timestamps. An administrator must investigate the stored timestamps.",
                             token: token).ConfigureAwait(false);
-                        return CaseFailure<LabelRetirementBatch>(LabelServiceErrorCode.TimestampExhausted, "No timestamp can supersede retained history.");
+                        return CaseFailure<LabelRetirementBatch>(LabelServiceErrorCode.TimestampExhausted, "The service cannot assign valid timestamps for these withdrawals. An administrator must investigate the stored timestamps before continuing.");
                     }
 
                     created = row.SignedLabel.Label.CreationTimestamp.ToUniversalTime().AddTicks(1);
@@ -258,9 +258,9 @@ internal abstract partial class RelationalLabelStore
                 transaction: transaction,
                 state: state,
                 data: data,
-                error: "TimestampExhausted: no timestamp range remains for a retirement batch.",
+                error: "TimestampExhausted: the service cannot assign valid withdrawal timestamps. An administrator must investigate the stored timestamps.",
                 token: token).ConfigureAwait(false);
-            return CaseFailure<LabelRetirementBatch>(LabelServiceErrorCode.TimestampExhausted, "No timestamp range remains for a retirement batch.");
+            return CaseFailure<LabelRetirementBatch>(LabelServiceErrorCode.TimestampExhausted, "The service cannot assign valid timestamps for these withdrawals. An administrator must investigate the stored timestamps before continuing.");
         }
 
         return LabelServiceResult<LabelRetirementBatch>.Success(new(
@@ -346,7 +346,7 @@ internal abstract partial class RelationalLabelStore
             if (data is null || !data.Running || data.OperationId != batch.OperationId || data.Generation != batch.Generation ||
                 state.Revision != batch.StoreRevision || state.Phase is not (LabelerLifecyclePhase.Retiring or LabelerLifecyclePhase.Distributing))
             {
-                return CaseFailure<LabelRetirementView>(LabelServiceErrorCode.StaleDecision, "Retirement progress changed; reload the durable checkpoint.");
+                return CaseFailure<LabelRetirementView>(LabelServiceErrorCode.StaleDecision, "Retirement progress changed. Reload its saved status.");
             }
 
             if (!await RetirementWorkerAllowedAsync(
@@ -356,12 +356,12 @@ internal abstract partial class RelationalLabelStore
                 data: data,
                 token: cancellationToken).ConfigureAwait(false))
             {
-                return AdminFailure<LabelRetirementView>("Retirement authority expired or was revoked.");
+                return AdminFailure<LabelRetirementView>("Permission to continue retirement expired or was removed.");
             }
 
             if ((await ReadMaintenanceAsync(connection, transaction, cancellationToken).ConfigureAwait(false)).IsActive)
             {
-                return CaseFailure<LabelRetirementView>(LabelServiceErrorCode.StaleDecision, "Retirement signing is blocked during recovery rotation.");
+                return CaseFailure<LabelRetirementView>(LabelServiceErrorCode.StaleDecision, "Retirement cannot sign withdrawals while a signing-key recovery is in progress.");
             }
 
             if (state.PublishedThrough < state.RetirementUpperBound ||
@@ -390,7 +390,7 @@ internal abstract partial class RelationalLabelStore
                 scanning && expected.Labels.Any(label => label.SignedLabel.Label.CreationTimestamp >= batch.CreatedAt) ||
                 signed.Length != (scanning ? 0 : expected.Labels.Count))
             {
-                return CaseFailure<LabelRetirementView>(LabelServiceErrorCode.StaleDecision, "Retirement candidates changed; reload the durable checkpoint.");
+                return CaseFailure<LabelRetirementView>(LabelServiceErrorCode.StaleDecision, "The labels selected for retirement changed. Reload its saved status.");
             }
 
             Signing.LabelSigningKeySelection? selection = await ReadSigningSelectionAsync(
@@ -407,9 +407,9 @@ internal abstract partial class RelationalLabelStore
                     transaction: transaction,
                     state: state,
                     data: data,
-                    error: "SigningFailed: restore the verified selected signing key and explicitly resume.",
+                    error: "SigningFailed: restore the checked, selected signing key, then resume retirement.",
                     token: cancellationToken).ConfigureAwait(false);
-                return CaseFailure<LabelRetirementView>(LabelServiceErrorCode.SigningFailed, "The selected signing key changed; restore it and explicitly resume.");
+                return CaseFailure<LabelRetirementView>(LabelServiceErrorCode.SigningFailed, "The selected signing key changed. Restore the required key, then resume retirement.");
             }
 
             for (int i = 0; i < signed.Length; i++)
@@ -421,7 +421,7 @@ internal abstract partial class RelationalLabelStore
                     label.CreationTimestamp != batch.CreatedAt.AddTicks(i) ||
                     !LabelDecisionRules.IsLater(signed[i], expected.Labels[i].SignedLabel))
                 {
-                    return CaseFailure<LabelRetirementView>(LabelServiceErrorCode.StaleDecision, "Retirement must negate exactly its retained CID slots with later timestamps.");
+                    return CaseFailure<LabelRetirementView>(LabelServiceErrorCode.StaleDecision, "The prepared retirement withdrawals must match the saved labels and have later timestamps. Stop and investigate before retrying.");
                 }
             }
 

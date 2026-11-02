@@ -51,7 +51,7 @@ internal sealed partial class AdministrationDispatcher
                 {
                     if (store is not ILabelSearchStore search)
                     {
-                        return new(false, "UnsupportedSearch", "Moderation search is unavailable for this provider.");
+                        return new(false, "UnsupportedSearch", "This database implementation does not support moderation search.");
                     }
 
                     LabelServiceResult<LabelSearchPage> result = await search.SearchAsync(
@@ -76,7 +76,7 @@ internal sealed partial class AdministrationDispatcher
                 {
                     if (store is not ILabelTableStore activityStore)
                     {
-                        return new(false, "UnsupportedTable", "Case activity is unavailable for this provider.");
+                        return new(false, "UnsupportedTable", "This database implementation does not support case history.");
                     }
 
                     LabelServiceResult<LabelCaseActivityPage> activity = await activityStore.ReadCaseActivityAsync(
@@ -95,7 +95,7 @@ internal sealed partial class AdministrationDispatcher
                 {
                     if (store is not ILabelTableStore tables)
                     {
-                        return new(false, "UnsupportedTable", "Open moderation counts are unavailable for this provider.");
+                        return new(false, "UnsupportedTable", "This database implementation does not support moderation counts.");
                     }
 
                     LabelServiceResult<LabelNavigationCounts> counts = await tables.ReadNavigationCountsAsync(caller, token).ConfigureAwait(false);
@@ -119,13 +119,13 @@ internal sealed partial class AdministrationDispatcher
 
                     if (gate.Result.Policy is not { } definition)
                     {
-                        return new(false, "PolicyUnavailable", "The current label choices are unavailable until a policy is selected.");
+                        return new(false, "PolicyUnavailable", "Select a policy before choosing labels.");
                     }
 
                     LabelReportSubject subject = result.Result.Subject;
                     if (store is not ILabelTableStore labelReader)
                     {
-                        return new(false, "UnsupportedTable", "Active subject labels are unavailable for this provider.");
+                        return new(false, "UnsupportedTable", "This database implementation does not support current labels.");
                     }
 
                     LabelServiceResult<StoredLabel[]> applied = await labelReader.ReadSubjectLabelsAsync(caller, subject, token).ConfigureAwait(false);
@@ -315,7 +315,7 @@ internal sealed partial class AdministrationDispatcher
                     catch (ArgumentException exception)
                     {
                         return new(false, "InvalidRequest", exception.ParamName == "actions"
-                            ? "The appeal outcome does not match the label selection. Keep the existing decision requires unchanged labels; Remove labels requires removing applied labels without adding any; Replace labels requires a changed selection. A superseded acknowledgement cannot change labels."
+                            ? "Your label choices do not match the appeal outcome. Keep the existing decision: leave the labels unchanged. Remove labels: remove applied labels without adding any. Replace labels: change the selection. Challenged labels no longer in effect: do not change labels."
                             : exception.Message);
                     }
                     LabelServiceResult<LabelCaseDecisionReceipt> result;
@@ -339,7 +339,7 @@ internal sealed partial class AdministrationDispatcher
                     {
                         if (signingKeyRing is null)
                         {
-                            return new(false, "IssuanceClosed", "This retired host has no private signing keys.");
+                            return new(false, "IssuanceClosed", "This retired server has no private signing keys and cannot create label changes.");
                         }
 
                         LabelIssuanceService issuance = new(
@@ -429,7 +429,7 @@ internal sealed partial class AdministrationDispatcher
                 {
                     if (store is not ILabelPolicyWithdrawalStore withdrawals)
                     {
-                        return new(false, "PolicyUnavailable", "The provider does not support resumable policy cleanup.");
+                        return new(false, "PolicyUnavailable", "This database implementation cannot resume policy label withdrawals.");
                     }
                     LabelServiceResult<LabelPolicyState> result = await withdrawals.ResumePolicyWithdrawalAsync(
                         caller: caller,

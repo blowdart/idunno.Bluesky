@@ -87,7 +87,7 @@ internal abstract partial class RelationalLabelStore
 
                 if (!opening && current!.Revision != change.ExpectedRevision)
                 {
-                    return CaseFailure<LabelCaseReceipt>(LabelServiceErrorCode.CaseConflict, "Reload the case before changing its revision.");
+                    return CaseFailure<LabelCaseReceipt>(LabelServiceErrorCode.CaseConflict, "The case changed. Reload it before submitting your changes.");
                 }
 
                 if (change.Action == LabelCaseAction.Resolve && Integer(await ScalarAsync(
@@ -98,20 +98,20 @@ internal abstract partial class RelationalLabelStore
                     ("@case", current!.Id),
                     ("@pending", (int)LabelAppealStatus.Pending)).ConfigureAwait(false)) != 0)
                 {
-                    return CaseFailure<LabelCaseReceipt>(LabelServiceErrorCode.CaseConflict, "Pending appeals require explicit review before closing this case.");
+                    return CaseFailure<LabelCaseReceipt>(LabelServiceErrorCode.CaseConflict, "Review and resolve the pending appeals before closing this case.");
                 }
 
                 if (change.Action == LabelCaseAction.Reopen &&
                     await OpenCaseAsync(connection, transaction, change.Subject, cancellationToken).ConfigureAwait(false) is not null)
                 {
-                    return CaseFailure<LabelCaseReceipt>(LabelServiceErrorCode.CaseConflict, "The subject already has an unresolved case.");
+                    return CaseFailure<LabelCaseReceipt>(LabelServiceErrorCode.CaseConflict, "This account or content already has an unresolved case.");
                 }
 
                 if (change.Assignee is { } assignee &&
                     (!administration.Members.TryGetValue(assignee.Value, out AdministrationMember? member) ||
                         !member.Active || member.Removed || member.Role < LabelTeamRole.Moderator))
                 {
-                    return CaseFailure<LabelCaseReceipt>(LabelServiceErrorCode.Unauthorized, "Assignment requires an active moderator.");
+                    return CaseFailure<LabelCaseReceipt>(LabelServiceErrorCode.Unauthorized, "Assign the case to an active moderator or administrator.");
                 }
 
                 LabelCaseStatus? status = change.Action switch
@@ -126,7 +126,7 @@ internal abstract partial class RelationalLabelStore
                 };
                 if (status is null)
                 {
-                    return CaseFailure<LabelCaseReceipt>(LabelServiceErrorCode.CaseConflict, "The case status does not permit this transition.");
+                    return CaseFailure<LabelCaseReceipt>(LabelServiceErrorCode.CaseConflict, "This action is not available while the case has its current status.");
                 }
 
                 StoredLabel[] challenges = [];
@@ -325,7 +325,7 @@ internal abstract partial class RelationalLabelStore
 
                 if (reader.GetString(0) != operationId)
                 {
-                    return CaseFailure<LabelCaseReceipt>(LabelServiceErrorCode.IdempotencyConflict, "The operation hash identifies different intent.");
+                    return CaseFailure<LabelCaseReceipt>(LabelServiceErrorCode.IdempotencyConflict, "The saved tracking information does not match this request. Preserve the diagnostics and ask an administrator to investigate.");
                 }
 
                 return LabelServiceResult<LabelCaseReceipt>.Success(DecodeCaseEvent((byte[])reader.GetValue(1)).ToReceipt());

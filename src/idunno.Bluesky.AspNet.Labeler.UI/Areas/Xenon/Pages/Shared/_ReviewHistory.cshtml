@@ -17,17 +17,29 @@
                             <p class="preview-text">@report.Report.Reason</p>
                             @if (report.HandledAt is { } handled)
                             {
-                                <p>Handled <time datetime="@handled.ToString("O")">@handled.ToUniversalTime().ToString("u")</time> by operation <code>@report.DecisionOperationId</code>.</p>
+                                <p>Reviewed <time datetime="@handled.ToString("O")">@handled.ToUniversalTime().ToString("u")</time>. Tracking ID: <code>@report.DecisionOperationId</code>.</p>
                                 @if (report.ResolutionReason is { } resolution)
                                 {
-                                    <p>Resolution: @resolution</p>
+                                    <p>Review outcome: @resolution</p>
                                 }
                             }
                         </div>
                     }
                     else if (entry.Event is { } caseEvent)
                     {
-                        <p class="history-heading"><strong>@caseEvent.Action</strong> <time datetime="@caseEvent.CreatedAt.ToString("O")">@caseEvent.CreatedAt.ToUniversalTime().ToString("u")</time></p>
+                        string actionTitle = caseEvent.Action switch
+                        {
+                            "Open" => "Case opened",
+                            "StartReview" => "Review started",
+                            "Assign" => "Assignment updated",
+                            "Note" => "Note added",
+                            "Resolve" => "Case resolved",
+                            "Reopen" => "Case reopened",
+                            "Decide" => "Decision recorded",
+                            "OpenAppeal" => "Label review opened",
+                            _ => UiPageHelpers.FormatEnumLabel(caseEvent.Action)
+                        };
+                        <p class="history-heading"><strong>@actionTitle</strong> <time datetime="@caseEvent.CreatedAt.ToString("O")">@caseEvent.CreatedAt.ToUniversalTime().ToString("u")</time></p>
                         <div class="history-card">
                             @if (caseEvent.LocalIdentity == "system:deleted-post")
                             {
@@ -51,11 +63,11 @@
                                 }
                                 @if (decision.HandleReportsAcrossRecordVersions)
                                 {
-                                    <p>Reports for this record URI handled, with or without a submitted CID. Appeals still require review.</p>
+                                    <p>Reports for this content were reviewed across all versions, including reports with no specific version supplied. Appeals still need their own review.</p>
                                 }
                                 else if (decision.HandleOtherReports)
                                 {
-                                    <p>Reports with the same submitted target handled.</p>
+                                    <p>Reports about the same account or the same reported content version were reviewed.</p>
                                 }
                             }
                         </div>

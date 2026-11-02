@@ -814,14 +814,14 @@ public class LabelAppealStoreTests
             authentication, new(s_account, AppealReason), policy.Revision, token);
         Assert.False(result.Succeeded);
         Assert.Equal(LabelServiceErrorCode.PolicyUnavailable, result.Error!.Code);
-        Assert.Contains("bounded capture limit", result.Error.Message, StringComparison.Ordinal);
+        Assert.Contains("too many labels for automatic appeal capture", result.Error.Message, StringComparison.Ordinal);
         Assert.Equal(accepted.Id, Assert.Single(Success(await ((ILabelReportStore)fixture.Store).GetReportsAsync(caller, cancellationToken: token))).Id);
         Assert.Equal(original.Id, Assert.Single(Success(await ((ILabelAppealStore)fixture.Store).GetAppealsAsync(caller, cancellationToken: token))).Id);
         Assert.Equal(accepted.CaseId, Assert.Single(Success(await ((ILabelModerationStore)fixture.Store).GetCasesAsync(caller, cancellationToken: token))).Id);
         LabelServiceResult<LabelModerationReport> retry = await ((ILabelReportStore)fixture.Store).SubmitReportAsync(
             authentication, new(s_account, AppealReason), policy.Revision, token);
         Assert.Equal(LabelServiceErrorCode.PolicyUnavailable, retry.Error!.Code);
-        Assert.Contains("bounded capture limit", retry.Error.Message, StringComparison.Ordinal);
+        Assert.Contains("too many labels for automatic appeal capture", retry.Error.Message, StringComparison.Ordinal);
         Assert.Equal(1001, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
 
         SignedLabelSnapshot selected = new(key.CreateLabel(

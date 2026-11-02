@@ -74,7 +74,7 @@ internal abstract partial class RelationalLabelStore : ILabelPolicyWithdrawalSto
             permission: LabelAdministrationPermission.ManagePolicy,
             token: token).ConfigureAwait(false))
         {
-            const string message = "Publication cleanup is paused because its administrator authorization expired or was revoked. An active administrator must resume it.";
+            const string message = "Policy label withdrawals are paused because the administrator's permission expired or was removed. An active administrator must resume them.";
             if (withdrawal.PauseReason != message)
             {
                 await SavePolicyGateAsync(connection, transaction, gate with
@@ -156,7 +156,7 @@ internal abstract partial class RelationalLabelStore : ILabelPolicyWithdrawalSto
                 if (reader.GetInt32(4) < 0)
                 {
                     return CaseFailure<LabelPolicyWithdrawalBatch>(LabelServiceErrorCode.StorageUnavailable,
-                        "A stored label has no distribution metadata; publication cleanup cannot advance.");
+                        "A saved label is missing information needed for public distribution. Withdrawals cannot continue until an administrator repairs the stored data.");
                 }
                 inspected++;
                 through = reader.GetInt64(0);
@@ -185,7 +185,7 @@ internal abstract partial class RelationalLabelStore : ILabelPolicyWithdrawalSto
         if (created.Ticks > DateTimeOffset.MaxValue.Ticks - timestampAdvance)
         {
             return CaseFailure<LabelPolicyWithdrawalBatch>(LabelServiceErrorCode.PolicyUnavailable,
-                "Retained label timestamps leave no representable superseding withdrawal timestamp.");
+                "The service cannot assign valid timestamps for these withdrawals. An administrator must investigate the stored timestamps before continuing.");
         }
         if (scanning && through == withdrawal.UpperBound)
         {
@@ -219,7 +219,7 @@ internal abstract partial class RelationalLabelStore : ILabelPolicyWithdrawalSto
                 gate.PublicationOperationId != batch.Policy.PublicationOperationId || state.Revision != batch.StoreRevision)
             {
                 return CaseFailure<LabelPolicyState>(LabelServiceErrorCode.StaleDecision,
-                    "Publication cleanup changed while signing; reload its next batch.");
+                    "The withdrawal work changed while labels were being signed. Reload its progress before continuing.");
             }
             LabelServiceResult<LabelPolicyWithdrawalBatch> observed = await PolicyWithdrawalBatchAsync(
                 connection: connection,
@@ -237,14 +237,14 @@ internal abstract partial class RelationalLabelStore : ILabelPolicyWithdrawalSto
                 maintenance.Phase == LabelMaintenancePhase.Completed && signingPublicKey != replacement)
             {
                 return CaseFailure<LabelPolicyState>(LabelServiceErrorCode.StaleDecision,
-                    "The withdrawal signing key was replaced; reload the active key before signing.");
+                    "The signing key changed. Reload the active key before continuing withdrawals.");
             }
             if (expected.ScannedThrough != batch.ScannedThrough || expected.NegatedThrough != batch.NegatedThrough ||
                 expected.CreatedAt != batch.CreatedAt || expected.Labels.Count != signed.Length ||
                 !expected.Labels.Select(label => label.Sequence).SequenceEqual(batch.Labels.Select(label => label.Sequence)))
             {
                 return CaseFailure<LabelPolicyState>(LabelServiceErrorCode.StaleDecision,
-                    "Publication cleanup candidates changed while signing; reload its next batch.");
+                    "The labels selected for withdrawal changed while being signed. Reload withdrawal progress before continuing.");
             }
             for (int i = 0; i < signed.Length; i++)
             {
@@ -255,7 +255,7 @@ internal abstract partial class RelationalLabelStore : ILabelPolicyWithdrawalSto
                     negation.CreationTimestamp != expected.CreatedAt.AddTicks(i) || negation.ExpiresAt is not null)
                 {
                     return CaseFailure<LabelPolicyState>(LabelServiceErrorCode.StaleDecision,
-                        "A withdrawal batch must negate exactly its retained label slots.");
+                        "The prepared withdrawals do not match the saved labels. Stop and investigate before retrying.");
                 }
             }
             long now = await DatabaseTimeAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
@@ -344,7 +344,7 @@ internal abstract partial class RelationalLabelStore : ILabelPolicyWithdrawalSto
                 if (gate?.Phase != LabelPolicyPhase.Withdrawing || gate.PublicationOperationId != operationId ||
                     gate.Withdrawal is not { } withdrawal)
                 {
-                    return CaseFailure<LabelPolicyState>(LabelServiceErrorCode.StaleDecision, "Only the selected pending cleanup may be resumed.");
+                    return CaseFailure<LabelPolicyState>(LabelServiceErrorCode.StaleDecision, "The withdrawal attempt changed. Reload the selected attempt before resuming.");
                 }
                 ModerationPolicyGate next = gate with
                 {

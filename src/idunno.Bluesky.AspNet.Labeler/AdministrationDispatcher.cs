@@ -31,7 +31,7 @@ internal sealed partial class AdministrationDispatcher(
 {
     /// <summary>Requires a real installed key only for an operation that actually signs.</summary>
     private ILabelSigningKeyRing SigningKeys => signingKeyRing
-        ?? throw new InvalidOperationException("This retired host has no private signing keys.");
+        ?? throw new InvalidOperationException("This retired server has no private signing keys and cannot create label changes.");
 
     // Bounded POST bodies keep confidential moderation filters out of URLs on both adapters.
     internal static readonly string[] s_moderationMethods =
@@ -85,7 +85,7 @@ internal sealed partial class AdministrationDispatcher(
         {
             using IDisposable? admission = host.TryAdmitAdministrativeIssuance();
             response = admission is null
-                ? new(false, "MaintenanceActive", "Label issuance is unavailable during coordinated maintenance.")
+                ? new(false, "MaintenanceActive", "Label changes are paused during signing-key maintenance.")
                 : await DispatchCoreAsync(caller, command, token).ConfigureAwait(false);
         }
         else
@@ -152,7 +152,7 @@ internal sealed partial class AdministrationDispatcher(
                     if (!Did.TryParse(command.Target, out Did? did) || command.Action is null ||
                         command.Action == LabelTeamAction.Enroll)
                     {
-                        return new(false, "InvalidRequest", "Use a DID and a non-enrollment team action.");
+                        return new(false, "InvalidRequest", "Enter the member's account ID (DID) and choose an action other than adding a member.");
                     }
 
                     LabelServiceResult<LabelAdministrationReceipt> result = await administration.ChangeTeamAsync(
@@ -167,7 +167,7 @@ internal sealed partial class AdministrationDispatcher(
                 {
                     if (!Did.TryParse(command.Target, out Did? did))
                     {
-                        return new(false, "InvalidRequest", "Supply the active administrator's DID.");
+                        return new(false, "InvalidRequest", "Enter the active administrator's account ID (DID).");
                     }
 
                     LabelTeamNotificationEmailChange change;
@@ -194,7 +194,7 @@ internal sealed partial class AdministrationDispatcher(
                 {
                     if (!AtIdentifier.TryParse(command.Target, out AtIdentifier? member))
                     {
-                        return new(false, "InvalidRequest", "Supply a member DID or handle.");
+                        return new(false, "InvalidRequest", "Enter the member's account ID (DID) or handle.");
                     }
 
                     LabelServiceResult<LabelAdministrationReceipt> result = await new LabelTeamService(administration, httpClient).EnrollAsync(
@@ -207,7 +207,7 @@ internal sealed partial class AdministrationDispatcher(
                 {
                     if (signingKeyRing is null)
                     {
-                        return new(false, "IssuanceClosed", "This retired host has no private signing keys.");
+                        return new(false, "IssuanceClosed", "This retired server has no private signing keys and cannot create label changes.");
                     }
 
                     LabelIssuanceService issuance = new(
@@ -224,7 +224,7 @@ internal sealed partial class AdministrationDispatcher(
                     {
                         if (!AtUri.TryParse(command.Target, out AtUri? atUri))
                         {
-                            return new(false, "InvalidRequest", "The record target is not a valid AT URI.");
+                            return new(false, "InvalidRequest", "Enter a complete content address (AT URI).");
                         }
 
                         target = LabelTarget.Record(atUri, cid);
@@ -283,7 +283,7 @@ internal sealed partial class AdministrationDispatcher(
                     }
                     catch (DbException)
                     {
-                        return new(false, "StorageUnavailable", "Publication state could not be read; restore database availability.");
+                        return new(false, "StorageUnavailable", "Publication status could not be read. Restore database access before continuing.");
                     }
                 }
             case "getMaintenanceState":
@@ -581,7 +581,7 @@ internal sealed partial class AdministrationDispatcher(
     {
         if (store is not ILabelRetirementStore retirement)
         {
-            return new(false, "StorageUnavailable", "The provider does not implement durable retirement.");
+            return new(false, "StorageUnavailable", "This database implementation does not support retirement that keeps its progress after a restart.");
         }
 
         try
@@ -633,7 +633,7 @@ internal sealed partial class AdministrationDispatcher(
             {
                 if (signingKeyRing is null || publicEndpoint is null)
                 {
-                    return new(false, "SigningFailed", "Configure the selected signing key and public endpoint before starting or resuming retirement.");
+                    return new(false, "SigningFailed", "Configure the selected signing key and public service address before starting or resuming retirement.");
                 }
 
                 LabelServiceResult<LabelAuthorizationGrant> authority = await administration.AuthorizeAsync(
@@ -654,7 +654,7 @@ internal sealed partial class AdministrationDispatcher(
                         cancellationToken: token).ConfigureAwait(false);
                     if (document is null)
                     {
-                        return new(false, "SigningFailed", "The public labeler DID document could not be resolved.");
+                        return new(false, "SigningFailed", "The labeler account's public identity information could not be loaded.");
                     }
 
                     LabelerIdentityDocument.VerifyPublication(
@@ -666,7 +666,7 @@ internal sealed partial class AdministrationDispatcher(
                 }
                 catch (Exception exception) when (exception is InvalidDataException or InvalidOperationException or KeyNotFoundException or HttpRequestException)
                 {
-                    return new(false, "SigningFailed", "Verify the selected key, public DID verification method and labeler endpoint before starting or resuming retirement.");
+                    return new(false, "SigningFailed", "Check that the selected signing key and public service address match the labeler account's published identity information before starting or resuming retirement.");
                 }
             }
 
@@ -687,11 +687,11 @@ internal sealed partial class AdministrationDispatcher(
         }
         catch (InvalidDataException)
         {
-            return new(false, "StorageUnavailable", "Retirement history is inconsistent; preserve diagnostics and recover before resuming.");
+            return new(false, "StorageUnavailable", "The saved retirement history is inconsistent. Preserve the diagnostics and have an administrator recover it before resuming.");
         }
         catch (DbException)
         {
-            return new(false, "StorageUnavailable", "Retirement state could not be read; restore database availability.");
+            return new(false, "StorageUnavailable", "Retirement status could not be read. Restore database access before continuing.");
         }
     }
 
@@ -874,7 +874,7 @@ internal static class AdministrationWire
             return payload;
         }
 
-        boundedResponse = new(false, "ResponseTooLarge", "The administrative response exceeds its size limit.");
+        boundedResponse = new(false, "ResponseTooLarge", "The result is too large to return. Request a smaller page or narrower selection.");
         return JsonSerializer.SerializeToUtf8Bytes(boundedResponse, AdministrationJsonContext.Default.AdministrationResponse);
     }
 }

@@ -38,7 +38,7 @@ public sealed class IndexModel : PageModel
 
         if (!ModelState.IsValid || AfterId < 0 || Status is { } status && !Enum.IsDefined(status))
         {
-            ViewData["Error"] = "Choose a valid appeal status and continuation identifier.";
+            ViewData["Error"] = "Choose an available appeal status and refresh the page before trying again.";
             return;
         }
 

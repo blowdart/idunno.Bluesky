@@ -6,6 +6,20 @@ namespace idunno.Bluesky.AspNet.Labeler.UI;
 /// <summary>Names standard submission reasons without conflating them with moderator decision explanations.</summary>
 internal static class ReportReasonOptions
 {
+    /// <summary>Names a known report reason while preserving custom identifiers.</summary>
+    internal static string Format(string? id)
+    {
+        foreach ((string _, string reasonId, string title) in s_all)
+        {
+            if (reasonId == id)
+            {
+                return title;
+            }
+        }
+
+        return id ?? string.Empty;
+    }
+
     /// <summary>Gets the standard Ozone and legacy AT Protocol reasons grouped for policy selection.</summary>
     internal static readonly (string Group, string Id, string Title)[] s_all =
     [

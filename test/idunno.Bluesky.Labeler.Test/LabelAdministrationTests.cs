@@ -212,8 +212,14 @@ public class LabelAdministrationTests
         Assert.Equal(first.Result, (await store.BootstrapAsync(s_administrator, "uid:0", "bootstrap", TestContext.Current.CancellationToken)).Result);
         Assert.False((await store.BootstrapAsync(s_member, "uid:1", "bootstrap", TestContext.Current.CancellationToken)).Succeeded);
         ILabelAdministrationStore restarted = (ILabelAdministrationStore)fixture.NewStore();
-        Assert.False((await restarted.BootstrapAsync(s_member, "uid:1", "other-bootstrap", TestContext.Current.CancellationToken)).Succeeded);
-        Assert.False((await restarted.AuthenticateLocalAsync("uid:1", TestContext.Current.CancellationToken)).Succeeded);
+        LabelServiceResult<LabelAdministrationReceipt> repeatedSetup = await restarted.BootstrapAsync(s_member, "uid:1", "other-bootstrap", TestContext.Current.CancellationToken);
+        Assert.False(repeatedSetup.Succeeded);
+        Assert.Equal(LabelServiceErrorCode.Unauthorized, repeatedSetup.Error.Code);
+        Assert.Equal("Initial setup has already been completed and cannot be repeated.", repeatedSetup.Error.Message);
+        LabelServiceResult<LabelAdministrationCaller> unlinked = await restarted.AuthenticateLocalAsync("uid:1", TestContext.Current.CancellationToken);
+        Assert.False(unlinked.Succeeded);
+        Assert.Equal(LabelServiceErrorCode.Unauthorized, unlinked.Error.Code);
+        Assert.Equal("This operating-system account is not linked to an active team member.", unlinked.Error.Message);
         LabelAdministrationCaller caller = (await restarted.AuthenticateLocalAsync("uid:0", TestContext.Current.CancellationToken)).Result!;
         Assert.Equal(s_administrator, caller.Actor);
         Assert.Equal("uid:0", caller.LocalIdentity);
@@ -442,8 +448,17 @@ public class LabelAdministrationTests
         await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
         ILabelAdministrationStore first = (ILabelAdministrationStore)fixture.Store;
         LabelAdministrationCaller administrator = await BootstrapAsync(first);
-        Assert.False((await first.ChangeTeamAsync(administrator, new(
-            operationId: "last-admin", action: action, target: s_administrator, reason: "Cannot remove final administrator."), TestContext.Current.CancellationToken)).Succeeded);
+        LabelServiceResult<LabelAdministrationReceipt> protectedAdministrator = await first.ChangeTeamAsync(
+            caller: administrator,
+            change: new(
+                operationId: "last-admin",
+                action: action,
+                target: s_administrator,
+                reason: "Cannot remove final administrator."),
+            cancellationToken: TestContext.Current.CancellationToken);
+        Assert.False(protectedAdministrator.Succeeded);
+        Assert.Equal(LabelServiceErrorCode.Unauthorized, protectedAdministrator.Error.Code);
+        Assert.Equal("You cannot remove, suspend or reduce the permissions of the last active administrator.", protectedAdministrator.Error.Message);
         await EnrollAndBindAsync(first, administrator, LabelTeamRole.Administrator);
         ILabelAdministrationStore second = (ILabelAdministrationStore)fixture.NewStore();
         LabelAdministrationCaller member = (await second.AuthenticateLocalAsync("uid:1", TestContext.Current.CancellationToken)).Result!;

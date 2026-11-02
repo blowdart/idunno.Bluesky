@@ -30,7 +30,7 @@ public sealed class SearchModel : PageModel
         ViewData["SearchQuery"] = Q;
         if (!ModelState.IsValid || PageNumber <= 0 || Q?.Length > 256 || Q is not null && Encoding.UTF8.GetByteCount(Q) > 512)
         {
-            ViewData["Error"] = "Enter up to 256 characters (512 UTF-8 bytes) and a valid result page.";
+            ViewData["Error"] = "Use a valid results page and keep the search within 256 characters and 512 encoded bytes. Some characters use more than one byte.";
             return;
         }
 

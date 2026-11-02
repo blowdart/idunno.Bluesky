@@ -11,7 +11,7 @@ function parsePolicyDeclaration(text) {
         !strings(value.subjectTypes) || value.subjectTypes.some(item => !["account", "record"].includes(item)) ||
         ("reasonTypes" in value && !strings(value.reasonTypes)) ||
         ("subjectCollections" in value && !strings(value.subjectCollections))) {
-        throw new Error("The declaration needs policies.labelValues and subjectTypes arrays, with string arrays for optional reasonTypes and subjectCollections.");
+        throw new Error("The public policy JSON must include policies.labelValues and subjectTypes lists. If present, reasonTypes and subjectCollections must be lists of text values.");
     }
     if ("labelValueDefinitions" in value.policies &&
         (!Array.isArray(value.policies.labelValueDefinitions) || value.policies.labelValueDefinitions.some(item =>
@@ -20,12 +20,12 @@ function parsePolicyDeclaration(text) {
             ("adultOnly" in item && typeof item.adultOnly !== "boolean") ||
             ("locales" in item && (!Array.isArray(item.locales) || item.locales.some(locale =>
                 !object(locale) || ["lang", "name", "description"].some(key => typeof locale[key] !== "string"))))))) {
-        throw new Error("Label definitions must be objects with an identifier, text metadata and valid locale entries.");
+        throw new Error("Each label definition needs an ID and correctly formatted name, description and translation information.");
     }
     const identifiers = (value.policies.labelValueDefinitions ?? []).map(item => item.identifier);
     if (new Set(value.policies.labelValues).size !== value.policies.labelValues.length ||
         new Set(identifiers).size !== identifiers.length || identifiers.some(item => !value.policies.labelValues.includes(item))) {
-        throw new Error("Label values and definition identifiers must be unique; every definition must have a declared label value.");
+        throw new Error("Do not repeat label values or definition IDs. Each definition ID must match a label in the policy.");
     }
     return value;
 }
@@ -56,6 +56,7 @@ document.querySelectorAll("[data-policy-tabs]").forEach(root => {
         if (save) save.hidden = !editing;
         const toolbar = root.querySelector(".policy-editor-toolbar");
         if (toolbar) toolbar.hidden = !editing;
+        history.replaceState(history.state, "", tab.getAttribute("href"));
     };
     tabs.forEach((tab, index) => {
         const panel = root.querySelector(tab.getAttribute("href"));
@@ -89,6 +90,17 @@ document.querySelectorAll("[data-policy-tabs]").forEach(root => {
         const panel = event.target.closest("[data-policy-panel]");
         if (panel) show(tabs.find(tab => tab.getAttribute("href") === "#" + panel.id));
     }, true);
+
+    root.querySelectorAll("[data-policy-publish]").forEach(link => {
+        const selection = root.querySelector('form[action*="handler=Publish"] select[name="version"]');
+        if (!selection) return;
+        link.addEventListener("click", event => {
+            event.preventDefault();
+            selection.value = link.dataset.policyPublish;
+            show(tabs.find(tab => tab.getAttribute("href") === "#policy-publication"));
+            selection.focus();
+        });
+    });
 
     const form = root.querySelector("[data-policy-editor]");
     if (!form) return;
@@ -146,10 +158,13 @@ document.querySelectorAll("[data-policy-tabs]").forEach(root => {
         parent.append(label);
         return control;
     };
-    const button = (parent, title, action) => {
+    const button = (parent, title, icon, action) => {
         const control = document.createElement("button");
         control.type = "button";
-        control.textContent = title;
+        const glyph = document.createElement("span");
+        glyph.className = "fa-icon " + icon;
+        glyph.setAttribute("aria-hidden", "true");
+        control.append(glyph, document.createTextNode(" " + title));
         control.addEventListener("click", action);
         parent.append(control);
         return control;
@@ -166,12 +181,12 @@ document.querySelectorAll("[data-policy-tabs]").forEach(root => {
             labels.append(card);
             const identifier = input(card, "Label value", value);
             identifier.maxLength = 128;
-            const custom = input(card, "Custom label definition", Boolean(original), "checkbox");
+            const custom = input(card, "Customize how apps display this label", Boolean(original), "checkbox");
             const metadata = document.createElement("div");
             metadata.hidden = !original;
             card.append(metadata);
-            const severity = select(metadata, "Severity", original?.severity ?? "inform", ["inform", "alert", "none"]);
-            const blurs = select(metadata, "Blur behaviour", original?.blurs ?? "none", ["none", "content", "media"]);
+            const severity = select(metadata, "Warning level (inform, alert or none)", original?.severity ?? "inform", ["inform", "alert", "none"]);
+            const blurs = select(metadata, "What to blur (none, content or media)", original?.blurs ?? "none", ["none", "content", "media"]);
             const setting = select(metadata, "Default setting", original?.defaultSetting ?? "warn", ["ignore", "warn", "hide"]);
             const adult = input(metadata, "Adult content only", original?.adultOnly ?? false, "checkbox");
             const locales = document.createElement("div");
@@ -211,20 +226,20 @@ document.querySelectorAll("[data-policy-tabs]").forEach(root => {
                 locales.append(group);
                 const entry = {
                     original: locale,
-                    lang: input(group, "Language tag", locale.lang),
+                    lang: input(group, "Language code, such as en", locale.lang),
                     name: input(group, "Name", locale.name),
                     description: input(group, "Description", locale.description, "textarea")
                 };
                 localeValues.push(entry);
-                button(group, "Remove translation", () => {
+                button(group, "Remove translation", "fa-circle-xmark", () => {
                     localeValues.splice(localeValues.indexOf(entry), 1);
                     group.remove();
                     update();
                 });
             };
             (original?.locales ?? []).forEach(addLocale);
-            button(metadata, "Add translation", () => { addLocale(); update(); });
-            button(card, "Remove label", () => {
+            button(metadata, "Add translation", "fa-globe", () => { addLocale(); update(); });
+            button(card, "Remove label", "fa-circle-xmark", () => {
                 const removed = declaration.policies.labelValues.splice(index, 1)[0];
                 if (declaration.policies.labelValueDefinitions) {
                     declaration.policies.labelValueDefinitions = declaration.policies.labelValueDefinitions.filter(item => item.identifier !== removed);
@@ -254,7 +269,7 @@ document.querySelectorAll("[data-policy-tabs]").forEach(root => {
         try {
             parsed = parsePolicyDeclaration(raw.value);
         } catch (exception) {
-            error.textContent = "Declaration not synchronized: " + exception.message + " Structured controls retain the last valid values. Correct the JSON before saving.";
+            error.textContent = "The JSON could not update the form: " + exception.message + " The form still shows the last valid values. Correct the JSON before saving.";
             raw.setCustomValidity("Correct the declaration JSON before saving.");
             add.disabled = true;
             form.querySelectorAll("[data-policy-declaration-controls], .policy-label").forEach(control => {

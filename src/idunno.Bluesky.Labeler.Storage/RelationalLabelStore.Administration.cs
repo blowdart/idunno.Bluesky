@@ -43,7 +43,7 @@ internal abstract partial class RelationalLabelStore
                 localIdentity: caller.LocalIdentity, operationId: operationId, action: "maintenance-" + phase,
                 reason: reason, succeeded: allowed && phase != LabelMaintenanceAuditPhase.Failed, token: cancellationToken).ConfigureAwait(false);
             return allowed ? LabelServiceResult<LabelAdministrationReceipt>.Success(audit)
-                : AdminFailure<LabelAdministrationReceipt>("Current maintenance authority is required.");
+                : AdminFailure<LabelAdministrationReceipt>("You no longer have permission to manage this maintenance operation.");
         }, cancellationToken);
     }
 
@@ -248,7 +248,7 @@ internal abstract partial class RelationalLabelStore
         {
             return LabelServiceResult<T>.Failure(new(
                 code: LabelServiceErrorCode.StorageUnavailable,
-                message: "Administrative storage is unavailable.",
+                message: "The administration database is unavailable.",
                 exception: exception));
         }
     }
@@ -283,7 +283,7 @@ internal abstract partial class RelationalLabelStore
                     connection: connection, transaction: transaction, administration: team, actor: administrator,
                     localIdentity: localIdentity, operationId: operationId, action: "bootstrap",
                     reason: "Bootstrap is already complete.", succeeded: false, token: cancellationToken).ConfigureAwait(false);
-                return AdminFailure<LabelAdministrationReceipt>("Bootstrap is permanently closed.");
+                return AdminFailure<LabelAdministrationReceipt>("Initial setup has already been completed and cannot be repeated.");
             }
 
             team.Bootstrapped = true;
@@ -313,9 +313,9 @@ internal abstract partial class RelationalLabelStore
                 await AuditAdministrationAsync(
                     connection: connection, transaction: transaction, administration: team, actor: null,
                     localIdentity: localIdentity, operationId: string.Empty, action: "authenticate-local",
-                    reason: "The OS identity has no active team binding.", succeeded: false,
+                    reason: "This operating-system account is not linked to an active team member.", succeeded: false,
                     token: cancellationToken).ConfigureAwait(false);
-                return AdminFailure<LabelAdministrationCaller>("The OS identity has no active team binding.");
+                return AdminFailure<LabelAdministrationCaller>("This operating-system account is not linked to an active team member.");
             }
 
             return LabelServiceResult<LabelAdministrationCaller>.Success(new(
@@ -343,9 +343,9 @@ internal abstract partial class RelationalLabelStore
                 await AuditAdministrationAsync(
                     connection: connection, transaction: transaction, administration: team, actor: actor,
                     localIdentity: null, operationId: string.Empty, action: "authenticate-browser",
-                    reason: "The authenticated DID is not an active team member.", succeeded: false,
+                    reason: "This account is not an active team member.", succeeded: false,
                     token: cancellationToken).ConfigureAwait(false);
-                return AdminFailure<LabelAdministrationCaller>("The authenticated DID is not an active team member.");
+                return AdminFailure<LabelAdministrationCaller>("This account is not an active team member.");
             }
 
             long now = await DatabaseTimeAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
@@ -400,7 +400,7 @@ internal abstract partial class RelationalLabelStore
                     localIdentity: null, operationId: string.Empty, action: "authenticate",
                     reason: "Invalid membership, audience or replayed credential.", succeeded: false,
                     token: cancellationToken).ConfigureAwait(false);
-                return AdminFailure<LabelAdministrationCaller>("The service credential or membership is not valid.");
+                return AdminFailure<LabelAdministrationCaller>("The access credential or team membership is no longer valid.");
             }
 
             await ExecuteAsync(
@@ -444,7 +444,7 @@ internal abstract partial class RelationalLabelStore
             return allowed ? LabelServiceResult<LabelAuthorizationGrant>.Success(new(audit.Sequence.ToString(CultureInfo.InvariantCulture))
             {
                 AdministrationCaller = caller
-            }) : AdminFailure<LabelAuthorizationGrant>("The caller lacks the current required permission.");
+            }) : AdminFailure<LabelAuthorizationGrant>("You do not currently have permission to perform this action.");
         }, cancellationToken);
     }
 
@@ -470,7 +470,7 @@ internal abstract partial class RelationalLabelStore
                     connection: connection, transaction: transaction, administration: team, actor: caller.Actor,
                     localIdentity: caller.LocalIdentity, operationId: change.OperationId, action: change.Action.ToString(),
                     reason: change.Reason, succeeded: false, token: cancellationToken).ConfigureAwait(false);
-                return AdminFailure<LabelAdministrationReceipt>("Current administrator authority is required.");
+                return AdminFailure<LabelAdministrationReceipt>("You must be an active administrator to perform this action.");
             }
 
             LabelServiceResult<LabelAdministrationReceipt>? original = await AdministrationReceiptAsync(
@@ -534,7 +534,7 @@ internal abstract partial class RelationalLabelStore
                     reason: change.Reason,
                     succeeded: false,
                     token: cancellationToken).ConfigureAwait(false);
-                return AdminFailure<LabelAdministrationReceipt>("Current administrator authority is required.");
+                return AdminFailure<LabelAdministrationReceipt>("You must be an active administrator to perform this action.");
             }
 
             LabelServiceResult<LabelAdministrationReceipt>? original = await AdministrationReceiptAsync(
@@ -562,7 +562,7 @@ internal abstract partial class RelationalLabelStore
                     reason: change.Reason,
                     succeeded: false,
                     token: cancellationToken).ConfigureAwait(false);
-                return AdminFailure<LabelAdministrationReceipt>("Only an active administrator can register a policy-alert email.");
+                return AdminFailure<LabelAdministrationReceipt>("You must be an active administrator to add a policy-alert email address.");
             }
 
             team.Members[change.Target.Value] = member with { NotificationEmail = change.NotificationEmail };
@@ -591,7 +591,7 @@ internal abstract partial class RelationalLabelStore
         {
             if (member is { Removed: false } || member is null && team.Members.Count >= 1000)
             {
-                return "The member exists or the team capacity is exhausted.";
+                return "This member already exists, or the team has reached its member limit.";
             }
 
             team.Members[did] = new(change.Role, true, false, checked((member?.Generation ?? 0) + 1));
@@ -600,7 +600,7 @@ internal abstract partial class RelationalLabelStore
 
         if (member is null || member.Removed)
         {
-            return "The target is not enrolled.";
+            return "This account is not a team member.";
         }
 
         bool losesAdmin = member is { Active: true, Role: LabelTeamRole.Administrator } &&
@@ -608,14 +608,14 @@ internal abstract partial class RelationalLabelStore
              change.Action == LabelTeamAction.SetRole && change.Role != LabelTeamRole.Administrator);
         if (losesAdmin && team.Members.Values.Count(entry => entry is { Active: true, Removed: false, Role: LabelTeamRole.Administrator }) == 1)
         {
-            return "The final active administrator cannot be removed, suspended or demoted.";
+            return "You cannot remove, suspend or reduce the permissions of the last active administrator.";
         }
 
         if (change.Action == LabelTeamAction.BindLocal)
         {
             if (!member.Active || team.Bindings.Count >= 1000 && !team.Bindings.ContainsKey(change.Credential!))
             {
-                return "An active member and available binding capacity are required.";
+                return "Choose an active member. The service must also have room for another local-account link.";
             }
 
             team.Bindings[change.Credential!] = new(did, Guid.NewGuid().ToString("N"));
@@ -624,7 +624,7 @@ internal abstract partial class RelationalLabelStore
         {
             if (!team.Bindings.TryGetValue(change.Credential!, out AdministrationBinding? binding) || binding.Did != did)
             {
-                return "The binding does not belong to this member.";
+                return "This local-account link belongs to a different member.";
             }
 
             team.Bindings.Remove(change.Credential!);
@@ -689,7 +689,7 @@ internal abstract partial class RelationalLabelStore
                     {
                         NotificationEmail = canManageTeam ? entry.Value.NotificationEmail : null
                     })])
-                : AdminFailure<IReadOnlyList<LabelTeamMember>>("Inspection requires current team authority.");
+                : AdminFailure<IReadOnlyList<LabelTeamMember>>("Your current team permissions do not allow you to view this information.");
         }, cancellationToken);
     }
 
@@ -714,7 +714,7 @@ internal abstract partial class RelationalLabelStore
                     connection: connection, transaction: transaction, administration: team, actor: caller.Actor,
                     localIdentity: caller.LocalIdentity, operationId: string.Empty, action: "audit-read",
                     reason: "Inspect audit.", succeeded: false, token: cancellationToken).ConfigureAwait(false);
-                return AdminFailure<IReadOnlyList<LabelAdministrationReceipt>>("Inspection requires current team authority.");
+                return AdminFailure<IReadOnlyList<LabelAdministrationReceipt>>("Your current team permissions do not allow you to view this information.");
             }
 
             DbCommand command = Command(
@@ -756,7 +756,7 @@ internal abstract partial class RelationalLabelStore
             {
                 return LabelServiceResult<LabelRemoteAdministrationStatus>.Failure(new(
                     code: LabelServiceErrorCode.Unauthorized,
-                    message: "Current team inspection authority is required."));
+                    message: "Your current team permissions do not allow you to view this information."));
             }
 
             if (team.OwnerDid is null && await ResolveOwnerDidAsync(connection, transaction, team, cancellationToken).ConfigureAwait(false) is not null)
@@ -806,7 +806,7 @@ internal abstract partial class RelationalLabelStore
                     reason: "Owner-only remote administration change denied.",
                     succeeded: false,
                     token: cancellationToken).ConfigureAwait(false);
-                return AdminFailure<LabelAdministrationReceipt>("Only the bootstrap owner can change remote administration.");
+                return AdminFailure<LabelAdministrationReceipt>("Only the account that originally set up this labeler can change remote administration.");
             }
 
             LabelServiceResult<LabelAdministrationReceipt>? original = await AdministrationReceiptAsync(

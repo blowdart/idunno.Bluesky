@@ -31,7 +31,7 @@ public sealed class PublishCallbackModel : PageModel
                 HttpContext.RequestServices.GetRequiredService<ILogger<PolicyPublicationService>>(),
                 exception.GetType().Name);
             TempData["PublicationError"] = exception is InvalidOperationException ? exception.Message :
-                "Publication did not confirm completion. Inspect policy state and the PDS declaration before retrying. Completed writes and negations are not rolled back.";
+                "We could not confirm that publication completed. Check the policy page and the account's public policy before retrying. Completed account writes and label withdrawals remain in place.";
         }
         return RedirectToPage(pageName: "./Index", pageHandler: null, routeValues: null, fragment: "policy-publication");
     }

@@ -426,7 +426,7 @@ public class LabelPolicyStoreTests
         foreach ((long revision, DateTimeOffset started, string diagnostic) in new[]
         {
             (active.Revision - 1, active.DatabaseTime, "policy changed"),
-            (active.Revision, active.DatabaseTime.Subtract(active.VerificationFreshness), "window expired"),
+            (active.Revision, active.DatabaseTime.Subtract(active.VerificationFreshness), "check expired"),
             (active.Revision, active.DatabaseTime.AddMilliseconds(430), "ahead of the database clock"),
             (active.Revision, active.DatabaseTime.AddDays(1), "ahead of the database clock")
         })
@@ -497,7 +497,7 @@ public class LabelPolicyStoreTests
         if (!succeeds)
         {
             Assert.Equal(LabelServiceErrorCode.StaleDecision, observation.Error!.Code);
-            Assert.Contains("window expired", observation.Error.Message, StringComparison.Ordinal);
+            Assert.Contains("check expired", observation.Error.Message, StringComparison.Ordinal);
             Assert.Equal(current.Revision, (await restarted.ReadPolicyStateAsync(token))!.Revision);
         }
     }
