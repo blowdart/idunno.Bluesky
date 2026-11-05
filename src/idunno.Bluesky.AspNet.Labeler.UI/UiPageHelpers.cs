@@ -47,10 +47,17 @@ internal static class UiPageHelpers
             "getMaintenanceState" or "getRetirementState" or "getCase" or "getCaseActivity" or
             "getCaseLabels" or "getReports" or "getReport" or "getAppeals" or "getAppeal" or
             "getManualLabelChoices" or "searchModeration" or "getPolicy" or "getPolicyHistory" or
-            "getPolicyVersion" or "getPolicyVersions");
+            "getPolicyVersion" or "getPolicyVersions" or "getMutes");
 
     /// <summary>Names administrative actions without hiding their original identifiers from callers.</summary>
-    internal static string FormatAuditAction(string? action) => action switch
+    internal static string FormatAuditAction(string? action)
+    {
+        string label = AuditActionLabel(action);
+        return label.Length == 0 ? label : char.ToUpperInvariant(label[0]) + label[1..];
+    }
+
+    /// <summary>Resolves known action descriptions and separates words in unknown identifiers.</summary>
+    private static string AuditActionLabel(string? action) => action switch
     {
         null => string.Empty,
         "bootstrap" => "Initial setup",

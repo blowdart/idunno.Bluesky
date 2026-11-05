@@ -117,7 +117,7 @@ internal abstract partial class RelationalLabelStore
         {
             CreatedAt = DateTimeOffset.FromUnixTimeMilliseconds(
                 await DatabaseTimeAsync(connection, transaction, token).ConfigureAwait(false)),
-            ChangeDescription = succeeded && ActiveAdministratorCount(administration) > 1 ? changeDescription : null
+            ChangeDescription = succeeded ? changeDescription : null
         };
         await ExecuteAsync(
             connection: connection,
@@ -693,10 +693,13 @@ internal abstract partial class RelationalLabelStore
                 caller: caller,
                 permission: LabelAdministrationPermission.ManageTeam,
                 token: cancellationToken).ConfigureAwait(false);
-            await AuditAdministrationAsync(
-                connection: connection, transaction: transaction, administration: team, actor: caller.Actor,
-                localIdentity: caller.LocalIdentity, operationId: string.Empty, action: "team-read",
-                reason: "Inspect team.", succeeded: allowed, token: cancellationToken).ConfigureAwait(false);
+            if (!allowed)
+            {
+                await AuditAdministrationAsync(
+                    connection: connection, transaction: transaction, administration: team, actor: caller.Actor,
+                    localIdentity: caller.LocalIdentity, operationId: string.Empty, action: "team-read",
+                    reason: "Inspect team.", succeeded: false, token: cancellationToken).ConfigureAwait(false);
+            }
             if (allowed)
             {
                 await ReconcileAssignmentsAsync(connection, transaction, team, caller, cancellationToken).ConfigureAwait(false);

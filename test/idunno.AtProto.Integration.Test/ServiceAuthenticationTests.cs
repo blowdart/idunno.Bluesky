@@ -23,15 +23,23 @@ public class ServiceAuthenticationTests
     private static readonly Nsid s_method = new("com.atproto.label.applyLabels");
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task OzoneAdministrationAcceptsPdsAudienceWithExactMethodAndReplayEvidence(bool bareAudience)
+    [InlineData(false, "tools.ozone.server.getConfig")]
+    [InlineData(true, "tools.ozone.server.getConfig")]
+    [InlineData(false, "app.bsky.actor.getProfile")]
+    [InlineData(true, "app.bsky.actor.getProfile")]
+    [InlineData(false, "app.bsky.feed.getPostThread")]
+    [InlineData(true, "app.bsky.feed.getPostThread")]
+    [InlineData(false, "tools.ozone.setting.listOptions")]
+    [InlineData(true, "tools.ozone.setting.listOptions")]
+    [InlineData(false, "tools.ozone.setting.upsertOption")]
+    [InlineData(true, "tools.ozone.setting.upsertOption")]
+    public async Task OzoneAdministrationAcceptsPdsAudienceWithExactMethodAndReplayEvidence(bool bareAudience, string nsid)
     {
         FakeTimeProvider clock = CreateClock();
         using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
         JsonObject payload = Payload(clock);
         payload["aud"] = bareAudience ? s_audience.Did.Value : s_audience.ToString();
-        Nsid method = new("tools.ozone.server.getConfig");
+        Nsid method = new(nsid);
         payload["lxm"] = method.ToString();
         string token = Sign(key, """{"typ":"JWT","alg":"ES256"}""", payload.ToJsonString());
         using TestServer server = Resolver(DidDocumentFor(TestDid, "atproto", key));
@@ -68,6 +76,9 @@ public class ServiceAuthenticationTests
     [InlineData("dev.idunno.labeler.admin.getTeam")]
     [InlineData("tools.ozone.inbox.appealActionedSubject")]
     [InlineData("tools.ozone.safelink.queryRules")]
+    [InlineData("app.bsky.actor.getProfiles")]
+    [InlineData("app.bsky.feed.getPosts")]
+    [InlineData("tools.ozone.setting.removeOptions")]
     public async Task OzoneAdministrationRejectsMethodsOutsideItsExplicitNamespaces(string method)
     {
         using HttpClient client = new();

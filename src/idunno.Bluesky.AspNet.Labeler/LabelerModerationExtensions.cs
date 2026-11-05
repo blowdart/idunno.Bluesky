@@ -82,7 +82,8 @@ public static class LabelerModerationExtensions
                 : null,
             settings: settings.PolicyEmail,
             clock: provider.GetRequiredService<TimeProvider>(),
-            logger: provider.GetRequiredService<ILogger<LabelerPolicyEmailService>>()));
+            logger: provider.GetRequiredService<ILogger<LabelerPolicyEmailService>>(),
+            xenonEndpoint: provider.GetService<LabelerEmailUiLink>()?.Endpoint));
         services.AddSingleton<ILabelIssuancePolicyProvider>(provider => provider.GetRequiredService<LabelPolicyService>());
         services.AddHostedService<PolicyVerificationWorker>();
         services.AddSingleton(provider => new LabelerModerationHost(

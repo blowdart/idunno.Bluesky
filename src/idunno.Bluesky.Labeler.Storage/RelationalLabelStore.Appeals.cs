@@ -335,7 +335,7 @@ internal abstract partial class RelationalLabelStore
         return payload is byte[] bytes ? DecodeAppeal(bytes) : null;
     }
 
-    /// <summary>Fences every captured label and requires explicit appeal outcomes before changing labels or case status.</summary>
+    /// <summary>Fences captured labels and requires explicit appeal review for label changes, while allowing report-only acknowledgment.</summary>
     private async Task<LabelServiceResult<IReadOnlyList<ModerationAppealData>>> ValidateAppealDecisionAsync(
         DbConnection connection,
         DbTransaction transaction,
@@ -343,7 +343,7 @@ internal abstract partial class RelationalLabelStore
         LabelCaseDecision request,
         CancellationToken token)
     {
-        if (request.AppealIds.Count == 0 && Integer(await ScalarAsync(
+        if (request.Actions.Count != 0 && request.AppealIds.Count == 0 && Integer(await ScalarAsync(
             connection: connection,
             transaction: transaction,
             sql: "SELECT COUNT(*) FROM label_appeals WHERE case_id=@case AND status=@pending",

@@ -37,6 +37,11 @@
             submit.disabled = true;
             submit.textContent = "Submit label changes";
             reason.readOnly = false;
+            const duration = form.querySelector('select[name="labelDurationHours"]');
+            if (duration) {
+                duration.disabled = false;
+                form.querySelector('input[type="hidden"][name="labelDurationHours"]')?.remove();
+            }
             controls.querySelector('[name="labelState"]').value = "";
             controls.querySelector("fieldset").disabled = true;
             controls.querySelector("fieldset").hidden = true;

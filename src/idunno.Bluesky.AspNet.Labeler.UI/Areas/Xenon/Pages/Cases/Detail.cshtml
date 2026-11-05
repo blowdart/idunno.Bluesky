@@ -27,6 +27,7 @@ else
         <h2>Subject</h2>
         <p>@await Html.PartialAsync("_Identity", new IdentityDisplayModel(target, Subject: true))</p>
         <partial name="_SubjectIdentifiers" model="subject" />
+        @await Html.PartialAsync("_MuteControls", (target, LabelMuteKind.Subject))
         @if (Model.Preview is { } preview)
         {
             @await Html.PartialAsync("_SubjectPreview", preview)
@@ -34,13 +35,21 @@ else
         @if (Model.LabelsAvailable)
         {
             @await Html.PartialAsync("_ReviewLabels", new ReviewLabelDisplay(
-                subject.TryGetProperty("uri", out _), Model.AccountLabels, Model.LabelChoices.Where(label => label.Applied).Select(label => label.Value).ToArray()))
+                IsRecord: subject.TryGetProperty("uri", out _),
+                AccountLabels: Model.AccountLabels,
+                SubjectLabels: Model.LabelChoices.Where(label => label.Applied).Select(label => label.Value).ToArray(),
+                SubjectChoices: Model.LabelChoices,
+                AccountChoices: Model.AccountLabelChoices))
         }
         else
         {
             <p role="status">Current labels could not be loaded. Refresh before reviewing this account or content.</p>
         }
-        <p class="case-status"><span>Status:</span> @await Html.PartialAsync("_WorkflowStatus", Model.Appeals.Length > 0 ? "Appealed" : item.GetProperty("status").GetString()!)</p>
+        <p class="case-status"><span>Status:</span> @await Html.PartialAsync("_WorkflowStatus", Model.Appeals.Length > 0 ? "Appealed" : item.GetProperty("status").GetString()!)
+            @if (Model.Appeals.Length > 0 && item.GetProperty("status").GetString() == "Escalated")
+            {
+                @await Html.PartialAsync("_WorkflowStatus", "Escalated")
+            }</p>
         <p>Assignee: @if (item.TryGetProperty("assignee", out JsonElement assignee) && assignee.GetString() is string assigned)
             {
                 @await Html.PartialAsync("_Identity", new IdentityDisplayModel(assigned))
@@ -73,6 +82,20 @@ else
                 <p id="assignment-reason-help">If left blank, the audit history records &ldquo;No reason provided.&rdquo;</p>
                 <label><input type="checkbox" name="confirmed" value="true" required /> Change who is assigned to this case.</label>
                 <div class="form-actions"><button type="submit">Save assignment</button></div>
+            </form>
+        </section>
+    }
+    @if ((ViewData["CurrentRole"] as LabelTeamRole?) >= LabelTeamRole.Moderator &&
+        item.GetProperty("status").GetString() is not ("Resolved" or "Escalated") &&
+        !Model.SelectedReviewCompleted && Model.RetryFields is null && Model.EscalationState is not null)
+    {
+        <section class="panel">
+            <h2><span class="fa-icon fa-triangle-exclamation" aria-hidden="true"></span> Escalate</h2>
+            <p>Flag this case for further moderator review. Reports stay unresolved, labels stay unchanged, and assignment is preserved.</p>
+            <form method="post" asp-page-handler="Escalate">
+                <input type="hidden" name="escalationState" value="@Model.EscalationState" />
+                <label class="field">Reason (optional)<textarea name="reason" maxlength="4096"></textarea></label>
+                <div class="form-actions"><button type="submit">Escalate case</button></div>
             </form>
         </section>
     }
@@ -116,7 +139,8 @@ else
                     {
                         <input type="hidden" name="@field.Key" value="@field.Value" />
                     }
-                    <p>The original labels, report selection, handling choice and reason will be retried unchanged.</p>
+                    <p>The original labels, report selection, handling choice, duration and reason will be retried unchanged.</p>
+                    @await Html.PartialAsync("_LabelDuration", Model.Duration)
                     <div class="form-actions"><button type="submit">Retry unchanged decision</button></div>
                 }
                 else
@@ -134,10 +158,13 @@ else
                         };
                         <label class="label-chip" data-applied="@(label.Applied ? "true" : "false")">
                             <input type="checkbox" name="selectedLabels" value="@label.Value" checked="@(Model.SubmittedDecision is { } submitted ? submitted["selectedLabels"].Contains(label.Value) : label.Applied)" disabled="@label.OtherVersion" />
-                            <span>@label.Value <small class="label-baseline">@labelStatus</small><small class="label-add">Will be added</small><small class="label-remove">Will be removed</small></span>
+                            <span>@label.Value <small class="label-baseline">@labelStatus</small>
+                                @await Html.PartialAsync("_LabelExpiry", label.ExpiresAt)
+                                <small class="label-add">Will be added</small><small class="label-remove">Will be removed</small></span>
                         </label>
                     }
                 </fieldset>
+                @await Html.PartialAsync("_LabelDuration", Model.Duration)
                 @if (Model.Appeals.Length > 0)
                 {
                     string selectedAppeal = Model.SubmittedDecision?["appealId"].ToString() ?? Model.AppealId?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
@@ -197,6 +224,21 @@ else
                 <p>This marks the selected reports as reviewed. Appeals still need their own review. Withdrawing a label that applies across all versions removes it from every version of this content.</p>
                 <div class="form-actions"><button type="submit">Submit</button></div>
                 }
+            </form>
+        </section>
+    }
+    @if ((ViewData["CurrentRole"] as LabelTeamRole?) >= LabelTeamRole.Moderator &&
+        item.GetProperty("status").GetString() != "Resolved" && Model.RetryFields is null && Model.AcknowledgeState is not null)
+    {
+        <section class="panel">
+            <h2><span class="fa-icon fa-circle-check" aria-hidden="true"></span> Acknowledge</h2>
+            <p>Mark this case's reports as reviewed and close the case without changing any labels.
+                If escalated, this ends escalation. Pending appeals remain open and keep the case in review.</p>
+            <form method="post" asp-page-handler="Decide">
+                <input type="hidden" name="decisionState" value="@Model.AcknowledgeState" />
+                <input type="hidden" name="reportHandling" value="same-target" />
+                <label class="field">Reason (optional)<textarea name="reason" maxlength="4096"></textarea></label>
+                <div class="form-actions"><button type="submit">Acknowledge and close case</button></div>
             </form>
         </section>
     }

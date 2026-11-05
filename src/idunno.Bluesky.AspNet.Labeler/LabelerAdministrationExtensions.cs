@@ -139,6 +139,7 @@ public static class LabelerAdministrationExtensions
         services.AddLogging();
         services.AddOptions<LabelerAdministrationOptions>();
         services.TryAddSingleton(TimeProvider.System);
+        services.TryAddSingleton<OzoneTeamPresence>();
         services.AddSingleton(new AdministrationConfiguration(audience, httpClient, lifetimeLimit));
         if (signingKeyRing is not null)
         {

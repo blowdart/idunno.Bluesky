@@ -111,7 +111,8 @@ internal sealed partial class AdministrationDispatcher
                     Applied: active && (target.Cid is null || label!.Cid is null || label.Cid == target.Cid),
                     Sequence: current?.Sequence ?? 0,
                     OtherVersion: active && target.Cid is not null && label!.Cid is not null && label.Cid != target.Cid,
-                    UriWide: active && target.RecordUri is not null && label!.Cid is null));
+                    UriWide: active && target.RecordUri is not null && label!.Cid is null,
+                    ExpiresAt: active ? label!.ExpiresAt : null));
             }
         }
 

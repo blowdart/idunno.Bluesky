@@ -1,4 +1,7 @@
 #nullable enable
+idunno.Bluesky.Labeler.Moderation.LabelCaseStatus.Escalated = 3 -> idunno.Bluesky.Labeler.Moderation.LabelCaseStatus
+idunno.Bluesky.Labeler.Moderation.LabelCaseAction.Escalate = 8 -> idunno.Bluesky.Labeler.Moderation.LabelCaseAction
+idunno.Bluesky.Labeler.Moderation.LabelCaseWorkflow.Escalated = 8 -> idunno.Bluesky.Labeler.Moderation.LabelCaseWorkflow
 idunno.Bluesky.Labeler.Moderation.LabelPolicyPhase.Withdrawing = 4 -> idunno.Bluesky.Labeler.Moderation.LabelPolicyPhase
 idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.CreatedAt.get -> System.DateTimeOffset?
 idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.CreatedAt.init -> void
@@ -703,6 +706,7 @@ idunno.Bluesky.Labeler.Moderation.LabelPolicyState.PublicationOperationId.get ->
 idunno.Bluesky.Labeler.Moderation.ILabelPolicyAlertStore
 idunno.Bluesky.Labeler.Moderation.ILabelPolicyAlertStore.ClaimPendingAlertAsync(string! leaseId, System.TimeSpan leaseDuration, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.Moderation.LabelPolicyAlertDelivery?>!
 idunno.Bluesky.Labeler.Moderation.ILabelPolicyAlertStore.CompleteAlertDeliveryAsync(string! alertId, string! leaseId, bool delivered, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+idunno.Bluesky.Labeler.Moderation.ILabelPolicyAlertStore.InitializeNotificationsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 idunno.Bluesky.Labeler.Moderation.ILabelPolicyAlertStore.RecordVerificationFailureAsync(string! category, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 idunno.Bluesky.Labeler.Moderation.ILabelPolicyAlertStore.RecordVerificationSuccessAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 idunno.Bluesky.Labeler.Moderation.LabelPolicyAlertDelivery

@@ -81,10 +81,26 @@ Supported subjects are an account DID (`repoRef`), a full DID-based record URI
 without a CID (`repoRef.did` containing that URI, as sent by Bluesky), or a record
 URI and explicitly supplied CID (`strongRef`). An account is distinct from its
 profile record. URI-only submissions form their own cases, separate from every
-explicit-CID version. An omitted CID stays absent: intake never copies a CID
-from a label or fetches one from a PDS. Deleted and historical records remain
-reportable. Current-record previews are separate context and do not change the
-stored report subject.
+explicit-CID version. An omitted CID stays absent in the immutable report evidence.
+After authentication, intake independently resolves the repository DID's PDS and
+observes its actual latest record CID, with a five-second resolution budget.
+The observation (CID, PDS, timestamp and outcome) is stored separately, including
+through pending-policy promotion. It is not a CID supplied by the reporter, proof
+of what existed when the report was composed, or a change to native label scope.
+Explicitly supplied CIDs are never looked up or rewritten by intake.
+Deleted, unavailable and inconsistent records remain reportable with unresolved
+observations; Xenon report details show the intake outcome separately from evidence.
+
+The first successful case observation is pinned for Ozone's required strong-reference
+projection. Authenticated Ozone status/history inspection retries unresolved and
+legacy URI-only cases, retaining that same native case ID and URI-wide label scope.
+Queue reads attempt at most three resolutions per request and back off failed
+observations for five minutes so unavailable repositories cannot block the queue.
+An exact-subject status query can retry a recent failure immediately.
+Successful resolution is durable and never refreshed to a newer version on reads;
+each new report still retains its own independent intake observation. Resolution
+does not recreate historical content or move the report to an explicit-CID case.
+Current-record previews are separate context and do not change the stored subject.
 
 Reason identifiers are open strings, including granular `tools.ozone.report.defs`
 reasons; recognizing those identifiers does not implement the broader Ozone APIs.
@@ -145,18 +161,55 @@ is a storage-protection boundary, not a time-based retention policy. Database
 failures and request deadlines remain explicit service errors and do not produce
 a success-shaped receipt.
 
+## Temporary subject and reporter mutes
+
+The logged-in account menu includes **Mutes**. Moderators and administrators can
+mute a subject or reporting account, inspect active mutes (target, kind, expiry
+and moderator), and explicitly unmute one after confirmation. The list is shared
+moderation state, not a private per-browser preference. Viewers can inspect but
+cannot change it. Case details provide a subject-mute control; report details
+provide a reporter-mute control.
+
+Choose 6 or 12 hours, or 1, 2, 3, 7, 30 or 90 days. There are no permanent mutes.
+Deadlines use database time and survive host restarts; expiry is effective at the
+deadline, without waiting for a cleanup worker. Unmute forms are fenced against
+an intervening extension or replacement, and all changes recheck live moderator
+authority and append immutable event/audit provenance.
+
+A subject mute suppresses its ordinary case/report workflow views, not its
+stored case, review state, assignee, report evidence or signed labels. A record
+mute applies to the submitted URI across CID versions, not to unrelated records
+or the owning account. **All** views, direct details and the explicit pending-appeal
+workflow remain available; mutes are not access control and do not decide appeals.
+
+A reporter mute retains each new authenticated submission with the distinct
+**Reporter muted** outcome, without creating, reopening or changing a case or
+appeal. Original subjects, reasons and reporter identity remain inspectable in
+Reports, separately from pending verification and out-of-scope reports. These
+submissions do not consume pending-verification capacity and are never promoted
+when reporting is unmuted or its deadline expires. Already accepted reports
+remain unchanged. Reporting-token authentication, appeal ownership and replay
+protection still apply. The case-linked `SubmitReportAsync` API rejects muted
+reporters; use `AcceptReportAsync` when a report can be retained without a case.
+
+Ozone's optional adapter uses the same state and operations. Its subject-status
+results are projections of existing native cases, not a separate Ozone status
+database; mutes without cases are still managed from **Mutes**.
+
 ## Cases, workflow views and decisions
 
 One unresolved case exists per exact subject. Concurrent reports retain every
 submission while joining that case. New reports after resolution open another
 case; explicit reopening rejects a conflicting unresolved case.
 
-Cases are `Open`, `InReview` or `Resolved`. Moderators can assign an eligible
+Cases are `Open`, `InReview`, `Escalated` or `Resolved`. Moderators can assign an eligible
 active moderator, release/reassign work, append reasoned notes, start review,
-resolve without labels, and reopen. Revocation takes effect immediately but
+escalate an unresolved case, resolve without labels, and reopen. Escalation flags
+further review without handling reports, deciding appeals, changing labels or
+reassigning the case. It remains available to every moderator. Revocation takes effect immediately but
 does not rewrite historical assignment; another moderator can reassign work.
 
-`GetCaseQueueAsync` supplies fixed views: unresolved, open, in review,
+`GetCaseQueueAsync` supplies fixed views: unresolved, open, in review, escalated,
 unassigned, assigned to the caller, pending appeals, resolved, and all cases.
 Filters combine exact subject/version, associated report reason and assignee.
 An opaque continuation is bound to all filters, authenticated caller and issuer.
@@ -272,11 +325,14 @@ is bounded to 64 KiB and rejects duplicate object names and malformed Unicode.
 Numbers, including extension values, must use signed 64-bit integer syntax
 as required by repository records; fractional and exponent spellings are rejected.
 Negative zero is normalized to zero before persistence and publication.
-Saving an immutable version does not disrupt the current active policy.
+Saving or updating an unpublished draft does not disrupt the current active policy.
+Draft updates use the same policy ID and a new operation ID; previous operation
+results and audit history are retained. Once selected for publication, a policy
+version cannot be edited.
 
 Publication is deliberately separate from a database transaction:
 
-1. Save the complete intended immutable version.
+1. Save the complete intended draft. Unpublished drafts can be updated under the same ID.
 2. Begin publication with a stable operation identity, observed gate revision
    and expected previous record CID, or absence for creation. This closes
    reports and new issuance. Explicit confirmation also authorizes permanent
@@ -387,7 +443,18 @@ and non-actionable while verification is unavailable; email configuration does n
 change report intake or return behavior.
 
 Active administrators can register or clear their own alert address on the Xenon
-Team page. Only active administrators with a registered address receive alerts.
+Team or Preferences page. Both forms require enabled SMTP with a configured server.
+Only active administrators with a registered address receive alerts.
+**Test my email** sends a diagnostic message only to the signed-in administrator's
+saved address, not an unsaved form value or another member's address. Tests require
+antiforgery validation and enabled SMTP, and are limited to one attempt per host
+every 30 seconds. SMTP acceptance does not guarantee inbox delivery.
+Failed delivery attempts are logged at Error level with a sanitized failure
+classification and the numeric SMTP status code when available. Raw server replies,
+exception details, credentials and recipient addresses are not logged.
+When the Xenon UI is registered and a public labeler endpoint is configured,
+all notification and test emails end with `Sent via https://your-host/Xenon/`.
+The link uses configured hosting options, never the incoming request's host.
 The message contains the labeler DID, failure category and first failure time, not
 report contents. Addresses are persisted with team state, are visible only to
 administrators, and are excluded from audit reasons and delivery logs.
@@ -397,17 +464,21 @@ after a policy publication is independently confirmed, team members are added,
 removed, suspended or reinstated, their roles change, remote CLI administration is
 enabled or disabled, or local CLI bindings are granted, replaced or revoked.
 Ordinary sign-ins and short-lived token renewals do not send emails.
-Change notifications require more than one active administrator after the change,
-regardless of how many have email addresses. This condition is checked again
-before delivery; queued changes are discarded if only one active administrator
-remains. Policy-verification failure alerts are not subject to this suppression.
+Change notifications are sent even when only one administrator is active.
+Recipients are checked again before delivery, and queued changes are retained
+when no active administrator has a registered email address.
 Moderators never receive these emails.
 
 Change descriptions are recorded atomically with successful mutations in the
 audit history. Replaying a request does not create another notification, and
 denied requests and unpublished drafts do not notify. Delivery uses a durable
 audit cursor and one recoverable lease, so disabled SMTP does not grow the team
-aggregate with an unbounded queue. Only current active administrators' registered
+aggregate with an unbounded queue. First email enablement durably starts administration
+notifications at the current audit position, even before anyone registers an address:
+earlier changes remain in the audit history but are not emailed. Restarts and later
+SMTP interruptions preserve that boundary and retry subsequent undelivered changes.
+Existing installations with delivery progress or a pending claim retain their retries.
+Only current active administrators' registered
 addresses are selected for each attempt; credentials, local operating-system
 identifiers, audit reasons and report contents are not included. Pending
 notifications are checked at startup and every five minutes even while policy
@@ -438,13 +509,21 @@ in a secret store or environment-backed configuration rather than a checked-in f
 Bind the section to `LabelerModerationOptions` and pass it to
 `AddLabelerModeration(issuer, httpClient, options)`. Port defaults to 587; the
 server and sender address are required when email is enabled.
+The canonical host can load an additional deployment-only JSON file through
+`LABELER_ADDITIONAL_CONFIGURATION`. The file is required when the variable is set,
+overrides existing configuration, and is read at startup without reload. Mount it
+read-only with restricted access; never commit SMTP credentials. Resend uses
+`smtp.resend.com`, port `587` with STARTTLS, username `resend`, and an API key
+as the password, with a sender on a verified domain.
 When enabled, the shared label store must also implement
 `ILabelPolicyAlertStore`; custom stores do not need that capability while email
 alerts remain disabled.
 
 Audit is application-append-only and atomic with mutations. Successful
 inspection does not append another audit entry; denied operations remain
-audited. Database administrators and backup custody remain trusted. There is
+audited. Successful team reads for page authorization or online-presence polling
+do not create audit entries; actual team changes and denied team reads do.
+Database administrators and backup custody remain trusted. There is
 no hash-chain or tamper-proof-storage claim. Moderation history is not silently
 purged by ordinary label retirement; moderation retention is a separate concern.
 

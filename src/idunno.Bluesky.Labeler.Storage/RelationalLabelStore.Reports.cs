@@ -126,7 +126,14 @@ internal abstract partial class RelationalLabelStore
                     verifiedUntil > now &&
                     now >= verifiedUntil - gate.FreshnessMilliseconds &&
                     gate.Policy is not null;
-                if (verified)
+                bool reporterMuted = await ReadMuteDeadlineAsync(
+                    connection: connection,
+                    transaction: transaction,
+                    subject: authentication.Reporter.Value,
+                    kind: LabelMuteKind.Reporter,
+                    now: now,
+                    token: cancellationToken).ConfigureAwait(false) is not null;
+                if (verified && !reporterMuted)
                 {
                     LabelServiceResult<LabelModerationReport> accepted = await CommitReportAsync(
                         connection: connection,
@@ -152,7 +159,8 @@ internal abstract partial class RelationalLabelStore
                         maximumPendingReports: maximumPendingReports,
                         state: state,
                         now: now,
-                        token: cancellationToken).ConfigureAwait(false);
+                        token: cancellationToken,
+                        reporterMuted: reporterMuted).ConfigureAwait(false);
                 }
             }
 
@@ -347,6 +355,18 @@ internal abstract partial class RelationalLabelStore
             {
                 result = CaseFailure<LabelModerationReport>(LabelServiceErrorCode.Unauthorized, "The reporting token is expired or addressed to another labeler.");
             }
+            else if (await ReadMuteDeadlineAsync(
+                connection: connection,
+                transaction: transaction,
+                subject: authentication.Reporter.Value,
+                kind: LabelMuteKind.Reporter,
+                now: now,
+                token: cancellationToken).ConfigureAwait(false) is not null)
+            {
+                result = CaseFailure<LabelModerationReport>(
+                    LabelServiceErrorCode.CaseConflict,
+                    "This reporter is muted. Use AcceptReportAsync to retain the submission without a review case.");
+            }
             else
             {
                 result = await CommitReportAsync(
@@ -373,7 +393,8 @@ internal abstract partial class RelationalLabelStore
         int maximumPendingReports,
         LabelStoreState state,
         long now,
-        CancellationToken token)
+        CancellationToken token,
+        bool reporterMuted = false)
     {
         bool appeal = submission.ReasonType is "com.atproto.moderation.defs#reasonAppeal" or "tools.ozone.report.defs#reasonAppeal";
         if (appeal && authentication.Reporter != submission.Subject.Repository)
@@ -411,7 +432,7 @@ internal abstract partial class RelationalLabelStore
             transaction: transaction,
             sql: "SELECT COUNT(*) FROM label_pending_reports WHERE pending=TRUE",
             token: token).ConfigureAwait(false));
-        if (count >= maximumPendingReports)
+        if (!reporterMuted && count >= maximumPendingReports)
         {
             return CaseFailure<LabelReportIntakeReceipt>(
                 LabelServiceErrorCode.PendingReportQueueFull,
@@ -419,7 +440,7 @@ internal abstract partial class RelationalLabelStore
         }
 
         StoredLabel[]? challenges = null;
-        if (appeal)
+        if (appeal && !reporterMuted)
         {
             LabelServiceResult<StoredLabel[]> capture = await ReadAppealChallengesAsync(
                 connection: connection,
@@ -458,13 +479,19 @@ internal abstract partial class RelationalLabelStore
             ExpiresAt: authentication.ExpiresAt,
             AppealChallenges: challenges?.Select(challenge => new ModerationAppealChallenge(
                 challenge.Sequence, challenge.SignedLabel.GetJsonBytes())).ToArray(),
-            AppealLabelValue: submission.AppealLabelValue);
+            AppealLabelValue: submission.AppealLabelValue,
+            PendingVerification: !reporterMuted,
+            ProcessedAt: reporterMuted ? createdAt : null,
+            ResolutionReason: reporterMuted ? "Reporter muted at submission; retained without changing a review case." : null,
+            ReporterMuted: reporterMuted,
+            RecordResolution: submission.RecordResolution);
         await ExecuteAsync(
             connection: connection,
             transaction: transaction,
-            sql: "INSERT INTO label_pending_reports(report_id,pending,payload) VALUES(@id,TRUE,@payload)",
+            sql: "INSERT INTO label_pending_reports(report_id,pending,payload) VALUES(@id,@pending,@payload)",
             token: token,
             ("@id", id),
+            ("@pending", !reporterMuted),
             ("@payload", JsonSerializer.SerializeToUtf8Bytes(pending, ModerationJsonContext.Default.PendingModerationReportData))).ConfigureAwait(false);
         await ExecuteAsync(
             connection: connection,
@@ -475,7 +502,7 @@ internal abstract partial class RelationalLabelStore
             ("@key", replayKey),
             ("@token", tokenHash),
             ("@expires", authentication.ExpiresAt.AddSeconds(5).ToUnixTimeMilliseconds())).ConfigureAwait(false);
-        return LabelServiceResult<LabelReportIntakeReceipt>.Success(new(id, createdAt, pendingVerification: true));
+        return LabelServiceResult<LabelReportIntakeReceipt>.Success(new(id, createdAt, pendingVerification: !reporterMuted));
     }
 
     /// <summary>Commits a scoped, single-use reporter submission without team authority or subject retrieval.</summary>
@@ -589,6 +616,8 @@ internal abstract partial class RelationalLabelStore
             connection: connection, transaction: transaction, sql: "SELECT COALESCE(MAX(case_id),0) FROM label_cases",
             token: token).ConfigureAwait(false)) + 1);
         LabelCaseStatus status = notApplicable ? LabelCaseStatus.Resolved : current?.Status ?? LabelCaseStatus.Open;
+        LabelRecordResolution? recordResolution = current?.RecordResolution?.Cid is not null
+            ? current.RecordResolution : submission.RecordResolution ?? current?.RecordResolution;
         ModerationCaseData next = notApplicable && current is not null ? current : new(
             Id: caseId,
             Revision: checked((current?.Revision ?? 0) + 1),
@@ -597,7 +626,8 @@ internal abstract partial class RelationalLabelStore
             Status: status,
             Assignee: SoleModerator(team) ?? current?.Assignee,
             CreatedAt: current?.CreatedAt ?? timestamp,
-            UpdatedAt: timestamp);
+            UpdatedAt: timestamp,
+            RecordResolution: recordResolution);
         if (!notApplicable || current is null)
         {
             await SaveCaseAsync(
@@ -622,7 +652,8 @@ internal abstract partial class RelationalLabelStore
             DecisionOperationId: notApplicable ? operation : null,
             HandledAt: notApplicable ? timestamp : null,
             ResolutionReason: notApplicable ? "Not Applicable" : null,
-            AppealLabelValue: submission.AppealLabelValue);
+            AppealLabelValue: submission.AppealLabelValue,
+            RecordResolution: submission.RecordResolution);
         byte[] payload = JsonSerializer.SerializeToUtf8Bytes(report, ModerationJsonContext.Default.ModerationReportData);
         LabelCaseAction reportAction = (notApplicable, current) switch
         {

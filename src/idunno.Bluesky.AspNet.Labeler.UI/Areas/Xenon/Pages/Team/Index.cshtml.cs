@@ -49,6 +49,10 @@ public sealed class IndexModel : PageModel
     /// <summary>Loads active members and retained membership tombstones.</summary>
     public async Task OnGetAsync()
     {
+        if (TempData["NotificationEmailError"] is string emailError)
+        {
+            ViewData["Error"] = emailError;
+        }
         IOptionsMonitor<LabelerAdministrationOptions>? administrationOptions =
             HttpContext.RequestServices.GetService<IOptionsMonitor<LabelerAdministrationOptions>>();
         LabelerAdministrationOptions currentOptions = administrationOptions?.CurrentValue ?? new();
@@ -239,13 +243,60 @@ public sealed class IndexModel : PageModel
         if (response.Succeeded)
         {
             TempData["Status"] = email.Length == 0
-                ? "Policy verification alert email cleared."
-                : "Policy verification alert email updated.";
+                ? "Administrator notification email cleared."
+                : "Administrator notification email updated.";
+            if (await UiPageHelpers.ConfirmedFieldAsync(this, "returnToPreferences").ConfigureAwait(false))
+            {
+                return RedirectToPage("/Preferences");
+            }
             return RedirectToPage();
         }
 
+        if (await UiPageHelpers.ConfirmedFieldAsync(this, "returnToPreferences").ConfigureAwait(false))
+        {
+            TempData["NotificationEmailError"] = response.Message ?? response.Error ?? "The email address could not be updated.";
+            return RedirectToPage("/Preferences");
+        }
         await OnGetAsync().ConfigureAwait(false);
         return Page();
+    }
+
+    /// <summary>Sends a test only to the current active administrator's persisted notification address.</summary>
+    /// <returns>The originating settings page with an explicit delivery outcome.</returns>
+    public async Task<IActionResult> OnPostTestEmailAsync()
+    {
+        LabelerModerationOptions? options = HttpContext.RequestServices.GetService<LabelerModerationOptions>();
+        if (ViewData["CurrentRole"] is not LabelTeamRole.Administrator ||
+            options?.PolicyEmail is not { Enabled: true, Server: { Length: > 0 } })
+        {
+            return Forbid();
+        }
+        AdministrationResponse team = await UiPageHelpers.DispatchAsync(
+            this,
+            new AdministrationCommand(Method: "getTeam", Reason: "Test own notification email.")).ConfigureAwait(false);
+        string? actor = User.FindFirst(idunno.AtProto.Authentication.AtProtoClaims.Did)?.Value;
+        AdministrationMemberView? member = team.Members?.FirstOrDefault(member => member.Did == actor);
+        if (!team.Succeeded || member is not { Active: true, Removed: false, Role: LabelTeamRole.Administrator })
+        {
+            return Forbid();
+        }
+        if (member.NotificationEmail is not { } address)
+        {
+            TempData["NotificationEmailError"] = "Save your notification email address before sending a test.";
+        }
+        else
+        {
+            bool sent = await HttpContext.RequestServices.GetRequiredService<LabelerPolicyEmailService>()
+                .SendTestAsync(address, HttpContext.RequestAborted).ConfigureAwait(false);
+            TempData[sent ? "Status" : "NotificationEmailError"] = sent
+                ? "Test email accepted by the SMTP server. Check your inbox and spam folder."
+                : "Test email was not sent. Wait 30 seconds before trying again, and check the server email configuration and logs.";
+        }
+        if (await UiPageHelpers.ConfirmedFieldAsync(this, "returnToPreferences").ConfigureAwait(false))
+        {
+            return RedirectToPage("/Preferences");
+        }
+        return RedirectToPage();
     }
 
     /// <summary>Changes the web-managed remote-administration switch under durable owner authorization.</summary>

@@ -7,15 +7,40 @@ using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.Bluesky.Labeler;
 using idunno.Bluesky.Labeler.Administration;
+using idunno.Bluesky.Labeler.Storage;
 namespace idunno.Bluesky.AspNet.Labeler.UI;
 
 /// <summary>Bridges validated browser identities to the shared administration dispatcher.</summary>
 /// <param name="administration">The provider that issues live browser caller evidence.</param>
+/// <param name="store">The durable store for caller-scoped display preferences.</param>
 /// <param name="dispatcher">The shared command dispatcher.</param>
 internal sealed class LabelerUiAdministration(
     ILabelAdministrationStore administration,
+    ILabelStore store,
     idunno.Bluesky.AspNet.Labeler.AdministrationDispatcher dispatcher)
 {
+    /// <summary>Authenticates each personal settings read or write without taking a target member from the browser.</summary>
+    internal async Task<LabelServiceResult<LabelMediaPreferences>> MediaPreferencesAsync(
+        ClaimsPrincipal principal,
+        LabelMediaPreferences? preferences,
+        CancellationToken token)
+    {
+        LabelServiceResult<LabelAdministrationCaller> caller = await AuthenticateAsync(principal, token).ConfigureAwait(false);
+        if (!caller.Succeeded)
+        {
+            return LabelServiceResult<LabelMediaPreferences>.Failure(caller.Error);
+        }
+        if (store is not ILabelTableStore tables)
+        {
+            return LabelServiceResult<LabelMediaPreferences>.Failure(new(
+                code: LabelServiceErrorCode.StorageUnavailable,
+                message: "Personal media preferences are unavailable with this store."));
+        }
+        return preferences is null
+            ? await tables.ReadMediaPreferencesAsync(caller.Result, token).ConfigureAwait(false)
+            : await tables.SaveMediaPreferencesAsync(caller.Result, preferences, token).ConfigureAwait(false);
+    }
+
     /// <summary>Checks live administrator publication authority without treating policy inspection as permission to write.</summary>
     internal async Task<AdministrationResponse> AuthorizePolicyPublicationAsync(
         ClaimsPrincipal principal,

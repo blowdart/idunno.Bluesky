@@ -149,13 +149,18 @@ internal sealed class FixtureHandler(string publicKey, HttpClient network, TimeP
                 collection == "app.bsky.actor.profile" && rkey == "self";
             bool namedRecord = Enumerable.Range(1, SubjectCount).Any(index => repo == Subject(index).Value) &&
                 collection is "app.bsky.graph.list" or "app.bsky.graph.starterpack" && rkey == "example";
-            if (!declaration && !post && !profile && !namedRecord || query.TryGetValue("cid", out Microsoft.Extensions.Primitives.StringValues cid) && cid != Cid)
+            bool follow = repo == Subject(2).Value && collection == "app.bsky.graph.follow" && rkey == "example";
+            if (!declaration && !post && !profile && !namedRecord && !follow || query.TryGetValue("cid", out Microsoft.Extensions.Primitives.StringValues cid) && cid != Cid)
             {
                 return Json(HttpStatusCode.NotFound, """{"error":"RecordNotFound"}""");
             }
 
             string record = s_declaration;
-            if (profile)
+            if (follow)
+            {
+                record = $$"""{"$type":"app.bsky.graph.follow","subject":"{{Subject(1)}}","createdAt":"2026-01-01T00:00:00Z"}""";
+            }
+            else if (profile)
             {
                 record = $$$"""
                     {"$type":"app.bsky.actor.profile","displayName":"Fictional Xenon profile",
@@ -225,13 +230,16 @@ internal sealed class FixtureHandler(string publicKey, HttpClient network, TimeP
     /// <summary>Creates harmless fictional self-labels for testing default image protection.</summary>
     private static string SelfLabels(string repo)
     {
+        if (repo == Subject(36).Value)
+        {
+            return """{"$type":"com.atproto.label.defs#selfLabels","values":[{"val":"porn"},{"val":"self-harm"}]}""";
+        }
         string? value = repo switch
         {
             "did:web:subject-21.xenon.invalid" => "porn",
             "did:web:subject-22.xenon.invalid" => "sexual",
             "did:web:subject-23.xenon.invalid" => "nudity",
             "did:web:subject-24.xenon.invalid" => "graphic-media",
-            "did:web:subject-36.xenon.invalid" => "porn",
             _ => null
         };
         return value is null ? "null" : $$"""{"$type":"com.atproto.label.defs#selfLabels","values":[{"val":"{{value}}"}]}""";

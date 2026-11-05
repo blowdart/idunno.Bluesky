@@ -46,7 +46,7 @@ public sealed class IndexModel : PageModel
         }
 
         if (!ModelState.IsValid || AfterId < 0 || Status is { } status && !Enum.IsDefined(status) ||
-            Queue is not (LabelCaseWorkflow.Unresolved or LabelCaseWorkflow.InReview or LabelCaseWorkflow.Resolved or LabelCaseWorkflow.All))
+            Queue is not (LabelCaseWorkflow.Unresolved or LabelCaseWorkflow.InReview or LabelCaseWorkflow.Escalated or LabelCaseWorkflow.Resolved or LabelCaseWorkflow.All))
         {
             ViewData["Error"] = "Choose an available appeal status and refresh the page before trying again.";
             return;

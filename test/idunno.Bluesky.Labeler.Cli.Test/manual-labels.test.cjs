@@ -47,6 +47,8 @@ function page() {
         formAction: "/Xenon/Labels?handler=CurrentCid",
         addEventListener(event, callback) { callbacks.currentCid = callback; }
     };
+    const duration = { disabled: false, value: "24" };
+    const frozenDuration = { removed: false, remove() { this.removed = true; } };
     const form = {
         elements: { namedItem(name) { return fields[name]; } },
         querySelector(selector) {
@@ -55,7 +57,9 @@ function page() {
                 "[data-load-labels]": load,
                 "[data-current-cid]": currentCid,
                 "[data-record-cid]": cidField,
-                "[data-submit-labels]": submit
+                "[data-submit-labels]": submit,
+                'select[name="labelDurationHours"]': duration,
+                'input[type="hidden"][name="labelDurationHours"]': frozenDuration
             }[selector];
         },
         addEventListener(event, callback) { callbacks.submit = callback; }
@@ -84,7 +88,7 @@ function page() {
     });
     const event = () => ({ prevented: false, preventDefault() { this.prevented = true; } });
     return {
-        fields, callbacks, requests, state, fieldset, submit, loadButton: load, currentCid, cidField, alerts, attributes, event,
+        fields, callbacks, requests, state, fieldset, submit, loadButton: load, currentCid, cidField, alerts, attributes, event, duration, frozenDuration,
         load() { return callbacks.load(event()); },
         fireTimer() { const callback = [...timers.values()].at(-1); timers.clear(); return callback(); }
     };
@@ -179,10 +183,14 @@ test("Changing CID or target invalidates the loaded state and frozen retry inten
     for (const name of ["cid", "target"]) {
         const p = page();
         p.fields.reason.readOnly = true;
+        p.duration.disabled = true;
         p.callbacks[name]();
         assert.equal(p.submit.disabled, true);
         assert.equal(p.state.value, "");
         assert.equal(p.fields.reason.readOnly, false);
+        assert.equal(p.duration.disabled, false);
+        assert.equal(p.duration.value, "24");
+        assert.equal(p.frozenDuration.removed, true);
     }
 });
 

@@ -19,6 +19,75 @@ public partial class LabelCaseDecisionTests
     private static readonly LabelReportSubject s_subject = LabelReportSubject.Account(new(TargetResolutionHandler.SubjectDid));
 
     [Theory]
+    [InlineData("sqlite", false)]
+    [InlineData("sqlite", true)]
+    [InlineData("postgresql", false)]
+    [InlineData("postgresql", true)]
+    [InlineData("mysql", false)]
+    [InlineData("mysql", true)]
+    public async Task AcknowledgmentPreservesLabelsAndPendingAppealsWhileEndingEscalation(string engine, bool withAppeal)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient http = new(new TargetResolutionHandler());
+        LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
+        LabelPolicyState active = await LabelPolicyStoreTests.ActivateAsync((ILabelPolicyStore)fixture.Store, caller, token);
+        LabelIssuanceService service = Service(fixture, caller, active, key, http);
+        LabelTarget target = LabelTarget.Account(s_subject.Repository);
+        LabelOperationReceipt issued = Success(await service.ExecuteAsync(LabelOperationRequest.Issue(
+            operationId: "acknowledge-existing-label",
+            target: target,
+            value: "spam",
+            context: new(caller.Actor, "Retain this label during report acknowledgment.")), token));
+        ILabelReportStore reports = (ILabelReportStore)fixture.Store;
+        ILabelModerationStore cases = (ILabelModerationStore)fixture.Store;
+        ILabelAppealStore appeals = (ILabelAppealStore)fixture.Store;
+        ModerationReportAuthenticationResult authentication = await ReportTestAuthentication.CreateAsync(
+            s_subject.Repository, active.DatabaseTime, "acknowledge-report");
+        LabelModerationReport report = Success(await reports.SubmitReportAsync(
+            authentication,
+            new(s_subject, withAppeal ? "com.atproto.moderation.defs#reasonAppeal" : "tools.ozone.report.defs#reasonMisleadingSpam"),
+            active.Revision,
+            token));
+        LabelModerationCase current = Success(await cases.GetCaseAsync(caller, report.CaseId, token));
+        current = Success(await cases.ChangeCaseAsync(
+            caller: caller,
+            change: new(
+                operationId: "acknowledge-escalate",
+                subject: s_subject,
+                action: LabelCaseAction.Escalate,
+                reason: "Request a second review.",
+                caseId: current.Id,
+                expectedRevision: current.Revision),
+            cancellationToken: token)).Case;
+        LabelCaseDecision decision = new(
+            operationId: "acknowledge-without-labels",
+            caseId: current.Id,
+            expectedRevision: current.Revision,
+            policyVersion: "v1",
+            reason: "Reviewed; no label changes needed.",
+            actions: [],
+            handleOtherReports: true);
+        LabelCaseDecisionReceipt receipt = Success(await service.ExecuteCaseDecisionAsync(caller, decision, token));
+        Assert.Equal(withAppeal ? LabelCaseStatus.InReview : LabelCaseStatus.Resolved, receipt.CaseEvent.Case.Status);
+        Assert.Empty(receipt.Labels);
+        Assert.Equal(decision.OperationId, Success(await reports.GetReportAsync(caller, report.Id, token)).DecisionOperationId);
+        IReadOnlyList<LabelAppeal> retained = Success(await appeals.GetAppealsAsync(caller, caseId: current.Id, cancellationToken: token));
+        if (withAppeal)
+        {
+            Assert.Equal(LabelAppealStatus.Pending, Assert.Single(retained).Status);
+        }
+        else
+        {
+            Assert.Empty(retained);
+        }
+        Assert.Equal(issued.Label!.Sequence, Success(await fixture.Store.ReadDecisionAsync(target, "spam", token)).CurrentLabel!.Sequence);
+        Success(await service.ExecuteCaseDecisionAsync(caller, decision, token));
+        Assert.Equal(receipt.CaseEvent.Case.Revision, Success(await cases.GetCaseAsync(caller, current.Id, token)).Revision);
+    }
+
+    [Theory]
     [InlineData("sqlite", false, false)]
     [InlineData("sqlite", true, false)]
     [InlineData("sqlite", false, true)]

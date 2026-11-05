@@ -21,7 +21,7 @@ using Microsoft.AspNetCore.Http;
 namespace idunno.Bluesky.AspNet.Labeler;
 
 /// <summary>Translates the supported Ozone wire operations without authenticating request-body identities.</summary>
-internal sealed class OzoneModerationAdapter(
+internal sealed partial class OzoneModerationAdapter(
     ILabelStore store,
     ILabelAdministrationStore administration,
     ILabelIssuancePolicyProvider policy,
@@ -56,12 +56,14 @@ internal sealed class OzoneModerationAdapter(
                     caller: caller,
                     reports: reports,
                     cases: cases,
+                    events: events,
                     token: token).ConfigureAwait(false),
                 "tools.ozone.report.getReport" => await GetReportAsync(
                     context: context,
                     caller: caller,
                     reports: reports,
                     cases: cases,
+                    events: events,
                     token: token).ConfigureAwait(false),
                 "tools.ozone.report.listActivities" => await ListActivitiesAsync(
                     context: context,
@@ -74,6 +76,7 @@ internal sealed class OzoneModerationAdapter(
                     caller: caller,
                     reports: reports,
                     cases: cases,
+                    events: events,
                     token: token).ConfigureAwait(false),
                 "tools.ozone.moderation.queryEvents" => await QueryEventsAsync(
                     context: context,
@@ -99,6 +102,22 @@ internal sealed class OzoneModerationAdapter(
                     caller: caller,
                     cases: cases,
                     token: token).ConfigureAwait(false),
+                "tools.ozone.moderation.getRepos" => await GetSubjectsAsync(
+                    context: context,
+                    caller: caller,
+                    cases: cases,
+                    records: false,
+                    token: token).ConfigureAwait(false),
+                "tools.ozone.moderation.getRecords" => await GetSubjectsAsync(
+                    context: context,
+                    caller: caller,
+                    cases: cases,
+                    records: true,
+                    token: token).ConfigureAwait(false),
+                "app.bsky.actor.getProfile" => await GetProfileAsync(context, token).ConfigureAwait(false),
+                "app.bsky.feed.getPostThread" => await GetPostThreadAsync(context, token).ConfigureAwait(false),
+                "tools.ozone.setting.listOptions" => await ListOptionsAsync(context, caller, token).ConfigureAwait(false),
+                "tools.ozone.setting.upsertOption" => await UpsertMediaOptionsAsync(context, caller, token).ConfigureAwait(false),
                 "tools.ozone.moderation.emitEvent" or "tools.ozone.report.closeReports" or "tools.ozone.report.createActivity" =>
                     await EmitAsync(
                         context: context,
@@ -124,6 +143,7 @@ internal sealed class OzoneModerationAdapter(
         LabelAdministrationCaller caller,
         ILabelReportStore reports,
         ILabelModerationStore cases,
+        ILabelOzoneStore events,
         CancellationToken token)
     {
         ValidateQuery(context, ["id"]);
@@ -133,6 +153,16 @@ internal sealed class OzoneModerationAdapter(
             token).ConfigureAwait(false);
         if (!result.Succeeded && result.Error.Code == LabelServiceErrorCode.OperationNotFound)
         {
+            IReadOnlyList<LabelPendingModerationReport> retained = Require(await events.ReadMutedReportsAsync(
+                caller: caller,
+                afterId: 0,
+                limit: 1,
+                reportId: Number(context, "id"),
+                cancellationToken: token).ConfigureAwait(false));
+            if (retained.Count != 0)
+            {
+                return Encode(writer => WriteMutedReport(writer, retained[0]));
+            }
             throw new OzoneOperationException("NotFound", result.Error.Message);
         }
         LabelModerationReport report = Require(result);
@@ -150,7 +180,24 @@ internal sealed class OzoneModerationAdapter(
     {
         ValidateQuery(context, ["reportId", "limit", "cursor"]);
         long reportId = Number(context, "reportId");
-        Require(await reports.GetReportAsync(caller, reportId, token).ConfigureAwait(false));
+        LabelServiceResult<LabelModerationReport> report = await reports.GetReportAsync(caller, reportId, token).ConfigureAwait(false);
+        if (!report.Succeeded && report.Error.Code == LabelServiceErrorCode.OperationNotFound)
+        {
+            IReadOnlyList<LabelPendingModerationReport> retained = Require(await events.ReadMutedReportsAsync(
+                caller: caller,
+                afterId: 0,
+                limit: 1,
+                reportId: reportId,
+                cancellationToken: token).ConfigureAwait(false));
+            if (retained.Count == 0)
+            {
+                Require(report);
+            }
+        }
+        else
+        {
+            Require(report);
+        }
         List<OzonePageItem> selected = [];
         long after = 0;
         while (true)
@@ -212,6 +259,7 @@ internal sealed class OzoneModerationAdapter(
         LabelAdministrationCaller caller,
         ILabelReportStore reports,
         ILabelModerationStore cases,
+        ILabelOzoneStore events,
         CancellationToken token)
     {
         ValidateQuery(
@@ -219,6 +267,7 @@ internal sealed class OzoneModerationAdapter(
             ["subject", "did", "subjectType", "status", "reportTypes", "collections", "assignedTo",
             "isMuted", "queueId", "limit", "cursor", "sortField", "sortDirection"]);
         string status = RequiredQuery(context, "status");
+        bool? isMuted = context.Request.Query.ContainsKey("isMuted") ? bool.Parse(Query(context, "isMuted")) : null;
         if (status is not ("open" or "closed" or "assigned" or "queued" or "escalated"))
         {
             throw new JsonException("The report status is invalid.");
@@ -245,7 +294,7 @@ internal sealed class OzoneModerationAdapter(
                     context.Request.Query.ContainsKey("reportTypes") &&
                         !context.Request.Query["reportTypes"].Contains(report.Submission.ReasonType, StringComparer.Ordinal) ||
                     context.Request.Query.ContainsKey("assignedTo") && Query(context, "assignedTo") != moderationCase.Assignee?.Value ||
-                    context.Request.Query.ContainsKey("isMuted") && bool.Parse(Query(context, "isMuted")) ||
+                    isMuted == true ||
                     context.Request.Query.ContainsKey("queueId") && Number(context, "queueId") != -1)
                 {
                     continue;
@@ -265,6 +314,38 @@ internal sealed class OzoneModerationAdapter(
             }
             after = page[^1].Id;
         }
+        if (isMuted != false && status == "open" && !context.Request.Query.ContainsKey("assignedTo") &&
+            (!context.Request.Query.ContainsKey("queueId") || Number(context, "queueId") == -1))
+        {
+            after = 0;
+            while (true)
+            {
+                IReadOnlyList<LabelPendingModerationReport> page = Require(await events.ReadMutedReportsAsync(
+                    caller: caller, afterId: after, limit: 100, reportId: null, cancellationToken: token).ConfigureAwait(false));
+                foreach (LabelPendingModerationReport report in page)
+                {
+                    if (!MatchesSubject(context, report.Submission.Subject) ||
+                        context.Request.Query.ContainsKey("reportTypes") &&
+                        !context.Request.Query["reportTypes"].Contains(report.Submission.ReasonType, StringComparer.Ordinal))
+                    {
+                        continue;
+                    }
+                    Consider(
+                        context: context,
+                        caller: caller,
+                        items: selected,
+                        item: new(
+                            Id: report.Id,
+                            Time: report.CreatedAt,
+                            Payload: Encode(writer => WriteMutedReport(writer, report))));
+                }
+                if (page.Count < 100)
+                {
+                    break;
+                }
+                after = page[^1].Id;
+            }
+        }
         return Page(
             context: context,
             caller: caller,
@@ -273,14 +354,20 @@ internal sealed class OzoneModerationAdapter(
     }
 
     /// <summary>Projects native case workflows while keeping distinct CID-scoped cases intact.</summary>
-    private static async Task<byte[]> QueryStatusesAsync(
+    private async Task<byte[]> QueryStatusesAsync(
         HttpContext context,
         LabelAdministrationCaller caller,
         ILabelReportStore reports,
         ILabelModerationStore cases,
+        ILabelOzoneStore events,
         CancellationToken token)
     {
-        ValidateQuery(context, ["subject", "reviewState", "limit", "cursor", "sortDirection", "sortField"]);
+        ValidateQuery(context,
+            ["subject", "reviewState", "limit", "cursor", "sortDirection", "sortField", "includeMuted", "onlyMuted",
+            "subjectType", "collections", "includeAllUserRecords", "lastReviewedBy", "appealed"]);
+        StatusFilter filters = ReadStatusFilters(context);
+        bool includeMuted = context.Request.Query.ContainsKey("includeMuted") && bool.Parse(Query(context, "includeMuted"));
+        bool onlyMuted = context.Request.Query.ContainsKey("onlyMuted") && bool.Parse(Query(context, "onlyMuted"));
         string sort = Query(context, "sortField", "lastReportedAt");
         if (sort is not ("lastReportedAt" or "lastReviewedAt"))
         {
@@ -288,6 +375,7 @@ internal sealed class OzoneModerationAdapter(
         }
         List<OzonePageItem> selected = [];
         long after = 0;
+        int unresolved = 0;
         while (true)
         {
             IReadOnlyList<LabelModerationCase> page = Require(await cases.GetCasesAsync(
@@ -295,18 +383,34 @@ internal sealed class OzoneModerationAdapter(
                 afterId: after,
                 limit: 100,
                 cancellationToken: token).ConfigureAwait(false));
-            foreach (LabelModerationCase moderationCase in page)
+            foreach (LabelModerationCase candidate in page)
             {
-                if (context.Request.Query.ContainsKey("subject") && Query(context, "subject") != moderationCase.Subject.Subject ||
+                LabelModerationCase moderationCase = candidate;
+                StatusMatch match = await StatusMatchesAsync(filters, moderationCase, caller, cases, token).ConfigureAwait(false);
+                if (!match.Matches ||
                     context.Request.Query.ContainsKey("reviewState") && Query(context, "reviewState") != ReviewState(moderationCase))
+                {
+                    continue;
+                }
+                LabelMuteState mute = Require(await events.ReadMuteAsync(caller, moderationCase.Subject.Subject, token).ConfigureAwait(false));
+                if (!includeMuted && mute.MuteUntil is not null ||
+                    onlyMuted && mute.MuteUntil is null && mute.MuteReportingUntil is null)
                 {
                     continue;
                 }
                 if (moderationCase.Subject.RecordUri is not null && moderationCase.Subject.Cid is null)
                 {
-                    throw new OzoneOperationException(
-                        "NotImplemented",
-                        "Ozone subject-status references cannot represent URI-only record evidence; use report details or native case views.");
+                    moderationCase = await ResolveCaseAsync(
+                        caller: caller,
+                        moderationCase: moderationCase,
+                        events: events,
+                        token: token,
+                        retryRecentlyObserved: context.Request.Query.ContainsKey("subject")).ConfigureAwait(false);
+                    if (moderationCase.RecordResolution?.Cid is null)
+                    {
+                        unresolved++;
+                        continue;
+                    }
                 }
                 DateTimeOffset? lastReported = null;
                 long afterReport = 0;
@@ -325,24 +429,7 @@ internal sealed class OzoneModerationAdapter(
                     }
                     afterReport = reportPage[^1].Id;
                 }
-                DateTimeOffset? lastReviewed = null;
-                long afterEvent = 0;
-                while (true)
-                {
-                    IReadOnlyList<LabelCaseReceipt> history = Require(await cases.GetCaseHistoryAsync(
-                        caller: caller,
-                        caseId: moderationCase.Id,
-                        afterSequence: afterEvent,
-                        limit: 100,
-                        cancellationToken: token).ConfigureAwait(false));
-                    lastReviewed = history.Where(receipt => receipt.Action is not (LabelCaseAction.Open or LabelCaseAction.Assign))
-                        .Select(receipt => (DateTimeOffset?)receipt.CreatedAt).Append(lastReviewed).Max();
-                    if (history.Count < 100)
-                    {
-                        break;
-                    }
-                    afterEvent = history[^1].Sequence;
-                }
+                DateTimeOffset? lastReviewed = match.LastReviewedAt;
                 Consider(
                     context: context,
                     caller: caller,
@@ -354,6 +441,19 @@ internal sealed class OzoneModerationAdapter(
                     {
                         writer.WriteStartObject();
                         WriteStatusProperties(writer, moderationCase);
+                        writer.WriteBoolean("appealed", match.Appealed);
+                        if (match.LastReviewedBy is { } reviewer)
+                        {
+                            writer.WriteString("lastReviewedBy", reviewer);
+                        }
+                        if (mute.MuteUntil is { } muteUntil)
+                        {
+                            writer.WriteString("muteUntil", muteUntil);
+                        }
+                        if (mute.MuteReportingUntil is { } reportingUntil)
+                        {
+                            writer.WriteString("muteReportingUntil", reportingUntil);
+                        }
                         if (lastReported is { } reported)
                         {
                             writer.WriteString("lastReportedAt", reported);
@@ -375,11 +475,12 @@ internal sealed class OzoneModerationAdapter(
             context: context,
             caller: caller,
             name: "subjectStatuses",
-            items: selected);
+            items: selected,
+            unresolved: unresolved);
     }
 
     /// <summary>Combines durable report, native case and Ozone event identities without colliding or rewriting history.</summary>
-    private static async Task<byte[]> QueryEventsAsync(
+    private async Task<byte[]> QueryEventsAsync(
         HttpContext context,
         LabelAdministrationCaller caller,
         ILabelReportStore reports,
@@ -390,8 +491,24 @@ internal sealed class OzoneModerationAdapter(
         ValidateQuery(
             context,
             ["subject", "types", "createdBy", "createdAfter", "createdBefore", "hasComment",
-            "collections", "limit", "cursor", "sortDirection"]);
+            "collections", "limit", "cursor", "sortDirection", "includeAllUserRecords", "withStrike"]);
+        bool includeAllUserRecords = StatusBoolean(context, "includeAllUserRecords") ?? false;
+        bool withStrike = StatusBoolean(context, "withStrike") ?? false;
+        string? requestedSubject = context.Request.Query.ContainsKey("subject") ? Query(context, "subject") : null;
+        LabelReportSubject? requested = null;
+        if (requestedSubject is not null)
+        {
+            requested = requestedSubject.StartsWith("at://", StringComparison.Ordinal)
+                ? LabelReportSubject.Record(new AtUri(requestedSubject))
+                : LabelReportSubject.Account(new Did(requestedSubject));
+        }
+        DateTimeOffset? createdAfter = context.Request.Query.ContainsKey("createdAfter")
+            ? DateTimeOffset.Parse(Query(context, "createdAfter"), CultureInfo.InvariantCulture) : null;
+        DateTimeOffset? createdBefore = context.Request.Query.ContainsKey("createdBefore")
+            ? DateTimeOffset.Parse(Query(context, "createdBefore"), CultureInfo.InvariantCulture) : null;
+        bool? hasComment = StatusBoolean(context, "hasComment");
         List<OzonePageItem> selected = [];
+        int unresolved = 0;
         await VisitEventsAsync(
             caller: caller,
             reports: reports,
@@ -403,13 +520,18 @@ internal sealed class OzoneModerationAdapter(
             JsonElement root = document.RootElement;
             JsonElement subject = root.GetProperty("subject");
             string target = subject.TryGetProperty("uri", out JsonElement uri) ? uri.GetString()! : subject.GetProperty("did").GetString()!;
-            if (context.Request.Query.ContainsKey("subject") && Query(context, "subject") != target ||
+            if (requested is not null &&
+                    (includeAllUserRecords
+                        ? requested.Repository.Value != EventRepository(target)
+                        : requested.Subject != target) ||
+                withStrike && (!root.GetProperty("event").TryGetProperty("strikeCount", out JsonElement strike) ||
+                    strike.ValueKind == JsonValueKind.Null) ||
                 context.Request.Query.ContainsKey("types") &&
                     !context.Request.Query["types"].Contains(root.GetProperty("event").GetProperty("$type").GetString(), StringComparer.Ordinal) ||
                 context.Request.Query.ContainsKey("createdBy") && Query(context, "createdBy") != root.GetProperty("createdBy").GetString() ||
-                context.Request.Query.ContainsKey("createdAfter") && item.Time <= DateTimeOffset.Parse(Query(context, "createdAfter"), CultureInfo.InvariantCulture) ||
-                context.Request.Query.ContainsKey("createdBefore") && item.Time >= DateTimeOffset.Parse(Query(context, "createdBefore"), CultureInfo.InvariantCulture) ||
-                context.Request.Query.ContainsKey("hasComment") && bool.Parse(Query(context, "hasComment")) !=
+                createdAfter is { } after && item.Time <= after ||
+                createdBefore is { } before && item.Time >= before ||
+                hasComment is { } commented && commented !=
                     (root.GetProperty("event").TryGetProperty("comment", out JsonElement comment) && !string.IsNullOrEmpty(comment.GetString())))
             {
                 return;
@@ -423,9 +545,8 @@ internal sealed class OzoneModerationAdapter(
             if (subject.TryGetProperty("did", out JsonElement repository) &&
                 repository.GetString()!.StartsWith("at://", StringComparison.Ordinal))
             {
-                throw new OzoneOperationException(
-                    "NotImplemented",
-                    "Ozone basic event references cannot represent URI-only record evidence; use report details or native history.");
+                unresolved++;
+                return;
             }
             Consider(
                 context: context,
@@ -438,7 +559,8 @@ internal sealed class OzoneModerationAdapter(
             context: context,
             caller: caller,
             name: "events",
-            items: selected);
+            items: selected,
+            unresolved: unresolved);
     }
 
     /// <summary>Reads exact event identity and hydrates only its display subject.</summary>
@@ -694,6 +816,7 @@ internal sealed class OzoneModerationAdapter(
         string[] types = [];
         bool all = false;
         bool resolve = false;
+        bool escalate = false;
         bool automated = false;
         string? external = null;
         string? tool = null;
@@ -792,6 +915,7 @@ internal sealed class OzoneModerationAdapter(
         }
         string eventType = Text(eventValue, "$type");
         List<LabelCaseLabelAction> actions = [];
+        LabelMuteChange? mute = null;
         if (eventType == "tools.ozone.moderation.defs#modEventLabel")
         {
             ValidateObject(eventValue, ["$type", "createLabelVals", "negateLabelVals", "comment", "durationInHours"]);
@@ -811,6 +935,7 @@ internal sealed class OzoneModerationAdapter(
             }
             actions.AddRange(create.Select(value => new LabelCaseLabelAction(LabelOperationKind.Issue, value, expiry)));
             actions.AddRange(negate.Select(value => new LabelCaseLabelAction(LabelOperationKind.Negate, value)));
+            resolve = actions.Count > 0;
         }
         else if (eventType == "tools.ozone.moderation.defs#modEventAcknowledge")
         {
@@ -821,9 +946,47 @@ internal sealed class OzoneModerationAdapter(
             }
             resolve = true;
         }
+        else if (eventType == "tools.ozone.moderation.defs#modEventEscalate")
+        {
+            ValidateObject(eventValue, ["$type", "comment"]);
+            if (root.TryGetProperty("reportAction", out _))
+            {
+                throw new JsonException("Escalation cannot handle reports.");
+            }
+            escalate = true;
+        }
+        else if (eventType is "tools.ozone.moderation.defs#modEventMute" or
+            "tools.ozone.moderation.defs#modEventUnmute" or
+            "tools.ozone.moderation.defs#modEventMuteReporter" or
+            "tools.ozone.moderation.defs#modEventUnmuteReporter")
+        {
+            bool reporter = eventType.EndsWith("Reporter", StringComparison.Ordinal);
+            bool unmute = eventType.Contains("#modEventUnmute", StringComparison.Ordinal);
+            ValidateObject(eventValue, unmute ? ["$type", "comment"] : ["$type", "comment", "durationInHours"]);
+            if (reporter && subject.RecordUri is not null)
+            {
+                throw new JsonException("Reporter muting requires an account subject.");
+            }
+            int? muteHours = unmute ? null : 24;
+            if (!unmute && eventValue.TryGetProperty("durationInHours", out _))
+            {
+                muteHours = checked((int)Integer(eventValue, "durationInHours"));
+            }
+            mute = new(reporter ? LabelMuteKind.Reporter : LabelMuteKind.Subject, muteHours);
+            mute.Validate();
+            if (ids.Length != 0 || types.Length != 0 || all)
+            {
+                throw new JsonException("Mute events cannot close reports.");
+            }
+        }
         else if (!activity)
         {
-            throw new OzoneOperationException("NotImplemented", "Only label and acknowledgment events are supported.");
+            throw new OzoneOperationException("NotImplemented", "This moderation event type is not supported.");
+        }
+        if (method == "tools.ozone.moderation.emitEvent" && resolve && !root.TryGetProperty("reportAction", out _))
+        {
+            all = true;
+            reportNote = reason;
         }
         string operation = external is null
             ? "ozone:" + Guid.NewGuid().ToString("N")
@@ -855,7 +1018,12 @@ internal sealed class OzoneModerationAdapter(
             AllReports: all,
             ResolveSubject: resolve,
             Automated: automated || Boolean(root, "isAutomated"),
-            ReportNote: reportNote);
+            ReportNote: reportNote,
+            Mute: mute,
+            IncludeAssignedReports: method == "tools.ozone.moderation.emitEvent" && resolve,
+            EscalateSubject: escalate,
+            PreserveEscalatedReview: eventType == "tools.ozone.moderation.defs#modEventLabel" &&
+                !root.TryGetProperty("reportAction", out _));
         LabelOzoneEvent result;
         using IDisposable? admission = actions.Count > 0 ? host?.TryAdmitAdministrativeIssuance() : null;
         if (actions.Count > 0 && host is not null && admission is null)
@@ -922,7 +1090,7 @@ internal sealed class OzoneModerationAdapter(
     }
 
     /// <summary>Traverses immutable event sources with bounded pages, omitting duplicate Ozone-backed native notes.</summary>
-    private static async Task VisitEventsAsync(
+    private async Task VisitEventsAsync(
         LabelAdministrationCaller caller,
         ILabelReportStore reports,
         ILabelModerationStore cases,
@@ -930,6 +1098,7 @@ internal sealed class OzoneModerationAdapter(
         Action<OzonePageItem> visit,
         CancellationToken token)
     {
+        Dictionary<long, LabelModerationCase> resolvedCases = [];
         long after = 0;
         while (true)
         {
@@ -940,7 +1109,50 @@ internal sealed class OzoneModerationAdapter(
                 cancellationToken: token).ConfigureAwait(false));
             foreach (LabelModerationReport report in page)
             {
-                visit(new(EventId(report.Id, 0), report.CreatedAt, Encode(writer => WriteReportEvent(writer, report))));
+                if (report.Submission.Subject is { RecordUri: not null, Cid: null } &&
+                    report.Submission.RecordResolution?.Cid is null)
+                {
+                    if (!resolvedCases.TryGetValue(report.CaseId, out LabelModerationCase? resolved))
+                    {
+                        resolved = await ResolveCaseAsync(
+                            caller,
+                            Require(await cases.GetCaseAsync(caller, report.CaseId, token).ConfigureAwait(false)),
+                            events,
+                            token).ConfigureAwait(false);
+                        resolvedCases.Add(report.CaseId, resolved);
+                    }
+                    report.Submission.RecordResolution = resolved.RecordResolution;
+                }
+                visit(new(EventId(report.Id, 0), report.CreatedAt, Encode(writer => WriteReportEvent(
+                    writer: writer,
+                    id: report.Id,
+                    submission: report.Submission,
+                    reporter: report.ReportedBy,
+                    createdAt: report.CreatedAt))));
+            }
+            if (page.Count < 100)
+            {
+                break;
+            }
+            after = page[^1].Id;
+        }
+        after = 0;
+        while (true)
+        {
+            IReadOnlyList<LabelPendingModerationReport> page = Require(await events.ReadMutedReportsAsync(
+                caller: caller,
+                afterId: after,
+                limit: 100,
+                reportId: null,
+                cancellationToken: token).ConfigureAwait(false));
+            foreach (LabelPendingModerationReport report in page)
+            {
+                visit(new(EventId(report.Id, 0), report.CreatedAt, Encode(writer => WriteReportEvent(
+                    writer: writer,
+                    id: report.Id,
+                    submission: report.Submission,
+                    reporter: report.ReportedBy,
+                    createdAt: report.CreatedAt))));
             }
             if (page.Count < 100)
             {
@@ -958,6 +1170,9 @@ internal sealed class OzoneModerationAdapter(
                 cancellationToken: token).ConfigureAwait(false));
             foreach (LabelModerationCase moderationCase in page)
             {
+                LabelModerationCase resolved = resolvedCases.TryGetValue(moderationCase.Id, out LabelModerationCase? retained)
+                    ? retained : await ResolveCaseAsync(caller, moderationCase, events, token).ConfigureAwait(false);
+                resolvedCases[moderationCase.Id] = resolved;
                 long sequence = 0;
                 while (true)
                 {
@@ -969,7 +1184,7 @@ internal sealed class OzoneModerationAdapter(
                         cancellationToken: token).ConfigureAwait(false));
                     foreach (LabelCaseReceipt entry in history.Where(entry => !entry.IsOzoneEvent))
                     {
-                        visit(new(EventId(entry.Sequence, 1), entry.CreatedAt, Encode(writer => WriteCaseEvent(writer, entry))));
+                        visit(new(EventId(entry.Sequence, 1), entry.CreatedAt, Encode(writer => WriteCaseEvent(writer, entry, resolved.RecordResolution))));
                     }
                     if (history.Count < 100)
                     {
@@ -994,7 +1209,12 @@ internal sealed class OzoneModerationAdapter(
                 cancellationToken: token).ConfigureAwait(false));
             foreach (LabelOzoneEvent entry in page)
             {
-                visit(new(EventId(entry.Id, 2), entry.CreatedAt, Encode(writer => WriteEvent(writer, entry))));
+                LabelRecordResolution[] resolutions = [.. resolvedCases.Values
+                    .Where(item => item.Subject.Subject == entry.Subject && item.RecordResolution?.Cid is not null)
+                    .Select(item => item.RecordResolution!)
+                    .DistinctBy(item => item.Cid)];
+                LabelRecordResolution? resolution = resolutions.Length == 1 ? resolutions[0] : null;
+                visit(new(EventId(entry.Id, 2), entry.CreatedAt, Encode(writer => WriteEvent(writer, entry, resolution))));
             }
             if (page.Count < 100)
             {
@@ -1020,7 +1240,9 @@ internal sealed class OzoneModerationAdapter(
                 afterId: after,
                 limit: 100,
                 cancellationToken: token).ConfigureAwait(false));
-            foreach (LabelModerationCase moderationCase in page.Where(item => item.Subject == subject))
+            foreach (LabelModerationCase moderationCase in page.Where(item =>
+                item.Subject.Subject == subject.Subject &&
+                ProjectedSubject(item.Subject, item.RecordResolution).Cid == subject.Cid))
             {
                 latest = moderationCase;
             }
@@ -1052,11 +1274,46 @@ internal sealed class OzoneModerationAdapter(
         writer.WriteString("createdAt", report.CreatedAt);
         writer.WriteString("updatedAt", report.HandledAt ?? report.CreatedAt);
         writer.WriteBoolean("isMuted", false);
-        if (moderationCase.Subject.RecordUri is null || moderationCase.Subject.Cid is not null)
+        if (report.Submission.RecordResolution is { } resolution)
+        {
+            writer.WriteStartObject("recordResolution");
+            writer.WriteString("status", resolution.Status);
+            if (resolution.Cid is { } resolvedCid)
+            {
+                writer.WriteString("cid", resolvedCid);
+            }
+            writer.WriteString("observedAt", resolution.ObservedAt);
+            writer.WriteEndObject();
+        }
+        if (moderationCase.Subject.RecordUri is null || moderationCase.Subject.Cid is not null ||
+            moderationCase.RecordResolution?.Cid is not null)
         {
             writer.WritePropertyName("subjectStatus");
             WriteStatus(writer, moderationCase);
         }
+        writer.WriteEndObject();
+    }
+
+    /// <summary>Writes immutable muted submissions without inventing a case, assignment or review state.</summary>
+    private static void WriteMutedReport(Utf8JsonWriter writer, LabelPendingModerationReport report)
+    {
+        writer.WriteStartObject();
+        writer.WriteNumber("id", report.Id);
+        writer.WriteNumber("eventId", EventId(report.Id, 0));
+        writer.WriteString("status", "open");
+        writer.WritePropertyName("subject");
+        WriteSubjectView(writer, report.Submission.Subject);
+        writer.WriteString("reportType", report.Submission.ReasonType);
+        writer.WriteString("reportedBy", report.ReportedBy.Value);
+        writer.WritePropertyName("reporter");
+        WriteSubjectView(writer, LabelReportSubject.Account(report.ReportedBy));
+        if (report.Submission.Reason is { } reason)
+        {
+            writer.WriteString("comment", reason);
+        }
+        writer.WriteString("createdAt", report.CreatedAt);
+        writer.WriteString("updatedAt", report.CreatedAt);
+        writer.WriteBoolean("isMuted", true);
         writer.WriteEndObject();
     }
 
@@ -1100,7 +1357,8 @@ internal sealed class OzoneModerationAdapter(
     {
         writer.WriteNumber("id", moderationCase.Id);
         writer.WritePropertyName("subject");
-        WriteReference(writer, moderationCase.Subject);
+        WriteReference(writer, ProjectedSubject(moderationCase.Subject, moderationCase.RecordResolution));
+        WriteOriginalSubject(writer, moderationCase.Subject, moderationCase.RecordResolution);
         writer.WriteString("createdAt", moderationCase.CreatedAt);
         writer.WriteString("updatedAt", moderationCase.UpdatedAt);
         writer.WriteString("reviewState", ReviewState(moderationCase));
@@ -1131,7 +1389,7 @@ internal sealed class OzoneModerationAdapter(
     }
 
     /// <summary>Writes the immutable Ozone event that committed with its labels and selected report resolutions.</summary>
-    private static void WriteEvent(Utf8JsonWriter writer, LabelOzoneEvent entry)
+    private static void WriteEvent(Utf8JsonWriter writer, LabelOzoneEvent entry, LabelRecordResolution? resolution = null)
     {
         writer.WriteStartObject();
         writer.WriteNumber("id", EventId(entry.Id, 2));
@@ -1149,11 +1407,11 @@ internal sealed class OzoneModerationAdapter(
         }
         writer.WritePropertyName("subject");
         Cid? cid = entry.Cid is null ? null : new Cid(entry.Cid);
-        WriteReference(
-            writer,
-            entry.Subject.StartsWith("at://", StringComparison.Ordinal)
+        LabelReportSubject subject = entry.Subject.StartsWith("at://", StringComparison.Ordinal)
             ? LabelReportSubject.Record(new AtUri(entry.Subject), cid)
-            : LabelReportSubject.Account(new Did(entry.Subject)));
+            : LabelReportSubject.Account(new Did(entry.Subject));
+        WriteReference(writer, ProjectedSubject(subject, resolution));
+        WriteOriginalSubject(writer, subject, resolution);
         writer.WriteStartArray("subjectBlobCids");
         writer.WriteEndArray();
         writer.WriteString("createdBy", entry.Actor);
@@ -1168,38 +1426,46 @@ internal sealed class OzoneModerationAdapter(
     }
 
     /// <summary>Projects a retained native report as an immutable report event.</summary>
-    private static void WriteReportEvent(Utf8JsonWriter writer, LabelModerationReport report)
+    private static void WriteReportEvent(
+        Utf8JsonWriter writer,
+        long id,
+        LabelReportSubmission submission,
+        Did reporter,
+        DateTimeOffset createdAt)
     {
         writer.WriteStartObject();
-        writer.WriteNumber("id", EventId(report.Id, 0));
+        writer.WriteNumber("id", EventId(id, 0));
         writer.WriteStartObject("event");
         writer.WriteString("$type", "tools.ozone.moderation.defs#modEventReport");
-        writer.WriteString("reportType", report.Submission.ReasonType);
-        if (report.Submission.Reason is { } reason)
+        writer.WriteString("reportType", submission.ReasonType);
+        if (submission.Reason is { } reason)
         {
             writer.WriteString("comment", reason);
         }
         writer.WriteEndObject();
         writer.WritePropertyName("subject");
-        WriteReference(writer, report.Submission.Subject);
+        WriteReference(writer, ProjectedSubject(submission.Subject, submission.RecordResolution));
+        WriteOriginalSubject(writer, submission.Subject, submission.RecordResolution);
         writer.WriteStartArray("subjectBlobCids");
         writer.WriteEndArray();
-        writer.WriteString("createdBy", report.ReportedBy.Value);
-        writer.WriteString("createdAt", report.CreatedAt);
+        writer.WriteString("createdBy", reporter.Value);
+        writer.WriteString("createdAt", createdAt);
         writer.WriteEndObject();
     }
 
-    /// <summary>Projects native workflow audit as comments without misrepresenting a case decision as an Ozone action.</summary>
-    private static void WriteCaseEvent(Utf8JsonWriter writer, LabelCaseReceipt entry)
+    /// <summary>Projects native escalation as its matching Ozone event and other workflow audit as comments.</summary>
+    private static void WriteCaseEvent(Utf8JsonWriter writer, LabelCaseReceipt entry, LabelRecordResolution? resolution = null)
     {
         writer.WriteStartObject();
         writer.WriteNumber("id", EventId(entry.Sequence, 1));
         writer.WriteStartObject("event");
-        writer.WriteString("$type", "tools.ozone.moderation.defs#modEventComment");
+        writer.WriteString("$type", entry.Action == LabelCaseAction.Escalate
+            ? "tools.ozone.moderation.defs#modEventEscalate" : "tools.ozone.moderation.defs#modEventComment");
         writer.WriteString("comment", entry.Reason);
         writer.WriteEndObject();
         writer.WritePropertyName("subject");
-        WriteReference(writer, entry.Case.Subject);
+        WriteReference(writer, ProjectedSubject(entry.Case.Subject, resolution ?? entry.Case.RecordResolution));
+        WriteOriginalSubject(writer, entry.Case.Subject, resolution ?? entry.Case.RecordResolution);
         writer.WriteStartArray("subjectBlobCids");
         writer.WriteEndArray();
         writer.WriteString("createdBy", entry.Actor.Value);
@@ -1238,7 +1504,8 @@ internal sealed class OzoneModerationAdapter(
         HttpContext context,
         LabelAdministrationCaller caller,
         string name,
-        List<OzonePageItem> items) =>
+        List<OzonePageItem> items,
+        int unresolved = 0) =>
         Encode(writer =>
         {
             int limit = Limit(context);
@@ -1254,6 +1521,11 @@ internal sealed class OzoneModerationAdapter(
                 document.RootElement.WriteTo(writer);
             }
             writer.WriteEndArray();
+            if (unresolved > 0)
+            {
+                context.Response.Headers["Warning"] = "199 - \"Unresolved record references omitted; use native Xenon reports for complete results\"";
+                writer.WriteNumber("unresolvedRecordCount", unresolved);
+            }
             if (items.Count > limit)
             {
                 OzonePageItem last = items[limit - 1];
@@ -1307,13 +1579,21 @@ internal sealed class OzoneModerationAdapter(
         {
             return "closed";
         }
+        if (moderationCase.Status == LabelCaseStatus.Escalated)
+        {
+            return "escalated";
+        }
         return moderationCase.Assignee is null ? "open" : "assigned";
     }
 
-    /// <summary>Maps native resolved and pending review state without asserting escalation support.</summary>
+    /// <summary>Maps durable native review state to the corresponding Ozone subject state.</summary>
     private static string ReviewState(LabelModerationCase moderationCase) =>
-        moderationCase.Status == LabelCaseStatus.Resolved
-            ? "tools.ozone.moderation.defs#reviewClosed" : "tools.ozone.moderation.defs#reviewOpen";
+        moderationCase.Status switch
+        {
+            LabelCaseStatus.Resolved => "tools.ozone.moderation.defs#reviewClosed",
+            LabelCaseStatus.Escalated => "tools.ozone.moderation.defs#reviewEscalated",
+            _ => "tools.ozone.moderation.defs#reviewOpen"
+        };
 
     /// <summary>Allocates disjoint, deterministic safe-integer namespaces for the three immutable event sources.</summary>
     private static long EventId(long id, int kind)
@@ -1353,7 +1633,12 @@ internal sealed class OzoneModerationAdapter(
     {
         if (context.Request.QueryString.Value?.Length > 4096 ||
             context.Request.Query.Any(pair => !allowed.Contains(pair.Key, StringComparer.Ordinal) ||
-                (pair.Key is "types" or "reportTypes" or "collections" ? pair.Value.Count > 20 : pair.Value.Count != 1)))
+                (pair.Key switch
+                {
+                    "dids" or "uris" or "keys" => pair.Value.Count > 100,
+                    "types" or "reportTypes" or "collections" => pair.Value.Count > 20,
+                    _ => pair.Value.Count != 1
+                })))
         {
             throw new JsonException("The Ozone query parameters are unsupported or exceed their bounds.");
         }

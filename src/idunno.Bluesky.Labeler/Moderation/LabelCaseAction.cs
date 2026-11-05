@@ -21,5 +21,7 @@ public enum LabelCaseAction
     /// <summary>Updates a case through an atomic zero-action or multi-label decision, retaining unresolved appeals.</summary>
     Decide,
     /// <summary>Opens or links an exact-subject case and captures current labels for an internal moderator review.</summary>
-    OpenAppeal
+    OpenAppeal,
+    /// <summary>Flags an unresolved case for further moderator review without handling reports or changing assignment.</summary>
+    Escalate
 }

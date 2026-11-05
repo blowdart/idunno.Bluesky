@@ -1,0 +1,5 @@
+@model DateTimeOffset?
+@if (Model is { } expires)
+{
+    <small class="label-expiry"><partial name="_LabelClock" /> Time limited — expires <time datetime="@expires.ToString("O")">@expires.ToString("u")</time></small>
+}

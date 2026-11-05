@@ -24,23 +24,28 @@
                 }
             }
         };
-        const times = Array.from(section.querySelectorAll("time[datetime]"), time => ({
+        const readTimes = () => Array.from(section.querySelectorAll("time[datetime]"), time => ({
             element: time,
-            utc: time.textContent,
+            utc: time.dataset.utcText ?? time.textContent,
             date: new Date(time.dateTime),
             relative: time.hasAttribute("data-relative-time")
         })).filter(time => !Number.isNaN(time.date.getTime()));
-        times.filter(time => time.relative).forEach((time, index) => {
-            time.label = document.createElement("span");
-            time.tooltip = document.createElement("span");
-            time.tooltip.className = "identity-tooltip";
-            time.tooltip.id = `relative-time-${index}`;
-            time.tooltip.setAttribute("role", "tooltip");
-            time.element.classList.add("identity");
-            time.element.tabIndex = 0;
-            time.element.setAttribute("aria-describedby", time.tooltip.id);
-            time.element.replaceChildren(time.label, time.tooltip);
-        });
+        let times = readTimes();
+        const prepare = () => {
+            times.forEach(time => { time.element.dataset.utcText = time.utc; });
+            times.filter(time => time.relative).forEach((time, index) => {
+                time.label = document.createElement("span");
+                time.tooltip = document.createElement("span");
+                time.tooltip.className = "identity-tooltip";
+                time.tooltip.id = `relative-time-${index}`;
+                time.tooltip.setAttribute("role", "tooltip");
+                time.element.classList.add("identity");
+                time.element.tabIndex = 0;
+                time.element.setAttribute("aria-describedby", time.tooltip.id);
+                time.element.replaceChildren(time.label, time.tooltip);
+            });
+        };
+        prepare();
         if (controls) controls.hidden = false;
         button.hidden = false;
         const apply = local => {
@@ -59,13 +64,16 @@
             button.setAttribute("aria-label", action);
             button.title = `${action}.`;
         };
-        if (times.some(time => time.relative)) {
-            setInterval(() => {
-                times.filter(time => time.relative).forEach(time => {
-                    time.label.textContent = relativeText(time.date);
-                });
-            }, 60000);
-        }
+        setInterval(() => {
+            times.filter(time => time.relative).forEach(time => {
+                time.label.textContent = relativeText(time.date);
+            });
+        }, 60000);
+        document.addEventListener("xenon:queue-updated", () => {
+            times = readTimes();
+            prepare();
+            apply(button.getAttribute("aria-pressed") === "true");
+        });
         const storageError = () => {
             if (status) status.textContent = "Your browser could not remember this setting. The change applies only to this page.";
         };

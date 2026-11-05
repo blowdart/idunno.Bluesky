@@ -1,0 +1,45 @@
+@page
+@model PreferencesModel
+@{
+    ViewData["Title"] = "Preferences";
+}
+<h1>Preferences</h1>
+@if (Model.CanManagePolicyEmail)
+{
+    <section class="panel">
+        <h2>Administrator email notifications</h2>
+        <p>Register an address for policy verification failures, published policies, team changes, and CLI access changes. Notifications are sent even if you are the only active administrator. Leave the field blank to clear your address.</p>
+        <form method="post" asp-area="Xenon" asp-page="/Team/Index" asp-page-handler="NotificationEmail">
+            <input type="hidden" name="operationId" value="@Guid.NewGuid().ToString("N")" />
+            <input type="hidden" name="returnToPreferences" value="true" />
+            <label class="field" for="notification-email">Your alert email address
+                <input id="notification-email" name="notificationEmail" type="email" value="@Model.CurrentNotificationEmail" maxlength="254" autocomplete="email" />
+            </label>
+            <p class="form-actions"><button type="submit">@(Model.CurrentNotificationEmail is null ? "Save alert email" : "Update email")</button></p>
+        </form>
+        <form method="post" asp-area="Xenon" asp-page="/Team/Index" asp-page-handler="TestEmail">
+            <input type="hidden" name="returnToPreferences" value="true" />
+            <button type="submit">Test my email</button>
+        </form>
+        <p class="muted">Tests use your saved address, not unsaved changes above. Allow 30 seconds between tests.</p>
+    </section>
+}
+<h2>Graphic media display</h2>
+<p>Choose how images and videos with these Bluesky moderation labels appear. Self-labels use the same filters. Other content warnings remain blurred.</p>
+<p>These preferences are private to your account on this labeler and follow you across browsers. They do not change labels, reports or other moderators' preferences.</p>
+<form method="post">
+    <div asp-validation-summary="All" role="alert"></div>
+    <div class="media-preferences">
+        @foreach (string label in PreferencesModel.Labels)
+        {
+            LabelMediaFilter filters = Model.Preferences.ForLabel(label);
+            <fieldset>
+                <legend><code>@label</code></legend>
+                <label><input type="checkbox" name="blur" value="@label" checked="@filters.HasFlag(LabelMediaFilter.Blur)" /> Blur</label>
+                <label><input type="checkbox" name="grayscale" value="@label" checked="@filters.HasFlag(LabelMediaFilter.Grayscale)" /> Grayscale</label>
+                <label><input type="checkbox" name="translucent" value="@label" checked="@filters.HasFlag(LabelMediaFilter.Translucent)" /> Translucent</label>
+            </fieldset>
+        }
+    </div>
+    <button type="submit">Save preferences</button>
+</form>

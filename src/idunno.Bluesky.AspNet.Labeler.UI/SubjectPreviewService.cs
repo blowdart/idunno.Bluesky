@@ -30,6 +30,9 @@ internal sealed partial class SubjectPreviewService(
     /// <summary>Gets the fixed public read-only AppView origin; report data never selects the service.</summary>
     private static readonly Uri s_appView = new("https://public.api.bsky.app");
 
+    /// <summary>Formats bounded JSON node content without reflection-based model serialization.</summary>
+    private static readonly JsonSerializerOptions s_recordJsonOptions = new() { WriteIndented = true };
+
     /// <summary>Reads the current version of an authorized canonical record through the bounded, SSRF-protected client.</summary>
     internal async Task<(string? Cid, string? Error)> LookupRecordCidAsync(string target, CancellationToken cancellationToken)
     {
@@ -79,7 +82,7 @@ internal sealed partial class SubjectPreviewService(
     }
 
     /// <summary>Loads current public content after the caller has been authorized to inspect the report or case.</summary>
-    internal async Task<SubjectPreview> LoadAsync(JsonElement subject, CancellationToken cancellationToken)
+    internal async Task<SubjectPreview> LoadAsync(JsonElement subject, CancellationToken cancellationToken, bool inspectRecord = false)
     {
         string? target = subject.TryGetProperty("uri", out JsonElement uriValue) ? uriValue.GetString() : null;
         AtUri? uri = null;
@@ -103,7 +106,7 @@ internal sealed partial class SubjectPreviewService(
                 "app.bsky.graph.starterpack" when uri.RecordKey is not null => "Starter pack",
                 _ => "Record"
             };
-            if (kind == "Record")
+            if (kind == "Record" && !inspectRecord)
             {
                 return new("Record", null, Error: "Public previews are available only for Bluesky posts, profiles, lists and starter packs.");
             }
@@ -237,7 +240,7 @@ internal sealed partial class SubjectPreviewService(
 
             // AppView metadata is supplementary: it must never gate repository content.
             ProfileViewDetailed? identity = await ReadIdentityAsync(client, did, cancellationToken).ConfigureAwait(false);
-            (string[] warnings, bool moderationUnavailable) = await ReadMediaWarningsAsync(
+            (string[] warnings, bool moderationUnavailable, string[] mediaLabels, string[] currentLabels, string[] accountLabels) = await ReadMediaWarningsAsync(
                 client: client,
                 did: did,
                 recordUri: recordUri,
@@ -268,10 +271,15 @@ internal sealed partial class SubjectPreviewService(
                 Following: identity?.FollowsCount,
                 Posts: identity?.PostsCount,
                 MediaWarnings: warnings,
+                MediaLabels: mediaLabels,
                 ModerationUnavailable: moderationUnavailable,
                 VideoWidth: videoWidth,
                 VideoHeight: videoHeight,
-                MatchesReportedVersion: reportedCid is not null && reportedCid == record.Result.Cid.ToString());
+                MatchesReportedVersion: reportedCid is not null && reportedCid == record.Result.Cid.ToString(),
+                RecordJson: inspectRecord ? value.ToJsonString(s_recordJsonOptions) : null,
+                Standalone: inspectRecord,
+                CurrentLabels: inspectRecord ? currentLabels : null,
+                AccountLabels: inspectRecord ? accountLabels : null);
         }
         catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
         {

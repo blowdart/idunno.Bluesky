@@ -55,7 +55,7 @@
             ? "Add an email address for administrator notifications."
             : "Update your email address for administrator notifications.")
             Notifications go only to active administrators with a registered address. Leave the field blank to clear your address.</p>
-        <p>When email is enabled on the server, notifications cover published policies, team membership and role changes, and remote or local CLI access changes. These change notifications are not sent when only one administrator is active. Automatic public policy check failure alerts are still sent, even to a single administrator. No emails are sent to moderators.</p>
+        <p>When email is enabled on the server, notifications cover published policies, team membership and role changes, remote or local CLI access changes, and automatic public policy check failures. Active administrators with a registered notification email receive these notifications even when only one administrator is active. No emails are sent to moderators.</p>
         <form method="post" asp-page-handler="NotificationEmail">
             <input type="hidden" name="operationId" value="@(ViewData["OperationId"] ?? Guid.NewGuid().ToString("N"))" />
             <label class="field" for="notification-email">Your alert email address
@@ -63,6 +63,10 @@
             </label>
             <p class="form-actions"><button type="submit">@(Model.CurrentNotificationEmail is null ? "Save alert email" : "Update email")</button></p>
         </form>
+        <form method="post" asp-page-handler="TestEmail">
+            <button type="submit">Test my email</button>
+        </form>
+        <p class="muted">Tests use your saved address, not unsaved changes above. Allow 30 seconds between tests.</p>
     </section>
 }
 <form method="get" class="panel team-search">

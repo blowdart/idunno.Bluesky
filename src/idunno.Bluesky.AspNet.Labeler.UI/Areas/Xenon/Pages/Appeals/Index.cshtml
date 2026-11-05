@@ -14,6 +14,7 @@
     {
         (LabelCaseWorkflow.Unresolved, "Unresolved"),
         (LabelCaseWorkflow.InReview, "In review"),
+        (LabelCaseWorkflow.Escalated, "Escalated"),
         (LabelCaseWorkflow.Resolved, "Resolved"),
         (LabelCaseWorkflow.All, "All")
     })
@@ -29,6 +30,7 @@
         @foreach ((LabelCaseWorkflow queue, string title) in new[]
         {
             (LabelCaseWorkflow.Unresolved, "Unresolved"), (LabelCaseWorkflow.InReview, "In review"),
+            (LabelCaseWorkflow.Escalated, "Escalated"),
             (LabelCaseWorkflow.Resolved, "Resolved"), (LabelCaseWorkflow.All, "All")
         })
         {
@@ -52,6 +54,8 @@
     </select>
     <button type="submit" aria-label="Filter appeals" title="Filter appeals"><span class="fa-icon fa-filter" aria-hidden="true"></span></button>
 </form>
+<p data-queue-update-status role="status" hidden></p>
+<div data-live-queue>
 @if (appeals is { ValueKind: JsonValueKind.Array } list && list.GetArrayLength() > 0)
 {
     <section class="panel">
@@ -75,6 +79,11 @@
                         <td>@await Html.PartialAsync("_Identity", new IdentityDisplayModel(appeal.GetProperty("subject").TryGetProperty("uri", out JsonElement subjectUri) ? subjectUri.GetString() : appeal.GetProperty("subject").GetProperty("did").GetString(), Subject: true))</td>
                         <td>@await Html.PartialAsync("_Identity", new IdentityDisplayModel(appeal.GetProperty("initiator").GetString()))</td>
                         <td>@await Html.PartialAsync("_WorkflowStatus", appeal.GetProperty("status").GetString())
+                            @if (Model.Data.GetProperty("moderation").TryGetProperty("escalatedCaseIds", out JsonElement escalatedIds) &&
+                                escalatedIds.EnumerateArray().Any(id => id.GetInt64() == appeal.GetProperty("caseId").GetInt64()))
+                            {
+                                @await Html.PartialAsync("_WorkflowStatus", "Escalated")
+                            }
                             @if (appeal.TryGetProperty("resolutionReason", out JsonElement resolution))
                             {
                                 <p>@resolution.GetString()</p>
@@ -107,3 +116,4 @@ else if (ViewData["Error"] is null)
 {
     <p class="panel">No appeals match this filter.</p>
 }
+</div>

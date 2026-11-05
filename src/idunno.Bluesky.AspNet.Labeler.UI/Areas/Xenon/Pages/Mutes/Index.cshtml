@@ -1,0 +1,98 @@
+@page
+@model idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Mutes.IndexModel
+@{
+    ViewData["Title"] = "Mutes";
+    ViewData["WideLayout"] = true;
+}
+<h1><span class="fa-icon fa-circle-pause" aria-hidden="true"></span> Mutes</h1>
+<p>Active mutes are shared with all moderators, including changes made in Ozone. The actor shows who last set each mute.</p>
+<p>Subject mutes hide matching accounts or content from normal review queues. Reporter mutes hide reports from that account. Muting does not delete reports or change labels.</p>
+@if (Model.CanChange)
+{
+    <section class="panel" aria-labelledby="create-mute-heading">
+        <h2 id="create-mute-heading">Mute a subject or reporter</h2>
+        <form method="post" asp-page-handler="Mute">
+            <input type="hidden" name="operationId" value="@Model.CreateOperationId" />
+            <label class="field" for="mute-subject">Account DID or complete content AT URI
+                <input id="mute-subject" name="subject" value="@Model.Subject" maxlength="2048" required />
+            </label>
+            <label class="field" for="mute-kind">Kind
+                <select id="mute-kind" name="kind">
+                    <option value="Subject" selected="@(Model.Kind == LabelMuteKind.Subject)">Subject</option>
+                    <option value="Reporter" selected="@(Model.Kind == LabelMuteKind.Reporter)">Reporter (account DID only)</option>
+                </select>
+            </label>
+            <label class="field" for="mute-duration">Duration
+                <select id="mute-duration" name="durationHours">
+                    @foreach (int hours in MuteDurations.Hours)
+                    {
+                        <option value="@hours" selected="@(Model.DurationHours == hours)">@hours hours</option>
+                    }
+                </select>
+            </label>
+            <p>Mutes always expire. Content mutes apply across all versions of that AT URI. Creating a mute replaces any current mute for the same target and kind.</p>
+            <label class="field" for="mute-reason">Reason (optional)<textarea id="mute-reason" name="reason" maxlength="4096">@Model.Reason</textarea></label>
+            <p>If left blank, the audit history records &ldquo;No reason provided.&rdquo;</p>
+            <label><input type="checkbox" name="confirmed" value="true" required /> Mute this target for the selected duration, replacing any existing mute of this kind.</label>
+            <div class="form-actions"><button type="submit">Confirm mute</button></div>
+        </form>
+    </section>
+}
+@if (Model.Loaded)
+{
+    <section class="panel">
+        <h2>All active shared mutes</h2>
+        @if (Model.Mutes.Length == 0)
+        {
+            <p>No active mutes on this page.</p>
+        }
+        else
+        {
+            <table>
+                <caption>Active subject and reporter mutes</caption>
+                <thead><tr><th scope="col">Target</th><th scope="col">Kind</th><th scope="col">Expires (UTC)</th><th scope="col">Actor</th><th scope="col">Created (UTC)</th>@if (Model.CanChange) { <th scope="col">Unmute</th> }</tr></thead>
+                <tbody>
+                @foreach (LabelMuteEntry mute in Model.Mutes)
+                {
+                    bool retry = Model.RetryUnmuteEventId == mute.EventId;
+                    <tr>
+                        <td>@await Html.PartialAsync("_Identity", new IdentityDisplayModel(mute.Subject, Subject: true))</td>
+                        <td>@mute.Kind</td>
+                        <td><time datetime="@mute.Until.ToString("O")">@mute.Until.ToUniversalTime().ToString("u")</time></td>
+                        <td>@await Html.PartialAsync("_Identity", new IdentityDisplayModel(mute.Actor))</td>
+                        <td><time datetime="@mute.CreatedAt.ToString("O")">@mute.CreatedAt.ToUniversalTime().ToString("u")</time></td>
+                        @if (Model.CanChange)
+                        {
+                            <td>
+                                <details>
+                                    <summary>Unmute @mute.Kind.ToString().ToLowerInvariant()</summary>
+                                    <form method="post" asp-page-handler="Unmute">
+                                        <input type="hidden" name="subject" value="@mute.Subject" />
+                                        <input type="hidden" name="kind" value="@mute.Kind" />
+                                        <input type="hidden" name="expectedMuteEventId" value="@mute.EventId" />
+                                        <input type="hidden" name="operationId" value="@(retry ? Model.RetryUnmuteOperationId : Guid.NewGuid().ToString("N"))" />
+                                        <label class="field">Reason (optional)<input name="reason" maxlength="4096" value="@(retry ? Model.RetryUnmuteReason : null)" /></label>
+                                        <p>If left blank, the audit history records &ldquo;No reason provided.&rdquo;</p>
+                                        <label><input type="checkbox" name="confirmed" value="true" required /> Unmute this @mute.Kind.ToString().ToLowerInvariant(): <code>@mute.Subject</code>.</label>
+                                        <div class="form-actions"><button type="submit">Confirm unmute</button></div>
+                                    </form>
+                                </details>
+                            </td>
+                        }
+                    </tr>
+                }
+                </tbody>
+            </table>
+        }
+        <nav aria-label="Mute pagination">
+            @if (Model.AfterMuteEventId > 0)
+            {
+                <a asp-page="/Mutes/Index">First page</a>
+            }
+            @if (Model.Mutes.Length == 16)
+            {
+                <a asp-page="/Mutes/Index" asp-route-afterMuteEventId="@Model.Mutes[^1].EventId">Next page</a>
+            }
+        </nav>
+    </section>
+}

@@ -95,26 +95,34 @@ internal abstract partial class RelationalLabelStore
                         "New policy workflows are closed because the labeler is retiring.");
                 }
 
-                if (await ReadPolicyGateAsync(connection, transaction, cancellationToken).ConfigureAwait(false) is null)
+                ModerationPolicyGate? gate = await ReadPolicyGateAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+                if (gate is null)
                 {
                     return CaseFailure<LabelPolicyDefinition>(LabelServiceErrorCode.PolicyUnavailable, "Moderation is not enabled.");
                 }
 
                 ModerationPolicyData? existing = await ReadPolicyDraftAsync(connection, transaction, draft.Version, cancellationToken).ConfigureAwait(false);
-                if (await HasPolicyVersionActionAsync(
-                    connection: connection,
-                    transaction: transaction,
-                    version: draft.Version,
-                    action: "deleteDraft",
-                    token: cancellationToken).ConfigureAwait(false))
-                {
-                    return CaseFailure<LabelPolicyDefinition>(LabelServiceErrorCode.IdempotencyConflict, "This policy ID belonged to a deleted version and cannot be reused. Choose a new ID.");
-                }
                 byte[] payload = JsonSerializer.SerializeToUtf8Bytes(draft, ModerationJsonContext.Default.ModerationPolicyData);
                 if (existing is not null && !JsonSerializer.SerializeToUtf8Bytes(
                     existing, ModerationJsonContext.Default.ModerationPolicyData).AsSpan().SequenceEqual(payload))
                 {
-                    return CaseFailure<LabelPolicyDefinition>(LabelServiceErrorCode.IdempotencyConflict, "A saved policy version cannot be changed. Save your changes under a new policy ID.");
+                    if (gate.Policy?.Version == draft.Version || await HasPolicyVersionActionAsync(
+                        connection: connection,
+                        transaction: transaction,
+                        version: draft.Version,
+                        action: "publication",
+                        token: cancellationToken).ConfigureAwait(false))
+                    {
+                        return CaseFailure<LabelPolicyDefinition>(LabelServiceErrorCode.IdempotencyConflict, "A policy selected for publication cannot be changed. Save a new draft with a different policy ID.");
+                    }
+
+                    await ExecuteAsync(
+                        connection: connection,
+                        transaction: transaction,
+                        sql: "UPDATE label_policy_versions SET payload=@payload WHERE version_hash=@hash",
+                        token: cancellationToken,
+                        ("@payload", payload),
+                        ("@hash", OperationHash(draft.Version))).ConfigureAwait(false);
                 }
 
                 if (existing is null)
@@ -586,14 +594,30 @@ internal abstract partial class RelationalLabelStore
         DbTransaction transaction,
         string version,
         string action,
-        CancellationToken token) =>
-        Integer(await ScalarAsync(
+        CancellationToken token)
+    {
+        if (action == "deleteDraft")
+        {
+            object? latest = await ScalarAsync(
+                connection: connection,
+                transaction: transaction,
+                sql: $"SELECT {TableJsonField("Action")} FROM label_policy_events t " +
+                    "JOIN label_policy_history h ON h.operation_hash=t.operation_hash " +
+                    $"WHERE {TableJsonField("Version")}=@version AND {TableJsonField("Action")} IN ('draft','deleteDraft') " +
+                    "ORDER BY h.seq DESC LIMIT 1",
+                token: token,
+                ("@version", version)).ConfigureAwait(false);
+            return latest is string value && value == "deleteDraft";
+        }
+
+        return Integer(await ScalarAsync(
             connection: connection,
             transaction: transaction,
             sql: $"SELECT COUNT(*) FROM label_policy_events t WHERE {TableJsonField("Version")}=@version AND {TableJsonField("Action")}=@action",
             token: token,
             ("@version", version),
             ("@action", action)).ConfigureAwait(false)) > 0;
+    }
 
     /// <summary>Atomically fences deletion against publication and retains a durable same-intent deletion receipt.</summary>
     Task<LabelServiceResult<LabelPolicyDefinition>> ILabelTableStore.DeletePolicyDraftAsync(

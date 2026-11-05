@@ -78,7 +78,7 @@ public class LabelPolicyStoreTests
     [InlineData("sqlite")]
     [InlineData("postgresql")]
     [InlineData("mysql")]
-    public async Task DraftDeletionRetainsHistoryAndPreventsLoadingPublicationAndVersionReuse(string engine)
+    public async Task DraftDeletionRetainsHistoryAndAllowsReusingUnpublishedNames(string engine)
     {
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
@@ -106,13 +106,6 @@ public class LabelPolicyStoreTests
             cancellationToken: token));
         Assert.False((await policies.GetPolicyVersionAsync(administrator, "v1", token)).Succeeded);
         Assert.Empty(Success(await policies.GetPolicyVersionsAsync(administrator, cancellationToken: token)));
-        Assert.Equal(LabelServiceErrorCode.IdempotencyConflict,
-            (await policies.SavePolicyAsync(
-                caller: administrator,
-                operationId: "recreate",
-                policy: Policy(),
-                reason: "Do not recreate.",
-                cancellationToken: token)).Error!.Code);
         Assert.False((await policies.BeginPolicyPublicationAsync(
             caller: administrator,
             operationId: "publish-deleted",
@@ -126,6 +119,27 @@ public class LabelPolicyStoreTests
         LabelPolicyHistoryEntry deletion = Assert.Single(history, entry => entry.Action == LabelPolicyHistoryAction.DraftDeletion);
         Assert.Equal("v1", deletion.Policy!.Issuance.Version);
         Assert.Equal("v1", Success(await policies.GetPolicyOperationAsync(administrator, "draft", token)).Policy!.Issuance.Version);
+        LabelPolicyDefinition recreated = Policy(rules: "Recreated draft.");
+        Success(await policies.SavePolicyAsync(administrator, "recreate", recreated, "Reuse unpublished name.", token));
+        // Retrying an old deletion recovers its receipt without deleting the newly saved draft.
+        Success(await drafts.DeletePolicyDraftAsync(administrator, "delete", "v1", "Delete unused draft.", token));
+        Assert.Equal(recreated.Rules, Success(await policies.GetPolicyVersionAsync(administrator, "v1", token)).Rules);
+        Assert.Single(Success(await policies.GetPolicyVersionsAsync(administrator, cancellationToken: token)));
+        LabelPolicyState recreatedPublication = Success(await policies.BeginPolicyPublicationAsync(
+            caller: administrator,
+            operationId: "publish-recreated",
+            version: "v1",
+            expectedRevision: initial.Revision,
+            previousCid: null,
+            reason: "Publish recreated draft.",
+            cancellationToken: token));
+        Assert.Equal(recreated.Rules, recreatedPublication.Policy!.Rules);
+        LabelPolicyState abandoned = Success(await policies.AbandonPolicyPublicationAsync(
+            caller: administrator,
+            operationId: "abandon-recreated",
+            expectedRevision: recreatedPublication.Revision,
+            reason: "Continue test with next policy.",
+            cancellationToken: token));
 
         using JsonDocument declaration = JsonDocument.Parse(Declaration);
         LabelPolicyDefinition next = new(
@@ -144,7 +158,7 @@ public class LabelPolicyStoreTests
             caller: administrator,
             operationId: "publish-next",
             version: "v2",
-            expectedRevision: initial.Revision,
+            expectedRevision: abandoned.Revision,
             previousCid: null,
             reason: "Publish next.",
             cancellationToken: token));
@@ -264,7 +278,7 @@ public class LabelPolicyStoreTests
     [InlineData("sqlite")]
     [InlineData("postgresql")]
     [InlineData("mysql")]
-    public async Task DraftsAreImmutableAndPublicationRequiresIndependentMatchingObservation(string engine)
+    public async Task DraftsAreEditableUntilPublicationRequiresIndependentMatchingObservation(string engine)
     {
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
@@ -298,14 +312,19 @@ public class LabelPolicyStoreTests
         LabelPolicyDefinition draft = Policy();
         Assert.Equal(draft.DeclarationJson, Success(await store.SavePolicyAsync(administrator, "draft", draft, "Reviewed rules.", token)).DeclarationJson);
         Assert.Equal(initial.Revision, (await store.ReadPolicyStateAsync(token))!.Revision);
-        Assert.Equal(LabelServiceErrorCode.IdempotencyConflict,
-            (await store.SavePolicyAsync(administrator, "changed", Policy(rules: "Different rules."), "Reviewed rules.", token)).Error!.Code);
+        Assert.Equal("Different rules.", Success(await store.SavePolicyAsync(
+            administrator, "changed", Policy(rules: "Different rules."), "Reviewed rules.", token)).Rules);
+        Assert.Equal(draft.Rules, Success(await store.SavePolicyAsync(administrator, "draft", draft, "Reviewed rules.", token)).Rules);
+        Assert.Equal("Different rules.", Success(await store.GetPolicyVersionAsync(administrator, "v1", token)).Rules);
+        Success(await store.SavePolicyAsync(administrator, "restore-draft", draft, "Restore reviewed rules.", token));
         LabelPolicyState publishing = Success(await store.BeginPolicyPublicationAsync(
             caller: administrator, operationId: "publish", version: "v1", expectedRevision: initial.Revision,
             previousCid: null, reason: "Publish reviewed policy.", cancellationToken: token));
         Assert.Equal(LabelPolicyPhase.Publishing, publishing.Phase);
         Assert.Equal("publish", publishing.PublicationOperationId);
         Assert.Null(publishing.VerifiedUntil);
+        Assert.Equal(LabelServiceErrorCode.IdempotencyConflict,
+            (await store.SavePolicyAsync(administrator, "change-selected", Policy(rules: "Different rules."), "Cannot edit publication.", token)).Error!.Code);
         using JsonDocument old = JsonDocument.Parse(Declaration.Replace("\"spam\"", "\"other\"", StringComparison.Ordinal));
         LabelPolicyState pending = Success(await store.ObservePolicyAsync(
             expectedRevision: publishing.Revision, verificationStartedAt: publishing.DatabaseTime,

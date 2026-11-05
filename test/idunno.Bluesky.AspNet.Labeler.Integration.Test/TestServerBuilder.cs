@@ -73,7 +73,8 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
         bool moderation = false,
         bool xenonUi = false,
         bool controlDatabaseTime = false,
-        bool ozoneAdministration = false)
+        bool ozoneAdministration = false,
+        string[]? ozoneAllowedOrigins = null)
     {
         TestServerBuilder fixture = new(database);
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
@@ -185,7 +186,14 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
         }
         if (ozoneAdministration)
         {
-            fixture._app.MapOzoneCompatibility();
+            if (ozoneAllowedOrigins is null)
+            {
+                fixture._app.MapOzoneCompatibility();
+            }
+            else
+            {
+                fixture._app.MapOzoneCompatibility(ozoneAllowedOrigins);
+            }
         }
         if (xenonUi)
         {

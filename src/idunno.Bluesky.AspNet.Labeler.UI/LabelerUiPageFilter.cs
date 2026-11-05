@@ -42,9 +42,28 @@ internal sealed class LabelerUiPageFilter(LabelerUiAdministration administration
         }
 
         context.HttpContext.Items["Xenon.CurrentRole"] = member.Role;
+        idunno.Bluesky.Labeler.Administration.LabelTeamMember[] team =
+            [.. response.Members.Select(candidate => new idunno.Bluesky.Labeler.Administration.LabelTeamMember(
+                Did: new(candidate.Did),
+                Role: candidate.Role,
+                Active: candidate.Active,
+                Removed: candidate.Removed))];
+        OzoneTeamPresence presence = context.HttpContext.RequestServices.GetRequiredService<OzoneTeamPresence>();
+        presence.Observe(new(member.Did), team);
+        OzoneOnlineMember[] online = presence.List(team, int.MaxValue);
+        bool showPresence = team.Count(candidate => candidate.Active && !candidate.Removed) > 1;
+        context.HttpContext.Items["Xenon.OnlineMembers"] = online;
+        context.HttpContext.Items["Xenon.ShowPresence"] = showPresence;
         PageModel page = (PageModel)context.HandlerInstance;
+        if (page is Areas.Xenon.Pages.Cases.IndexModel or
+            Areas.Xenon.Pages.Reports.IndexModel or Areas.Xenon.Pages.Appeals.IndexModel)
+        {
+            context.HttpContext.Response.Headers.CacheControl = "private, no-store";
+        }
         bool countsRequest = page is Areas.Xenon.Pages.IndexModel &&
-            context.HandlerMethod?.MethodInfo.Name == nameof(Areas.Xenon.Pages.IndexModel.OnGetCountsAsync);
+            context.HandlerMethod?.MethodInfo.Name is
+                nameof(Areas.Xenon.Pages.IndexModel.OnGetCountsAsync) or
+                nameof(Areas.Xenon.Pages.IndexModel.OnGetOnlineAsync);
         if (countsRequest)
         {
             context.HttpContext.Response.Headers.CacheControl = "private, no-store";
@@ -52,6 +71,8 @@ internal sealed class LabelerUiPageFilter(LabelerUiAdministration administration
             return;
         }
         page.ViewData["CurrentRole"] = member.Role;
+        page.ViewData["OnlineMembers"] = online;
+        page.ViewData["ShowPresence"] = showPresence;
         page.ViewData["AvailableModerators"] = response.Members
             .Where(candidate => candidate.Active && !candidate.Removed && candidate.Role >= idunno.Bluesky.Labeler.Administration.LabelTeamRole.Moderator)
             .ToArray();

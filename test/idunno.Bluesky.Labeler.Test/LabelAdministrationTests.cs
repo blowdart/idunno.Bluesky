@@ -24,6 +24,51 @@ public class LabelAdministrationTests
     [InlineData("sqlite")]
     [InlineData("postgresql")]
     [InlineData("mysql")]
+    public async Task TeamReadsDoNotAppendAuditButRevokedAccessIsStillAudited(string engine)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        ILabelAdministrationStore store = (ILabelAdministrationStore)fixture.Store;
+        Assert.True((await store.BootstrapAsync(s_administrator, "uid:0", "bootstrap", token)).Succeeded);
+        LabelAdministrationCaller owner = (await store.AuthenticateLocalAsync("uid:0", token)).Result!;
+        Assert.True((await store.ChangeTeamAsync(
+            caller: owner,
+            change: new(
+                operationId: "enroll",
+                action: LabelTeamAction.Enroll,
+                target: s_member,
+                reason: "Enroll a reader.",
+                role: LabelTeamRole.Viewer),
+            cancellationToken: token)).Succeeded);
+        LabelAdministrationCaller member = (await store.AuthenticateBrowserAsync(s_member, token)).Result!;
+        IReadOnlyList<LabelAdministrationReceipt> before = (await store.GetAdministrationAuditAsync(owner, cancellationToken: token)).Result!;
+        for (int index = 0; index < 5; index++)
+        {
+            Assert.True((await store.GetTeamAsync(owner, token)).Succeeded);
+            Assert.True((await store.GetTeamAsync(member, token)).Succeeded);
+        }
+        Assert.Equal(before, (await store.GetAdministrationAuditAsync(owner, cancellationToken: token)).Result!);
+        Assert.True((await store.ChangeTeamAsync(
+            caller: owner,
+            change: new(
+                operationId: "suspend",
+                action: LabelTeamAction.Suspend,
+                target: s_member,
+                reason: "Revoke reader access."),
+            cancellationToken: token)).Succeeded);
+        ILabelAdministrationStore restarted = (ILabelAdministrationStore)fixture.NewStore();
+        Assert.False((await restarted.GetTeamAsync(member, token)).Succeeded);
+        IReadOnlyList<LabelAdministrationReceipt> after = (await restarted.GetAdministrationAuditAsync(owner, cancellationToken: token)).Result!;
+        LabelAdministrationReceipt denial = Assert.Single(after, entry => entry.Action == "team-read");
+        Assert.False(denial.Succeeded);
+        Assert.Equal(s_member, denial.Actor);
+        Assert.Contains(after, entry => entry.OperationId == "suspend" && entry.Succeeded);
+    }
+
+    [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
     public async Task AuditTimesUseDatabaseClockSurviveRetriesAndRetainUnknownLegacyTimes(string engine)
     {
         CancellationToken token = TestContext.Current.CancellationToken;

@@ -36,6 +36,7 @@ internal sealed partial class AdministrationDispatcher(
     // Bounded POST bodies keep confidential moderation filters out of URLs on both adapters.
     internal static readonly string[] s_moderationMethods =
     [
+        "getMutes", "changeMute",
         "getCase", "getCaseLabels", "getManualLabelChoices", "getModerationOverview", "getCaseActivity", "searchModeration", "getCases", "getCaseHistory", "getCaseOperation", "changeCase", "decideCase", "getCaseDecision",
         "getAppeal", "getAppeals", "getAppealReports", "getCaseQueue",
         "getPolicyVersion", "getPolicyVersions", "getPolicyHistory", "getPolicyOperation",

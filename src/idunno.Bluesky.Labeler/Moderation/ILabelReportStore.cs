@@ -31,7 +31,9 @@ public interface ILabelReportStore
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A protocol receipt, or an explicit authentication, scope, capacity or storage failure.</returns>
     /// <remarks><para>Queued reports remain non-actionable until an independently verified policy is available.
-    /// They are automatically checked against that policy before promotion to ordinary cases.</para></remarks>
+    /// They are automatically checked against that policy before promotion to ordinary cases.</para>
+    /// <para>Submissions from an actively muted reporter are retained for inspection without creating or changing
+    /// a review case. These submissions never enter the verification queue or get promoted when the mute expires.</para></remarks>
     Task<LabelServiceResult<LabelReportIntakeReceipt>> AcceptReportAsync(
         ModerationReportAuthenticationResult authentication,
         LabelReportSubmission submission,
@@ -64,7 +66,9 @@ public interface ILabelReportStore
     /// with resolution reason <c>Not Applicable</c>. Automatic handling does not change labels or existing
     /// case workflow and is audited under the issuer with <c>system:report-reason</c> provenance.
     /// Owner appeals are exempt from report-reason filtering, including when promoted from the pending
-    /// queue. Subject restrictions and ownership checks on appeals still apply.</para></remarks>
+    /// queue. Subject restrictions and ownership checks on appeals still apply.</para>
+    /// <para>This case-linked API rejects an actively muted reporter because a case cannot be returned.
+    /// Use <see cref="AcceptReportAsync"/> for protocol intake that can retain submissions without a case.</para></remarks>
     Task<LabelServiceResult<LabelModerationReport>> SubmitReportAsync(
         ModerationReportAuthenticationResult authentication,
         LabelReportSubmission submission,

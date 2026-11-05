@@ -162,7 +162,7 @@ public static class ServiceAuthentication
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The verified caller evidence and identifiers for durable replay protection.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException"><paramref name="method"/> is not a supported Ozone administration namespace.</exception>
+    /// <exception cref="ArgumentException"><paramref name="method"/> is not a supported Ozone compatibility method or administration namespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="maximumLifetime"/> is zero or negative.</exception>
     /// <exception cref="InvalidDataException">The token, claims, identity or signature is invalid.</exception>
     /// <exception cref="HttpRequestException">Identity resolution fails at the transport layer.</exception>
@@ -174,6 +174,10 @@ public static class ServiceAuthentication
     /// <para>Verification grants no permission. The trusted adapter must consume the replay identifiers
     /// through <c>ILabelAdministrationStore.AuthenticateServiceAsync</c> and check live team authority
     /// for every operation. Public report and appeal intake must use their separate verification methods.</para>
+    /// <para>The stock Ozone UI also requires the exact read methods <c>app.bsky.actor.getProfile</c>,
+    /// <c>app.bsky.feed.getPostThread</c> and <c>tools.ozone.setting.listOptions</c>, and the settings procedure
+    /// <c>tools.ozone.setting.upsertOption</c>. These are accepted without granting other AppView or settings methods,
+    /// or relaxing the method claim.</para>
     /// </remarks>
     public static Task<ServiceAuthenticationResult> VerifyOzoneAdministrationAsync(
         string token,
@@ -190,7 +194,9 @@ public static class ServiceAuthentication
         if (!nsid.StartsWith("tools.ozone.server.", StringComparison.Ordinal) &&
             !nsid.StartsWith("tools.ozone.team.", StringComparison.Ordinal) &&
             !nsid.StartsWith("tools.ozone.moderation.", StringComparison.Ordinal) &&
-            !nsid.StartsWith("tools.ozone.report.", StringComparison.Ordinal))
+            !nsid.StartsWith("tools.ozone.report.", StringComparison.Ordinal) &&
+            nsid is not ("app.bsky.actor.getProfile" or "app.bsky.feed.getPostThread" or
+                "tools.ozone.setting.listOptions" or "tools.ozone.setting.upsertOption"))
         {
             throw new ArgumentException("An Ozone administration method is required.", nameof(method));
         }

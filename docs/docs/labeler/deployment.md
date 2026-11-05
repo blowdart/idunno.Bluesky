@@ -62,6 +62,7 @@ provider, or a host-owned configuration file:
 | `LabelerAdministration:RemoteMode` | `Disabled` (default), `Enabled`, or `WebUiControlled`; overrides the legacy Boolean |
 | `LabelerAdministration:RemoteEnabled` | Legacy fallback only when `RemoteMode` is absent; defaults to `false` |
 | `LabelerOzone:Enabled` | Startup opt-in to `MapOzoneCompatibility()` discovery and labeler-focused administration; defaults to `false` and does not enable remote administration |
+| `LabelerOzone:AllowedOrigins` | Exact Ozone UI HTTP(S) origin array, including non-default ports and without trailing slashes; defaults to empty (no cross-origin access). For a local UI, set `LabelerOzone__AllowedOrigins__0=http://127.0.0.1:3000`. CORS is automatic and limited to mapped Ozone routes; changes require a restart |
 | `LabelerModeration:Enabled` | Optional Xenon report/case/policy backend; defaults to `false` |
 | `LabelerModeration:VerificationFreshness` | Persisted declaration-observation lifetime; defaults to `00:30:00`; active policies are checked in the background every five minutes |
 | `Labeler:TrustedProxies` | Optional array of exact proxy IP addresses trusted to forward client IP and HTTPS scheme |
@@ -351,6 +352,12 @@ CLI only when the deployment platform supports a protected bind-mounted socket d
 matching service UID; otherwise use the authenticated HTTPS remote transport.
 
 ## Safe updates and rollback
+
+Schema sixteen adds the escalated case state and upgrades the case-status check
+in each relational provider. Stop all older writers before initialization and
+take a verified whole-database backup. A schema-fifteen host rejects the upgraded
+database: retaining the old image alone is not a rollback plan. Use a compatible
+host or restore the pre-upgrade backup, accounting for any writes after deployment.
 
 For Docker Compose, use an image variable and keep every stateful path outside the container:
 

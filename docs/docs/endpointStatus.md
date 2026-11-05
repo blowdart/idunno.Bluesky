@@ -168,16 +168,22 @@
 | **Ozone Moderation** | [tools.ozone.moderation.emitEvent](https://github.com/bluesky-social/atproto/blob/main/lexicons/tools/ozone/moderation/emitEvent.json) | `MapOzoneCompatibility()` label/acknowledgment events only | Partial |
 | | [tools.ozone.moderation.getEvent](https://github.com/bluesky-social/atproto/blob/main/lexicons/tools/ozone/moderation/getEvent.json) | `MapOzoneCompatibility()` labeler event inspection | ✔ |
 | | [tools.ozone.moderation.getRecord](https://github.com/bluesky-social/atproto/blob/main/lexicons/tools/ozone/moderation/getRecord.json) | `MapOzoneCompatibility()` record display | Partial |
+| | [tools.ozone.moderation.getRecords](https://github.com/bluesky-social/atproto/blob/main/lexicons/tools/ozone/moderation/getRecords.json) | `MapOzoneCompatibility()` bounded record display | Partial |
 | | [tools.ozone.moderation.getRepo](https://github.com/bluesky-social/atproto/blob/main/lexicons/tools/ozone/moderation/getRepo.json) | `MapOzoneCompatibility()` repository display | Partial |
+| | [tools.ozone.moderation.getRepos](https://github.com/bluesky-social/atproto/blob/main/lexicons/tools/ozone/moderation/getRepos.json) | `MapOzoneCompatibility()` bounded repository display | Partial |
 | | [tools.ozone.moderation.queryEvents](https://github.com/bluesky-social/atproto/blob/main/lexicons/tools/ozone/moderation/queryEvents.json) | `MapOzoneCompatibility()` labeler event history | Partial |
 | | [tools.ozone.moderation.queryStatuses](https://github.com/bluesky-social/atproto/blob/main/lexicons/tools/ozone/moderation/queryStatuses.json) | `MapOzoneCompatibility()` native case status | Partial |
+| **Ozone Preview** | [app.bsky.feed.getPostThread](https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/feed/getPostThread.json) | `MapOzoneCompatibility()` authenticated public AppView preview, not original report evidence | Partial |
 | **Ozone Report** | [tools.ozone.report.closeReports](https://github.com/bluesky-social/atproto/blob/main/lexicons/tools/ozone/report/closeReports.json) | `MapOzoneCompatibility()` bounded subject closure | Partial |
 | | [tools.ozone.report.createActivity](https://github.com/bluesky-social/atproto/blob/main/lexicons/tools/ozone/report/createActivity.json) | `MapOzoneCompatibility()` close activities only | Partial |
 | | [tools.ozone.report.getReport](https://github.com/bluesky-social/atproto/blob/main/lexicons/tools/ozone/report/getReport.json) | `MapOzoneCompatibility()` retained report evidence | ✔ |
 | | [tools.ozone.report.listActivities](https://github.com/bluesky-social/atproto/blob/main/lexicons/tools/ozone/report/listActivities.json) | `MapOzoneCompatibility()` adapter-created closure history | Partial |
 | | [tools.ozone.report.queryReports](https://github.com/bluesky-social/atproto/blob/main/lexicons/tools/ozone/report/queryReports.json) | `MapOzoneCompatibility()` native report inspection | Partial |
 | **Ozone Server** | [tools.ozone.server.getConfig](https://github.com/bluesky-social/atproto/blob/main/lexicons/tools/ozone/server/getConfig.json) | `MapOzoneCompatibility()` opt-in host adapter | ✔ |
+| **Ozone Setting** | [tools.ozone.setting.listOptions](https://github.com/bluesky-social/atproto/blob/main/lexicons/tools/ozone/setting/listOptions.json) | `MapOzoneCompatibility()` personal media preferences only | Partial |
+| | [tools.ozone.setting.upsertOption](https://github.com/bluesky-social/atproto/blob/main/lexicons/tools/ozone/setting/upsertOption.json) | `MapOzoneCompatibility()` personal media preferences only | Partial |
 | **Ozone Team** | [tools.ozone.team.listMembers](https://github.com/bluesky-social/atproto/blob/main/lexicons/tools/ozone/team/listMembers.json) | `MapOzoneCompatibility()` opt-in host adapter | ✔ |
+| | [tools.ozone.team.listOnlineMembers](https://github.com/bluesky-social/atproto/blob/main/lexicons/tools/ozone/team/listOnlineMembers.json) | `MapOzoneCompatibility()` host-local five-minute authenticated activity | Partial |
 | **Repo**     | [com.atproto.repo.applyWrites](https://endpoints.bsky.app/#bluesky-app/tag/comatprotorepo/POST/xrpc/com.atproto.repo.applyWrites) | `AtProtoAgent.ApplyWrites()` | ✔ |
 | | [com.atproto.repo.createRecord](https://endpoints.bsky.app/#bluesky-app/tag/comatprotorepo/POST/xrpc/com.atproto.repo.createRecord) | `AtProtoAgent.CreateRecord()` | ✔ |
 | | [com.atproto.repo.deleteRecord](https://endpoints.bsky.app/#bluesky-app/tag/comatprotorepo/POST/xrpc/com.atproto.repo.deleteRecord) | `AtProtoAgent.DeleteRecord()` | ✔ |

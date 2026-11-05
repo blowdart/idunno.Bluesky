@@ -1,5 +1,6 @@
 @using System.Reflection
 @using idunno.Bluesky.AspNet.Authentication
+@inject idunno.AtProto.IDidHandleResolver Handles
 @{
     LabelTeamRole? role = ViewData["CurrentRole"] is LabelTeamRole currentRole ? currentRole : null;
     string? status = ViewData["Status"] as string;
@@ -69,6 +70,27 @@
             @if (User.Identity?.IsAuthenticated is true)
             {
                 string accountHandle = User.GetHandle()?.ToString() ?? "Account";
+                @if (role is not null && ViewData["ShowPresence"] is true &&
+                    ViewData["OnlineMembers"] is idunno.Bluesky.AspNet.Labeler.OzoneOnlineMember[] onlineMembers)
+                {
+                    <details class="online-menu" data-online-presence data-online-url="@Url.Page("/Index", "Online", new { area = "Xenon" })">
+                        <summary title="Team members active in the last five minutes">
+                            <span class="fa-icon fa-users" aria-hidden="true"></span>
+                            <span data-online-count aria-live="polite">@onlineMembers.Length online</span>
+                        </summary>
+                        <div class="online-menu-panel">
+                            <p>Active in the last five minutes</p>
+                            <ul data-online-members>
+                                @foreach (string onlineDid in onlineMembers.Select(member => member.Did))
+                                {
+                                    idunno.AtProto.Handle? onlineHandle = await Handles.ResolveHandleAsync(new idunno.AtProto.Did(onlineDid), Context.RequestAborted);
+                                    <li title="@onlineDid"><span class="fa-icon fa-user" aria-hidden="true"></span> <span>@(onlineHandle is { IsValid: true } ? $"@{onlineHandle}" : "Handle unavailable")</span></li>
+                                }
+                            </ul>
+                            <p data-online-status role="status" hidden></p>
+                        </div>
+                    </details>
+                }
                 <details class="account-menu">
                     <summary aria-label="Account menu for @accountHandle">
                         <span class="account-handle" title="@accountHandle">@accountHandle</span>
@@ -88,8 +110,13 @@
                         @if (role is not null)
                         {
                             <p class="account-role">@role</p>
+                            <a asp-area="Xenon" asp-page="/Preferences"><span class="fa-icon fa-user-gear" aria-hidden="true"></span> Preferences</a>
                         }
-                        <a class="sign-out" href="/Bluesky/Logout?ReturnUrl=%2FXenon">Sign out</a>
+                        @if (role is LabelTeamRole.Moderator or LabelTeamRole.Administrator)
+                        {
+                            <a asp-area="Xenon" asp-page="/Mutes/Index"><span class="fa-icon fa-circle-pause" aria-hidden="true"></span> Mutes</a>
+                        }
+                        <a class="sign-out" href="/Bluesky/Logout?ReturnUrl=%2FXenon"><span class="fa-icon fa-right-from-bracket" aria-hidden="true"></span> Sign out</a>
                     </div>
                 </details>
             }
@@ -147,5 +174,7 @@
 <script src="~/Xenon/js/policy.js" asp-append-version="true" defer></script>
 <script src="~/Xenon/js/manual-labels.js" asp-append-version="true" defer></script>
 <script src="~/Xenon/js/workflow-counts.js" asp-append-version="true" defer></script>
+<script src="~/Xenon/js/queue-updates.js" asp-append-version="true" defer></script>
+<script src="~/Xenon/js/online-presence.js" asp-append-version="true" defer></script>
 </body>
 </html>

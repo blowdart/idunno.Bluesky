@@ -24,6 +24,9 @@ public sealed class IndexModel : PageModel
     internal string Reason { get; private set; } = string.Empty;
     internal ManualLabelFormDisplay Labels { get; private set; } = new([], null);
 
+    /// <summary>Gets the new-label duration, frozen together with retry selections.</summary>
+    internal LabelDurationDisplay Duration { get; private set; } = new();
+
     /// <summary>Displays the available policy values before a target has been loaded.</summary>
     /// <returns>A task that loads the available label choices.</returns>
     public async Task OnGetAsync()
@@ -107,6 +110,19 @@ public sealed class IndexModel : PageModel
         }
 
         Microsoft.AspNetCore.Http.IFormCollection form = await Request.ReadFormAsync(HttpContext.RequestAborted).ConfigureAwait(false);
+        int hours = snapshot.DurationHours;
+        if (snapshot.Selected is null && !LabelDuration.TryRead(form, out hours))
+        {
+            ViewData["Error"] = "Choose an available new label duration.";
+            Labels = new(snapshot.Choices, state);
+            return Page();
+        }
+        Duration = new(hours, snapshot.Selected is not null);
+        DateTimeOffset? expiresAt = snapshot.ExpiresAt;
+        if (snapshot.Selected is null && hours != 0)
+        {
+            expiresAt = HttpContext.RequestServices.GetRequiredService<TimeProvider>().GetUtcNow().AddHours(hours);
+        }
         string[] selected = snapshot.Selected ?? [.. form["selectedLabels"].Select(value => value ?? string.Empty).Distinct(StringComparer.Ordinal)];
         Reason = snapshot.Reason ?? await UiPageHelpers.FormValueAsync(this, "reason", 4096).ConfigureAwait(false);
         Labels = new(
@@ -129,7 +145,8 @@ public sealed class IndexModel : PageModel
             return Page();
         }
 
-        snapshot = snapshot with { Selected = selected, Reason = Reason };
+        snapshot = snapshot with { Selected = selected, Reason = Reason, DurationHours = hours, ExpiresAt = expiresAt };
+        Duration = new(hours, true);
         Labels = new(
             Choices: snapshot.Choices,
             State: Protect(snapshot),
@@ -147,6 +164,7 @@ public sealed class IndexModel : PageModel
                     Target: snapshot.Target,
                     Value: choice.Value,
                     Cid: choice.UriWide || Cid.Length == 0 ? null : Cid,
+                    ExpiresAt: choice.Applied ? null : snapshot.ExpiresAt,
                     ExpectedLabelSequence: choice.Sequence)).ConfigureAwait(false);
             if (!response.Succeeded)
             {
@@ -160,6 +178,7 @@ public sealed class IndexModel : PageModel
 
         ViewData["Status"] = $"{completed} label {(completed == 1 ? "change" : "changes")} completed.";
         Reason = string.Empty;
+        Duration = new();
         await LoadLabelsAsync().ConfigureAwait(false);
         return Page();
     }
@@ -173,6 +192,11 @@ public sealed class IndexModel : PageModel
             ? await UiPageHelpers.FormValueAsync(this, "cid", 128).ConfigureAwait(false)
             : string.Empty;
         Reason = await UiPageHelpers.FormValueAsync(this, "reason", 4096).ConfigureAwait(false);
+        Microsoft.AspNetCore.Http.IFormCollection form = await Request.ReadFormAsync(HttpContext.RequestAborted).ConfigureAwait(false);
+        if (LabelDuration.TryRead(form, out int hours))
+        {
+            Duration = new(hours);
+        }
     }
 
     /// <summary>Loads a canonical DID-based target and protects its observed label sequences against substitution.</summary>
@@ -232,7 +256,9 @@ internal sealed record ManualLabelForm(
     string OperationId,
     ModerationLabelChoiceView[] Choices,
     string[]? Selected = null,
-    string? Reason = null);
+    string? Reason = null,
+    int DurationHours = 0,
+    DateTimeOffset? ExpiresAt = null);
 
 /// <summary>Renders the shared background and no-script label controls without exposing the protected baseline.</summary>
 internal sealed record ManualLabelFormDisplay(

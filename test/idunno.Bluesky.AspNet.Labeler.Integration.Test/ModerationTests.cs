@@ -1436,7 +1436,7 @@ public partial class ModerationTests
         using JsonDocument output = JsonDocument.Parse(await response.Content.ReadAsByteArrayAsync(token));
         JsonElement appealSubject = output.RootElement.GetProperty("subject");
         Assert.Equal(TestServerBuilder.s_issuer.Value, output.RootElement.GetProperty("src").GetString());
-        Assert.Equal(recordReads, declarationHandler.SubjectRecordReads);
+        Assert.Equal(recordReads + (strongReference ? 0 : 1), declarationHandler.SubjectRecordReads);
         if (strongReference)
         {
             Assert.Equal("com.atproto.repo.strongRef", appealSubject.GetProperty("$type").GetString());
@@ -1728,6 +1728,14 @@ public partial class ModerationTests
         internal int SubjectRecordReads { get; private set; }
         /// <summary>Gets or sets whether the reported record is authoritatively absent.</summary>
         internal bool MissingSubjectRecord { get; set; }
+        /// <summary>Gets or sets the independently controlled reported-record response.</summary>
+        internal HttpStatusCode SubjectRecordStatus { get; set; } = HttpStatusCode.OK;
+        /// <summary>Gets or sets the current record version returned by the PDS.</summary>
+        internal string SubjectRecordCid { get; set; } = Cid;
+        /// <summary>Gets or sets whether the PDS returns an inconsistent record identity.</summary>
+        internal bool InconsistentSubjectRecord { get; set; }
+        /// <summary>Gets or sets whether independent repository resolution has no PDS service.</summary>
+        internal bool MissingSubjectPds { get; set; }
         internal bool BlockDeclarationReads { get; set; }
         internal TaskCompletionSource DeclarationRequested { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         /// <summary>Gets or sets whether account resolution pauses after the case policy revision has been captured.</summary>
@@ -1753,6 +1761,13 @@ public partial class ModerationTests
                     {"id":"{{did}}#atproto","type":"Multikey","controller":"{{did}}","publicKeyMultibase":"{{publicKey}}"}],
                     "service":[{"id":"#atproto_pds","type":"AtprotoPersonalDataServer","serviceEndpoint":"https://pds.example"}]}
                     """;
+                if (did == s_reporter.Value && MissingSubjectPds)
+                {
+                    json = json.Replace(
+                        "\"serviceEndpoint\":\"https://pds.example\"",
+                        "\"serviceEndpoint\":\"ftp://pds.example\"",
+                        StringComparison.Ordinal);
+                }
             }
             else if (uri.Host == "pds.example" &&
                 uri.AbsolutePath == "/xrpc/com.atproto.repo.getRecord" &&
@@ -1767,7 +1782,17 @@ public partial class ModerationTests
                         Content = new StringContent("""{"error":"RecordNotFound","message":"The record is deleted."}""", Encoding.UTF8, "application/json")
                     };
                 }
-                json = $$$"""{"uri":"at://did:plc:reporter/app.bsky.feed.post/3loqo3h6jbb2g","cid":"{{{Cid}}}","value":{"$type":"app.bsky.feed.post","text":"Test"}}""";
+                if (SubjectRecordStatus != HttpStatusCode.OK)
+                {
+                    return new HttpResponseMessage(SubjectRecordStatus)
+                    {
+                        Content = new StringContent("""{"error":"InternalServerError"}""", Encoding.UTF8, "application/json")
+                    };
+                }
+                string recordUri = InconsistentSubjectRecord
+                    ? "at://did:plc:other/app.bsky.feed.post/3loqo3h6jbb2g"
+                    : "at://did:plc:reporter/app.bsky.feed.post/3loqo3h6jbb2g";
+                json = $$$"""{"uri":"{{{recordUri}}}","cid":"{{{SubjectRecordCid}}}","value":{"$type":"app.bsky.feed.post","text":"Test"}}""";
             }
             else if (uri.Host == "pds.example" && uri.AbsolutePath == "/xrpc/com.atproto.repo.getRecord")
             {

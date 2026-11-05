@@ -61,8 +61,11 @@ internal abstract partial class RelationalLabelStore
                 DbCommand command = Command(
                     connection: connection,
                     transaction: transaction,
-                    sql: "SELECT v.version,v.payload FROM label_policy_versions v WHERE NOT EXISTS " +
-                        $"(SELECT 1 FROM label_policy_events t WHERE {TableJsonField("Version")}=v.version AND {TableJsonField("Action")}='deleteDraft')" +
+                    sql: "SELECT v.version,v.payload FROM label_policy_versions v WHERE COALESCE(" +
+                        $"(SELECT {TableJsonField("Action")} FROM label_policy_events t " +
+                        "JOIN label_policy_history h ON h.operation_hash=t.operation_hash " +
+                        $"WHERE {TableJsonField("Version")}=v.version AND {TableJsonField("Action")} IN ('draft','deleteDraft') " +
+                        "ORDER BY h.seq DESC LIMIT 1),'')<>'deleteDraft'" +
                         (afterVersion is null ? string.Empty : " AND v.version>@after") + " ORDER BY v.version LIMIT @limit",
                     ("@after", afterVersion),
                     ("@limit", limit));

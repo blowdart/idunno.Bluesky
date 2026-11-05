@@ -17,6 +17,7 @@
     {
         (LabelCaseWorkflow.Unresolved, "Unresolved"),
         (LabelCaseWorkflow.InReview, "In review"),
+        (LabelCaseWorkflow.Escalated, "Escalated"),
         (LabelCaseWorkflow.Resolved, "Resolved"),
         (LabelCaseWorkflow.All, "All")
     })
@@ -32,6 +33,7 @@
         @foreach ((LabelCaseWorkflow queue, string title) in new[]
         {
             (LabelCaseWorkflow.Unresolved, "Unresolved"), (LabelCaseWorkflow.InReview, "In review"),
+            (LabelCaseWorkflow.Escalated, "Escalated"),
             (LabelCaseWorkflow.Resolved, "Resolved"), (LabelCaseWorkflow.All, "All")
         })
         {
@@ -40,6 +42,8 @@
     </select>
     <button type="submit" aria-label="Filter reports" title="Filter reports"><span class="fa-icon fa-filter" aria-hidden="true"></span></button>
 </form>
+<p data-queue-update-status role="status" hidden></p>
+<div data-live-queue>
 @if (ViewData["Error"] is string error)
 {
     <p class="panel" role="alert">@error</p>
@@ -69,6 +73,11 @@
                         <td>@await Html.PartialAsync("_Identity", new IdentityDisplayModel(target, Subject: true))</td>
                         <td>@ReportReasonOptions.Format(submitted.GetProperty("reasonType").GetString())<br />@submitted.GetProperty("reason").GetString()</td>
                         <td>@await Html.PartialAsync("_WorkflowStatus", report.TryGetProperty("decisionOperationId", out _) ? "Handled" : "Open")
+                            @if (Model.Data.GetProperty("moderation").TryGetProperty("escalatedCaseIds", out JsonElement escalatedIds) &&
+                                escalatedIds.EnumerateArray().Any(id => id.GetInt64() == report.GetProperty("caseId").GetInt64()))
+                            {
+                                @await Html.PartialAsync("_WorkflowStatus", "Escalated")
+                            }
                             @if (report.TryGetProperty("resolutionReason", out JsonElement resolution))
                             {
                                 <p>@resolution.GetString()</p>
@@ -109,6 +118,10 @@ else if (ViewData["Error"] is null)
     {
         <p>Reports marked Not Applicable are about accounts or types of content this policy does not accept for review. They were saved, but no cases were opened for them.</p>
     }
+    @if (Model.HasMutedReporterReports)
+    {
+        <p>Reports marked Reporter muted were submitted while that account was muted. They were retained without opening or changing a review case. Unmuting the reporter does not automatically move these reports into case review.</p>
+    }
     @if (pendingReports is { ValueKind: JsonValueKind.Array } pendingList && pendingList.GetArrayLength() > 0)
     {
         <table>
@@ -130,7 +143,13 @@ else if (ViewData["Error"] is null)
                         <td class="numeric">#@submitted.GetProperty("id").GetInt64()</td>
                         <td>@await Html.PartialAsync("_Identity", new IdentityDisplayModel(target, Subject: true))</td>
                         <td>@ReportReasonOptions.Format(submitted.GetProperty("reasonType").GetString())<br />@submitted.GetProperty("reason").GetString()</td>
-                        <td>@(item.GetProperty("status").GetString() == "PendingVerification" ? "Waiting for the public policy check" : "Not Applicable")
+                        <td>@(item.GetProperty("status").GetString() switch
+                            {
+                                "PendingVerification" => "Waiting for the public policy check",
+                                "NotApplicable" => "Not Applicable",
+                                "ReporterMuted" => "Reporter muted",
+                                _ => "Retained"
+                            })
                             @if (item.TryGetProperty("resolutionReason", out JsonElement resolution))
                             {
                                 <p>@resolution.GetString()</p>
@@ -145,3 +164,4 @@ else if (ViewData["Error"] is null)
     }
 </section>
 }
+</div>

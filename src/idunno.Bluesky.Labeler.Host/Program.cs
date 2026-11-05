@@ -43,6 +43,11 @@ internal static partial class Program
         }
 
         WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+        string? additionalConfiguration = Environment.GetEnvironmentVariable("LABELER_ADDITIONAL_CONFIGURATION");
+        if (!string.IsNullOrWhiteSpace(additionalConfiguration))
+        {
+            builder.Configuration.AddJsonFile(additionalConfiguration, optional: false, reloadOnChange: false);
+        }
         Did issuer = new(Required(builder.Configuration, "Labeler:IssuerDid"));
         Uri publicEndpoint = new(Required(builder.Configuration, "Labeler:PublicEndpoint"));
         string provider = builder.Configuration["Labeler:DatabaseProvider"] ?? "postgresql";
@@ -203,7 +208,7 @@ internal static partial class Program
         app.MapLabelerAdministration();
         if (ozoneEnabled)
         {
-            app.MapOzoneCompatibility();
+            app.MapOzoneCompatibility(builder.Configuration.GetSection("LabelerOzone:AllowedOrigins").Get<string[]>() ?? []);
         }
         if (moderationEnabled)
         {
