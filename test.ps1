@@ -6,7 +6,7 @@ Runs the clean Debug build and full test suite against disposable databases.
 Requires PowerShell 7 and Docker with Linux containers. Creates unique, loopback-only PostgreSQL 17 and
 MySQL 8.4 servers with temporary storage, verifies authenticated access from the test runner, runs every
 test project and framework with bounded parallelism, and removes only this run's containers in finally.
-Logs and elapsed times are retained under the ignored .artifacts/test-runs directory.
+Logs, the clean-build binary log, and elapsed times are retained under the ignored .artifacts/test-runs directory.
 #>
 #Requires -Version 7.0
 [CmdletBinding()]
@@ -57,7 +57,8 @@ try
     & docker info --format '{{.ServerVersion}}' | Out-Host
     if ($LASTEXITCODE -ne 0) { throw 'Docker with Linux containers must be running.' }
     Invoke-DotNet -Name 'build' -Arguments @(
-        'build', 'idunno.Bluesky.slnx', '-c', 'Debug', '--no-incremental', '--verbosity', 'quiet')
+        'build', 'idunno.Bluesky.slnx', '-c', 'Debug', '--no-incremental', '--verbosity', 'quiet',
+        "-bl:$logDirectory\build-{}.binlog")
 
     $password = [Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
     $env:POSTGRES_PASSWORD = $password

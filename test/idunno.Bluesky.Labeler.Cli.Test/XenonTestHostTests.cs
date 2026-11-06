@@ -15,6 +15,7 @@ using idunno.AtProto.Authentication;
 using idunno.AtProto.Labels;
 using idunno.Bluesky.AspNet.Authentication;
 using idunno.Bluesky.AspNet.Labeler;
+using idunno.Bluesky.AspNet.Labeler.UI;
 using idunno.Bluesky.Labeler;
 using idunno.Bluesky.Labeler.Administration;
 using idunno.Bluesky.Labeler.Issuance;
@@ -1747,6 +1748,38 @@ public partial class XenonTestHostTests
             Assert.Contains("<dt>CID</dt>", html, StringComparison.Ordinal);
             Assert.DoesNotContain("record-contents", html, StringComparison.Ordinal);
             Assert.DoesNotContain("Current labels could not be checked.", html, StringComparison.Ordinal);
+        }
+        foreach (string target in new[]
+        {
+            "did:key:unsupported",
+            "at://did:key:unsupported/app.bsky.feed.post/example",
+            "at://did:key:unsupported/app.bsky.graph.follow/example"
+        })
+        {
+            string route = "/Xenon/Subjects/Detail?target=" + Uri.EscapeDataString(target);
+            using HttpResponseMessage anonymous = await client.GetAsync(route, token);
+            Assert.Equal(HttpStatusCode.Redirect, anonymous.StatusCode);
+            using HttpRequestMessage request = new(HttpMethod.Get, route);
+            request.Headers.Add("X-Test-Authenticated", "true");
+            using HttpResponseMessage response = await client.SendAsync(request, token);
+            string html = await response.Content.ReadAsStringAsync(token);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.True(response.Headers.CacheControl!.NoStore);
+            Assert.Contains(WebUtility.HtmlEncode(target), html, StringComparison.Ordinal);
+            Assert.Contains("<dt>DID</dt>", html, StringComparison.Ordinal);
+            Assert.Contains("<dt>CID</dt>", html, StringComparison.Ordinal);
+            Assert.Contains("The server storing this account&#x27;s data could not be found.", html, StringComparison.Ordinal);
+            Assert.DoesNotContain("record-contents", html, StringComparison.Ordinal);
+            Assert.Equal(
+                target.StartsWith("at:", StringComparison.Ordinal),
+                html.Contains("Current labels could not be checked.", StringComparison.Ordinal));
+            if (target.StartsWith("at:", StringComparison.Ordinal))
+            {
+                (string? cid, string? error) = await services.GetRequiredService<SubjectPreviewService>()
+                    .LookupRecordCidAsync(target, token);
+                Assert.Null(cid);
+                Assert.Equal("The server storing this account's data could not be found.", error);
+            }
         }
         foreach (string target in new[] { "", "https://127.0.0.1/", "did:invalid", "at://example.com/app.bsky.feed.post/example",
             $"at://{Xenon.TestHost.FixtureHandler.Subject(2)}/app.bsky.graph.follow" })

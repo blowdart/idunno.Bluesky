@@ -18,6 +18,19 @@ The image also includes the matching Linux CLI in `/opt/labeler-cli`, which is o
 CLI runs as the container's configured user; existing local identity authorization
 and remote-administration restrictions still apply.
 
+### Trimming and Native AOT support
+
+The canonical host ships untrimmed and does not support trimmed or Native AOT
+deployment. It includes the Xenon and authentication Razor Pages UI packages;
+Razor Pages does not support trimming or Native AOT. Disabling the UI through
+runtime configuration does not remove those build-time dependencies.
+
+This is an architectural support boundary, not a pending trimming experiment.
+The host remains excluded from the supported-library trimming/AOT matrix in
+`trimTest.ps1`. That exclusion does not extend to independently supported SDK
+libraries or the trimmed CLI. A separately built headless host would require its
+own evaluation and is not part of the canonical host's supported configurations.
+
 The host serves `/robots.txt` anonymously as plain text with `User-agent: *` and
 `Disallow: /`, asking crawlers not to crawl any path. This is advisory and does not
 replace authentication or access controls.
@@ -74,6 +87,12 @@ all parent directories must be protected from replacement by other users. Remote
 requires exact-audience method-bound service authentication and live team authorization; local
 administration requires the service process's OS identity to have an explicit active team binding.
 Neither localhost nor container placement is an authorization boundary.
+
+Enabling Ozone opts into [limited compatibility](administration.md#optional-ozone-compatibility),
+not a complete Ozone implementation. Use Xenon/native views as the primary moderation
+interface. Unresolved URI-only records can be absent from Ozone event/status views
+without a visible warning in stock Ozone; those views must not be the sole inventory
+of outstanding moderation work. This is an accepted limitation of the supported subset.
 
 `RemoteMode=Disabled` keeps remote CLI routes unavailable; `Enabled` allows them subject to those
 existing checks. `WebUiControlled` additionally requires the durable switch to be enabled by the
@@ -178,8 +197,9 @@ public distribution, UID 1654, the inherited probe, persistent-volume restart
 and byte-for-byte signature recovery. Its identity/declaration responses and
 setup authority were deterministic fixtures, not live OAuth/PDS validation.
 Production deployments must use real discovery and independent policy
-verification. Integrated application samples, direct image signing/attestation
-and canonical-host trimming evaluation remain separate follow-ups.
+verification. Integrated application samples and direct image signing/attestation
+remain separate follow-ups. Canonical-host trimming evaluation is resolved by the
+Razor Pages support boundary described above; no trimmed-host support is claimed.
 
 ## Key installation and rotation
 

@@ -295,9 +295,14 @@ internal sealed partial class SubjectPreviewService(
         }
     }
 
-    /// <summary>Accepts an HTTPS PDS only from a matching DID document; the HTTP handler fences resolved destination addresses.</summary>
+    /// <summary>Accepts an HTTPS PDS only from a matching supported DID document; the HTTP handler fences resolved destination addresses.</summary>
     internal static async Task<Uri?> ResolvePersonalDataServerAsync(HttpClient client, Did did, CancellationToken token)
     {
+        if (did.Method is not ("plc" or "web"))
+        {
+            return null;
+        }
+
         DidDocument? document = await IdentityResolution.ResolveDidDocumentAsync(
             did: did,
             httpClient: client,

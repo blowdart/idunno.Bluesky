@@ -11,8 +11,14 @@ Ozone.
 * Liveness and readiness health checks
 * Opt-in remote service-token administration and protected local administration
 * Optional Xenon reports, cases, appeals and versioned-policy administration
-* Opt-in Ozone compatibility with a browser-origin allowlist
+* Opt-in, limited Ozone compatibility with a browser-origin allowlist
 * OpenTelemetry metrics for distribution and optional moderation
+
+Ozone compatibility covers a labeler-focused subset, not full Ozone parity.
+Use Xenon/native views as the primary, complete moderation interface. Unresolved
+URI-only records are omitted from Ozone event/status projections without a visible
+warning in stock Ozone; an empty Ozone view does not prove that no work remains.
+This is an accepted limitation of the compatibility subset.
 
 ## Version History
 

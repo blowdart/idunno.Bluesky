@@ -31,6 +31,19 @@ internally; all changes still require an explicit submission and audit reason.
 
 ## Optional Ozone compatibility
 
+**Limited compatibility is intentional and accepted.** This opt-in adapter supports
+the labeler-focused subset listed below, not full Ozone parity. Use Xenon/native
+views as the primary, complete moderation interface; stock Ozone must not be the
+sole source of queue or event-history completeness.
+
+Unresolved URI-only records cannot be represented in Ozone's event/status subject
+unions and are omitted from those projections without blocking other entries.
+They remain in native report/history views and may become representable after
+successful resolution. Stock Ozone does not display the adapter's
+`unresolvedRecordCount` extension or warn about these omissions, so a partial or
+empty Ozone view does not prove that no matching work remains. This limitation
+is accepted for the compatibility subset, not a promise of future full parity.
+
 `app.MapOzoneCompatibility()` explicitly opts an application into the adapter while
 building its pipeline. Omit the call and no Ozone compatibility routes are registered.
 It uses the same administration services; register `AddLabelerAdministration` first.

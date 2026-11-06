@@ -25,6 +25,7 @@
 * Background declaration verification, bounded pending intake during verification outages, restart-resumed policy-label withdrawal and authoritative deleted-post checks. Moderation health is available separately at `/health/labeler/moderation`.
 * Optional administrator email for verification failures, confirmed policy publication, team changes and CLI access changes, using mandatory STARTTLS, durable retries and a link to the sending Xenon UI when enabled. First enablement excludes historical administration changes; notifications also support a single active administrator. Verification-failure emails explain automatic retries, possible recovery before delivery and when administrator action may be needed.
 * Opt-in `MapOzoneCompatibility()` routes for discovery, configuration, team presence, filtered queues, subject/event history, previews, report acknowledgment, escalation, label actions and appeals. Supported workflows share Xenon's policies, authorization and atomic storage; unsupported capabilities fail explicitly.
+* Documented limited Ozone compatibility as an accepted scope: use Xenon/native views as the complete moderation interface, because stock Ozone does not visibly warn when unresolved URI-only records are omitted from event/status projections.
 * Explicit Ozone browser-origin allowlists with automatic route-scoped CORS preflight and response handling; no cross-origin access is enabled by default.
 * Ozone partial projections retain an omission count for extension-aware clients without sending the deprecated HTTP `Warning` header. Stock Ozone does not display this count; Xenon/native views retain complete report evidence.
 * Durable background retirement and local-purge workflows, coordinated multi-host signing-key rotation and maintenance, with live authorization, resumable checkpoints and explicit recovery.
@@ -51,6 +52,7 @@
 
 #### idunno.Bluesky.Labeler.Host
 
+* Documented that the canonical host ships untrimmed and does not support trimming or Native AOT because it includes Razor Pages; disabling the UI at runtime does not remove that dependency.
 * Standalone labeler application and container with public label distribution, all three storage providers, protected administration and independently optional Xenon moderation, web UI and Ozone compatibility.
 * PostgreSQL defaults with an externally supplied connection string; SQLite and MySQL alternatives; non-secret configuration defaults; and optional external JSON configuration for separately mounted secrets.
 * Environment-backed signing keys by default, optional mounted PEM keys, database-backed active-key selection and coordinated rotation. Terminal retired labelers can use explicit keyless read-only distribution.
@@ -164,6 +166,10 @@
 
 ### ✅ Fixed
 
+#### idunno.AtProto.OAuthCallback
+
+* Callback server disposal awaits listener shutdown before disposing the host, preventing competing host disposal paths from racing file-system watcher cleanup. Failed startup also releases the host only once.
+
 #### idunno.AtProto
 
 * Clarified live Jetstream disconnection errors when SDK-managed reconnection is disabled or its configured attempt limit is exhausted.
@@ -179,6 +185,10 @@
 * Recursive validation now checks required URI and CID members of embedded and associated strong references, and required mention DIDs and nonblank link values in known facet features. Failures preserve indexed member paths without changing unknown facet handling.
 * Profile validation now checks strong references in links, pinned posts and starter pack attribution. Message validation accepts supported group-chat join-link embeds. Gate validation requires a post record key, while tolerant parsing retains collection-only targets for inspection.
 * Message validation reports missing join-link codes as `Embed.Code`, including when a code is cleared through an initializer or `with` expression.
+
+#### idunno.Bluesky.AspNet.Labeler.UI
+
+* Unsupported DID methods show unavailable public previews and current-version lookups instead of server errors, while retaining canonical subject details and issuer-local account label checks.
 
 ## 8.0.0 - 2026-10-16
 

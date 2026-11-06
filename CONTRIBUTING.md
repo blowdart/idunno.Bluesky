@@ -51,8 +51,22 @@ Tests use the new MTP runner. If you attempt to `dotnet test --nologo` it will r
 Run `pwsh -File ./test.ps1` from the repository root with Docker running Linux containers. This runs the
 non-incremental Debug solution build and all test projects and frameworks. The script creates disposable PostgreSQL 17
 and MySQL 8.4 containers with random credentials, temporary storage and loopback-only ports; verifies database access
-from the test runner; and removes only its own containers in `finally`. Logs and separate build, test and total timings
-are retained under `.artifacts/test-runs/`. Existing database connection environment variables are restored afterward.
+from the test runner; and removes only its own containers in `finally`. Logs, a uniquely named clean-build binary log,
+and separate build, test and total timings are retained under `.artifacts/test-runs/`. Existing database connection
+environment variables are restored afterward.
+
+Before every commit, also run both informational checks from the repository root after `test.ps1`:
+
+```powershell
+dotnet format style idunno.Bluesky.slnx --no-restore --severity info --verify-no-changes
+dotnet format analyzers idunno.Bluesky.slnx --no-restore --severity info --verify-no-changes
+```
+
+Both must exit successfully with no outstanding diagnostics. Run them sequentially, not concurrently with each
+other or build/test commands, because workspace loading can contend over generated files and produce misleading
+diagnostics. `--verify-no-changes` verifies without editing files. If workspace-loading warnings appear, rerun the
+affected check with `--verbosity diagnostic` and investigate the warnings before treating the result as conclusive.
+A clean build alone does not establish that informational style and analyzer diagnostics are clean.
 
 The full suite uses four parallel test modules and four xUnit workers per module. Labeler fixtures retain a unique
 database per test, reuse bounded connection pools within that database, and clear only their own pool before dropping

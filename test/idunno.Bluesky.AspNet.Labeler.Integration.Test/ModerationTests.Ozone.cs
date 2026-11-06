@@ -294,20 +294,28 @@ public partial class ModerationTests
             body: body);
         Assert.Equal(HttpStatusCode.OK, acknowledged.StatusCode);
         ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
-        LabelAdministrationCaller caller = (await team.AuthenticateLocalAsync("uid:0", token)).Result!;
+        LabelServiceResult<LabelAdministrationCaller> callerResult = await team.AuthenticateLocalAsync("uid:0", token);
+        Assert.True(callerResult.Succeeded, $"{callerResult.Error?.Code}: {callerResult.Error?.Message}\n{callerResult.Error?.Exception}");
+        LabelAdministrationCaller caller = callerResult.Result;
         ILabelReportStore reports = fixture.Services.GetRequiredService<ILabelReportStore>();
-        LabelModerationReport first = (await reports.GetReportAsync(caller, reportIds[0], token)).Result!;
+        LabelServiceResult<LabelModerationReport> firstResult = await reports.GetReportAsync(caller, reportIds[0], token);
+        Assert.True(firstResult.Succeeded, $"Report {reportIds[0]}: {firstResult.Error?.Code}: {firstResult.Error?.Message}\n{firstResult.Error?.Exception}");
+        LabelModerationReport first = firstResult.Result;
         Assert.NotNull(first.HandledAt);
         Assert.Equal(
             selectedOnly ? "Selected report reviewed." : remarks ? "Reviewed; no label change needed." : "Ozone moderation event.",
             first.ResolutionReason);
         LabelServiceResult<LabelModerationReport> secondResult = await reports.GetReportAsync(caller, reportIds[1], token);
-        Assert.True(secondResult.Succeeded, secondResult.Error?.ToString());
+        Assert.True(secondResult.Succeeded, $"Report {reportIds[1]}: {secondResult.Error?.Code}: {secondResult.Error?.Message}\n{secondResult.Error?.Exception}");
         LabelModerationReport second = secondResult.Result;
         Assert.Equal(!selectedOnly, second.HandledAt is not null);
-        Assert.Null((await reports.GetReportAsync(caller, reportIds[2], token)).Result!.HandledAt);
-        LabelModerationCase moderationCase = (await fixture.Services.GetRequiredService<ILabelModerationStore>()
-            .GetCaseAsync(caller, first.CaseId, token)).Result!;
+        LabelServiceResult<LabelModerationReport> thirdResult = await reports.GetReportAsync(caller, reportIds[2], token);
+        Assert.True(thirdResult.Succeeded, $"Report {reportIds[2]}: {thirdResult.Error?.Code}: {thirdResult.Error?.Message}\n{thirdResult.Error?.Exception}");
+        Assert.Null(thirdResult.Result.HandledAt);
+        LabelServiceResult<LabelModerationCase> caseResult = await fixture.Services.GetRequiredService<ILabelModerationStore>()
+            .GetCaseAsync(caller, first.CaseId, token);
+        Assert.True(caseResult.Succeeded, $"Case {first.CaseId}: {caseResult.Error?.Code}: {caseResult.Error?.Message}\n{caseResult.Error?.Exception}");
+        LabelModerationCase moderationCase = caseResult.Result;
         Assert.Equal(!selectedOnly, moderationCase.Status == LabelCaseStatus.Resolved);
         Assert.Equal(0, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
         using HttpResponseMessage queued = await SendOzoneAsync(
