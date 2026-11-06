@@ -1,0 +1,148 @@
+{
+  "lexicon": 1,
+  "id": "dev.idunno.labeler.issuance.defs",
+  "defs": {
+    "labelOperation": {
+      "type": "object",
+      "required": [
+        "operationId",
+        "target",
+        "value",
+        "reason"
+      ],
+      "properties": {
+        "operationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "description": "A stable caller-generated identifier used to recover the result of an uncertain operation."
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048,
+          "description": "An account DID or handle, or a record AT URI."
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "A label value declared by the current issuance policy."
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096,
+          "description": "A nonblank explanation retained with the administrative operation."
+        },
+        "cid": {
+          "type": "string",
+          "format": "cid",
+          "description": "An optional record version; requires a record AT URI target."
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "datetime",
+          "description": "An optional absolute expiry used by issueLabel; negateLabel does not use this field."
+        },
+        "correlationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "description": "An optional diagnostic identifier for correlating the operation with caller logs."
+        }
+      }
+    },
+    "operationReceipt": {
+      "type": "object",
+      "required": [
+        "operationId",
+        "changed"
+      ],
+      "properties": {
+        "operationId": {
+          "type": "string",
+          "description": "The stable identifier supplied with the operation."
+        },
+        "sequence": {
+          "type": "integer",
+          "description": "The label-stream sequence assigned to the operation, when a label event was appended."
+        },
+        "changed": {
+          "type": "boolean",
+          "description": "Whether the operation changed the current label state."
+        }
+      }
+    },
+    "labelChoice": {
+      "type": "object",
+      "required": [
+        "value",
+        "applied",
+        "sequence",
+        "otherVersion",
+        "uriWide"
+      ],
+      "properties": {
+        "value": {
+          "type": "string",
+          "description": "The label value declared by the issuance policy."
+        },
+        "applied": {
+          "type": "boolean",
+          "description": "Whether this label is currently active for the requested target and version."
+        },
+        "sequence": {
+          "type": "integer",
+          "description": "The label-stream sequence associated with the current label state, or zero when none exists."
+        },
+        "otherVersion": {
+          "type": "boolean",
+          "description": "Whether the label is active on another record version."
+        },
+        "uriWide": {
+          "type": "boolean",
+          "description": "Whether the active label applies to the record URI without a CID restriction."
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "datetime",
+          "description": "The expiry of the active label, when it has one."
+        }
+      }
+    },
+    "availableLabels": {
+      "type": "object",
+      "required": [
+        "labelChoices"
+      ],
+      "properties": {
+        "labelChoices": {
+          "type": "array",
+          "description": "The policy-declared label values and, when a target was requested, their current state.",
+          "items": {
+            "type": "ref",
+            "ref": "#labelChoice"
+          }
+        }
+      }
+    },
+    "availableLabelsResult": {
+      "type": "object",
+      "required": [
+        "moderation"
+      ],
+      "properties": {
+        "moderation": {
+          "type": "ref",
+          "ref": "#availableLabels",
+          "description": "The declared label choices and optional target-state details."
+        },
+        "target": {
+          "type": "string",
+          "description": "The canonical target identifier when current target state was requested."
+        }
+      }
+    }
+  }
+}

@@ -60,7 +60,7 @@ Select **one** of these modes:
 |---|---|
 | `Disabled` | Remote CLI routes are always unavailable, regardless of the Xenon switch. This is the default for an unconfigured host. |
 | `Enabled` | Remote CLI routes are enabled. Authentication, method-bound service tokens and live team authorization remain mandatory. |
-| `WebUiControlled` | The bootstrap owner can enable or disable remote CLI access from Xenon's **Team and membership** page. The durable switch starts disabled. |
+| `WebUiControlled` | The current labeler owner can enable or disable remote CLI access from Xenon's **Team and membership** page. The durable switch starts disabled. |
 
 For example, to force remote access off, set this in the host's `appsettings.json`:
 
@@ -75,7 +75,8 @@ For example, to force remote access off, set this in the host's `appsettings.jso
 To force it on, use `"RemoteMode": "Enabled"`. To delegate the switch to Xenon,
 use `"RemoteMode": "WebUiControlled"` and enable the optional
 [Xenon web UI](ui.md) separately. Other Administrators cannot toggle it: the owner
-is the DID that completed the one-time local bootstrap and must still be an active
+is initially the DID that completed the one-time local bootstrap, or the recipient of an
+owner-authorized ownership transfer, and must still be an active
 Administrator. Neither a labeler issuer DID nor an arbitrary Administrator is
 assumed to be the owner.
 
@@ -247,14 +248,26 @@ the same durable totals shown by Xenon's moderation navigation.
 | `--cid` | Pin a **record** label/withdrawal to an explicitly chosen CID: `negate at://did:plc:example/app.bsky.feed.post/record beansonista @ipc --cid <actual-cid> --operation-id withdrawal-2 --reason "Withdraw pinned version"`. Omit for URI-wide scope; never infer or manufacture a CID. |
 | `--expires-at` | Absolute issue-only expiry: `issue did:plc:example beansonista @ipc --expires-at 2030-01-01T00:00:00Z --operation-id label-2 --reason "Time-limited label"`. |
 | `--role` | `Viewer`, `Moderator` or `Administrator`; required for `enroll` and `change-team --action SetRole`. |
-| `--action` | Team action: `SetRole`, `Suspend`, `Reinstate`, `Remove`, `BindLocal`, or `RevokeLocal`. |
+| `--action` | Team action: `SetRole`, `Suspend`, `Reinstate`, `Remove`, `BindLocal`, `RevokeLocal`, or owner-only `TransferOwnership`. |
 | `--credential` | OS identity, not a password/token; required for binding actions: `change-team did:plc:member @ipc --action BindLocal --credential uid:1001 --operation-id bind-1 --reason "Approved local operator"`. Windows uses `sid:<actual-SID>`. |
 
 For example, suspend, reinstate or remove a member by replacing `SetRole --role Viewer`
 with `Suspend`, `Reinstate` or `Remove` after `--action`, and choose a new operation ID.
 To revoke a local binding, use `--action RevokeLocal --credential uid:1001`.
-Roles and last-administrator protections are enforced by the service; reinstatement
+Roles, owner protection and last-administrator protections are enforced by the service; reinstatement
 does not recreate revoked local bindings.
+
+The owner cannot be removed, suspended or demoted. Only the current owner can transfer
+ownership to another active Administrator:
+
+```shell
+labeler-admin change-team did:plc:new-owner @ipc --action TransferOwnership --operation-id transfer-owner-1 --reason "Approved ownership handover"
+```
+
+Confirm the prompt only after checking the recipient. The new owner receives protection and
+control of the remote CLI switch; the former owner remains an ordinary Administrator.
+No role or local binding is changed, and the remote-access switch retains its current state.
+Do not pass `--role` or `--credential` for this action.
 
 ## Policy commands
 

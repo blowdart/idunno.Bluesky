@@ -1,0 +1,62 @@
+#nullable enable
+idunno.Bluesky.Labeler.Agent.LabelOperationReceipt
+idunno.Bluesky.Labeler.Agent.LabelOperationReceipt.Changed.get -> bool
+idunno.Bluesky.Labeler.Agent.LabelOperationReceipt.OperationId.get -> string!
+idunno.Bluesky.Labeler.Agent.LabelOperationReceipt.Sequence.get -> long?
+idunno.Bluesky.Labeler.Agent.LabelerAgent
+idunno.Bluesky.Labeler.Agent.LabelerAgent.AccountAgent.get -> idunno.AtProto.AtProtoAgent!
+idunno.Bluesky.Labeler.Agent.LabelerAgent.Audience.get -> idunno.AtProto.AtProtoServiceReference!
+idunno.Bluesky.Labeler.Agent.LabelerAgent.Dispose() -> void
+idunno.Bluesky.Labeler.Agent.LabelerAgent.GetAppliedLabels(idunno.AtProto.AtUri! subject, int? limit = 100, string? cursor = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.PagedReadOnlyCollection<idunno.AtProto.Labels.Label!>!>!>!
+idunno.Bluesky.Labeler.Agent.LabelerAgent.GetAppliedLabels(idunno.AtProto.Did! subject, int? limit = 100, string? cursor = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.PagedReadOnlyCollection<idunno.AtProto.Labels.Label!>!>!>!
+idunno.Bluesky.Labeler.Agent.LabelerAgent.GetAvailableLabels(string! reason = "Administrative inspection.", System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<System.Collections.Generic.IReadOnlyList<string!>!>!>!
+idunno.Bluesky.Labeler.Agent.LabelerAgent.GetLabelOperationReceipt(string! operationId, string! reason = "Administrative inspection.", System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Labeler.Agent.LabelOperationReceipt!>!>!
+idunno.Bluesky.Labeler.Agent.LabelerAgent.IssueLabel(idunno.Bluesky.Labeler.LabelTarget! target, string! value, string! reason, System.DateTimeOffset? expiresAt = null, string? correlationId = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Labeler.Agent.LabelOperationReceipt!>!>!
+idunno.Bluesky.Labeler.Agent.LabelerAgent.IssueLabel(string! operationId, idunno.Bluesky.Labeler.LabelTarget! target, string! value, string! reason, System.DateTimeOffset? expiresAt = null, string? correlationId = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Labeler.Agent.LabelOperationReceipt!>!>!
+idunno.Bluesky.Labeler.Agent.LabelerAgent.LabelerService.get -> System.Uri!
+idunno.Bluesky.Labeler.Agent.LabelerAgent.NegateLabel(idunno.Bluesky.Labeler.LabelTarget! target, string! value, string! reason, string? correlationId = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Labeler.Agent.LabelOperationReceipt!>!>!
+idunno.Bluesky.Labeler.Agent.LabelerAgent.NegateLabel(string! operationId, idunno.Bluesky.Labeler.LabelTarget! target, string! value, string! reason, string? correlationId = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Labeler.Agent.LabelOperationReceipt!>!>!
+idunno.Bluesky.Labeler.Agent.LabelerAgentBuilder
+idunno.Bluesky.Labeler.Agent.LabelerAgentBuilder.Build() -> idunno.Bluesky.Labeler.Agent.LabelerAgent!
+idunno.Bluesky.Labeler.Agent.LabelerAgentBuilder.ConfigureAccountAgent(System.Action<idunno.AtProto.AtProtoAgentBuilder!>! configure) -> idunno.Bluesky.Labeler.Agent.LabelerAgentBuilder!
+static idunno.Bluesky.Labeler.Agent.LabelerAgentBuilder.Create() -> idunno.Bluesky.Labeler.Agent.LabelerAgentBuilder!
+idunno.Bluesky.Labeler.Agent.LabelerAgentBuilder.WithAccountAgent(idunno.AtProto.AtProtoAgent! agent) -> idunno.Bluesky.Labeler.Agent.LabelerAgentBuilder!
+idunno.Bluesky.Labeler.Agent.LabelerAgentBuilder.WithLabelerService(System.Uri! service, idunno.AtProto.Did! labelerDid) -> idunno.Bluesky.Labeler.Agent.LabelerAgentBuilder!
+idunno.Bluesky.Labeler.Agent.Errors.CidMismatch
+idunno.Bluesky.Labeler.Agent.Errors.CidMismatch.CidMismatch(idunno.AtProto.AtErrorDetail! errorDetail) -> void
+idunno.Bluesky.Labeler.Agent.Errors.IdempotencyConflict
+idunno.Bluesky.Labeler.Agent.Errors.IdempotencyConflict.IdempotencyConflict(idunno.AtProto.AtErrorDetail! errorDetail) -> void
+idunno.Bluesky.Labeler.Agent.Errors.InvalidExpiry
+idunno.Bluesky.Labeler.Agent.Errors.InvalidExpiry.InvalidExpiry(idunno.AtProto.AtErrorDetail! errorDetail) -> void
+idunno.Bluesky.Labeler.Agent.Errors.InvalidTarget
+idunno.Bluesky.Labeler.Agent.Errors.InvalidTarget.InvalidTarget(idunno.AtProto.AtErrorDetail! errorDetail) -> void
+idunno.Bluesky.Labeler.Agent.Errors.IssuanceClosed
+idunno.Bluesky.Labeler.Agent.Errors.IssuanceClosed.IssuanceClosed(idunno.AtProto.AtErrorDetail! errorDetail) -> void
+idunno.Bluesky.Labeler.Agent.Errors.LabelerAgentError
+idunno.Bluesky.Labeler.Agent.Errors.LabelerAgentError.LabelerAgentError(idunno.AtProto.AtErrorDetail! errorDetail, string! expectedError) -> void
+idunno.Bluesky.Labeler.Agent.Errors.MaintenanceActive
+idunno.Bluesky.Labeler.Agent.Errors.MaintenanceActive.MaintenanceActive(idunno.AtProto.AtErrorDetail! errorDetail) -> void
+idunno.Bluesky.Labeler.Agent.Errors.OperationNotFound
+idunno.Bluesky.Labeler.Agent.Errors.OperationNotFound.OperationNotFound(idunno.AtProto.AtErrorDetail! errorDetail) -> void
+idunno.Bluesky.Labeler.Agent.Errors.OutcomeUnknown
+idunno.Bluesky.Labeler.Agent.Errors.OutcomeUnknown.OutcomeUnknown(idunno.AtProto.AtErrorDetail! errorDetail) -> void
+idunno.Bluesky.Labeler.Agent.Errors.PolicyUnavailable
+idunno.Bluesky.Labeler.Agent.Errors.PolicyUnavailable.PolicyUnavailable(idunno.AtProto.AtErrorDetail! errorDetail) -> void
+idunno.Bluesky.Labeler.Agent.Errors.ServiceUnavailable
+idunno.Bluesky.Labeler.Agent.Errors.ServiceUnavailable.ServiceUnavailable(idunno.AtProto.AtErrorDetail! errorDetail) -> void
+idunno.Bluesky.Labeler.Agent.Errors.SigningFailed
+idunno.Bluesky.Labeler.Agent.Errors.SigningFailed.SigningFailed(idunno.AtProto.AtErrorDetail! errorDetail) -> void
+idunno.Bluesky.Labeler.Agent.Errors.StaleDecision
+idunno.Bluesky.Labeler.Agent.Errors.StaleDecision.StaleDecision(idunno.AtProto.AtErrorDetail! errorDetail) -> void
+idunno.Bluesky.Labeler.Agent.Errors.StorageUnavailable
+idunno.Bluesky.Labeler.Agent.Errors.StorageUnavailable.StorageUnavailable(idunno.AtProto.AtErrorDetail! errorDetail) -> void
+idunno.Bluesky.Labeler.Agent.Errors.TargetNotAllowed
+idunno.Bluesky.Labeler.Agent.Errors.TargetNotAllowed.TargetNotAllowed(idunno.AtProto.AtErrorDetail! errorDetail) -> void
+idunno.Bluesky.Labeler.Agent.Errors.TargetNotFound
+idunno.Bluesky.Labeler.Agent.Errors.TargetNotFound.TargetNotFound(idunno.AtProto.AtErrorDetail! errorDetail) -> void
+idunno.Bluesky.Labeler.Agent.Errors.TargetResolutionFailed
+idunno.Bluesky.Labeler.Agent.Errors.TargetResolutionFailed.TargetResolutionFailed(idunno.AtProto.AtErrorDetail! errorDetail) -> void
+idunno.Bluesky.Labeler.Agent.Errors.TimestampExhausted
+idunno.Bluesky.Labeler.Agent.Errors.TimestampExhausted.TimestampExhausted(idunno.AtProto.AtErrorDetail! errorDetail) -> void
+idunno.Bluesky.Labeler.Agent.Errors.ValueNotDeclared
+idunno.Bluesky.Labeler.Agent.Errors.ValueNotDeclared.ValueNotDeclared(idunno.AtProto.AtErrorDetail! errorDetail) -> void

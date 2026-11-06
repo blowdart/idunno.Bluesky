@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
+
 using idunno.AtProto;
 using idunno.Bluesky.AspNet.Labeler;
 using idunno.Bluesky.Labeler.Administration;
@@ -32,7 +34,8 @@ public class PolicyAlertEmailOptionsTests
             },
             clock: new FakeTimeProvider(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero)),
             logger: NullLogger<LabelerPolicyEmailService>.Instance,
-            xenonEndpoint: endpoint)
+            xenonEndpoint: endpoint,
+            handles: new EmailHandles())
         {
             TestMessageSender = (_, message, _) =>
             {
@@ -43,6 +46,7 @@ public class PolicyAlertEmailOptionsTests
         Assert.True(await service.SendTestAsync("admin@example.invalid", TestContext.Current.CancellationToken));
         void CheckBody(string body)
         {
+            Assert.Contains($"@labeler.example ({TestServerBuilder.s_issuer})", body, StringComparison.Ordinal);
             if (uiEnabled)
             {
                 Assert.EndsWith("\n\nSent via https://labeler.example/Xenon/", body, StringComparison.Ordinal);
@@ -189,7 +193,7 @@ public class PolicyAlertEmailOptionsTests
         {
             Assert.False(await service.SendTestAsync("admin@example.invalid", cancellation.Token));
         }
-        Assert.Equal(enabled ? 1 : 0, attempts);
+        Assert.Equal(0, attempts);
     }
 
     [Fact]
@@ -270,10 +274,18 @@ public class PolicyAlertEmailOptionsTests
             settings: new() { FromAddress = "labeler@example.invalid" },
             clock: fixture.Clock,
             logger: NullLogger<LabelerPolicyEmailService>.Instance,
-            xenonEndpoint: uiEnabled ? new Uri("https://labeler.example/Xenon/") : null);
-        using System.Net.Mail.MailMessage message = service.CreateMessage(delivery, delivery.Recipients[0]);
+            xenonEndpoint: uiEnabled ? new Uri("https://labeler.example/Xenon/") : null,
+            handles: new EmailHandles());
+        using System.Net.Mail.MailMessage message = await service.CreateMessageAsync(delivery, delivery.Recipients[0], token);
         Assert.Equal(change ? "Labeler administration changed" : "Labeler policy verification failed", message.Subject);
         Assert.Contains(TestServerBuilder.s_issuer.Value, message.Body, StringComparison.Ordinal);
+        Assert.Contains($"@labeler.example ({TestServerBuilder.s_issuer})", message.Body, StringComparison.Ordinal);
+        if (change)
+        {
+            Assert.Contains("Team member @member.example (did:plc:second-email-admin) was added", message.Body, StringComparison.Ordinal);
+            Assert.Contains("Changed by @admin.example (did:plc:email-admin).", message.Body, StringComparison.Ordinal);
+            Assert.DoesNotContain("@member.example", delivery.ChangeDescription!, StringComparison.Ordinal);
+        }
         Assert.Contains(change ? "was added" : "Unavailable", message.Body, StringComparison.Ordinal);
         Assert.DoesNotContain("Private audit reason", message.Body, StringComparison.Ordinal);
         Assert.DoesNotContain("uid:0", message.Body, StringComparison.Ordinal);
@@ -286,6 +298,92 @@ public class PolicyAlertEmailOptionsTests
         else
         {
             Assert.DoesNotContain("Sent via", message.Body, StringComparison.Ordinal);
+        }
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task EmailIdentitiesPreservePunctuationAndCanonicalDidsWhenHandlesAreUnavailable(bool resolved)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync();
+        ILabelAdministrationStore team = (ILabelAdministrationStore)fixture.Store;
+        Did administratorDid = new("did:plc:email-admin");
+        Assert.True((await team.BootstrapAsync(administratorDid, "uid:0", "format-bootstrap", token)).Succeeded);
+        LabelAdministrationCaller administrator = (await team.AuthenticateLocalAsync("uid:0", token)).Result!;
+        Assert.True((await team.SetTeamNotificationEmailAsync(
+            caller: administrator,
+            change: new("format-email", administratorDid, "admin@example.invalid", "Register alerts."),
+            cancellationToken: token)).Succeeded);
+        Assert.True((await team.ChangeTeamAsync(
+            caller: administrator,
+            change: new(
+                operationId: "format-enroll",
+                action: LabelTeamAction.Enroll,
+                target: new Did("did:web:labeler.example"),
+                reason: "Enroll a notification test member.",
+                role: LabelTeamRole.Viewer),
+            cancellationToken: token)).Succeeded);
+        LabelPolicyAlertDelivery delivery = Assert.IsType<LabelPolicyAlertDelivery>(
+            await ((ILabelPolicyAlertStore)fixture.Store).ClaimPendingAlertAsync(
+                leaseId: "format-message",
+                leaseDuration: TimeSpan.FromMinutes(2),
+                cancellationToken: token));
+        EmailHandles handles = new(resolved);
+        LabelerPolicyEmailService service = new(
+            issuer: new Did("did:web:labeler.example"),
+            alerts: null,
+            settings: new() { FromAddress = "labeler@example.invalid" },
+            clock: new FakeTimeProvider(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero)),
+            logger: NullLogger<LabelerPolicyEmailService>.Instance,
+            handles: handles);
+        using System.Net.Mail.MailMessage message = await service.CreateMessageAsync(
+            delivery, delivery.Recipients[0], token);
+        string issuer = resolved ? "@labeler.example" : "Handle unavailable";
+        string administratorIdentity = resolved ? "@admin.example" : "Handle unavailable";
+        Assert.Contains($"{issuer} (did:web:labeler.example)", message.Body, StringComparison.Ordinal);
+        Assert.Contains($"Team member {issuer} (did:web:labeler.example) was added with the Viewer role.", message.Body, StringComparison.Ordinal);
+        Assert.Contains($"Changed by {administratorIdentity} (did:plc:email-admin).", message.Body, StringComparison.Ordinal);
+        Assert.Equal(2, handles.Lookups);
+        using CancellationTokenSource cancellation = new();
+        cancellation.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            service.CreateMessageAsync(delivery, delivery.Recipients[0], cancellation.Token));
+    }
+
+    /// <summary>Supplies verified fictional email identities or explicit lookup failures without external requests.</summary>
+    private sealed class EmailHandles(bool resolved = true) : IDidHandleResolver
+    {
+        /// <summary>Gets the number of unique identity lookups performed by message formatting.</summary>
+        internal int Lookups { get; private set; }
+
+        /// <inheritdoc/>
+        public ValueTask<Handle> ResolveHandleAsync(Did did, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Lookups++;
+            return ValueTask.FromResult(MemberHandle(did));
+        }
+
+        /// <inheritdoc/>
+        public bool TryGetCachedHandle(Did did, [NotNullWhen(true)] out Handle? handle)
+        {
+            handle = MemberHandle(did);
+            return true;
+        }
+
+        /// <summary>Returns a verified test handle or an explicit lookup failure.</summary>
+        private Handle MemberHandle(Did did) => !resolved ? Handle.Invalid : did.Value switch
+        {
+            "did:plc:email-admin" => new Handle("admin.example"),
+            "did:plc:second-email-admin" => new Handle("member.example"),
+            _ => new Handle("labeler.example")
+        };
+
+        /// <inheritdoc/>
+        public void Invalidate(Did did)
+        {
         }
     }
 

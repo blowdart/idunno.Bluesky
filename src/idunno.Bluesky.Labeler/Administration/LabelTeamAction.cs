@@ -19,5 +19,7 @@ public enum LabelTeamAction
     /// <summary>Binds an OS identity to an active member.</summary>
     BindLocal,
     /// <summary>Revokes an OS identity binding.</summary>
-    RevokeLocal
+    RevokeLocal,
+    /// <summary>Transfers ownership from the current owner to another active administrator.</summary>
+    TransferOwnership
 }

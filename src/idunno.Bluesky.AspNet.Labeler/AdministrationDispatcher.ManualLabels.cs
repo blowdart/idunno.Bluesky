@@ -15,6 +15,59 @@ namespace idunno.Bluesky.AspNet.Labeler;
 
 internal sealed partial class AdministrationDispatcher
 {
+    /// <summary>Lists issuance-policy labels without requiring Xenon moderation services.</summary>
+    private async Task<AdministrationResponse> ReadAvailableLabelsAsync(
+        LabelAdministrationCaller caller,
+        AdministrationCommand command,
+        CancellationToken token)
+    {
+        if (command.Target.Length == 0 && command.Cid is not null)
+        {
+            return new(false, "InvalidRequest", "A content version requires a target.");
+        }
+
+        if (command.Target.Length != 0)
+        {
+            return store is ILabelPolicyStore policies
+                ? await ReadManualLabelChoicesAsync(caller, command, policies, token).ConfigureAwait(false)
+                : new(false, "PolicyUnavailable", "Target label state is unavailable.");
+        }
+
+        LabelServiceResult<LabelAuthorizationGrant> grant = await administration.AuthorizeAsync(
+            caller: caller,
+            permission: LabelAdministrationPermission.Inspect,
+            reason: command.Reason,
+            cancellationToken: token).ConfigureAwait(false);
+        if (!grant.Succeeded)
+        {
+            return Failure(grant.Error);
+        }
+
+        LabelServiceResult<LabelIssuancePolicy> result = await policy.GetPolicyAsync(token).ConfigureAwait(false);
+        if (!result.Succeeded)
+        {
+            return Failure(result.Error);
+        }
+
+        grant = await administration.AuthorizeAsync(
+            caller: caller,
+            permission: LabelAdministrationPermission.Inspect,
+            reason: command.Reason,
+            cancellationToken: token).ConfigureAwait(false);
+        if (!grant.Succeeded)
+        {
+            return Failure(grant.Error);
+        }
+
+        return new(true, Moderation: new(LabelChoices: [.. result.Result.DeclaredValues
+            .Order(StringComparer.Ordinal)
+            .Select(value => new ModerationLabelChoiceView(
+                Value: value,
+                Applied: false,
+                Sequence: 0,
+                OtherVersion: false))]));
+    }
+
     /// <summary>Loads policy choices and issuer-local label state without requiring a report or a remotely available record.</summary>
     private async Task<AdministrationResponse> ReadManualLabelChoicesAsync(
         LabelAdministrationCaller caller,

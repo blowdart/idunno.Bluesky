@@ -18,7 +18,7 @@
 
 #### idunno.Bluesky.AspNet.Labeler
 
-* Public label queries and HTTP/1.1 or HTTP/2 WebSocket subscriptions, with stable pagination, bounded replay, live delivery, admission limits and liveness/readiness health checks.
+* Public `com.atproto.server.describeServer` identity discovery, configurable contact and policy links for method-bound service authentication, plus label queries and HTTP/1.1 or HTTP/2 WebSocket subscriptions, with stable pagination, bounded replay, live delivery, admission limits and liveness/readiness health checks.
 * Optional Xenon moderation backend with authenticated report and appeal intake, shared case workflows and independent verification of the labeler's published declaration. Public label distribution remains independent of moderation and remote administration.
 * Replay-protected, method-bound service-token administration over HTTPS and protected local administration through Windows named pipes or Linux Unix sockets, with browserless owner setup and live team authorization.
 * Disabled, Enabled and WebUiControlled remote-administration modes, including an audited owner-only switch, without affecting protected local access.
@@ -27,6 +27,7 @@
 * Opt-in `MapOzoneCompatibility()` routes for discovery, configuration, team presence, filtered queues, subject/event history, previews, report acknowledgment, escalation, label actions and appeals. Supported workflows share Xenon's policies, authorization and atomic storage; unsupported capabilities fail explicitly.
 * Explicit Ozone browser-origin allowlists with automatic route-scoped CORS preflight and response handling; no cross-origin access is enabled by default.
 * Durable background retirement and local-purge workflows, coordinated multi-host signing-key rotation and maintenance, with live authorization, resumable checkpoints and explicit recovery.
+* Database-outage recovery for labeler startup and hosted workers, with bounded startup retries, unhealthy readiness during runtime retries and safe recovery of stale Linux administration sockets.
 * Structured operational diagnostics and `AddBlueskyLabelerMetrics()` OpenTelemetry registration, without credentials or report contents in diagnostic messages.
 
 #### idunno.Bluesky.AspNet.Labeler.UI
@@ -39,7 +40,8 @@
 * Policy-backed manual and case label decisions for accounts or records, optional CID scope and expiry, current-state lookup, selectable report-handling scope and retry-safe additions/removals. Appeal review supports retaining, withdrawing or replacing challenged labels.
 * Tabbed policy editor for label definitions and translations, report subjects, collections and reasons, plus synchronized advanced JSON and an explicit action to match label-issuance permissions to reporting scope. Unpublished drafts can be saved, updated, loaded and deleted, with shared working-copy context and retained editor state.
 * Explicit policy publication and independent verification, with separate labeler-account authorization, conditional PDS writes, irreversible removed-label cleanup confirmation, progress, pause/resume and abandonment.
-* Team enrollment and membership/role management, verified-handle search, owner-controlled remote CLI access, and administrator email registration and test delivery from Team or Preferences when SMTP is configured.
+* Team enrollment and membership/role management, verified-handle search, owner-controlled remote CLI access, and administrator email registration and test delivery from Team or Preferences when SMTP is configured. Email controls keep the save and test buttons aligned on both pages, and the Team page collapses configured settings by default.
+* Ownership transfer controls appear at the bottom of Team in a panel collapsed by default.
 * Filterable administrative audit history and streamed JSON export, with consistently capitalized action labels, timestamp, actor and outcome filters, retained original event times and repeated live authorization during downloads.
 * Guided maintenance and retirement with phase-specific progress, recovery and action-bound confirmations for grace periods, stopped-host attestations, local label-history cleanup and external signing-key removal.
 * Responsive light, dark and system themes; keyboard-accessible controls; UTC/local and relative timestamps; locally bundled fonts and icons; build identification; and public terms/privacy notices for operator customization.
@@ -69,10 +71,21 @@
 * Signed-label storage and distribution contracts with immutable signed snapshots, ordered publication and replay, retained-slot queries, stable cursors, operation receipts, structured logging and persistence metrics.
 * Xenon reports, exact-subject cases and appeals, with retained evidence, assignment, escalation, workflow filtering, temporary subject/reporter mutes and atomic label/report decisions. Intake never automatically labels content.
 * Verified DID/handle enrollment, Administrator/Moderator/Viewer roles, explicit local OS delegations, live revocation, last-administrator protection and append-only administrative audit of changes and denials, without successful team-read polling noise.
+* Protected labeler ownership: the current owner cannot be removed, suspended or demoted, and other administrators cannot replace their local access bindings. Owners can explicitly transfer protection and remote CLI control to another active administrator through Xenon or the CLI, with atomic audit and retry-safe receipts.
 * Editable unpublished policy drafts and retained publication history, independent declaration verification, scope enforcement, conditional publication/recovery and bounded withdrawal of removed labels.
 * Encrypted local signing-key files with owner-only permissions and create-only backups, public identity publication/verification helpers, durable active-key selection and verified resumable signature replacement.
 * Coordinated maintenance and irreversible retirement, with action-bound confirmations, bounded signed negations, durable checkpoints, explicit grace periods and availability evidence. Local history purge and operator-attested external key removal are separate actions; moderation/audit history, backups and downstream copies are not erased.
 * Feature namespaces for `Issuance`, `Administration`, `Moderation`, `Maintenance`, `Signing`, `Storage` and `Identity`, with common target and result/error types in the root namespace.
+
+#### idunno.Bluesky.Labeler.Agent
+
+* Added a manual-only Lexicon publishing workflow for `main`, using the dedicated `lexicon` environment, pinned goat tooling, linting and published-schema compatibility checks.
+* Added a remote bot client with borrowed or owned AT Protocol agents, method-bound service authentication, label issue/negate operations, durable receipt recovery, available-label discovery and public applied-label queries.
+* Split labeler-agent issuance calls into the `labeler_issuance` service audience and XRPC namespace, separate from `labeler_admin` administration calls. Added public audience fragments and host/sample guidance.
+* Named the issuance lookups `getOperationReceipt` and `getAvailableLabels`, and added lexicons for all four issuance XRPC procedures.
+* Standardized issuance XRPC bodies: successful responses now match their lexicon result DTOs, and failures use AT Protocol error details and HTTP status codes.
+* Mapped labeler issuance error responses to typed error objects in the remote agent, using standard `AuthenticationRequired`, `Forbidden` and `InvalidRequest` errors where applicable.
+* Added issue and negate overloads that generate a GUID operation ID when callers do not supply one; callers needing reliable retry and receipt recovery should continue to persist their own IDs.
 
 #### idunno.Bluesky.Labeler.SQLite / PostgreSQL / MySQL
 
@@ -394,6 +407,10 @@
 #### Samples
 
 * Added `Samples.BotSdk`, a reply-only durable bot sample with developer-mode simulation, in-memory storage, and health and metrics endpoints.
+* Added `Samples.LabelerAgent` commands to issue and negate labels for accounts or records with readable change/no-op outcomes, list labels supported by a remote labeler, and publicly query published labels by account or AT URI with automatic pagination, verified handles, friendly local dates and explicit negation and expiry status.
+* Added optional `--expires-in` durations and `--expires-at` absolute dates to the sample's `label` command, with mutually exclusive options and future-expiry validation before issuance.
+* Added `remove` as an alias for the sample's `negate` command.
+* Resolved account and record handles before sample negation requests, avoiding `InvalidTarget` while retaining record version scope and DID-based withdrawals.
 * Added `--replay-live-buffer-capacity` to `Samples.JetstreamReplay` to configure the decoded-event buffer during live replay, defaulting to 1,024 events and rejecting non-positive values.
 * Added `Samples.BlazorAuthentication`, an Interactive Server Blazor Web App with Bluesky OAuth authentication, timeline, claims and conditional profile editing, using the ASP.NET authentication handler and UI. Circuit operations validate the session and refresh server-side credentials. Activity-based, antiforgery-protected HTTP heartbeats renew cookies and synchronize circuit expiry without reloading the page; idle sessions still expire.
 * Added a success indication after saving a profile in `Samples.AspNetAuthentication`.

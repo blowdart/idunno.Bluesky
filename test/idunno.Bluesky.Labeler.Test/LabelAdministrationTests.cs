@@ -24,6 +24,233 @@ public class LabelAdministrationTests
     [InlineData("sqlite")]
     [InlineData("postgresql")]
     [InlineData("mysql")]
+    public async Task OwnerProtectionIncludesLocalBindingsAndSurvivesRestart(string engine)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        ILabelAdministrationStore store = (ILabelAdministrationStore)fixture.Store;
+        LabelAdministrationCaller owner = await BootstrapAsync(store);
+        await EnrollAndBindAsync(store, owner, LabelTeamRole.Administrator);
+        LabelAdministrationCaller administrator = (await store.AuthenticateLocalAsync("uid:1", token)).Result!;
+        ILabelAdministrationStore restarted = (ILabelAdministrationStore)fixture.NewStore();
+        foreach (LabelTeamAction action in new[]
+        {
+            LabelTeamAction.Remove, LabelTeamAction.Suspend, LabelTeamAction.SetRole,
+            LabelTeamAction.Reinstate, LabelTeamAction.BindLocal, LabelTeamAction.RevokeLocal
+        })
+        {
+            LabelServiceResult<LabelAdministrationReceipt> result = await restarted.ChangeTeamAsync(
+                caller: administrator,
+                change: new(
+                    operationId: $"protect-owner-{action}",
+                    action: action,
+                    target: s_administrator,
+                    reason: "Reject an attempt to alter the owner.",
+                    role: LabelTeamRole.Administrator,
+                    credential: action == LabelTeamAction.BindLocal ? "uid:2" :
+                        action == LabelTeamAction.RevokeLocal ? "uid:0" : null),
+                cancellationToken: token);
+            Assert.False(result.Succeeded);
+        }
+
+        Assert.False((await restarted.ChangeTeamAsync(
+            caller: administrator,
+            change: Change(LabelTeamAction.BindLocal, "replace-owner-binding", credential: "uid:0"),
+            cancellationToken: token)).Succeeded);
+        Assert.False((await restarted.AuthenticateLocalAsync("uid:2", token)).Succeeded);
+        Assert.Equal(s_administrator, (await restarted.AuthenticateLocalAsync("uid:0", token)).Result!.Actor);
+        Assert.True((await restarted.AuthorizeAsync(owner, LabelAdministrationPermission.ManageTeam, "Owner remains authorized.", token)).Succeeded);
+        foreach (LabelAdministrationCaller caller in new[] { owner, administrator })
+        {
+            foreach (LabelTeamAction action in new[] { LabelTeamAction.Remove, LabelTeamAction.Suspend, LabelTeamAction.SetRole })
+            {
+                Assert.False((await restarted.ChangeTeamAsync(
+                    caller: caller,
+                    change: new(
+                        operationId: $"protect-owner-{caller.Actor}-{action}",
+                        action: action,
+                        target: s_administrator,
+                        reason: "Ownership must be transferred before losing administrator access.",
+                        role: LabelTeamRole.Moderator),
+                    cancellationToken: token)).Succeeded);
+            }
+        }
+
+        IReadOnlyList<LabelTeamMember> members = (await restarted.GetTeamAsync(owner, token)).Result!;
+        Assert.True(Assert.Single(members, member => member.Did == s_administrator) is
+            { Active: true, Removed: false, Role: LabelTeamRole.Administrator });
+        IReadOnlyList<LabelAdministrationReceipt> audit = (await restarted.GetAdministrationAuditAsync(owner, limit: 16, cancellationToken: token)).Result!;
+        Assert.Contains(audit, receipt => receipt.OperationId == "replace-owner-binding" && !receipt.Succeeded);
+    }
+
+    [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task OwnershipTransferMovesProtectionAndRemoteControlWithoutReplayingTheTransfer(string engine)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        ILabelAdministrationStore store = (ILabelAdministrationStore)fixture.Store;
+        LabelAdministrationCaller owner = await BootstrapAsync(store);
+        await EnrollAndBindAsync(store, owner, LabelTeamRole.Administrator);
+        LabelAdministrationCaller administrator = (await store.AuthenticateLocalAsync("uid:1", token)).Result!;
+        LabelTeamChange transfer = Change(LabelTeamAction.TransferOwnership, "transfer-owner");
+        Assert.False((await store.ChangeTeamAsync(administrator, transfer, token)).Succeeded);
+        LabelServiceResult<LabelAdministrationReceipt> result = await store.ChangeTeamAsync(owner, transfer, token);
+        Assert.True(result.Succeeded, result.Error?.Message);
+        ILabelAdministrationStore restarted = (ILabelAdministrationStore)fixture.NewStore();
+        Assert.False((await restarted.GetRemoteAdministrationStatusAsync(owner, token)).Result!.IsOwner);
+        Assert.True((await restarted.GetRemoteAdministrationStatusAsync(administrator, token)).Result!.IsOwner);
+        Assert.Equal(result.Result, (await restarted.ChangeTeamAsync(owner, transfer, token)).Result);
+        Assert.False((await restarted.GetRemoteAdministrationStatusAsync(owner, token)).Result!.IsOwner);
+        Assert.False((await restarted.SetRemoteAdministrationEnabledAsync(
+            caller: owner,
+            operationId: "former-owner-remote",
+            enabled: true,
+            reason: "Former ownership must not retain control.",
+            cancellationToken: token)).Succeeded);
+        Assert.True((await restarted.SetRemoteAdministrationEnabledAsync(
+            caller: administrator,
+            operationId: "new-owner-remote",
+            enabled: true,
+            reason: "New ownership controls remote access.",
+            cancellationToken: token)).Succeeded);
+        Assert.False((await restarted.ChangeTeamAsync(owner, Change(LabelTeamAction.Remove, "remove-new-owner"), token)).Succeeded);
+        LabelTeamChange transferBack = new(
+            operationId: "transfer-back",
+            action: LabelTeamAction.TransferOwnership,
+            target: s_administrator,
+            reason: "Return ownership explicitly.");
+        Assert.True((await restarted.ChangeTeamAsync(administrator, transferBack, token)).Succeeded);
+        Assert.Equal(result.Result, (await restarted.ChangeTeamAsync(owner, transfer, token)).Result);
+        Assert.True((await restarted.GetRemoteAdministrationStatusAsync(owner, token)).Result!.IsOwner);
+        Assert.False((await restarted.GetRemoteAdministrationStatusAsync(administrator, token)).Result!.IsOwner);
+        Assert.True((await restarted.ChangeTeamAsync(owner, Change(LabelTeamAction.Remove, "remove-former-owner"), token)).Succeeded);
+        IReadOnlyList<LabelAdministrationReceipt> audit = (await restarted.GetAdministrationAuditAsync(owner, limit: 16, cancellationToken: token)).Result!;
+        Assert.Single(audit, receipt => receipt.OperationId == transfer.OperationId && receipt.Succeeded);
+    }
+
+    [Theory]
+    [InlineData(LabelTeamRole.Viewer, false, false)]
+    [InlineData(LabelTeamRole.Moderator, false, false)]
+    [InlineData(LabelTeamRole.Administrator, true, false)]
+    [InlineData(LabelTeamRole.Administrator, false, true)]
+    public async Task OwnershipTransferRejectsIneligibleTargets(LabelTeamRole role, bool suspended, bool removed)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using StoreFixture fixture = await StoreFixture.CreateAsync("sqlite");
+        ILabelAdministrationStore store = (ILabelAdministrationStore)fixture.Store;
+        LabelAdministrationCaller owner = await BootstrapAsync(store);
+        await EnrollAndBindAsync(store, owner, role);
+        if (suspended || removed)
+        {
+            Assert.True((await store.ChangeTeamAsync(
+                caller: owner,
+                change: Change(removed ? LabelTeamAction.Remove : LabelTeamAction.Suspend, "make-ineligible"),
+                cancellationToken: token)).Succeeded);
+        }
+
+        foreach (Did target in new[] { s_member, s_administrator, new Did("did:plc:unknown") })
+        {
+            Assert.False((await store.ChangeTeamAsync(
+                caller: owner,
+                change: new(
+                    operationId: $"invalid-owner-{target}",
+                    action: LabelTeamAction.TransferOwnership,
+                    target: target,
+                    reason: "Reject an ineligible ownership target."),
+                cancellationToken: token)).Succeeded);
+        }
+        Assert.True((await store.GetRemoteAdministrationStatusAsync(owner, token)).Result!.IsOwner);
+    }
+
+    [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task ConcurrentOwnershipTransfersHaveExactlyOneWinner(string engine)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        ILabelAdministrationStore first = (ILabelAdministrationStore)fixture.Store;
+        ILabelAdministrationStore second = (ILabelAdministrationStore)fixture.NewStore();
+        LabelAdministrationCaller owner = await BootstrapAsync(first);
+        await EnrollAndBindAsync(first, owner, LabelTeamRole.Administrator);
+        Did third = new("did:plc:third-administrator");
+        Assert.True((await first.ChangeTeamAsync(
+            caller: owner,
+            change: new(
+                operationId: "enroll-third",
+                action: LabelTeamAction.Enroll,
+                target: third,
+                reason: "Enroll a competing ownership target.",
+                role: LabelTeamRole.Administrator),
+            cancellationToken: token)).Succeeded);
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        async Task<LabelServiceResult<LabelAdministrationReceipt>> TransferAsync(ILabelAdministrationStore store, Did target)
+        {
+            await release.Task.WaitAsync(token);
+            return await store.ChangeTeamAsync(
+                caller: owner,
+                change: new(
+                    operationId: $"transfer-{target}",
+                    action: LabelTeamAction.TransferOwnership,
+                    target: target,
+                    reason: "Only one concurrent transfer may win."),
+                cancellationToken: token);
+        }
+
+        Task<LabelServiceResult<LabelAdministrationReceipt>> one = TransferAsync(first, s_member);
+        Task<LabelServiceResult<LabelAdministrationReceipt>> two = TransferAsync(second, third);
+        release.SetResult();
+        LabelServiceResult<LabelAdministrationReceipt>[] results = await Task.WhenAll(one, two);
+        Assert.Single(results, result => result.Succeeded);
+        Assert.False((await first.GetRemoteAdministrationStatusAsync(owner, token)).Result!.IsOwner);
+        foreach (Did target in new[] { s_member, third })
+        {
+            LabelAdministrationCaller candidate = (await first.AuthenticateBrowserAsync(target, token)).Result!;
+            Assert.Equal(target == (results[0].Succeeded ? s_member : third),
+                (await first.GetRemoteAdministrationStatusAsync(candidate, token)).Result!.IsOwner);
+        }
+    }
+
+    [Theory]
+    [InlineData(LabelTeamAction.Remove)]
+    [InlineData(LabelTeamAction.Suspend)]
+    [InlineData(LabelTeamAction.SetRole)]
+    public async Task OwnershipTransferAndTargetRevocationCannotBothSucceed(LabelTeamAction action)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using StoreFixture fixture = await StoreFixture.CreateAsync("sqlite");
+        ILabelAdministrationStore first = (ILabelAdministrationStore)fixture.Store;
+        ILabelAdministrationStore second = (ILabelAdministrationStore)fixture.NewStore();
+        LabelAdministrationCaller owner = await BootstrapAsync(first);
+        await EnrollAndBindAsync(first, owner, LabelTeamRole.Administrator);
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        async Task<LabelServiceResult<LabelAdministrationReceipt>> ChangeAsync(ILabelAdministrationStore store, LabelTeamAction requested)
+        {
+            await release.Task.WaitAsync(token);
+            return await store.ChangeTeamAsync(
+                caller: owner,
+                change: Change(requested, $"race-{requested}"),
+                cancellationToken: token);
+        }
+
+        Task<LabelServiceResult<LabelAdministrationReceipt>> transfer = ChangeAsync(first, LabelTeamAction.TransferOwnership);
+        Task<LabelServiceResult<LabelAdministrationReceipt>> revoke = ChangeAsync(second, action);
+        release.SetResult();
+        LabelServiceResult<LabelAdministrationReceipt>[] results = await Task.WhenAll(transfer, revoke);
+        Assert.Single(results, result => result.Succeeded);
+        Assert.Equal(!results[0].Succeeded, (await first.GetRemoteAdministrationStatusAsync(owner, token)).Result!.IsOwner);
+        LabelTeamMember member = Assert.Single((await first.GetTeamAsync(owner, token)).Result!, entry => entry.Did == s_member);
+        Assert.Equal(results[0].Succeeded, member is { Active: true, Removed: false, Role: LabelTeamRole.Administrator });
+    }
+
+    [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
     public async Task TeamReadsDoNotAppendAuditButRevokedAccessIsStillAudited(string engine)
     {
         CancellationToken token = TestContext.Current.CancellationToken;
@@ -464,6 +691,14 @@ public class LabelAdministrationTests
         }
         ILabelAdministrationStore restarted = (ILabelAdministrationStore)fixture.NewStore();
         LabelAdministrationCaller administrator = (await restarted.AuthenticateLocalAsync("uid:1", token)).Result!;
+        Assert.False((await restarted.ChangeTeamAsync(
+            caller: administrator,
+            change: new(
+                operationId: "protect-legacy-owner",
+                action: LabelTeamAction.Remove,
+                target: s_administrator,
+                reason: "Protect a legacy owner before any owner-status read."),
+            cancellationToken: token)).Succeeded);
         Assert.False((await restarted.GetRemoteAdministrationStatusAsync(administrator, token)).Result!.IsOwner);
         LabelAdministrationCaller recovered = (await restarted.AuthenticateLocalAsync("uid:0", token)).Result!;
         Assert.True((await restarted.GetRemoteAdministrationStatusAsync(recovered, token)).Result!.IsOwner);
@@ -503,7 +738,7 @@ public class LabelAdministrationTests
             cancellationToken: TestContext.Current.CancellationToken);
         Assert.False(protectedAdministrator.Succeeded);
         Assert.Equal(LabelServiceErrorCode.Unauthorized, protectedAdministrator.Error.Code);
-        Assert.Equal("You cannot remove, suspend or reduce the permissions of the last active administrator.", protectedAdministrator.Error.Message);
+        Assert.Equal("The labeler owner cannot be removed, suspended or demoted. Transfer ownership first.", protectedAdministrator.Error.Message);
         await EnrollAndBindAsync(first, administrator, LabelTeamRole.Administrator);
         ILabelAdministrationStore second = (ILabelAdministrationStore)fixture.NewStore();
         LabelAdministrationCaller member = (await second.AuthenticateLocalAsync("uid:1", TestContext.Current.CancellationToken)).Result!;

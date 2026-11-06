@@ -8,6 +8,7 @@ using System.Text.Json;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
+using idunno.AtProto.Server;
 using idunno.Bluesky.AspNet.Authentication;
 using idunno.Bluesky.AspNet.Labeler;
 using idunno.Bluesky.Labeler.Administration;
@@ -56,6 +57,11 @@ internal static partial class Program
             builder.Configuration["Labeler:LocalAdministrationEndpoint"] ??
             (OperatingSystem.IsWindows() ? "idunno-labeler-admin" : "/run/labeler/admin.sock");
         AtProtoServiceReference audience = ParseAudience(Required(builder.Configuration, "Labeler:AdministrationAudience"));
+        if (audience.Did != issuer || audience.Fragment != Audience.Administration)
+        {
+            throw new InvalidOperationException(
+                "Labeler:AdministrationAudience must match Labeler:IssuerDid and use the labeler_admin fragment.");
+        }
 
         using IDisposable? keyRingLifetime = IsKeylessConfiguration(builder.Configuration)
             ? null
@@ -97,9 +103,24 @@ internal static partial class Program
                 new ConfigurationLabelIssuancePolicyProvider(builder.Configuration));
         }
 
+        string? contactEmail = builder.Configuration["Labeler:ContactEmail"];
+        Links? serverLinks = uiEnabled
+            ? new Links
+            {
+                TermsOfService = new Uri(publicEndpoint, "/Xenon/Terms"),
+                PrivacyPolicy = new Uri(publicEndpoint, "/Xenon/Privacy")
+            }
+            : null;
         builder.Services.AddBlueskyLabeler(
             issuer,
-            new LabelerHostingOptions { PublicEndpoint = publicEndpoint });
+            new LabelerHostingOptions
+            {
+                PublicEndpoint = publicEndpoint,
+                Contact = string.IsNullOrWhiteSpace(contactEmail)
+                    ? null
+                    : new idunno.AtProto.Server.Contact(contactEmail),
+                Links = serverLinks
+            });
         if (keyRing is null)
         {
             builder.Services.AddKeylessLabelerAdministration(audience, identityClient);
@@ -126,57 +147,71 @@ internal static partial class Program
 
         WebApplication app = builder.Build();
         await using ConfiguredAsyncDisposable appDisposal = app.ConfigureAwait(false);
-        if (uiEnabled && provider == "postgresql")
-        {
-            await app.Services.GetRequiredService<PostgreSqlXmlRepository>()
-                .InitializeAsync(app.Lifetime.ApplicationStopping).ConfigureAwait(false);
-        }
-        if (keyRing is null)
-        {
-            await ValidateKeylessHostingAsync(
-                issuer: issuer,
-                store: app.Services.GetRequiredService<ILabelStore>(),
-                maintenance: app.Services.GetRequiredService<ILabelMaintenanceStore>(),
-                policies: app.Services.GetService<ILabelPolicyStore>(),
-                cancellationToken: app.Lifetime.ApplicationStopping).ConfigureAwait(false);
-        }
-        else
-        {
-            await app.Services.GetRequiredService<ILabelStore>()
-                .InitializeAsync(issuer, app.Lifetime.ApplicationStopping)
-                .ConfigureAwait(false);
-        }
-        if (moderationEnabled)
-        {
-            await app.Services.GetRequiredService<ILabelPolicyStore>().InitializePolicyAsync(
-                verificationFreshness: moderationOptions.VerificationFreshness,
-                cancellationToken: app.Lifetime.ApplicationStopping).ConfigureAwait(false);
-        }
-        if (keyRing is EnvironmentLabelSigningKeyRing environmentKeys)
-        {
-            await environmentKeys.InitializeAsync(
-                selectionStore: app.Services.GetRequiredService<ILabelSigningKeySelectionStore>(),
-                maintenance: app.Services.GetRequiredService<ILabelMaintenanceStore>(),
-                initialKeyId: builder.Configuration["Labeler:InitialSigningKeyId"],
-                cancellationToken: app.Lifetime.ApplicationStopping).ConfigureAwait(false);
-        }
-        else if (keyRing is PemDirectoryLabelSigningKeyRing pemKeys)
-        {
-            await pemKeys.InitializeAsync(
-                selectionStore: app.Services.GetRequiredService<ILabelSigningKeySelectionStore>(),
-                maintenance: app.Services.GetRequiredService<ILabelMaintenanceStore>(),
-                cancellationToken: app.Lifetime.ApplicationStopping).ConfigureAwait(false);
-        }
+        await DatabaseRetry.ExecuteStartupAsync(
+            async cancellationToken =>
+            {
+                if (uiEnabled && provider == "postgresql")
+                {
+                    await app.Services.GetRequiredService<PostgreSqlXmlRepository>()
+                        .InitializeAsync(cancellationToken).ConfigureAwait(false);
+                }
+                if (keyRing is null)
+                {
+                    await ValidateKeylessHostingAsync(
+                        issuer: issuer,
+                        store: app.Services.GetRequiredService<ILabelStore>(),
+                        maintenance: app.Services.GetRequiredService<ILabelMaintenanceStore>(),
+                        policies: app.Services.GetService<ILabelPolicyStore>(),
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
+                }
+                else
+                {
+                    await app.Services.GetRequiredService<ILabelStore>()
+                        .InitializeAsync(issuer, cancellationToken)
+                        .ConfigureAwait(false);
+                }
+                if (moderationEnabled)
+                {
+                    await app.Services.GetRequiredService<ILabelPolicyStore>().InitializePolicyAsync(
+                        verificationFreshness: moderationOptions.VerificationFreshness,
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
+                }
+                if (keyRing is EnvironmentLabelSigningKeyRing environmentKeys)
+                {
+                    await environmentKeys.InitializeAsync(
+                        selectionStore: app.Services.GetRequiredService<ILabelSigningKeySelectionStore>(),
+                        maintenance: app.Services.GetRequiredService<ILabelMaintenanceStore>(),
+                        initialKeyId: builder.Configuration["Labeler:InitialSigningKeyId"],
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
+                }
+                else if (keyRing is PemDirectoryLabelSigningKeyRing pemKeys)
+                {
+                    await pemKeys.InitializeAsync(
+                        selectionStore: app.Services.GetRequiredService<ILabelSigningKeySelectionStore>(),
+                        maintenance: app.Services.GetRequiredService<ILabelMaintenanceStore>(),
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
+                }
+
+                return true;
+            },
+            app.Services.GetRequiredService<TimeProvider>(),
+            app.Logger,
+            "host initialization",
+            app.Lifetime.ApplicationStopping).ConfigureAwait(false);
 
         string? bootstrapAdministrator = builder.Configuration["bootstrap-admin"];
         if (bootstrapAdministrator is not null)
         {
             string operationId = Required(builder.Configuration, "bootstrap-operation-id");
-            LabelServiceResult<LabelAdministrationReceipt> bootstrap = await app.Services
-                .BootstrapLocalAdministratorAsync(
+            LabelServiceResult<LabelAdministrationReceipt> bootstrap = await DatabaseRetry.ExecuteStartupAsync(
+                token => app.Services.BootstrapLocalAdministratorAsync(
                     AtIdentifier.Create(bootstrapAdministrator),
                     operationId,
-                    app.Lifetime.ApplicationStopping)
+                    token),
+                app.Services.GetRequiredService<TimeProvider>(),
+                app.Logger,
+                "administrator bootstrap",
+                app.Lifetime.ApplicationStopping)
                 .ConfigureAwait(false);
             if (!bootstrap.Succeeded)
             {

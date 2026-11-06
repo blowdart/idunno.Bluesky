@@ -46,6 +46,21 @@ When creating a pull request please create an issue first, unless it's a simple 
 
 Tests use the new MTP runner. If you attempt to `dotnet test --nologo` it will report "Zero tests ran" with an exit code of 5. Remove the `--nologo` parameter.
 
+### Changing lexicons
+
+Lexicon schemas live under `lexicons/`. Keep schemas, endpoint implementations and corresponding DTOs consistent, and add tests covering changed request and response shapes.
+
+Before submitting a pull request, run:
+
+```powershell
+goat lex lint
+goat lex breaking
+```
+
+The second command compares against published schemas and requires network access. If namespace resolution fails or a schema has not been published, there is no compatibility result for that schema.
+
+Changes to published schemas must follow AT Protocol's evolution rules. Breaking changes require a new NSID. Include the validation results and any compatibility implications in your pull request.
+
 ### Dependencies Upgrades
 
 Dependencies in the libraries should only be altered by maintainers.

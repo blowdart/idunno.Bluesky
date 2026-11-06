@@ -14,10 +14,16 @@ and fixed-width identifiers use locally bundled Google Sans Code with programmin
 ligatures disabled. Its normal and italic variable fonts, SIL Open Font License
 1.1, and trademark notice are also included and linked from the footer.
 
-On Team, select a member's handle (or DID when no handle is available) to fill the
-Change member form with their canonical DID and current role. Select an action,
+On Team, select a member's verified handle to fill the
+Change member form with their handle and current role. Select an action,
 provide a reason, and choose **Update**. Enrollment and membership updates use the
 submit button without an additional confirmation checkbox.
+The current owner also has a **Labeler ownership** panel at the bottom of Team, collapsed
+by default. Expand it, enter another active
+Administrator's handle and a reason, confirm the handover, and choose **Transfer ownership**.
+The new owner receives protection from removal, suspension and demotion, along with control
+of the remote CLI switch. The former owner remains an ordinary Administrator. Only the
+new owner can transfer ownership back; the handover does not change roles or local bindings.
 Role names have eye (Viewer), gavel (Moderator) and user-gear (Administrator)
 glyphs. Removed members use muted text while retaining their identity links and
 explicit Removed status. A single Status column distinguishes Active, Suspended
@@ -155,7 +161,7 @@ and remote CLI administration remain independently configurable.
 Set `LabelerAdministration__RemoteMode=WebUiControlled` in the standalone host to let
 the owner control remote access from Xenon. In that mode, the **Team and
 membership** page displays the effective remote-access status and offers the durable
-switch only to the DID that completed the one-time local bootstrap. Administrator
+switch only to the current owner, initially the DID that completed the one-time local bootstrap. Administrator
 role alone is insufficient. Every change is committed with its audit event; protected
 local administration remains available when the switch is off. See the
 [remote administration control modes](administration.md#remote-administration-control-modes)

@@ -2,11 +2,15 @@
 @model idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Team.IndexModel
 @using System.Text.Json
 @using idunno.Bluesky.Labeler.Administration
+@inject idunno.AtProto.IDidHandleResolver Handles
 @{
     ViewData["Title"] = "Team";
     ViewData["WideLayout"] = true;
     JsonElement? members = Model.Data.ValueKind == JsonValueKind.Object &&
         Model.Data.TryGetProperty("members", out JsonElement values) ? values : null;
+    string? selectedHandle = Model.SelectedMember is { } selectedMember &&
+        Handles.TryGetCachedHandle(new idunno.AtProto.Did(selectedMember), out idunno.AtProto.Handle? selectedMemberHandle) &&
+        selectedMemberHandle is { IsValid: true } ? selectedMemberHandle.Value : null;
     string remoteAccessIcon = Model.RemoteAdministrationEnabled switch
     {
         true => "circle-check",
@@ -39,7 +43,7 @@
         }
         else
         {
-            <p>Only the account that originally set up this labeler can change this setting.</p>
+            <p>Only the current labeler owner can change this setting.</p>
         }
     }
     else
@@ -49,8 +53,13 @@
 </section>
 @if (Model.CanManagePolicyEmail)
 {
-    <section class="panel">
-        <h2>Administrator email notifications</h2>
+    <details class="panel" open="@(Model.CurrentNotificationEmail is null)">
+        <summary><strong>Administrator email notifications</strong>
+            @if (Model.CurrentNotificationEmail is not null)
+            {
+                <span class="muted">You have configured your email address. Expand to edit or remove it.</span>
+            }
+        </summary>
         <p>@(Model.CurrentNotificationEmail is null
             ? "Add an email address for administrator notifications."
             : "Update your email address for administrator notifications.")
@@ -58,21 +67,40 @@
         <p>When email is enabled on the server, notifications cover published policies, team membership and role changes, remote or local CLI access changes, and automatic public policy check failures. Active administrators with a registered notification email receive these notifications even when only one administrator is active. No emails are sent to moderators.</p>
         <form method="post" asp-page-handler="NotificationEmail">
             <input type="hidden" name="operationId" value="@(ViewData["OperationId"] ?? Guid.NewGuid().ToString("N"))" />
-            <label class="field" for="notification-email">Your alert email address
-                <input id="notification-email" name="notificationEmail" type="email" value="@Model.CurrentNotificationEmail" maxlength="254" autocomplete="email" />
-            </label>
-            <p class="form-actions"><button type="submit">@(Model.CurrentNotificationEmail is null ? "Save alert email" : "Update email")</button></p>
+            <div class="notification-email-entry">
+                <label class="field" for="notification-email">Your alert email address
+                    <input id="notification-email" name="notificationEmail" type="email" value="@Model.CurrentNotificationEmail" maxlength="254" autocomplete="email" />
+                </label>
+                <button type="submit">@(Model.CurrentNotificationEmail is null ? "Save alert email" : "Update email")</button>
+            </div>
         </form>
-        <form method="post" asp-page-handler="TestEmail">
+        <form method="post" asp-page-handler="TestEmail" class="notification-email-test">
             <button type="submit">Test my email</button>
+            <p class="muted">Tests use your saved address, not unsaved changes above. Allow 30 seconds between tests.</p>
         </form>
-        <p class="muted">Tests use your saved address, not unsaved changes above. Allow 30 seconds between tests.</p>
-    </section>
+    </details>
 }
 <form method="get" class="panel team-search">
-    <label class="field" for="team-search">Member handle or account ID (DID)
-        <input id="team-search" name="Search" value="@Request.Query["Search"]" maxlength="256" placeholder="DID or handle" />
+    <label class="field" for="team-search">Member handle
+        <input id="team-search" name="Search" value="@Request.Query["Search"]" maxlength="256" placeholder="Handle"
+               list="team-search-handles" autocomplete="off" spellcheck="false" />
     </label>
+    <datalist id="team-search-handles">
+        @foreach (AdministrationMemberView member in Model.MemberChoices)
+        {
+            if (Handles.TryGetCachedHandle(new idunno.AtProto.Did(member.Did), out idunno.AtProto.Handle? handle) &&
+                handle is { IsValid: true })
+            {
+                string status = (member.Removed, member.Active) switch
+                {
+                    (true, _) => "Removed",
+                    (false, true) => "Active",
+                    (false, false) => "Suspended"
+                };
+                <option value="@handle.Value" label="@($"@{handle} - {status}")" data-role="@member.Role"></option>
+            }
+        }
+    </datalist>
     <div class="team-search-actions"><button type="submit">Search</button><a asp-page="./Index">Clear</a></div>
 </form>
 @if (members is { ValueKind: JsonValueKind.Array } list)
@@ -111,11 +139,13 @@
                                asp-route-PageNumber="@Model.Table.Page"
                                asp-route-Search="@Request.Query["Search"]"
                                asp-fragment="change-member">@await Html.PartialAsync("_Identity", new IdentityDisplayModel(member.GetProperty("did").GetString()))</a></td>
-                        <td>@if (roleIcon is not null)
+                        <td><span class="team-member-role">
+                            @if (roleIcon is not null)
                             {
                                 <span class="fa-icon fa-@roleIcon" aria-hidden="true"></span>
                             }
-                            @role</td>
+                            @role
+                        </span></td>
                         <td><span class="fa-icon fa-@statusIcon" aria-hidden="true"></span> @status</td>
                     </tr>
                 }
@@ -129,7 +159,16 @@
         <h2>Add a team member</h2>
         <form method="post" asp-page-handler="Enroll">
             <input type="hidden" name="operationId" value="@(ViewData["OperationId"] ?? Guid.NewGuid().ToString("N"))" />
-            <label class="field">Handle or account ID (DID)<input name="target" required maxlength="256" /></label>
+            <div class="field handle-typeahead" data-handle-typeahead>
+                <label for="enroll-target">Bluesky handle</label>
+                <div class="handle-search-control">
+                    <input id="enroll-target" name="target" required maxlength="256" autocomplete="off" spellcheck="false"
+                           aria-describedby="enroll-target-help enroll-target-status" />
+                    <ul id="enroll-target-suggestions" class="handle-suggestions" role="listbox" aria-label="Suggested accounts" hidden></ul>
+                </div>
+                <small id="enroll-target-help" class="muted">Type at least two characters for suggestions, or enter a handle directly.</small>
+                <small id="enroll-target-status" role="status" aria-live="polite"></small>
+            </div>
             <label class="field">Role
                 <select name="role"><option value="Viewer">Viewer</option><option value="Moderator">Moderator</option><option value="Administrator">Administrator</option></select>
             </label>
@@ -141,7 +180,10 @@
         <h2>Change member</h2>
         <form method="post" asp-page-handler="Change" data-team-change>
             <input type="hidden" name="operationId" value="@(ViewData["OperationId"] ?? Guid.NewGuid().ToString("N"))" />
-            <label class="field">Member account ID (DID)<input name="target" value="@Model.SelectedMember" required maxlength="256" /></label>
+            <label class="field">Team member
+                <input name="target" value="@selectedHandle" required maxlength="256" placeholder="Handle"
+                       list="team-search-handles" autocomplete="off" spellcheck="false" data-team-member />
+            </label>
             <label class="field">Action
                 <select name="action"><option value="SetRole">Change role</option><option value="Suspend">Suspend</option><option value="Reinstate">Reinstate</option><option value="Remove">Remove</option></select>
             </label>
@@ -158,3 +200,22 @@
         </form>
     </section>
 </div>
+@if (Model.IsRemoteAdministrationOwner && ViewData["CurrentRole"] is LabelTeamRole.Administrator)
+{
+    <details class="panel" id="labeler-ownership">
+        <summary><strong>Labeler ownership</strong></summary>
+        <p>You are the owner. Your account cannot be removed, suspended or demoted while you own this labeler.</p>
+        <p>You can transfer ownership to another active administrator. They will receive this protection and control of remote CLI access. You will remain an administrator.</p>
+        <form method="post" asp-page-handler="Change">
+            <input type="hidden" name="operationId" value="@Guid.NewGuid().ToString("N")" />
+            <input type="hidden" name="action" value="TransferOwnership" />
+            <input type="hidden" name="role" value="Administrator" />
+            <label class="field">New owner's handle
+                <input name="target" required maxlength="256" list="team-search-handles" autocomplete="off" spellcheck="false" />
+            </label>
+            <label class="field">Reason<input name="reason" required maxlength="4096" /></label>
+            <label><input type="checkbox" name="confirmTransfer" value="true" required /> I understand that only the new owner can transfer ownership back.</label>
+            <p class="form-actions"><button type="submit">Transfer ownership</button></p>
+        </form>
+    </details>
+}

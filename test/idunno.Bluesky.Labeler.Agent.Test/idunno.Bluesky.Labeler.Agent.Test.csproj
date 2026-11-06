@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+    <ProjectReference Include="..\..\src\idunno.Bluesky.Labeler.Agent\idunno.Bluesky.Labeler.Agent.csproj" />
+  </ItemGroup>
+</Project>

@@ -5,6 +5,7 @@ using System.Buffers.Binary;
 using System.IO.Pipes;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Net.Sockets;
 using System.Security.AccessControl;
 using System.Security.Cryptography;
 using System.Security.Principal;
@@ -509,6 +510,191 @@ public partial class AdministrationTests
         using HttpResponseMessage publicResponse = await fixture.Client.GetAsync(
             "/xrpc/com.atproto.label.queryLabels?uriPatterns=did:plc:subject", TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, publicResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task IssuanceAudienceIsLimitedToLabelerAgentEndpoints()
+    {
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(key, identity);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        Assert.True((await team.BootstrapAsync(s_actor, "uid:0", "bootstrap-issuance-audience", TestContext.Current.CancellationToken)).Succeeded);
+        DateTimeOffset now = await DatabaseNowAsync(fixture);
+        fixture.Clock.SetUtcNow(now);
+        string issuanceMethod = "dev.idunno.labeler.issuance.issueLabel";
+        string adminMethod = "dev.idunno.labeler.admin.getTeam";
+
+        using HttpRequestMessage issuanceRequest = new(HttpMethod.Post, "http://localhost/xrpc/" + issuanceMethod)
+        {
+            Content = new StringContent(
+                """{"operationId":"issuance-audience-operation","target":"did:plc:subject","value":"spam","reason":"Issue through the agent endpoint."}""",
+                Encoding.UTF8,
+                "application/json")
+        };
+        AddTrustedProxyHeaders(issuanceRequest);
+        issuanceRequest.Headers.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            Token(
+                key,
+                now,
+                audience: new AtProtoServiceReference(TestServerBuilder.s_issuer, Audience.Issuance).ToString(),
+                method: issuanceMethod));
+        using HttpResponseMessage issuanceResponse = await fixture.Client.SendAsync(issuanceRequest, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, issuanceResponse.StatusCode);
+        using JsonDocument issuanceBody = JsonDocument.Parse(
+            await issuanceResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        Assert.False(issuanceBody.RootElement.TryGetProperty("succeeded", out _));
+        Assert.Equal("issuance-audience-operation", issuanceBody.RootElement.GetProperty("operationId").GetString());
+        Assert.True(issuanceBody.RootElement.GetProperty("changed").GetBoolean());
+
+        string negateMethod = "dev.idunno.labeler.issuance.negateLabel";
+        using HttpRequestMessage negateRequest = new(HttpMethod.Post, "http://localhost/xrpc/" + negateMethod)
+        {
+            Content = new StringContent(
+                """{"operationId":"issuance-audience-negation","target":"did:plc:subject","value":"spam","reason":"Negate through the agent endpoint."}""",
+                Encoding.UTF8,
+                "application/json")
+        };
+        AddTrustedProxyHeaders(negateRequest);
+        negateRequest.Headers.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            Token(
+                key,
+                now,
+                audience: new AtProtoServiceReference(TestServerBuilder.s_issuer, Audience.Issuance).ToString(),
+                method: negateMethod));
+        using HttpResponseMessage negateResponse = await fixture.Client.SendAsync(negateRequest, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, negateResponse.StatusCode);
+        using JsonDocument negateBody = JsonDocument.Parse(
+            await negateResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        Assert.False(negateBody.RootElement.TryGetProperty("succeeded", out _));
+        Assert.Equal("issuance-audience-negation", negateBody.RootElement.GetProperty("operationId").GetString());
+
+        string availableLabelsMethod = "dev.idunno.labeler.issuance.getAvailableLabels";
+        using HttpRequestMessage availableLabelsRequest = new(
+            HttpMethod.Get,
+            "http://localhost/xrpc/" + availableLabelsMethod + "?reason=Inspect%20available%20labels.");
+        AddTrustedProxyHeaders(availableLabelsRequest);
+        availableLabelsRequest.Headers.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            Token(
+                key,
+                now,
+                audience: new AtProtoServiceReference(TestServerBuilder.s_issuer, Audience.Issuance).ToString(),
+                method: availableLabelsMethod));
+        using HttpResponseMessage availableLabelsResponse = await fixture.Client.SendAsync(
+            availableLabelsRequest,
+            TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, availableLabelsResponse.StatusCode);
+        using JsonDocument availableLabelsBody = JsonDocument.Parse(
+            await availableLabelsResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        Assert.False(availableLabelsBody.RootElement.TryGetProperty("succeeded", out _));
+        Assert.NotEmpty(availableLabelsBody.RootElement.GetProperty("moderation").GetProperty("labelChoices").EnumerateArray());
+
+        string receiptMethod = "dev.idunno.labeler.issuance.getOperationReceipt";
+        using HttpRequestMessage receiptRequest = new(
+            HttpMethod.Get,
+            "http://localhost/xrpc/" + receiptMethod + "?operationId=issuance-audience-operation&reason=Recover%20receipt");
+        AddTrustedProxyHeaders(receiptRequest);
+        receiptRequest.Headers.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            Token(
+                key,
+                now,
+                audience: new AtProtoServiceReference(TestServerBuilder.s_issuer, Audience.Issuance).ToString(),
+                method: receiptMethod));
+        using HttpResponseMessage receiptResponse = await fixture.Client.SendAsync(
+            receiptRequest,
+            TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, receiptResponse.StatusCode);
+        using JsonDocument receiptBody = JsonDocument.Parse(
+            await receiptResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        Assert.False(receiptBody.RootElement.TryGetProperty("succeeded", out _));
+        Assert.Equal(
+            "issuance-audience-operation",
+            receiptBody.RootElement.GetProperty("operationId").GetString());
+
+        Did viewer = new("did:plc:issuance-viewer");
+        LabelAdministrationCaller adminCaller = (await team.AuthenticateLocalAsync(
+            "uid:0",
+            TestContext.Current.CancellationToken)).Result!;
+        Assert.True((await new LabelTeamService(team, identity).EnrollAsync(
+            caller: adminCaller,
+            member: viewer,
+            role: LabelTeamRole.Viewer,
+            operationId: "issuance-viewer-enrollment",
+            reason: "Set up an issuance viewer.",
+            cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
+        using HttpRequestMessage forbiddenIssuance = new(HttpMethod.Post, "http://localhost/xrpc/" + issuanceMethod)
+        {
+            Content = new StringContent(
+                """{"operationId":"forbidden-issuance","target":"did:plc:subject","value":"spam","reason":"Verify issuance authorization."}""",
+                Encoding.UTF8,
+                "application/json")
+        };
+        AddTrustedProxyHeaders(forbiddenIssuance);
+        forbiddenIssuance.Headers.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            Token(
+                key,
+                now,
+                audience: new AtProtoServiceReference(TestServerBuilder.s_issuer, Audience.Issuance).ToString(),
+                method: issuanceMethod,
+                actor: viewer.Value));
+        using HttpResponseMessage forbiddenIssuanceResponse = await fixture.Client.SendAsync(
+            forbiddenIssuance,
+            TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Forbidden, forbiddenIssuanceResponse.StatusCode);
+        using JsonDocument forbiddenIssuanceBody = JsonDocument.Parse(
+            await forbiddenIssuanceResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        Assert.Equal("Forbidden", forbiddenIssuanceBody.RootElement.GetProperty("error").GetString());
+        Assert.False(forbiddenIssuanceBody.RootElement.TryGetProperty("succeeded", out _));
+
+        using HttpRequestMessage unauthenticatedInspection = new(
+            HttpMethod.Get,
+            "http://localhost/xrpc/dev.idunno.labeler.issuance.getAvailableLabels?reason=Verify%20authentication%20semantics");
+        AddTrustedProxyHeaders(unauthenticatedInspection);
+        using HttpResponseMessage unauthenticatedInspectionResponse = await fixture.Client.SendAsync(
+            unauthenticatedInspection,
+            TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Unauthorized, unauthenticatedInspectionResponse.StatusCode);
+        using JsonDocument unauthenticatedInspectionBody = JsonDocument.Parse(
+            await unauthenticatedInspectionResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        Assert.Equal("AuthenticationRequired", unauthenticatedInspectionBody.RootElement.GetProperty("error").GetString());
+        Assert.False(unauthenticatedInspectionBody.RootElement.TryGetProperty("succeeded", out _));
+
+        using HttpRequestMessage wrongAudience = new(HttpMethod.Post, "http://localhost/xrpc/" + issuanceMethod)
+        {
+            Content = new StringContent(
+                """{"operationId":"wrong-admin-audience","target":"did:plc:subject","value":"spam","reason":"Reject the admin audience."}""",
+                Encoding.UTF8,
+                "application/json")
+        };
+        AddTrustedProxyHeaders(wrongAudience);
+        wrongAudience.Headers.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            Token(key, now, audience: s_audience.ToString(), method: issuanceMethod));
+        using HttpResponseMessage wrongAudienceResponse = await fixture.Client.SendAsync(wrongAudience, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Unauthorized, wrongAudienceResponse.StatusCode);
+        using JsonDocument wrongAudienceBody = JsonDocument.Parse(
+            await wrongAudienceResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        Assert.False(wrongAudienceBody.RootElement.TryGetProperty("succeeded", out _));
+        Assert.Equal("InvalidToken", wrongAudienceBody.RootElement.GetProperty("error").GetString());
+        Assert.True(wrongAudienceBody.RootElement.TryGetProperty("message", out _));
+
+        using HttpRequestMessage wrongEndpoint = new(HttpMethod.Get, "http://localhost/xrpc/" + adminMethod);
+        AddTrustedProxyHeaders(wrongEndpoint);
+        wrongEndpoint.Headers.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            Token(
+                key,
+                now,
+                audience: new AtProtoServiceReference(TestServerBuilder.s_issuer, Audience.Issuance).ToString(),
+                method: adminMethod));
+        using HttpResponseMessage wrongEndpointResponse = await fixture.Client.SendAsync(wrongEndpoint, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Unauthorized, wrongEndpointResponse.StatusCode);
+        Assert.Equal(2, (await fixture.Store.GetStateAsync(TestContext.Current.CancellationToken)).IssuedThrough);
     }
 
     [Fact]
@@ -1223,6 +1409,49 @@ public partial class AdministrationTests
             File.Delete(link);
             Directory.Delete(directory);
             Directory.Delete(parent);
+        }
+    }
+
+    [Fact]
+    public void LinuxLocalAdministrationRemovesOnlyAStaleOwnedSocket()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        UnixFileMode privateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute;
+        string directory = Path.Combine(Path.GetTempPath(), "labeler-stale-socket-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory, privateMode);
+        File.SetUnixFileMode(directory, privateMode);
+        string endpoint = Path.Combine(directory, "admin.sock");
+        try
+        {
+            using (Socket staleListener = new(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified))
+            {
+                staleListener.Bind(new UnixDomainSocketEndPoint(endpoint));
+            }
+            File.SetUnixFileMode(endpoint, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+
+            LocalPeer.VerifyDirectory(directory);
+            LocalPeer.RemoveStaleSocket(endpoint);
+            Assert.False(Path.Exists(endpoint));
+
+            using Socket activeListener = new(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+            activeListener.Bind(new UnixDomainSocketEndPoint(endpoint));
+            File.SetUnixFileMode(endpoint, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+            activeListener.Listen(1);
+
+            Assert.Throws<IOException>(() => LocalPeer.RemoveStaleSocket(endpoint));
+            Assert.True(Path.Exists(endpoint));
+        }
+        finally
+        {
+            if (Path.Exists(endpoint))
+            {
+                File.Delete(endpoint);
+            }
+            Directory.Delete(directory);
         }
     }
 

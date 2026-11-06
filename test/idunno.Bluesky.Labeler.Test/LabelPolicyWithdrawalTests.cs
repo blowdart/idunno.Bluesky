@@ -315,6 +315,9 @@ public class LabelPolicyWithdrawalTests
         }
         else
         {
+            Success(await team.ChangeTeamAsync(administrator, new(
+                operationId: "transfer-to-backup", action: LabelTeamAction.TransferOwnership, target: backupDid,
+                reason: "Transfer ownership before revoking the publication caller."), token));
             Success(await team.ChangeTeamAsync(backup, new(
                 operationId: "suspend", action: LabelTeamAction.Suspend, target: administrator.Actor,
                 reason: "Revoke publication caller."), token));

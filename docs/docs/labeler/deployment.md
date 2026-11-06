@@ -55,7 +55,7 @@ provider, or a host-owned configuration file:
 | `Labeler:SigningKeys:<index>:Id` | Environment provider: stable, case-sensitive key ID using ASCII letters, digits, dots, underscores or hyphens |
 | `Labeler:SigningKeys:<index>:PrivateKeyBase64` | Environment provider: separate protected variable per base64-encoded private PEM |
 | `Labeler:InitialSigningKeyId` | Environment provider: explicit initial key ID, used only when the database has no selection |
-| `Labeler:AdministrationAudience` | Exact `did:...#service-fragment` audience for service tokens |
+| `Labeler:AdministrationAudience` | Exact `did:...#labeler_admin` audience for administration service tokens; the host derives the matching `#labeler_issuance` audience from the same DID |
 | `Labeler:DeclaredLabels` | Comma-separated declared label values |
 | `Labeler:AllowAccountLabels` | Whether the issuance policy permits account labels |
 | `Labeler:AllowRecordLabels` | Whether the issuance policy permits record labels |
@@ -77,7 +77,8 @@ Neither localhost nor container placement is an authorization boundary.
 
 `RemoteMode=Disabled` keeps remote CLI routes unavailable; `Enabled` allows them subject to those
 existing checks. `WebUiControlled` additionally requires the durable switch to be enabled by the
-bootstrap owner in Xenon. The owner is the DID that completed the initial OS-authorized bootstrap,
+current owner in Xenon. The owner is initially the DID that completed the initial OS-authorized bootstrap,
+or an active Administrator to whom the current owner explicitly transferred ownership,
 not any Administrator. The durable switch defaults off, is transactionally audited, and does not
 affect protected local administration. An explicitly configured `RemoteMode` always takes
 precedence over `RemoteEnabled`. If `RemoteMode` is omitted, the old Boolean continues to apply,

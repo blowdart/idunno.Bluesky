@@ -3,6 +3,7 @@
 
 using System.Net;
 using System.Net.Mail;
+using System.Text.RegularExpressions;
 
 using idunno.AtProto;
 using idunno.Bluesky.Labeler.Moderation;
@@ -18,7 +19,8 @@ internal sealed partial class LabelerPolicyEmailService(
     LabelerPolicyEmailOptions settings,
     TimeProvider clock,
     ILogger<LabelerPolicyEmailService> logger,
-    Uri? xenonEndpoint = null)
+    Uri? xenonEndpoint = null,
+    IDidHandleResolver? handles = null)
 {
     private static readonly TimeSpan s_leaseDuration = TimeSpan.FromMinutes(2);
     private static readonly TimeSpan s_sendDeadline = TimeSpan.FromSeconds(30);
@@ -62,6 +64,7 @@ internal sealed partial class LabelerPolicyEmailService(
         using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(deadline.Token, cancellationToken);
         try
         {
+            message.Body = await FormatIdentitiesAsync(message.Body, linked.Token).ConfigureAwait(false);
             await TestMessageSender(client, message, linked.Token).ConfigureAwait(false);
             return true;
         }
@@ -148,7 +151,7 @@ internal sealed partial class LabelerPolicyEmailService(
                 deadline.Token, cancellationToken);
             foreach (string recipient in delivery.Recipients)
             {
-                using MailMessage message = CreateMessage(delivery, recipient);
+                using MailMessage message = await CreateMessageAsync(delivery, recipient, linked.Token).ConfigureAwait(false);
                 await client.SendMailAsync(message, linked.Token).ConfigureAwait(false);
             }
 
@@ -171,25 +174,54 @@ internal sealed partial class LabelerPolicyEmailService(
     }
 
     /// <summary>Formats a plain-text notification without report contents, user-supplied audit reasons or access credentials.</summary>
-    internal MailMessage CreateMessage(LabelPolicyAlertDelivery delivery, string recipient)
+    internal async Task<MailMessage> CreateMessageAsync(
+        LabelPolicyAlertDelivery delivery,
+        string recipient,
+        CancellationToken cancellationToken)
     {
+        string body = delivery.ChangeDescription is { } description
+            ? $"An administration change for {issuer.Value} was recorded at {delivery.OccurredAt:O}.\n\n" +
+                $"{description}\n\nReview the Policy or Team page and administration history in Xenon. " +
+                "This notification is sent to active administrators with a registered notification email address."
+            : $"Independent policy verification for {issuer.Value} failed at {delivery.OccurredAt:O} " +
+                $"({delivery.Category}). Authenticated reports remain queued and non-actionable until an " +
+                "administrator restores verified policy state. Review the Xenon moderation health status and server logs.";
+        body = await FormatIdentitiesAsync(body, cancellationToken).ConfigureAwait(false);
         MailMessage message = new()
         {
             From = new MailAddress(settings.FromAddress!),
             Subject = delivery.ChangeDescription is null ? "Labeler policy verification failed" : "Labeler administration changed",
-            Body = delivery.ChangeDescription is { } description
-                ? $"An administration change for {issuer.Value} was recorded at {delivery.OccurredAt:O}.\n\n" +
-                    $"{description}\n\nReview the Policy or Team page and administration history in Xenon. " +
-                    "This notification is sent to active administrators with a registered notification email address."
-                : $"Independent policy verification for {issuer.Value} failed at {delivery.OccurredAt:O} " +
-                    $"({delivery.Category}). Authenticated reports remain queued and non-actionable until an " +
-                    "administrator restores verified policy state. Review the Xenon moderation health status and server logs.",
+            Body = body,
             IsBodyHtml = false
         };
         message.Body = WithHostLink(message.Body);
         message.To.Add(new MailAddress(recipient));
         return message;
     }
+
+    /// <summary>Adds verified handles to canonical identities without changing persisted notification or audit records.</summary>
+    private async Task<string> FormatIdentitiesAsync(string body, CancellationToken cancellationToken)
+    {
+        Dictionary<string, string> identities = new(StringComparer.Ordinal);
+        foreach (string value in IdentityPattern().Matches(body).Select(match => match.Value).Distinct(StringComparer.Ordinal))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!Did.TryParse(value, out Did? did))
+            {
+                continue;
+            }
+
+            Handle handle = handles is null ? Handle.Invalid :
+                await handles.ResolveHandleAsync(did, cancellationToken).ConfigureAwait(false);
+            identities.Add(value, handle.IsValid ? $"@{handle} ({did})" : $"Handle unavailable ({did})");
+        }
+
+        return IdentityPattern().Replace(body, match => identities.GetValueOrDefault(match.Value, match.Value));
+    }
+
+    /// <summary>Matches complete DID tokens in generated notification text without consuming sentence punctuation.</summary>
+    [GeneratedRegex(@"\bdid:[a-z]+:[A-Za-z0-9._:%-]*[A-Za-z0-9_:%-]", RegexOptions.CultureInvariant)]
+    private static partial Regex IdentityPattern();
 
     /// <summary>Appends only the configured UI location, never a request-supplied host.</summary>
     private string WithHostLink(string body) =>

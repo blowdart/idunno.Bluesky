@@ -1885,7 +1885,9 @@ public partial class XenonTestHostTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("#change-member", html, StringComparison.Ordinal);
         Assert.Contains("@team-viewer.xenon.invalid", html, StringComparison.Ordinal);
-        Assert.Contains($"name=\"target\" value=\"{did}\"", html, StringComparison.Ordinal);
+        Assert.Contains("name=\"target\" value=\"team-viewer.xenon.invalid\"", html, StringComparison.Ordinal);
+        Assert.Contains("name=\"action\" value=\"TransferOwnership\"", html, StringComparison.Ordinal);
+        Assert.Contains("name=\"confirmTransfer\"", html, StringComparison.Ordinal);
         Assert.Contains("value=\"Viewer\" selected=\"selected\"", html, StringComparison.Ordinal);
         Assert.Contains(">Update</button>", html, StringComparison.Ordinal);
         Assert.DoesNotContain("name=\"confirmed\"", html, StringComparison.Ordinal);
@@ -1911,7 +1913,8 @@ public partial class XenonTestHostTests
         Assert.Contains("data-team-role", html, StringComparison.Ordinal);
         Assert.Contains("class=\"panel team-search\"", html, StringComparison.Ordinal);
         Assert.Contains("class=\"team-search-actions\"", html, StringComparison.Ordinal);
-        Assert.Contains("placeholder=\"DID or handle\"", html, StringComparison.Ordinal);
+        Assert.Contains("placeholder=\"Handle\"", html, StringComparison.Ordinal);
+        Assert.Contains("list=\"team-search-handles\"", html, StringComparison.Ordinal);
 
         foreach (string search in new[] { did, "team-viewer.xenon.invalid", "@team-viewer.xenon.invalid" })
         {
@@ -1922,7 +1925,10 @@ public partial class XenonTestHostTests
             Assert.Equal(HttpStatusCode.OK, filteredResponse.StatusCode);
             Assert.Contains("<caption>1 member, including removed members", filteredHtml, StringComparison.Ordinal);
             Assert.Contains("@team-viewer.xenon.invalid", filteredHtml, StringComparison.Ordinal);
-            Assert.DoesNotContain("@team-removed.xenon.invalid", filteredHtml, StringComparison.Ordinal);
+            int tableStart = filteredHtml.IndexOf("<table class=\"team-members\">", StringComparison.Ordinal);
+            int tableEnd = filteredHtml.IndexOf("</table>", tableStart, StringComparison.Ordinal);
+            Assert.DoesNotContain("@team-removed.xenon.invalid", filteredHtml[tableStart..tableEnd], StringComparison.Ordinal);
+            Assert.Contains("value=\"team-removed.xenon.invalid\"", filteredHtml, StringComparison.Ordinal);
             Assert.Contains("Search=", filteredHtml, StringComparison.Ordinal);
         }
 
@@ -1944,7 +1950,7 @@ public partial class XenonTestHostTests
         {
             ["__RequestVerificationToken"] = ReadField(html, "__RequestVerificationToken"),
             ["operationId"] = Guid.NewGuid().ToString("N"),
-            ["target"] = did,
+            ["target"] = "team-viewer.xenon.invalid",
             ["action"] = "SetRole",
             ["role"] = "Viewer",
             ["reason"] = "Keep the fixture viewer role."

@@ -954,7 +954,7 @@ public partial class ModerationTests
             key: key,
             method: "tools.ozone.moderation.emitEvent",
             body: issue);
-        Assert.Equal(HttpStatusCode.OK, issued.StatusCode);
+        Assert.True(issued.StatusCode == HttpStatusCode.OK, await issued.Content.ReadAsStringAsync(token));
         await fixture.PublishAllAsync();
         const string appeal = """
             {"subject":{"$type":"com.atproto.admin.defs#repoRef","did":"did:plc:reporter"},
@@ -966,7 +966,7 @@ public partial class ModerationTests
             method: "tools.ozone.inbox.appealActionedSubject",
             body: appeal,
             actor: s_reporter.Value);
-        Assert.Equal(HttpStatusCode.OK, accepted.StatusCode);
+        Assert.True(accepted.StatusCode == HttpStatusCode.OK, await accepted.Content.ReadAsStringAsync(token));
         ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
         LabelServiceResult<LabelAdministrationCaller> authentication = await team.AuthenticateLocalAsync("uid:0", token);
         Assert.True(authentication.Succeeded);
@@ -987,7 +987,7 @@ public partial class ModerationTests
             key: key,
             method: acknowledge ? "tools.ozone.moderation.emitEvent" : "tools.ozone.report.createActivity",
             body: close);
-        Assert.Equal(HttpStatusCode.OK, closed.StatusCode);
+        Assert.True(closed.StatusCode == HttpStatusCode.OK, await closed.Content.ReadAsStringAsync(token));
         LabelModerationReport handled = (await reports.GetReportAsync(authentication.Result, report.Id, token)).Result!;
         Assert.NotNull(handled.HandledAt);
         Assert.Equal("Report acknowledged, appeal awaits review.", handled.ResolutionReason);

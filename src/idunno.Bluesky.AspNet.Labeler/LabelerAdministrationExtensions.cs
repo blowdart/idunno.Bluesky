@@ -140,7 +140,11 @@ public static class LabelerAdministrationExtensions
         services.AddOptions<LabelerAdministrationOptions>();
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<OzoneTeamPresence>();
-        services.AddSingleton(new AdministrationConfiguration(audience, httpClient, lifetimeLimit));
+        services.AddSingleton(new AdministrationConfiguration(
+            AdministrationAudience: audience,
+            IssuanceAudience: new AtProtoServiceReference(audience.Did, Audience.Issuance),
+            HttpClient: httpClient,
+            MaximumServiceTokenLifetime: lifetimeLimit));
         if (signingKeyRing is not null)
         {
             services.AddSingleton(signingKeyRing);
@@ -258,7 +262,8 @@ public static class LabelerAdministrationExtensions
         foreach (string method in AdministrationDispatcher.s_getMethods)
         {
             Task handler(HttpContext context) => HandleRequestAsync(
-                context: context, method: method, isPost: false, dispatcher: dispatcher, configuration: configuration,
+                context: context, method: method, serviceNamespace: "admin", audience: configuration.AdministrationAudience,
+                isPost: false, dispatcher: dispatcher, configuration: configuration,
                 remoteOptions: remoteOptions, fixedRemoteEnabled: remoteEnabled,
                 store: store, clock: clock, logger: logger);
             endpoints.MapGet("/xrpc/dev.idunno.labeler.admin." + method, handler).AllowAnonymous();
@@ -267,10 +272,31 @@ public static class LabelerAdministrationExtensions
         foreach (string method in AdministrationDispatcher.s_postMethods)
         {
             Task handler(HttpContext context) => HandleRequestAsync(
-                context: context, method: method, isPost: true, dispatcher: dispatcher, configuration: configuration,
+                context: context, method: method, serviceNamespace: "admin", audience: configuration.AdministrationAudience,
+                isPost: true, dispatcher: dispatcher, configuration: configuration,
                 remoteOptions: remoteOptions, fixedRemoteEnabled: remoteEnabled,
                 store: store, clock: clock, logger: logger);
             endpoints.MapPost("/xrpc/dev.idunno.labeler.admin." + method, handler).AllowAnonymous();
+        }
+
+        foreach (string method in new[] { "getOperationReceipt", "getAvailableLabels" })
+        {
+            Task handler(HttpContext context) => HandleRequestAsync(
+                context: context, method: method, serviceNamespace: "issuance", audience: configuration.IssuanceAudience,
+                isPost: false, dispatcher: dispatcher, configuration: configuration,
+                remoteOptions: remoteOptions, fixedRemoteEnabled: remoteEnabled,
+                store: store, clock: clock, logger: logger);
+            endpoints.MapGet("/xrpc/dev.idunno.labeler.issuance." + method, handler).AllowAnonymous();
+        }
+
+        foreach (string method in new[] { "issueLabel", "negateLabel" })
+        {
+            Task handler(HttpContext context) => HandleRequestAsync(
+                context: context, method: method, serviceNamespace: "issuance", audience: configuration.IssuanceAudience,
+                isPost: true, dispatcher: dispatcher, configuration: configuration,
+                remoteOptions: remoteOptions, fixedRemoteEnabled: remoteEnabled,
+                store: store, clock: clock, logger: logger);
+            endpoints.MapPost("/xrpc/dev.idunno.labeler.issuance." + method, handler).AllowAnonymous();
         }
 
         return endpoints;
@@ -282,6 +308,8 @@ public static class LabelerAdministrationExtensions
     private static async Task HandleRequestAsync(
         HttpContext context,
         string method,
+        string serviceNamespace,
+        AtProtoServiceReference audience,
         bool isPost,
         AdministrationDispatcher dispatcher,
         AdministrationConfiguration configuration,
@@ -292,8 +320,9 @@ public static class LabelerAdministrationExtensions
         ILogger logger)
         => await HandleRemoteRequestAsync(
             context: context,
-            method: new("dev.idunno.labeler.admin." + method),
+            method: new("dev.idunno.labeler." + serviceNamespace + "." + method),
             ozone: false,
+            audience: audience,
             configuration: configuration,
             remoteOptions: remoteOptions,
             fixedRemoteEnabled: fixedRemoteEnabled,
@@ -306,7 +335,13 @@ public static class LabelerAdministrationExtensions
                 isPost: isPost,
                 dispatcher: dispatcher,
                 caller: caller),
-            write: WriteResponseAsync).ConfigureAwait(false);
+            write: serviceNamespace == "issuance"
+                ? (responseContext, response, status) => WriteIssuanceResponseAsync(
+                    responseContext,
+                    method,
+                    response,
+                    status)
+                : WriteResponseAsync).ConfigureAwait(false);
 
     /// <summary>Shares transport, replay, live remote-switch and denial-audit enforcement between native and Ozone routes.</summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S6667:Logging in a catch clause should pass the caught exception as a parameter",
@@ -315,6 +350,7 @@ public static class LabelerAdministrationExtensions
         HttpContext context,
         Nsid method,
         bool ozone,
+        AtProtoServiceReference? audience,
         AdministrationConfiguration configuration,
         IOptionsMonitor<LabelerAdministrationOptions> remoteOptions,
         bool? fixedRemoteEnabled,
@@ -362,18 +398,20 @@ public static class LabelerAdministrationExtensions
         AdministrationResponse response;
         int status;
         LabelAdministrationCaller? authenticatedCaller = null;
+        bool authenticationRequired = false;
         try
         {
             string header = context.Request.Headers.Authorization.ToString();
             if (!header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) || header.Length > 16384)
             {
+                authenticationRequired = !header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase);
                 throw new InvalidDataException("A service authentication token is required.");
             }
 
             ServiceAuthenticationResult authentication = ozone
                 ? await ServiceAuthentication.VerifyOzoneAdministrationAsync(
                     token: header[7..],
-                    labeler: configuration.Audience.Did,
+                    labeler: configuration.AdministrationAudience.Did,
                     method: method,
                     httpClient: configuration.HttpClient,
                     timeProvider: clock,
@@ -381,7 +419,7 @@ public static class LabelerAdministrationExtensions
                     maximumLifetime: configuration.MaximumServiceTokenLifetime).ConfigureAwait(false)
                 : await ServiceAuthentication.VerifyAsync(
                     token: header[7..],
-                    audience: configuration.Audience,
+                    audience: audience ?? configuration.AdministrationAudience,
                     method: method,
                     httpClient: configuration.HttpClient,
                     timeProvider: clock,
@@ -424,7 +462,9 @@ public static class LabelerAdministrationExtensions
         catch (Exception exception) when (exception is CryptographicException or InvalidDataException)
         {
             AdministrationLog.Rejected(logger, exception.GetType().Name);
-            response = new(false, "InvalidToken", "Authentication failed or the message exceeds its bounds.");
+            response = authenticationRequired
+                ? new(false, "AuthenticationRequired", "A valid bearer token is required.")
+                : new(false, "InvalidToken", "Authentication failed or the message exceeds its bounds.");
             status = StatusCodes.Status401Unauthorized;
         }
         catch (Exception exception) when (exception is JsonException or ArgumentException or FormatException or OverflowException)
@@ -488,9 +528,12 @@ public static class LabelerAdministrationExtensions
         }
         else
         {
+            string[] allowedQueryParameters = method == "getAvailableLabels"
+                ? ["cid", "reason", "target"]
+                : ["afterSequence", "limit", "operationId", "reason"];
             if (context.Request.QueryString.Value?.Length > 2048 ||
                 context.Request.Query.Any(pair => pair.Value.Count != 1 ||
-                    pair.Key is not ("afterSequence" or "limit" or "operationId" or "reason")))
+                    !allowedQueryParameters.Contains(pair.Key, StringComparer.Ordinal)))
             {
                 throw new JsonException("The query parameters are invalid.");
             }
@@ -499,6 +542,8 @@ public static class LabelerAdministrationExtensions
                 Method: method,
                 OperationId: context.Request.Query["operationId"].ToString(),
                 Reason: context.Request.Query["reason"].ToString() is { Length: > 0 } reason ? reason : "Administrative inspection.",
+                Target: context.Request.Query["target"].ToString(),
+                Cid: context.Request.Query.ContainsKey("cid") ? context.Request.Query["cid"].ToString() : null,
                 AfterSequence: context.Request.Query.ContainsKey("afterSequence") ? long.Parse(context.Request.Query["afterSequence"].ToString(), System.Globalization.CultureInfo.InvariantCulture) : 0,
                 Limit: context.Request.Query.ContainsKey("limit") ? int.Parse(context.Request.Query["limit"].ToString(), System.Globalization.CultureInfo.InvariantCulture) : AdministrationCommand.MaximumAuditPageSize);
         }
@@ -530,6 +575,93 @@ public static class LabelerAdministrationExtensions
         await context.Response.Body.WriteAsync(payload, context.RequestAborted).ConfigureAwait(false);
     }
 
+    /// <summary>Writes an issuance result or standard AT Protocol error without the administration envelope.</summary>
+    private static async Task WriteIssuanceResponseAsync(
+        HttpContext context,
+        string method,
+        AdministrationResponse response,
+        int status)
+    {
+        byte[] payload;
+        if (status is >= StatusCodes.Status200OK and < StatusCodes.Status300MultipleChoices)
+        {
+            payload = method switch
+            {
+                "issueLabel" or "negateLabel" or "getOperationReceipt" => SerializeIssuanceReceipt(response),
+                "getAvailableLabels" => SerializeAvailableLabels(response),
+                _ => throw new InvalidOperationException("The issuance response method is not supported.")
+            };
+        }
+        else
+        {
+            payload = SerializeAtProtoError(
+                error: status switch
+                {
+                    StatusCodes.Status401Unauthorized when response.Error == "AuthenticationRequired" => "AuthenticationRequired",
+                    StatusCodes.Status403Forbidden => "Forbidden",
+                    _ => response.Error ?? "UnknownError"
+                },
+                message: response.Message ?? "The request could not be completed.");
+        }
+
+        if (payload.Length > AdministrationWire.MaximumResponseBytes)
+        {
+            status = StatusCodes.Status503ServiceUnavailable;
+            payload = SerializeAtProtoError(
+                error: "ResponseTooLarge",
+                message: "The result is too large to return. Request a smaller response.");
+        }
+
+        context.Response.StatusCode = status;
+        context.Response.Headers.CacheControl = "no-store";
+        if (status == StatusCodes.Status401Unauthorized)
+        {
+            context.Response.Headers.WWWAuthenticate = "Bearer";
+        }
+
+        context.Response.ContentType = "application/json";
+        await context.Response.Body.WriteAsync(payload, context.RequestAborted).ConfigureAwait(false);
+    }
+
+    /// <summary>Serializes the bounded receipt projection returned by label mutations and receipt lookups.</summary>
+    private static byte[] SerializeIssuanceReceipt(AdministrationResponse response)
+    {
+        if (response.OperationId is null || response.Changed is not { } changed)
+        {
+            throw new InvalidDataException("The successful issuance response has no operation receipt.");
+        }
+
+        IssuanceOperationReceiptResponse receipt = new(
+            OperationId: response.OperationId,
+            Sequence: response.Sequence,
+            Changed: changed);
+        return JsonSerializer.SerializeToUtf8Bytes(
+            receipt,
+            AdministrationJsonContext.Default.IssuanceOperationReceiptResponse);
+    }
+
+    /// <summary>Serializes the bounded policy-label projection returned by available-label queries.</summary>
+    private static byte[] SerializeAvailableLabels(AdministrationResponse response)
+    {
+        if (response.Moderation?.LabelChoices is null)
+        {
+            throw new InvalidDataException("The successful available-label response has no label choices.");
+        }
+
+        IssuanceAvailableLabelsResponse availableLabels = new(
+            Moderation: response.Moderation,
+            Target: response.Target);
+        return JsonSerializer.SerializeToUtf8Bytes(
+            availableLabels,
+            AdministrationJsonContext.Default.IssuanceAvailableLabelsResponse);
+    }
+
+    /// <summary>Serializes the standard AT Protocol error body for one failed issuance request.</summary>
+    private static byte[] SerializeAtProtoError(string error, string message) =>
+        JsonSerializer.SerializeToUtf8Bytes(
+            new AtErrorDetail(error, message),
+            AdministrationJsonContext.Default.AtErrorDetail);
+
     /// <summary>Maps classified service outcomes without collapsing denials into successful empty responses.</summary>
     internal static int ResponseStatus(AdministrationResponse response) => response.Error switch
     {
@@ -544,6 +676,7 @@ public static class LabelerAdministrationExtensions
 
 /// <summary>Retains trusted configured service identity independently from incoming request headers.</summary>
 internal sealed record AdministrationConfiguration(
-    AtProtoServiceReference Audience,
+    AtProtoServiceReference AdministrationAudience,
+    AtProtoServiceReference IssuanceAudience,
     HttpClient HttpClient,
     TimeSpan MaximumServiceTokenLifetime);

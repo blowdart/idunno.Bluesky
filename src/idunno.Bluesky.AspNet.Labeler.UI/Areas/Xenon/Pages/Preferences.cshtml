@@ -12,16 +12,18 @@
         <form method="post" asp-area="Xenon" asp-page="/Team/Index" asp-page-handler="NotificationEmail">
             <input type="hidden" name="operationId" value="@Guid.NewGuid().ToString("N")" />
             <input type="hidden" name="returnToPreferences" value="true" />
-            <label class="field" for="notification-email">Your alert email address
-                <input id="notification-email" name="notificationEmail" type="email" value="@Model.CurrentNotificationEmail" maxlength="254" autocomplete="email" />
-            </label>
-            <p class="form-actions"><button type="submit">@(Model.CurrentNotificationEmail is null ? "Save alert email" : "Update email")</button></p>
+            <div class="notification-email-entry">
+                <label class="field" for="notification-email">Your alert email address
+                    <input id="notification-email" name="notificationEmail" type="email" value="@Model.CurrentNotificationEmail" maxlength="254" autocomplete="email" />
+                </label>
+                <button type="submit">@(Model.CurrentNotificationEmail is null ? "Save alert email" : "Update email")</button>
+            </div>
         </form>
-        <form method="post" asp-area="Xenon" asp-page="/Team/Index" asp-page-handler="TestEmail">
+        <form method="post" asp-area="Xenon" asp-page="/Team/Index" asp-page-handler="TestEmail" class="notification-email-test">
             <input type="hidden" name="returnToPreferences" value="true" />
             <button type="submit">Test my email</button>
+            <p class="muted">Tests use your saved address, not unsaved changes above. Allow 30 seconds between tests.</p>
         </form>
-        <p class="muted">Tests use your saved address, not unsaved changes above. Allow 30 seconds between tests.</p>
     </section>
 }
 <h2>Graphic media display</h2>

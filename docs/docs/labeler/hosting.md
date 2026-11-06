@@ -2,7 +2,10 @@
 
 `idunno.Bluesky.AspNet.Labeler` hosts the public, read-only
 `com.atproto.label.queryLabels` HTTP endpoint and `com.atproto.label.subscribeLabels`
-WebSocket endpoint. It uses the [shared persistence](persistence.md) and
+WebSocket endpoint, plus `com.atproto.server.describeServer` for publishing the labeler's issuer DID
+to service-authenticated clients. Configure optional contact and policy links with
+`LabelerHostingOptions.Contact` and `LabelerHostingOptions.Links`; links must use HTTPS.
+It uses the [shared persistence](persistence.md) and
 [issuance](issuance.md) services without Ozone. [Administration](administration.md) is a separate,
 explicit opt-in; it does not change these public routes. There is no moderation UI, identity
 provisioning, automatic retention, or signing-key manager.
@@ -55,8 +58,16 @@ proxies. See [administration](administration.md) for details.
 The hosted worker promotes pending durable events in bounded transactions. Multiple hosts
 can share a database. Readers poll its durable publication boundary, so publication from
 another process is visible and restarting a host resumes pending publication. No process-local
-notification queue is needed for correctness. Stopping the application cancels readers,
-subscribers and publication; publication failure stops admission and fails the hosted worker.
+notification queue is needed for correctness. Transient database failures during publication
+or maintenance keep readiness unhealthy and are retried with bounded backoff; successful
+recovery resumes from the durable publication boundary. Startup initialization and registration
+retry up to five times, with 30 seconds between retries, then surface persistent failures to the
+host supervisor. Stopping the application cancels readers, subscribers and publication.
+
+On Linux, local administration verifies an existing socket's owner, permissions and listener
+state before removing it as stale. An active listener or an unsafe/replaced socket path is never
+removed. This allows a restarted host to recover after an ungraceful exit without weakening the
+private socket-directory boundary.
 
 New publication also obeys the
 [Bluesky AppView label-service limits](https://github.com/bluesky-social/bsky-docs/blob/main/docs/advanced-guides/rate-limits.md#label-limits)

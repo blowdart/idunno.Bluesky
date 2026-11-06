@@ -95,6 +95,9 @@ public interface ILabelAdministrationStore
     /// <param name="change">The verified team change.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The original or newly committed receipt, or a classified denial.</returns>
+    /// <remarks><para>The current owner cannot be removed, suspended or demoted. Only that owner
+    /// may transfer ownership to another active administrator. Ownership, protection and remote-administration
+    /// control move atomically, without changing either account's role or local bindings.</para></remarks>
     Task<LabelServiceResult<LabelAdministrationReceipt>> ChangeTeamAsync(
         LabelAdministrationCaller caller,
         LabelTeamChange change,
@@ -142,14 +145,14 @@ public interface ILabelAdministrationStore
         LabelAdministrationCaller caller,
         CancellationToken cancellationToken = default);
 
-    /// <summary>Changes the durable remote-administration switch under the bootstrap owner's authority.</summary>
+    /// <summary>Changes the durable remote-administration switch under the current owner's authority.</summary>
     /// <param name="caller">The provider-issued invocation evidence.</param>
     /// <param name="operationId">The stable operation identity for retries.</param>
     /// <param name="enabled">A value that indicates whether remote administration should be enabled.</param>
     /// <param name="reason">The bounded audit reason.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The original or newly committed audit receipt, or a classified denial.</returns>
-    /// <remarks><para>Only the DID that completed the one-time local bootstrap may change this setting.
+    /// <remarks><para>Only the current owner, initially the DID that completed the one-time local bootstrap, may change this setting.
     /// The update and its audit receipt commit atomically. An existing installation's bootstrap audit
     /// is used to identify its owner when its persisted team predates this setting.</para></remarks>
     Task<LabelServiceResult<LabelAdministrationReceipt>> SetRemoteAdministrationEnabledAsync(
@@ -165,7 +168,7 @@ public sealed class LabelRemoteAdministrationStatus
 {
     /// <summary>Initializes a status projection for a validated administration caller.</summary>
     /// <param name="enabled">A value that indicates whether the persisted remote-administration switch is enabled.</param>
-    /// <param name="isOwner">A value that indicates whether the caller is the bootstrap owner.</param>
+    /// <param name="isOwner">A value that indicates whether the caller is the current labeler owner.</param>
     internal LabelRemoteAdministrationStatus(bool enabled, bool isOwner)
     {
         Enabled = enabled;
@@ -176,7 +179,7 @@ public sealed class LabelRemoteAdministrationStatus
     /// <value><see langword="true"/> if the persisted switch is enabled; otherwise, <see langword="false"/>.</value>
     public bool Enabled { get; }
 
-    /// <summary>Gets a value that indicates whether the caller is the bootstrap owner.</summary>
-    /// <value><see langword="true"/> if the caller is the bootstrap owner; otherwise, <see langword="false"/>.</value>
+    /// <summary>Gets a value that indicates whether the caller is the current labeler owner.</summary>
+    /// <value><see langword="true"/> if the caller is the current labeler owner; otherwise, <see langword="false"/>.</value>
     public bool IsOwner { get; }
 }

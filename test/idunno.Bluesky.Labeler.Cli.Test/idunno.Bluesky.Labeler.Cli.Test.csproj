@@ -6,6 +6,7 @@
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\samples\Samples.LabelerAgent\Samples.LabelerAgent.csproj" />
     <ProjectReference Include="..\..\tools\Xenon.TestHost\Xenon.TestHost.csproj" />
     <ProjectReference Include="..\..\src\idunno.Bluesky.Labeler.Cli\idunno.Bluesky.Labeler.Cli.csproj" />
     <ProjectReference Include="..\..\src\idunno.Bluesky.Labeler.Host\idunno.Bluesky.Labeler.Host.csproj" />

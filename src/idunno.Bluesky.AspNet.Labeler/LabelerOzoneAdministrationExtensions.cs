@@ -108,7 +108,7 @@ public static class LabelerOzoneAdministrationExtensions
                 context: context,
                 payload: JsonSerializer.SerializeToUtf8Bytes(
                     new OzoneMetadata(
-                        Did: configuration.Audience.Did.Value,
+                        Did: configuration.AdministrationAudience.Did.Value,
                         Url: origin.AbsoluteUri,
                         PublicKey: "did:key:" + keys.GetPublicKeyMultibase(keys.ActiveKeyId)),
                     OzoneAdministrationJsonContext.Default.OzoneMetadata),
@@ -150,6 +150,7 @@ public static class LabelerOzoneAdministrationExtensions
                     context: context,
                     method: new(method),
                     ozone: true,
+                    audience: null,
                     configuration: configuration,
                     remoteOptions: options,
                     fixedRemoteEnabled: null,

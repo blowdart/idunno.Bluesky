@@ -22,19 +22,29 @@ internal sealed partial class RetirementWorker(
     ILogger<RetirementWorker> logger) : BackgroundService
 {
     private readonly SemaphoreSlim _advanceGate = new(1, 1);
+    private readonly object _advanceGateLifetimeLock = new();
     private readonly TaskCompletionSource _initialIteration = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly LabelRetirementService? _service = store is ILabelRetirementStore retirement
         ? new(store, retirement, keys) : null;
     private LabelRetirementCheckpoint? _pendingPause;
+    private int _advanceGateUsers;
+    private bool _advanceGateDisposed;
 
     /// <summary>Gets completion of the initial checkpoint read and registration of the next hosted iteration.</summary>
     internal Task InitialIteration => _initialIteration.Task;
 
-    /// <summary>Releases the execution gate after hosted execution has stopped.</summary>
+    /// <summary>Disposes the execution gate only after active and queued operations have released it.</summary>
     public override void Dispose()
     {
         base.Dispose();
-        _advanceGate.Dispose();
+        lock (_advanceGateLifetimeLock)
+        {
+            _advanceGateDisposed = true;
+            if (_advanceGateUsers == 0)
+            {
+                _advanceGate.Dispose();
+            }
+        }
     }
 
     /// <summary>Rejects unsafe keyless administrative hosting before background execution begins.</summary>
@@ -42,10 +52,19 @@ internal sealed partial class RetirementWorker(
     {
         if (keys is null)
         {
-            LabelStoreState state = await store.GetStateAsync(cancellationToken).ConfigureAwait(false);
-            LabelMaintenanceState maintenance = await ((ILabelMaintenanceStore)store).GetMaintenanceStateAsync(cancellationToken).ConfigureAwait(false);
-            if (state.Phase is not (LabelerLifecyclePhase.Retired or LabelerLifecyclePhase.Purging or LabelerLifecyclePhase.Purged) ||
-                state.IssuedThrough != state.PublishedThrough || maintenance.IsActive)
+            bool safeToStart = await DatabaseRetry.ExecuteStartupAsync(
+                async token =>
+                {
+                    LabelStoreState state = await store.GetStateAsync(token).ConfigureAwait(false);
+                    LabelMaintenanceState maintenance = await ((ILabelMaintenanceStore)store).GetMaintenanceStateAsync(token).ConfigureAwait(false);
+                    return state.Phase is (LabelerLifecyclePhase.Retired or LabelerLifecyclePhase.Purging or LabelerLifecyclePhase.Purged) &&
+                        state.IssuedThrough == state.PublishedThrough && !maintenance.IsActive;
+                },
+                clock,
+                logger,
+                "keyless administration validation",
+                cancellationToken).ConfigureAwait(false);
+            if (!safeToStart)
             {
                 throw new InvalidOperationException("Keyless administration requires terminal retirement with no unpublished labels or active signing-key rotation.");
             }
@@ -83,58 +102,78 @@ internal sealed partial class RetirementWorker(
     /// <summary>Serializes manual and hosted work, retaining failed checkpoints until their pause is durably recorded.</summary>
     internal async Task<LabelServiceError?> AdvanceAsync(CancellationToken token)
     {
-        await _advanceGate.WaitAsync(token).ConfigureAwait(false);
+        lock (_advanceGateLifetimeLock)
+        {
+            ObjectDisposedException.ThrowIf(_advanceGateDisposed, this);
+            _advanceGateUsers++;
+        }
+
         try
         {
-            if (_service is null || store is not ILabelRetirementStore retirement)
-            {
-                return new(LabelServiceErrorCode.StorageUnavailable, "This database implementation does not support retirement that keeps its progress after a restart.");
-            }
-
-            if (_pendingPause is { } pending)
-            {
-                await PersistPauseAsync(retirement, pending, token).ConfigureAwait(false);
-                _pendingPause = null;
-            }
-
-            LabelServiceError? error;
+            await _advanceGate.WaitAsync(token).ConfigureAwait(false);
             try
             {
-                error = await _service.AdvanceAsync(token).ConfigureAwait(false);
-                if (error is null || error.Code == LabelServiceErrorCode.StaleDecision)
+                if (_service is null || store is not ILabelRetirementStore retirement)
                 {
-                    return error;
+                    return new(LabelServiceErrorCode.StorageUnavailable, "This database implementation does not support retirement that keeps its progress after a restart.");
                 }
 
-                RetirementPaused(logger, error.Code.ToString());
-            }
-            catch (Exception exception) when (exception is DbException or InvalidDataException or InvalidOperationException or OverflowException)
-            {
-                RetirementFailed(logger, exception);
-                error = new(
-                    code: LabelServiceErrorCode.StorageUnavailable,
-                    message: "Retirement failed; inspect durable progress and explicitly resume.",
-                    exception: exception);
-            }
-            catch (OperationCanceledException) when (token.IsCancellationRequested)
-            {
+                if (_pendingPause is { } pending)
+                {
+                    await PersistPauseAsync(retirement, pending, token).ConfigureAwait(false);
+                    _pendingPause = null;
+                }
+
+                LabelServiceError? error;
+                try
+                {
+                    error = await _service.AdvanceAsync(token).ConfigureAwait(false);
+                    if (error is null || error.Code == LabelServiceErrorCode.StaleDecision)
+                    {
+                        return error;
+                    }
+
+                    RetirementPaused(logger, error.Code.ToString());
+                }
+                catch (Exception exception) when (exception is DbException or InvalidDataException or InvalidOperationException or OverflowException)
+                {
+                    RetirementFailed(logger, exception);
+                    error = new(
+                        code: LabelServiceErrorCode.StorageUnavailable,
+                        message: "Retirement failed; inspect durable progress and explicitly resume.",
+                        exception: exception);
+                }
+                catch (OperationCanceledException) when (token.IsCancellationRequested)
+                {
+                    _pendingPause = _service.RecoveryCheckpoint;
+                    throw;
+                }
+
                 _pendingPause = _service.RecoveryCheckpoint;
-                throw;
-            }
+                if (_pendingPause is { } checkpoint)
+                {
+                    // Cancellation leaves the checkpoint owned by this host, not by the disconnected request.
+                    await PersistPauseAsync(retirement, checkpoint, token).ConfigureAwait(false);
+                    _pendingPause = null;
+                }
 
-            _pendingPause = _service.RecoveryCheckpoint;
-            if (_pendingPause is { } checkpoint)
+                return error;
+            }
+            finally
             {
-                // Cancellation leaves the checkpoint owned by this host, not by the disconnected request.
-                await PersistPauseAsync(retirement, checkpoint, token).ConfigureAwait(false);
-                _pendingPause = null;
+                _advanceGate.Release();
             }
-
-            return error;
         }
         finally
         {
-            _advanceGate.Release();
+            lock (_advanceGateLifetimeLock)
+            {
+                _advanceGateUsers--;
+                if (_advanceGateDisposed && _advanceGateUsers == 0)
+                {
+                    _advanceGate.Dispose();
+                }
+            }
         }
     }
 

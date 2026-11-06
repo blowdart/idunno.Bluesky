@@ -115,6 +115,16 @@ internal sealed partial class AdministrationDispatcher(
         AdministrationCommand command,
         CancellationToken token)
     {
+        if (command.Method == "getOperationReceipt")
+        {
+            command = command with { Method = "getOperation" };
+        }
+
+        if (command.Method == "getAvailableLabels")
+        {
+            return await ReadAvailableLabelsAsync(caller, command, token).ConfigureAwait(false);
+        }
+
         if (!s_methods.Contains(command.Method, StringComparer.Ordinal))
         {
             return new(false, "InvalidRequest", "The administrative method is unknown.");
@@ -786,6 +796,22 @@ internal sealed record AdministrationResponse(
     string? Target = null,
     LabelRetirementView? Retirement = null);
 
+/// <summary>Contains the protocol receipt fields exposed by issuance operations.</summary>
+/// <param name="OperationId">The durable operation identifier.</param>
+/// <param name="Sequence">The resulting label stream sequence, when an event was appended.</param>
+/// <param name="Changed">Whether a new label event was appended.</param>
+internal sealed record IssuanceOperationReceiptResponse(
+    string OperationId,
+    long? Sequence,
+    bool Changed);
+
+/// <summary>Contains the protocol result fields exposed by available-label queries.</summary>
+/// <param name="Moderation">The declared label choices and optional target-state projection.</param>
+/// <param name="Target">The optional target whose current label state was inspected.</param>
+internal sealed record IssuanceAvailableLabelsResponse(
+    ModerationResponse Moderation,
+    string? Target = null);
+
 /// <summary>Contains all-time issuer-local report counts for the authors on one authorized case page.</summary>
 internal sealed record AdministrationAuthorSummaryView(string Did, long Reports, long Records, IReadOnlyDictionary<string, long> ReportKinds);
 
@@ -837,6 +863,9 @@ internal sealed record AdministrationMaintenanceHostView(
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
 [JsonSerializable(typeof(AdministrationCommand))]
 [JsonSerializable(typeof(AdministrationResponse))]
+[JsonSerializable(typeof(AtErrorDetail))]
+[JsonSerializable(typeof(IssuanceOperationReceiptResponse))]
+[JsonSerializable(typeof(IssuanceAvailableLabelsResponse))]
 [JsonSerializable(typeof(AdministrationAuditView))]
 internal sealed partial class AdministrationJsonContext : JsonSerializerContext;
 

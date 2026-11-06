@@ -12,8 +12,17 @@ namespace idunno.AtProto.Server;
 /// </summary>
 public sealed record ServerDescription
 {
+    /// <summary>Initializes a new instance of the <see cref="ServerDescription"/> class.</summary>
+    /// <param name="did">The DID for the server.</param>
+    /// <param name="inviteCodeRequired">A flag that indicates whether account creation requires an invite code.</param>
+    /// <param name="phoneVerificationRequired">A flag that indicates whether the server verifies phone numbers.</param>
+    /// <param name="blobUploadLimit">The maximum blob size accepted by the server, in bytes.</param>
+    /// <param name="availableUserDomains">A list of domains that users can create handles with.</param>
+    /// <param name="links">The optional policy links published by the server.</param>
+    /// <param name="contact">The optional contact information published by the server.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="did"/> or <paramref name="availableUserDomains"/> is <see langword="null"/>.</exception>
     [JsonConstructor]
-    internal ServerDescription(
+    public ServerDescription(
         Did did,
         bool? inviteCodeRequired,
         bool? phoneVerificationRequired,
@@ -23,6 +32,7 @@ public sealed record ServerDescription
         Contact? contact)
     {
         ArgumentNullException.ThrowIfNull(did);
+        ArgumentNullException.ThrowIfNull(availableUserDomains);
 
         Did = did;
 

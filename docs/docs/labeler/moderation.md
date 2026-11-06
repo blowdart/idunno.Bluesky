@@ -455,7 +455,11 @@ exception details, credentials and recipient addresses are not logged.
 When the Xenon UI is registered and a public labeler endpoint is configured,
 all notification and test emails end with `Sent via https://your-host/Xenon/`.
 The link uses configured hosting options, never the incoming request's host.
-The message contains the labeler DID, failure category and first failure time, not
+Email identities use `@handle (did:...)` for the labeler, affected member and person
+making a change. Handles are verified when preparing delivery; unavailable handles
+are shown as `Handle unavailable (did:...)`, so identity lookups do not prevent
+notifications. Persisted audit records retain their original DIDs.
+The message contains the labeler identity, failure category and first failure time, not
 report contents. Addresses are persisted with team state, are visible only to
 administrators, and are excluded from audit reasons and delivery logs.
 

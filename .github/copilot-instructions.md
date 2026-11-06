@@ -53,6 +53,17 @@ Report new findings, previously missed findings, and older findings that remain 
 
 ## Pre-commit gate
 
+### Disposable database prerequisites
+
+Before **every full test run**, provision fresh, disposable PostgreSQL 17 and MySQL 8.4 Docker containers. Do not start the suite with missing database configuration and rediscover the same prerequisite failures.
+
+* Set `LABELER_TEST_POSTGRESQL_CONNECTION` and `LABELER_TEST_MYSQL_CONNECTION` in the test process to administrative connections on those disposable servers. The labeler fixtures create and drop their own databases; never point them at a live labeler database or reuse production containers, credentials, or volumes.
+* Use unique test-container names, generated temporary passwords, disposable storage, and loopback-only published ports. Verify authenticated database connections through the published ports from the test runner before launching the full suite; a running container or an in-container readiness probe alone is insufficient.
+* On Windows, bound **both** module and xUnit collection concurrency: `dotnet test --max-parallel-test-modules 1 --max-threads 1`. Limiting only modules does not prevent ephemeral-port exhaustion from the unpooled real-engine fixtures. Do not change machine-wide TCP settings or weaken fixture isolation to work around this.
+* Record the elapsed time and preserve the complete test log and database diagnostics. In a `finally` block, remove only the containers and disposable storage created for that run, including when tests fail. Do not report the commit gate as passed unless every required test passes.
+
+These database prerequisites also apply to targeted runs that include PostgreSQL or MySQL labeler conformance tests.
+
 Before *every* commit, run both of these from the repository root and require both to be clean:
 
 1. `dotnet build idunno.Bluesky.slnx -c Debug --no-incremental` — must report 0 warnings and 0 errors.

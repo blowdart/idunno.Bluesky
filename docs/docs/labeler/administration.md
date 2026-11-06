@@ -12,6 +12,23 @@ must consume this boundary rather than construct actor DIDs from request fields 
 The `dev.idunno.labeler.admin.*` methods are this library's administration protocol, not Ozone or
 standard AT Protocol moderation endpoints.
 
+On Xenon's Team page, the add-member field suggests public Bluesky accounts as you type.
+JavaScript calls `https://public.api.bsky.app/xrpc/app.bsky.actor.searchActorsTypeahead`
+directly from the browser, without cookies, authorization headers or a referrer; there is no
+server-side search proxy. Searches wait for two characters and a 300 ms pause, and superseded
+requests are canceled. Selecting an account fills in its handle. Suggestions are not identity
+verification: enrollment still performs the existing server-side identity and permission checks.
+Manual handle or DID entry works without JavaScript or when search is unavailable.
+Hosts with a Content Security Policy must allow `https://public.api.bsky.app` in `connect-src`
+to enable suggestions.
+The member-search and change-member fields share handle suggestions from the full registered
+team, including suspended and removed members, independently of the table's search and current
+page. Suggestions show membership status and omit accounts whose handles cannot be verified.
+They use the browser's built-in autocomplete and make no network requests. Selecting a
+suggestion fills in the handle; Search still submits the filter. In Change member, selecting a
+member also selects their current role. The server maps the handle to its registered member
+internally; all changes still require an explicit submission and audit reason.
+
 ## Optional Ozone compatibility
 
 `app.MapOzoneCompatibility()` explicitly opts an application into the adapter while
@@ -284,7 +301,7 @@ After registering storage and an `ILabelIssuancePolicyProvider`, opt in explicit
 
 ```csharp
 AtProtoServiceReference audience = new(
-    new Did("did:web:labeler.example"), "labeler_admin");
+    new Did("did:web:labeler.example"), Audience.Administration);
 
 builder.Services.AddLabelerAdministration(
     audience: audience,
@@ -334,7 +351,7 @@ example above explicitly chooses its own `Labeler:Administration` section instea
 |---|---|
 | `Disabled` | Always unavailable; this is the default. |
 | `Enabled` | Available after the existing HTTPS, method-bound service-token and live-team checks. |
-| `WebUiControlled` | Available only while the bootstrap owner has enabled the durable switch in Xenon. |
+| `WebUiControlled` | Available only while the current labeler owner has enabled the durable switch in Xenon. |
 
 When `RemoteMode` is configured, it takes precedence over the legacy
 `LabelerAdministration:RemoteEnabled` Boolean in the standalone host. If `RemoteMode` is absent, `RemoteEnabled`
@@ -345,12 +362,26 @@ Invalid enum text fails configuration binding; an undefined numeric enum value i
 the request gate. Neither falls back to enabling access through the legacy Boolean.
 
 In `WebUiControlled` mode, the switch starts disabled and is changed from **Team and membership**
-in Xenon. The owner is the DID that completed the one-time OS-authorized local bootstrap, not the
+in Xenon. The initial owner is the DID that completed the one-time OS-authorized local bootstrap, not the
 issuer DID by assumption and not every team member with the Administrator role. The store checks
 current Administrator authority and the owner DID inside the same transaction that changes the
 persisted setting and appends its audit receipt. Legacy installations recover the bootstrap DID
 from their first durable bootstrap audit event; if that evidence is missing, no owner is inferred
 and remote control fails closed. Other Administrators may inspect status but cannot change it.
+The current owner cannot be removed, suspended or demoted, including by themselves. Other
+Administrators cannot invalidate or replace the owner's local access bindings, including by
+rebinding an owner's OS identity to another member.
+
+Only the current owner can transfer ownership to another active Administrator. In Xenon, use
+**Team and membership > Labeler ownership**, select the new owner's handle, give a reason and
+confirm the transfer. The CLI exposes the same operation as
+`change-team <administrator-DID> --action TransferOwnership` with the usual transport, operation
+ID and reason options. Ownership protection and control of the remote CLI switch move together
+in one audited transaction. The switch's enabled state, both members' roles and existing local
+bindings are unchanged. The former owner remains an ordinary Administrator and can then be
+removed, suspended or demoted. Only the new owner can transfer ownership back.
+Upgrade every host sharing the database before relying on these protections; older hosts do not enforce them.
+
 Protected local administration remains available in all three modes. Neither mode selection nor
 the Xenon switch bypasses HTTPS, service-token method binding, authentication or live authorization.
 
@@ -478,8 +509,12 @@ administration continues to request only its method-bound service permission.
 Metadata can supply a name/logo, but an authorization server need not display untrusted branding.
 
 After OAuth establishes the expected account DID and authoritative PDS/authorization-server
-relationship, call `GetServiceAuth` using the new `AtProtoServiceReference` overload. Request the
-**exact** audience `did:web:labeler.example#labeler_admin` and exact `lxm`. `GetServiceAuth` requests
+relationship, call `GetServiceAuth` using the new `AtProtoServiceReference` overload. Administrative
+methods request the **exact** audience `did:web:labeler.example#labeler_admin` and exact `lxm`.
+The labeler-agent issuance procedures use `did:web:labeler.example#labeler_issuance` on the separate
+`dev.idunno.labeler.issuance` namespace. The host derives this audience from the configured administration
+audience's DID; it is not accepted on `dev.idunno.labeler.admin` routes, and `labeler_admin` is not
+accepted on issuance routes. `GetServiceAuth` requests
 a token expiring in 14 minutes 55 seconds by default, leaving five seconds of client/PDS clock-skew
 headroom below the verifier maximum; specify a different positive `expiry` when acquiring the token. The
 labeler accepts up to 15 minutes by default; set `maximumServiceTokenLifetime` when registering
@@ -525,6 +560,12 @@ Suspend or remove a member to revoke their team access. Do not put raw credentia
 `issueLabel` and `negateLabel` use `operationId`, `target`, `value`, `reason`, and optional `cid`,
 `expiresAt` (issue only), and `correlationId`. The shared issuance service still enforces policy,
 target verification, lifecycle and semantic retries. `getOperation` requires `operationId`;
+these methods remain in the `dev.idunno.labeler.admin` namespace for administrator clients. The
+labeler-agent client uses the separate `dev.idunno.labeler.issuance.issueLabel`,
+`dev.idunno.labeler.issuance.negateLabel`, `dev.idunno.labeler.issuance.getOperationReceipt`, and
+`dev.idunno.labeler.issuance.getAvailableLabels` procedures, authenticated with the
+`labeler_issuance` audience. Both namespaces enter the same team authorization, issuance policy,
+replay protection and storage boundary.
 `getAudit` accepts `afterSequence` and `limit` (1-16), bounding the maximum serialized audit
 response below the local transport's 1 MiB frame limit even when reasons require JSON escaping;
 read queries may include `reason`. Both HTTP and local read commands use

@@ -41,8 +41,12 @@ idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions
 idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.<Clone>$() -> idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions!
 idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.BatchSize.get -> int
 idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.BatchSize.init -> void
+idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.Contact.get -> idunno.AtProto.Server.Contact?
+idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.Contact.init -> void
 idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.Equals(idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions? other) -> bool
 idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.LabelerHostingOptions() -> void
+idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.Links.get -> idunno.AtProto.Server.Links?
+idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.Links.init -> void
 idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.MaximumMessageBytes.get -> int
 idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.MaximumMessageBytes.init -> void
 idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.PublicEndpoint.get -> System.Uri?

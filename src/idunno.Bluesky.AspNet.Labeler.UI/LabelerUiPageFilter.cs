@@ -71,6 +71,7 @@ internal sealed class LabelerUiPageFilter(LabelerUiAdministration administration
             return;
         }
         page.ViewData["CurrentRole"] = member.Role;
+        page.ViewData["TeamMembers"] = response.Members;
         page.ViewData["OnlineMembers"] = online;
         page.ViewData["ShowPresence"] = showPresence;
         page.ViewData["AvailableModerators"] = response.Members
