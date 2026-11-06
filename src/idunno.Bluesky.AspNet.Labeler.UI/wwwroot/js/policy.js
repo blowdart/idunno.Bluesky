@@ -32,6 +32,9 @@ function parsePolicyDeclaration(text) {
 
 function setPolicyReportScope(declaration, subjects, collections, reasons) {
     declaration.subjectTypes = subjects;
+    if (collections !== null && subjects.includes("account") && !collections.includes("app.bsky.actor.profile")) {
+        collections = [...collections, "app.bsky.actor.profile"];
+    }
     if (collections === null) delete declaration.subjectCollections;
     else declaration.subjectCollections = collections;
     if (reasons === null) delete declaration.reasonTypes;
@@ -43,9 +46,10 @@ document.querySelectorAll("[data-policy-tabs]").forEach(root => {
     const tabs = Array.from(root.querySelectorAll("[data-policy-tab]"));
     const panels = Array.from(root.querySelectorAll("[data-policy-panel]"));
     const save = root.querySelector("[data-policy-save]");
+    const deletionConfirmation = root.querySelector("[data-policy-delete-confirmation]");
     const nav = root.querySelector("nav");
     nav.setAttribute("role", "tablist");
-    const show = tab => {
+    const show = (tab, updateFragment = true) => {
         tabs.forEach(item => {
             const selected = item === tab;
             item.setAttribute("aria-selected", String(selected));
@@ -53,10 +57,12 @@ document.querySelectorAll("[data-policy-tabs]").forEach(root => {
         });
         panels.forEach(panel => { panel.hidden = "#" + panel.id !== tab.getAttribute("href"); });
         const editing = ["#policy-labels", "#policy-moderation", "#policy-advanced"].includes(tab.getAttribute("href"));
+        const editorTab = root.querySelector('input[name="editorTab"]');
+        if (editing && editorTab) editorTab.value = tab.getAttribute("href").slice(1);
         if (save) save.hidden = !editing;
         const toolbar = root.querySelector(".policy-editor-toolbar");
         if (toolbar) toolbar.hidden = !editing;
-        history.replaceState(history.state, "", tab.getAttribute("href"));
+        if (updateFragment) history.replaceState(history.state, "", tab.getAttribute("href"));
     };
     tabs.forEach((tab, index) => {
         const panel = root.querySelector(tab.getAttribute("href"));
@@ -82,10 +88,21 @@ document.querySelectorAll("[data-policy-tabs]").forEach(root => {
             tabs[next].focus();
         });
     });
-    show(tabs.find(tab => tab.getAttribute("href") === location.hash) ||
+    show((deletionConfirmation ? tabs.find(tab => tab.getAttribute("href") === "#policy-current") : null) ||
+        tabs.find(tab => tab.getAttribute("href") === location.hash) ||
         (root.dataset.policyVerificationSubmitted === "true" ? tabs.find(tab => tab.getAttribute("href") === "#policy-verification") : null) ||
         (root.dataset.policyPublicationSubmitted === "true" ? tabs.find(tab => tab.getAttribute("href") === "#policy-publication") : null) ||
-        tabs[root.querySelector("[data-policy-editor]")?.dataset.policySubmitted === "true" ? 3 : 0]);
+        ((root.querySelector("[data-policy-editor]")?.dataset.policySubmitted === "true" || location.hash === "#main")
+            ? tabs.find(tab => tab.getAttribute("href") === "#" + root.querySelector('input[name="editorTab"]')?.value) : null) ||
+        tabs[0], false);
+    if (deletionConfirmation) {
+        const focusDeletion = () => {
+            deletionConfirmation.querySelector('input[name="reason"]').focus({ preventScroll: true });
+            deletionConfirmation.scrollIntoView({ block: "start" });
+        };
+        if (document.readyState === "complete") focusDeletion();
+        else window.addEventListener("load", focusDeletion, { once: true });
+    }
     root.addEventListener("invalid", event => {
         const panel = event.target.closest("[data-policy-panel]");
         if (panel) show(tabs.find(tab => tab.getAttribute("href") === "#" + panel.id));
@@ -106,6 +123,7 @@ document.querySelectorAll("[data-policy-tabs]").forEach(root => {
     if (!form) return;
     const field = name => form.elements.namedItem(name);
     const raw = field("declaration");
+    const syncIssuance = root.querySelector("[data-policy-sync-issuance]");
     const error = root.querySelector("#policy-json-error");
     const labels = root.querySelector("[data-policy-labels]");
     const add = root.querySelector("[data-policy-add-label]");
@@ -116,7 +134,7 @@ document.querySelectorAll("[data-policy-tabs]").forEach(root => {
         raw.setCustomValidity("");
         error.textContent = "";
     };
-    const reportControls = () => {
+    const reportControls = (normalizeField = false) => {
         if (!declaration) return;
         const reasons = field("reasonMode").value === "all" ? null : [
             ...new Set([
@@ -128,6 +146,7 @@ document.querySelectorAll("[data-policy-tabs]").forEach(root => {
             Array.from(form.querySelectorAll('input[name="reportSubjects"]:checked'), input => input.value),
             field("reportAllCollections").checked ? null : list(field("reportCollections").value, ","),
             reasons);
+        if (normalizeField) field("reportCollections").value = (declaration.subjectCollections ?? []).join(", ");
         write();
     };
     const input = (parent, title, value, type = "text") => {
@@ -272,6 +291,7 @@ document.querySelectorAll("[data-policy-tabs]").forEach(root => {
             error.textContent = "The JSON could not update the form: " + exception.message + " The form still shows the last valid values. Correct the JSON before saving.";
             raw.setCustomValidity("Correct the declaration JSON before saving.");
             add.disabled = true;
+            syncIssuance.disabled = true;
             form.querySelectorAll("[data-policy-declaration-controls], .policy-label").forEach(control => {
                 control.disabled = true;
             });
@@ -282,16 +302,26 @@ document.querySelectorAll("[data-policy-tabs]").forEach(root => {
         raw.setCustomValidity("");
         reflect();
         add.disabled = false;
+        syncIssuance.disabled = false;
         form.querySelectorAll("[data-policy-declaration-controls], .policy-label").forEach(control => {
             control.disabled = false;
         });
     };
     raw.addEventListener("input", read);
+    syncIssuance.hidden = false;
+    syncIssuance.addEventListener("click", () => {
+        if (raw.validationMessage) return;
+        field("allowAccounts").checked = declaration.subjectTypes.includes("account");
+        field("allowRecords").checked = declaration.subjectTypes.includes("record");
+        field("issueAllCollections").checked = declaration.subjectCollections === undefined;
+        field("collections").value = (declaration.subjectCollections ?? []).join(", ");
+    });
     ["reasonMode", "customReasons", "reportCollections"].forEach(name => {
         field(name).addEventListener("input", () => { if (!raw.validationMessage) reportControls(); });
     });
+    field("reportCollections").addEventListener("change", () => { if (!raw.validationMessage) reportControls(true); });
     form.querySelectorAll('input[name="reasonTypes"], input[name="reportSubjects"], input[name="reportAllCollections"]').forEach(control => {
-        control.addEventListener("change", () => { if (!raw.validationMessage) reportControls(); });
+        control.addEventListener("change", () => { if (!raw.validationMessage) reportControls(true); });
     });
     add.hidden = false;
     add.addEventListener("click", () => {
@@ -300,18 +330,31 @@ document.querySelectorAll("[data-policy-tabs]").forEach(root => {
         renderLabels();
         labels.lastElementChild.querySelector("input").focus();
     });
-    const load = (definition, source) => {
+    const load = (definition, source, draft = false) => {
         raw.value = JSON.stringify(definition.declaration, null, 2);
         field("allowAccounts").checked = definition.allowAccounts;
         field("allowRecords").checked = definition.allowRecords;
         field("collections").value = (definition.allowedRecordCollections ?? []).join(", ");
         field("issueAllCollections").checked = definition.allowedRecordCollections == null;
         field("rules").value = definition.rules;
-        field("version").value = "";
+        field("version").value = draft ? definition.version : "";
+        field("version").readOnly = draft;
+        field("editingDraft").value = draft ? definition.version : "";
+        root.querySelector("[data-policy-save-heading]").textContent = draft ? "Update a draft policy" : "Save a policy draft";
+        root.querySelector("[data-policy-save-text]").textContent = draft ? "Update draft" : "Save draft";
+        const deletion = root.querySelector("[data-policy-editor-delete]");
+        deletion.hidden = !draft;
+        deletion.querySelector('input[name="version"]').value = draft ? definition.version : "";
+        const publish = root.querySelector("[data-policy-editor-publish]");
+        publish.hidden = !draft;
+        publish.dataset.policyPublish = draft ? definition.version : "";
+        publish.href = "?publish=" + encodeURIComponent(draft ? definition.version : "") + "#policy-publication";
         field("reason").value = "";
         root.querySelector("[data-policy-source]").textContent = source;
         read();
-        show(tabs[1]);
+        const selected = tabs.find(tab => tab.getAttribute("aria-selected") === "true");
+        const editing = ["#policy-labels", "#policy-moderation", "#policy-advanced"];
+        show(selected && editing.includes(selected.getAttribute("href")) ? selected : tabs[1]);
     };
     root.querySelectorAll("[data-policy-load]").forEach(link => {
         const text = root.querySelector(link.dataset.policyLoad === "draft" ? "[data-policy-drafts]" : "[data-policy-current]").value;
@@ -320,7 +363,8 @@ document.querySelectorAll("[data-policy-tabs]").forEach(root => {
             event.preventDefault();
             const parsed = JSON.parse(text);
             const definition = link.dataset.policyLoad === "draft" ? parsed.find(item => item.version === link.dataset.policyVersion) : parsed;
-            load(definition, (link.dataset.policyLoad === "draft" ? "Saved draft: " : "Current policy: ") + definition.version);
+            load(definition, (link.dataset.policyLoad === "draft" ? "Working on policy draft: " : "Working on policy draft: new, based on current policy ") + definition.version,
+                link.dataset.policyLoad === "draft");
         });
     });
     root.querySelector("[data-policy-clear]").addEventListener("click", event => {
@@ -331,7 +375,7 @@ document.querySelectorAll("[data-policy-tabs]").forEach(root => {
                 subjectTypes: [], policies: { labelValues: [] }
             },
             allowAccounts: false, allowRecords: false, rules: ""
-        }, "New policy");
+        }, "Working on policy draft: new, unsaved");
     });
     read();
 });

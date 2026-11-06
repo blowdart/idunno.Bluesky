@@ -19,7 +19,93 @@ public class LabelPolicyAlertStoreTests
     [InlineData("sqlite")]
     [InlineData("postgresql")]
     [InlineData("mysql")]
-    public async Task ChangesAreDurablePrivateIdempotentAndSuppressedForASingleAdministrator(string engine)
+    public async Task FirstEmailEnablementSkipsHistoricalChangesAndRetainsLaterRetriesAcrossRestarts(string engine)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        ILabelAdministrationStore team = (ILabelAdministrationStore)fixture.Store;
+        Assert.True((await team.BootstrapAsync(s_administrator, "uid:0", "bootstrap", token)).Succeeded);
+        LabelAdministrationCaller administrator = (await team.AuthenticateLocalAsync("uid:0", token)).Result!;
+        Assert.True((await team.SetRemoteAdministrationEnabledAsync(
+            caller: administrator,
+            operationId: "before-email",
+            enabled: true,
+            reason: "Historical change.",
+            cancellationToken: token)).Succeeded);
+        ILabelPolicyAlertStore alerts = (ILabelPolicyAlertStore)fixture.Store;
+        await alerts.InitializeNotificationsAsync(token);
+        Assert.Null(await ClaimAsync(alerts, token));
+        Assert.True((await team.SetRemoteAdministrationEnabledAsync(
+            caller: administrator,
+            operationId: "after-email",
+            enabled: false,
+            reason: "New change while no addresses are registered.",
+            cancellationToken: token)).Succeeded);
+        ILabelPolicyAlertStore restarted = (ILabelPolicyAlertStore)fixture.NewStore();
+        await restarted.InitializeNotificationsAsync(token);
+        Assert.Null(await ClaimAsync(restarted, token));
+        Assert.True((await team.SetTeamNotificationEmailAsync(
+            caller: administrator,
+            change: new("email", s_administrator, "admin@example.invalid", "Register alerts."),
+            cancellationToken: token)).Succeeded);
+        LabelPolicyAlertDelivery current = Assert.IsType<LabelPolicyAlertDelivery>(await ClaimAsync(restarted, token));
+        Assert.Contains("disabled", current.ChangeDescription, StringComparison.Ordinal);
+        await restarted.CompleteAlertDeliveryAsync(
+            alertId: current.AlertId,
+            leaseId: current.LeaseId,
+            delivered: false,
+            cancellationToken: token);
+        await alerts.InitializeNotificationsAsync(token);
+        LabelPolicyAlertDelivery retry = Assert.IsType<LabelPolicyAlertDelivery>(await ClaimAsync(alerts, token));
+        Assert.Equal(current.AlertId, retry.AlertId);
+        await CompleteAsync(alerts, retry, token);
+        Assert.Null(await ClaimAsync(restarted, token));
+        IReadOnlyList<LabelAdministrationReceipt> audit = (await team.GetAdministrationAuditAsync(
+            caller: administrator,
+            cancellationToken: token)).Result!;
+        Assert.Contains(audit, item => item.OperationId == "before-email" && item.Succeeded);
+        Assert.Contains(audit, item => item.OperationId == "after-email" && item.Succeeded);
+    }
+
+    [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task InitializingAnExistingDeliveryPreservesItsPendingRetry(string engine)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        ILabelAdministrationStore team = (ILabelAdministrationStore)fixture.Store;
+        Assert.True((await team.BootstrapAsync(s_administrator, "uid:0", "bootstrap", token)).Succeeded);
+        LabelAdministrationCaller administrator = (await team.AuthenticateLocalAsync("uid:0", token)).Result!;
+        Assert.True((await team.SetTeamNotificationEmailAsync(
+            caller: administrator,
+            change: new("email", s_administrator, "admin@example.invalid", "Register alerts."),
+            cancellationToken: token)).Succeeded);
+        Assert.True((await team.SetRemoteAdministrationEnabledAsync(
+            caller: administrator,
+            operationId: "existing-delivery",
+            enabled: true,
+            reason: "An existing installation already started delivery.",
+            cancellationToken: token)).Succeeded);
+        ILabelPolicyAlertStore alerts = (ILabelPolicyAlertStore)fixture.Store;
+        LabelPolicyAlertDelivery pending = Assert.IsType<LabelPolicyAlertDelivery>(await ClaimAsync(alerts, token));
+        await alerts.CompleteAlertDeliveryAsync(
+            alertId: pending.AlertId,
+            leaseId: pending.LeaseId,
+            delivered: false,
+            cancellationToken: token);
+        ILabelPolicyAlertStore restarted = (ILabelPolicyAlertStore)fixture.NewStore();
+        await restarted.InitializeNotificationsAsync(token);
+        LabelPolicyAlertDelivery retry = Assert.IsType<LabelPolicyAlertDelivery>(await ClaimAsync(restarted, token));
+        Assert.Equal(pending.AlertId, retry.AlertId);
+    }
+
+    [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task ChangesAreDurablePrivateIdempotentAndDeliveredToASingleAdministrator(string engine)
     {
         CancellationToken token = TestContext.Current.CancellationToken;
         FakeTimeProvider clock = new(new DateTimeOffset(2026, 1, 2, 3, 4, 5, TimeSpan.Zero));
@@ -41,7 +127,10 @@ public class LabelPolicyAlertStoreTests
                 reason: "Private audit reason.",
                 role: LabelTeamRole.Moderator),
             cancellationToken: token)).Succeeded);
-        Assert.Null(await ClaimAsync(alerts, token));
+        LabelPolicyAlertDelivery moderatorAdded = Assert.IsType<LabelPolicyAlertDelivery>(await ClaimAsync(alerts, token));
+        Assert.Contains(s_moderator.Value, moderatorAdded.ChangeDescription, StringComparison.Ordinal);
+        Assert.Equal("admin@example.invalid", Assert.Single(moderatorAdded.Recipients));
+        await CompleteAsync(alerts, moderatorAdded, token);
         Assert.True((await team.ChangeTeamAsync(
             caller: administrator,
             change: new(
@@ -129,6 +218,13 @@ public class LabelPolicyAlertStoreTests
                 target: s_secondAdministrator,
                 reason: "Remove administrator."),
             cancellationToken: token)).Succeeded);
+        LabelPolicyAlertDelivery remote = Assert.IsType<LabelPolicyAlertDelivery>(await ClaimAsync(alerts, token));
+        Assert.Contains("Remote CLI", remote.ChangeDescription, StringComparison.Ordinal);
+        await CompleteAsync(alerts, remote, token);
+        LabelPolicyAlertDelivery administratorRemoved = Assert.IsType<LabelPolicyAlertDelivery>(await ClaimAsync(restarted, token));
+        Assert.Contains(s_secondAdministrator.Value, administratorRemoved.ChangeDescription, StringComparison.Ordinal);
+        Assert.Equal("admin@example.invalid", Assert.Single(administratorRemoved.Recipients));
+        await CompleteAsync(restarted, administratorRemoved, token);
         Assert.Null(await ClaimAsync(alerts, token));
         await alerts.RecordVerificationFailureAsync("Unavailable", token);
         LabelPolicyAlertDelivery failure = Assert.IsType<LabelPolicyAlertDelivery>(await ClaimAsync(alerts, token));
@@ -229,7 +325,7 @@ public class LabelPolicyAlertStoreTests
         LabelAdministrationCaller administrator = (await team.AuthenticateLocalAsync("uid:0", token)).Result!;
         for (int index = 0; index < 110; index++)
         {
-            Assert.True((await team.GetTeamAsync(administrator, token)).Succeeded);
+            Assert.True((await team.RecordAdministrationDenialAsync("Audit paging fixture.", administrator, token)).Succeeded);
         }
         Assert.True((await team.ChangeTeamAsync(
             caller: administrator,
@@ -357,10 +453,13 @@ public class LabelPolicyAlertStoreTests
             leaseId: retry.LeaseId,
             delivered: true,
             cancellationToken: token);
-        Assert.Null(await restarted.ClaimPendingAlertAsync(
+        LabelPolicyAlertDelivery enrollment = Assert.IsType<LabelPolicyAlertDelivery>(await restarted.ClaimPendingAlertAsync(
             leaseId: "alert-lease-3",
             leaseDuration: TimeSpan.FromMinutes(2),
             cancellationToken: token));
+        Assert.Contains(s_moderator.Value, enrollment.ChangeDescription, StringComparison.Ordinal);
+        await CompleteAsync(restarted, enrollment, token);
+        Assert.Null(await ClaimAsync(restarted, token));
 
         LabelServiceResult<LabelAdministrationReceipt> cleared = await administration.SetTeamNotificationEmailAsync(
             caller: administrator,

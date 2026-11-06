@@ -161,7 +161,8 @@ public sealed class CallbackServer : IAsyncDisposable
 
         Startup = InitializeListenerAsync(port, path, loggerFactory, ownedSockets, configure, cancellationToken);
 
-        _ = RunListenerAsync().ContinueWith(
+        ListenerShutdown = RunListenerAsync();
+        _ = ListenerShutdown.ContinueWith(
             static (listenerTask, state) =>
             {
                 CallbackServer server = (CallbackServer)state!;
@@ -211,9 +212,11 @@ public sealed class CallbackServer : IAsyncDisposable
         }
         catch
         {
-            if (_listener is not null)
+            WebApplication? listener = _listener;
+            _listener = null;
+            if (listener is not null)
             {
-                await _listener.DisposeAsync().ConfigureAwait(false);
+                await listener.DisposeAsync().ConfigureAwait(false);
             }
 
             throw;
@@ -448,7 +451,12 @@ public sealed class CallbackServer : IAsyncDisposable
     internal Task Startup { get; }
 
     /// <summary>
-    /// Runs the listener until shutdown, preserving the disposal performed by the host's RunAsync method.
+    /// Gets the listener shutdown task; disposal owns and awaits this task before releasing host services.
+    /// </summary>
+    internal Task ListenerShutdown { get; }
+
+    /// <summary>
+    /// Observes listener shutdown without competing with the callback server for ownership of host disposal.
     /// </summary>
     /// <returns>A task representing the listener lifetime.</returns>
     private async Task RunListenerAsync()
@@ -461,14 +469,7 @@ public sealed class CallbackServer : IAsyncDisposable
             throw new InvalidOperationException("Callback server startup completed without a listener.");
         }
 
-        try
-        {
-            await listener.WaitForShutdownAsync(CancellationToken.None).ConfigureAwait(false);
-        }
-        finally
-        {
-            await listener.DisposeAsync().ConfigureAwait(false);
-        }
+        await listener.WaitForShutdownAsync(CancellationToken.None).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -726,7 +727,8 @@ public sealed class CallbackServer : IAsyncDisposable
         {
             if (listener is not null)
             {
-                await listener.StopAsync(CancellationToken.None).ConfigureAwait(false);
+                listener.Lifetime.StopApplication();
+                await ListenerShutdown.ConfigureAwait(false);
             }
         }
         finally

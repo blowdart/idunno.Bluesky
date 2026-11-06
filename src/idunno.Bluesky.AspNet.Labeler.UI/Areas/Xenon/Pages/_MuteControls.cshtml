@@ -1,0 +1,27 @@
+@model (string Subject, LabelMuteKind Kind)
+@if ((ViewData["CurrentRole"] as LabelTeamRole?) >= LabelTeamRole.Moderator)
+{
+    string kind = Model.Kind.ToString().ToLowerInvariant();
+    <details class="mute-controls">
+        <summary><span class="fa-icon fa-circle-pause" aria-hidden="true"></span> Mute this @kind</summary>
+        <form method="post" asp-area="Xenon" asp-page="/Mutes/Index" asp-page-handler="Mute">
+            <input type="hidden" name="subject" value="@Model.Subject" />
+            <input type="hidden" name="kind" value="@Model.Kind" />
+            <input type="hidden" name="operationId" value="@Guid.NewGuid().ToString("N")" />
+            <label class="field">Duration
+                <select name="durationHours">
+                    @foreach (int hours in MuteDurations.Hours)
+                    {
+                        <option value="@hours" selected="@(hours == 24)">@hours hours</option>
+                    }
+                </select>
+            </label>
+            <p>This hides @(Model.Kind == LabelMuteKind.Reporter ? "reports from this account" : "this subject") from normal review queues until the mute expires. Any current mute of this kind is replaced. Content mutes apply across all versions.</p>
+            <label class="field">Reason (optional)<input name="reason" maxlength="4096" /></label>
+            <p>If left blank, the audit history records &ldquo;No reason provided.&rdquo;</p>
+            <label><input type="checkbox" name="confirmed" value="true" required /> Mute this @kind for the selected duration.</label>
+            <div class="form-actions"><button type="submit">Confirm mute</button></div>
+        </form>
+    </details>
+    <p><a asp-area="Xenon" asp-page="/Mutes/Index" asp-route-subject="@Model.Subject" asp-route-kind="@Model.Kind">View shared mutes or unmute this @kind</a></p>
+}

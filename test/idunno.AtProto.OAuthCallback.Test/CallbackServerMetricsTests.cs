@@ -20,6 +20,39 @@ namespace idunno.AtProto.OAuthCallback.Test;
 public class CallbackServerMetricsTests
 {
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ListenerShutdownLeavesHostDisposalToTheCallbackServer(bool completeCallback)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using CallbackServer server = await CallbackServerFactory.CreateAsync();
+        WebApplication application = (WebApplication)typeof(CallbackServer)
+            .GetField("_listener", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(server)!;
+        IHostApplicationLifetime lifetime = application.Services.GetRequiredService<IHostApplicationLifetime>();
+        Task<string> callback = server.WaitForCallbackAsync(cancellationToken: token);
+        if (completeCallback)
+        {
+            using HttpClient client = new();
+            using HttpResponseMessage response = await client.GetAsync(new Uri($"{server.Uri}?code=abc&state=xyz"), token);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal("?code=abc&state=xyz", await callback);
+        }
+
+        await application.StopAsync(token);
+        await server.ListenerShutdown.WaitAsync(TimeSpan.FromSeconds(30), token);
+        Assert.True(lifetime.ApplicationStopped.IsCancellationRequested);
+        Assert.Same(lifetime, application.Services.GetRequiredService<IHostApplicationLifetime>());
+
+        await server.DisposeAsync();
+        Assert.Throws<ObjectDisposedException>(() => application.Services.GetRequiredService<IHostApplicationLifetime>());
+        if (!completeCallback)
+        {
+            await Assert.ThrowsAsync<ObjectDisposedException>(async () => await callback);
+        }
+        await server.DisposeAsync();
+    }
+
+    [Theory]
     [InlineData("idunno.atproto.oauthcallback.callbacks.total", false)]
     [InlineData("idunno.atproto.oauthcallback.callbacks.total", true)]
     [InlineData("idunno.atproto.oauthcallback.callback.wait.duration", false)]

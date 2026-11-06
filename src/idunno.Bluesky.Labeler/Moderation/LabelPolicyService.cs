@@ -81,9 +81,12 @@ public sealed class LabelPolicyService(
                 return Reject(LabelServiceErrorCode.PolicyUnavailable, "Publish and check a policy before allowing new reports or label changes.");
             }
 
-            if (state.VerifiedUntil is { } deadline && state.DatabaseTime < deadline - state.VerificationFreshness)
+            if (state.VerifiedUntil is { } deadline &&
+                PolicyVerificationClock.IsRollbackBeyondTolerance(deadline - state.VerificationFreshness, state.DatabaseTime))
             {
-                return Reject(LabelServiceErrorCode.PolicyUnavailable, "The database clock is earlier than the saved policy check. An administrator must investigate before checks can continue.");
+                long rollbackMilliseconds = (long)((deadline - state.VerificationFreshness) - state.DatabaseTime).TotalMilliseconds;
+                return Reject(LabelServiceErrorCode.PolicyUnavailable,
+                    $"The database clock is {rollbackMilliseconds} milliseconds earlier than the saved policy check. An administrator must investigate before checks can continue.");
             }
 
             if (!forceVerification && state.Phase == LabelPolicyPhase.VerifiedActive && state.VerifiedUntil > state.DatabaseTime)
@@ -175,9 +178,23 @@ public sealed class LabelPolicyService(
     /// <summary>Surfaces a classified failure without logging declaration contents or repository diagnostics.</summary>
     private LabelServiceResult<LabelPolicyState> Reject(LabelServiceErrorCode code, string message, Exception? exception = null)
     {
-        LabelModerationLog.Rejected(_logger, "policy-verification", code);
+        LabelModerationLog.VerificationRejected(_logger, code, message);
         return LabelServiceResult<LabelPolicyState>.Failure(new(code: code, message: message, exception: exception));
     }
+}
+
+/// <summary>Applies the same bounded database-clock rollback tolerance to policy verification and admission.</summary>
+internal static class PolicyVerificationClock
+{
+    internal const long RollbackToleranceMilliseconds = 5_000;
+
+    /// <summary>Determines whether database time precedes a verification start by more than the allowed tolerance.</summary>
+    internal static bool IsRollbackBeyondTolerance(long verificationStart, long databaseTime) =>
+        verificationStart - databaseTime > RollbackToleranceMilliseconds;
+
+    /// <summary>Determines whether database time precedes a verification start by more than the allowed tolerance.</summary>
+    internal static bool IsRollbackBeyondTolerance(DateTimeOffset verificationStart, DateTimeOffset databaseTime) =>
+        verificationStart - databaseTime > TimeSpan.FromMilliseconds(RollbackToleranceMilliseconds);
 }
 
 /// <summary>Logs bounded moderation failure categories without sensitive subjects, reasons or credentials.</summary>
@@ -186,4 +203,8 @@ internal static partial class LabelModerationLog
     /// <summary>Emits a categorized failure without retaining untrusted exception text.</summary>
     [LoggerMessage(1, LogLevel.Warning, "Moderation service rejected {Operation} with {Code}.")]
     internal static partial void Rejected(ILogger logger, string operation, LabelServiceErrorCode code);
+
+    /// <summary>Emits a locally authored policy verification failure reason without remote data.</summary>
+    [LoggerMessage(2, LogLevel.Warning, "Policy verification rejected with {Code}: {Reason}")]
+    internal static partial void VerificationRejected(ILogger logger, LabelServiceErrorCode code, string reason);
 }

@@ -12,7 +12,7 @@
             {
                 <ul class="current-labels">@foreach (string label in Model.AccountLabels)
                     {
-                        <li>@label</li>
+                        <li>@label @await Html.PartialAsync("_LabelExpiry", Model.AccountChoices?.FirstOrDefault(choice => choice.Value == label)?.ExpiresAt)</li>
                     }</ul>
             }
         </dd>
@@ -27,7 +27,7 @@
         {
             <ul class="current-labels">@foreach (string label in Model.SubjectLabels)
                 {
-                    <li>@label</li>
+                    <li>@label @await Html.PartialAsync("_LabelExpiry", Model.SubjectChoices?.FirstOrDefault(choice => choice.Value == label)?.ExpiresAt)</li>
                 }</ul>
         }
     </dd>

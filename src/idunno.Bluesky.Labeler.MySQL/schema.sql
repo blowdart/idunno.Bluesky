@@ -118,7 +118,7 @@ CREATE TABLE IF NOT EXISTS label_cases (
     case_id BIGINT PRIMARY KEY CHECK(case_id>0),
     subject_hash BINARY(32) NOT NULL,
     subject_key LONGBLOB NOT NULL,
-    status INTEGER NOT NULL CHECK(status BETWEEN 0 AND 2),
+    status INTEGER NOT NULL CHECK(status BETWEEN 0 AND 3),
     assignee_hash BINARY(32) NULL,
     assignee_key LONGBLOB NULL,
     payload LONGBLOB NOT NULL,
@@ -231,4 +231,12 @@ CREATE TABLE IF NOT EXISTS label_post_review_checks (
     checked_ms BIGINT NOT NULL,
     FOREIGN KEY(case_id) REFERENCES label_cases(case_id)
 ) ENGINE=InnoDB;
-INSERT INTO label_schema(id, version) VALUES(1, 14) ON DUPLICATE KEY UPDATE id=id;
+CREATE TABLE IF NOT EXISTS label_mutes (
+    kind INTEGER NOT NULL CHECK(kind IN (0,1)),
+    event_id BIGINT NOT NULL,
+    subject_hash BINARY(32) NOT NULL,
+    subject_key LONGBLOB NOT NULL,
+    until_ms BIGINT NOT NULL,
+    PRIMARY KEY(kind,subject_hash)
+) ENGINE=InnoDB;
+INSERT INTO label_schema(id, version) VALUES(1, 16) ON DUPLICATE KEY UPDATE id=id;

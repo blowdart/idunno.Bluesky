@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 
+using idunno.AtProto;
 using idunno.Bluesky.Labeler;
 using idunno.Bluesky.Labeler.Administration;
 
@@ -22,6 +23,9 @@ public sealed class IndexModel : PageModel
     /// <summary>Gets counted membership navigation and canonical identity ordering.</summary>
     internal TableNavigation? Table { get; private set; }
 
+    /// <summary>Gets all registered members independently of the table's search and pagination.</summary>
+    internal AdministrationMemberView[] MemberChoices { get; private set; } = [];
+
     /// <summary>Gets the canonical DID selected from the current team list.</summary>
     internal string? SelectedMember { get; private set; }
 
@@ -40,7 +44,7 @@ public sealed class IndexModel : PageModel
     /// <summary>Gets the currently effective remote-administration state, when available.</summary>
     internal bool? RemoteAdministrationEnabled { get; private set; }
 
-    /// <summary>Gets whether the current browser identity is the bootstrap owner.</summary>
+    /// <summary>Gets whether the current browser identity is the current labeler owner.</summary>
     internal bool IsRemoteAdministrationOwner { get; private set; }
 
     /// <summary>Gets whether the current owner can control the Xenon-managed switch.</summary>
@@ -49,6 +53,10 @@ public sealed class IndexModel : PageModel
     /// <summary>Loads active members and retained membership tombstones.</summary>
     public async Task OnGetAsync()
     {
+        if (TempData["NotificationEmailError"] is string emailError)
+        {
+            ViewData["Error"] = emailError;
+        }
         IOptionsMonitor<LabelerAdministrationOptions>? administrationOptions =
             HttpContext.RequestServices.GetService<IOptionsMonitor<LabelerAdministrationOptions>>();
         LabelerAdministrationOptions currentOptions = administrationOptions?.CurrentValue ?? new();
@@ -82,7 +90,17 @@ public sealed class IndexModel : PageModel
 
         LabelerModerationOptions? moderationOptions = HttpContext.RequestServices.GetService<LabelerModerationOptions>();
         CanManagePolicyEmail = ViewData["CurrentRole"] is LabelTeamRole.Administrator &&
-            moderationOptions?.PolicyEmail is { Enabled: true, Server: { Length: > 0 } };
+            moderationOptions?.PolicyEmail is { Enabled: true, Server.Length: > 0 };
+        await LoadMemberChoicesAsync().ConfigureAwait(false);
+        string? actor = User.FindFirst(idunno.AtProto.Authentication.AtProtoClaims.Did)?.Value;
+        CurrentNotificationEmail = MemberChoices.FirstOrDefault(member => member.Did == actor)?.NotificationEmail;
+        string selected = Request.Query["member"].ToString();
+        if (MemberChoices.FirstOrDefault(member => member.Did == selected) is { } selectedMember)
+        {
+            SelectedMember = selectedMember.Did;
+            SelectedRole = selectedMember.Role;
+        }
+
         Table = TableNavigation.Read(Request, new(LabelTableKind.Team, Sort: LabelTableSort.Subject, Ascending: true));
         if (Table is null)
         {
@@ -115,28 +133,6 @@ public sealed class IndexModel : PageModel
         }
 
         Data = await UiPageHelpers.ReadTableAsync(this, Table).ConfigureAwait(false);
-        if (Data.ValueKind == JsonValueKind.Object &&
-            Data.TryGetProperty("members", out JsonElement members) &&
-            members.ValueKind == JsonValueKind.Array)
-        {
-            string? actor = User.FindFirst(idunno.AtProto.Authentication.AtProtoClaims.Did)?.Value;
-            JsonElement currentMember = members.EnumerateArray()
-                .FirstOrDefault(member => member.GetProperty("did").GetString() == actor);
-            if (currentMember.ValueKind == JsonValueKind.Object &&
-                currentMember.TryGetProperty("notificationEmail", out JsonElement notificationEmail) &&
-                notificationEmail.ValueKind == JsonValueKind.String)
-            {
-                CurrentNotificationEmail = notificationEmail.GetString();
-            }
-
-            string selected = Request.Query["member"].ToString();
-            JsonElement member = members.EnumerateArray().FirstOrDefault(member => member.GetProperty("did").GetString() == selected);
-            if (member.ValueKind == JsonValueKind.Object)
-            {
-                SelectedMember = selected;
-                SelectedRole = (LabelTeamRole)member.GetProperty("role").GetInt32();
-            }
-        }
     }
 
     /// <summary>Enrolls an identity after the shared service verifies its DID document and handle, if supplied.</summary>
@@ -190,13 +186,33 @@ public sealed class IndexModel : PageModel
             return Page();
         }
 
+        await LoadMemberChoicesAsync().ConfigureAwait(false);
+        if (action == LabelTeamAction.TransferOwnership &&
+            await UiPageHelpers.FormValueAsync(this, "confirmTransfer", 8).ConfigureAwait(false) != "true")
+        {
+            ViewData["Error"] = "Confirm that you want to transfer labeler ownership.";
+            await OnGetAsync().ConfigureAwait(false);
+            return Page();
+        }
+
+        IDidHandleResolver handles = HttpContext.RequestServices.GetRequiredService<IDidHandleResolver>();
+        AdministrationMemberView? member = MemberChoices.FirstOrDefault(candidate =>
+            handles.TryGetCachedHandle(new Did(candidate.Did), out Handle? handle) &&
+            handle is { IsValid: true } && string.Equals(handle.Value, target.TrimStart('@'), StringComparison.OrdinalIgnoreCase));
+        if (member is null)
+        {
+            ViewData["Error"] = "Choose a registered team member with a verified handle.";
+            await OnGetAsync().ConfigureAwait(false);
+            return Page();
+        }
+
         AdministrationResponse response = await UiPageHelpers.DispatchAsync(
             this,
             new AdministrationCommand(
                 Method: "changeTeam",
                 OperationId: operationId,
                 Reason: reason,
-                Target: target,
+                Target: member.Did,
                 Role: role,
                 Action: action)).ConfigureAwait(false);
         if (response.Succeeded)
@@ -209,13 +225,27 @@ public sealed class IndexModel : PageModel
         return Page();
     }
 
+    /// <summary>Loads the already authorized full team and verifies handles independently of the visible table page.</summary>
+    private async Task LoadMemberChoicesAsync()
+    {
+        MemberChoices = ViewData["TeamMembers"] as AdministrationMemberView[] ?? [];
+        IDidHandleResolver handles = HttpContext.RequestServices.GetRequiredService<IDidHandleResolver>();
+        await Parallel.ForEachAsync(
+            source: MemberChoices,
+            parallelOptions: new ParallelOptions { MaxDegreeOfParallelism = 8, CancellationToken = HttpContext.RequestAborted },
+            body: async (member, token) => await handles.ResolveHandleAsync(new Did(member.Did), token).ConfigureAwait(false)).ConfigureAwait(false);
+        MemberChoices = [.. MemberChoices.OrderBy(
+            member => handles.TryGetCachedHandle(new Did(member.Did), out Handle? handle) && handle.IsValid ? handle.Value : null,
+            StringComparer.OrdinalIgnoreCase)];
+    }
+
     /// <summary>Registers or clears the current administrator's policy-verification alert address.</summary>
     /// <returns>An action result that displays the outcome of the update.</returns>
     public async Task<IActionResult> OnPostNotificationEmailAsync()
     {
         LabelerModerationOptions? moderationOptions = HttpContext.RequestServices.GetService<LabelerModerationOptions>();
         if (ViewData["CurrentRole"] is not LabelTeamRole.Administrator ||
-            moderationOptions?.PolicyEmail is not { Enabled: true, Server: { Length: > 0 } })
+            moderationOptions?.PolicyEmail is not { Enabled: true, Server.Length: > 0 })
         {
             return Forbid();
         }
@@ -239,13 +269,60 @@ public sealed class IndexModel : PageModel
         if (response.Succeeded)
         {
             TempData["Status"] = email.Length == 0
-                ? "Policy verification alert email cleared."
-                : "Policy verification alert email updated.";
+                ? "Administrator notification email cleared."
+                : "Administrator notification email updated.";
+            if (await UiPageHelpers.ConfirmedFieldAsync(this, "returnToPreferences").ConfigureAwait(false))
+            {
+                return RedirectToPage("/Preferences");
+            }
             return RedirectToPage();
         }
 
+        if (await UiPageHelpers.ConfirmedFieldAsync(this, "returnToPreferences").ConfigureAwait(false))
+        {
+            TempData["NotificationEmailError"] = response.Message ?? response.Error ?? "The email address could not be updated.";
+            return RedirectToPage("/Preferences");
+        }
         await OnGetAsync().ConfigureAwait(false);
         return Page();
+    }
+
+    /// <summary>Sends a test only to the current active administrator's persisted notification address.</summary>
+    /// <returns>The originating settings page with an explicit delivery outcome.</returns>
+    public async Task<IActionResult> OnPostTestEmailAsync()
+    {
+        LabelerModerationOptions? options = HttpContext.RequestServices.GetService<LabelerModerationOptions>();
+        if (ViewData["CurrentRole"] is not LabelTeamRole.Administrator ||
+            options?.PolicyEmail is not { Enabled: true, Server.Length: > 0 })
+        {
+            return Forbid();
+        }
+        AdministrationResponse team = await UiPageHelpers.DispatchAsync(
+            this,
+            new AdministrationCommand(Method: "getTeam", Reason: "Test own notification email.")).ConfigureAwait(false);
+        string? actor = User.FindFirst(idunno.AtProto.Authentication.AtProtoClaims.Did)?.Value;
+        AdministrationMemberView? member = team.Members?.FirstOrDefault(member => member.Did == actor);
+        if (!team.Succeeded || member is not { Active: true, Removed: false, Role: LabelTeamRole.Administrator })
+        {
+            return Forbid();
+        }
+        if (member.NotificationEmail is not { } address)
+        {
+            TempData["NotificationEmailError"] = "Save your notification email address before sending a test.";
+        }
+        else
+        {
+            bool sent = await HttpContext.RequestServices.GetRequiredService<LabelerPolicyEmailService>()
+                .SendTestAsync(address, HttpContext.RequestAborted).ConfigureAwait(false);
+            TempData[sent ? "Status" : "NotificationEmailError"] = sent
+                ? "Test email accepted by the SMTP server. Check your inbox and spam folder."
+                : "Test email was not sent. Wait 30 seconds before trying again, and check the server email configuration and logs.";
+        }
+        if (await UiPageHelpers.ConfirmedFieldAsync(this, "returnToPreferences").ConfigureAwait(false))
+        {
+            return RedirectToPage("/Preferences");
+        }
+        return RedirectToPage();
     }
 
     /// <summary>Changes the web-managed remote-administration switch under durable owner authorization.</summary>
@@ -264,7 +341,7 @@ public sealed class IndexModel : PageModel
             ViewData["CurrentRole"] is not LabelTeamRole.Administrator ||
             !bool.TryParse(enabledText, out bool enabled))
         {
-            ViewData["Error"] = "Only the bootstrap owner can change the switch while WebUiControlled mode is configured.";
+            ViewData["Error"] = "Only the labeler owner can change the switch while WebUiControlled mode is configured.";
             await OnGetAsync().ConfigureAwait(false);
             return Page();
         }

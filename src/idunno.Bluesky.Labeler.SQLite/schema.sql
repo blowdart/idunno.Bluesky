@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS label_cases (
     case_id INTEGER PRIMARY KEY CHECK(case_id>0),
     subject_hash BLOB NOT NULL CHECK(length(subject_hash)=32),
     subject_key BLOB NOT NULL,
-    status INTEGER NOT NULL CHECK(status BETWEEN 0 AND 2),
+    status INTEGER NOT NULL CHECK(status BETWEEN 0 AND 3),
     assignee_hash BLOB NULL CHECK(assignee_hash IS NULL OR length(assignee_hash)=32),
     assignee_key BLOB NULL,
     payload BLOB NOT NULL
@@ -211,4 +211,12 @@ CREATE TABLE IF NOT EXISTS label_post_review_checks (
     case_id INTEGER PRIMARY KEY REFERENCES label_cases(case_id),
     checked_ms INTEGER NOT NULL
 );
-INSERT OR IGNORE INTO label_schema(id, version) VALUES(1, 14);
+CREATE TABLE IF NOT EXISTS label_mutes (
+    kind INTEGER NOT NULL CHECK(kind IN (0,1)),
+    event_id INTEGER NOT NULL,
+    subject_hash BLOB NOT NULL CHECK(length(subject_hash)=32),
+    subject_key BLOB NOT NULL,
+    until_ms INTEGER NOT NULL,
+    PRIMARY KEY(kind,subject_hash)
+);
+INSERT OR IGNORE INTO label_schema(id, version) VALUES(1, 16);

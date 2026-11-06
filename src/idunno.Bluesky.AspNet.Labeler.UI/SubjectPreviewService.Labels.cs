@@ -17,7 +17,7 @@ internal sealed partial class SubjectPreviewService
     private static readonly Uri s_moderation = new("https://mod.bsky.app");
 
     /// <summary>Combines current-record self-labels with bounded, anonymous reads of Bluesky's account and record labels.</summary>
-    private async Task<(string[] Warnings, bool Unavailable)> ReadMediaWarningsAsync(
+    private async Task<(string[] Warnings, bool Unavailable, string[] Labels, string[] CurrentLabels, string[] AccountLabels)> ReadMediaWarningsAsync(
         HttpClient client,
         Did did,
         AtUri recordUri,
@@ -26,15 +26,23 @@ internal sealed partial class SubjectPreviewService
         CancellationToken token)
     {
         HashSet<string> warnings = new(StringComparer.Ordinal);
+        HashSet<string> mediaLabels = new(StringComparer.Ordinal);
+        HashSet<string> currentLabels = new(StringComparer.Ordinal);
+        HashSet<string> accountLabels = new(StringComparer.Ordinal);
         if (record["labels"] is JsonObject selfLabels &&
             Text(selfLabels, "$type") == "com.atproto.label.defs#selfLabels" &&
             selfLabels["values"] is JsonArray values)
         {
             foreach (JsonObject value in values.OfType<JsonObject>())
             {
+                if (Text(value, "val") is { } selfLabel)
+                {
+                    currentLabels.Add(selfLabel + " (self-label)");
+                }
                 if (MediaWarning(Text(value, "val")) is { } warning)
                 {
                     warnings.Add(warning + " (self-label)");
+                    mediaLabels.Add(Text(value, "val")!);
                 }
             }
         }
@@ -99,11 +107,23 @@ internal sealed partial class SubjectPreviewService
                 .GroupBy(label => (label.Uri, label.Cid, label.Value))
                 .Select(group => group.OrderByDescending(label => label.CreationTimestamp).ThenByDescending(label => label.IsNegationLabel).First())
                 .Where(label => !label.IsNegationLabel && (label.ExpiresAt is null || label.ExpiresAt > now))];
-            foreach (Label label in active)
+            foreach (string value in active.Select(label => label.Value))
             {
-                if (MediaWarning(label.Value) is { } warning)
+                if (MediaWarning(value) is { } warning)
                 {
                     warnings.Add(warning + " (Bluesky moderation)");
+                    mediaLabels.Add(value);
+                }
+            }
+            foreach (Label label in active)
+            {
+                if (label.Uri == recordUri.ToString())
+                {
+                    currentLabels.Add(label.Value + " (Bluesky moderation)");
+                }
+                else if (label.Uri == did.Value)
+                {
+                    accountLabels.Add(label.Value + " (Bluesky moderation)");
                 }
             }
 
@@ -136,6 +156,7 @@ internal sealed partial class SubjectPreviewService
                             active.Any(label => label.Value == definition.Identifier && MediaWarning(label.Value) is null))
                         {
                             warnings.Add(definition.Identifier + " (Bluesky moderation)");
+                            mediaLabels.Add(definition.Identifier);
                         }
                     }
                 }
@@ -166,7 +187,12 @@ internal sealed partial class SubjectPreviewService
                 exception: failure);
         }
 
-        return (warnings.Order(StringComparer.Ordinal).ToArray(), unavailable);
+        return (
+            warnings.Order(StringComparer.Ordinal).ToArray(),
+            unavailable,
+            mediaLabels.Order(StringComparer.Ordinal).ToArray(),
+            currentLabels.Order(StringComparer.Ordinal).ToArray(),
+            accountLabels.Order(StringComparer.Ordinal).ToArray());
     }
 
     /// <summary>Names built-in media warnings without interpreting unrelated labels as sensitive imagery.</summary>
@@ -176,6 +202,7 @@ internal sealed partial class SubjectPreviewService
         SelfLabelValues.Sexual => "Sexual content",
         SelfLabelValues.Nudity => "Nudity",
         SelfLabelValues.GraphicMedia => "Graphic or violent content",
+        "self-harm" => "Self-harm",
         "!hide" => "Content hidden by its label",
         "!warn" => "Content warning",
         _ => null

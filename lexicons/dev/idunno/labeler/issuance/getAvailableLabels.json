@@ -1,0 +1,69 @@
+{
+  "lexicon": 1,
+  "id": "dev.idunno.labeler.issuance.getAvailableLabels",
+  "defs": {
+    "main": {
+      "type": "query",
+      "description": "Lists the label values declared by the current issuance policy, optionally with their state for a target.",
+      "parameters": {
+        "type": "params",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "description": "An optional explanation for inspecting the issuance policy."
+          },
+          "target": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "description": "Optionally inspect current label state for an account DID or handle, or a record AT URI."
+          },
+          "cid": {
+            "type": "string",
+            "format": "cid",
+            "description": "An optional record version; requires a record AT URI target."
+          }
+        }
+      },
+      "output": {
+        "encoding": "application/json",
+        "schema": {
+          "type": "ref",
+          "ref": "dev.idunno.labeler.issuance.defs#availableLabelsResult"
+        }
+      },
+      "errors": [
+        {
+          "name": "InvalidRequest",
+          "description": "The optional target or content version is malformed."
+        },
+        {
+          "name": "Forbidden",
+          "description": "The authenticated caller does not have permission to inspect labels."
+        },
+        {
+          "name": "PolicyUnavailable",
+          "description": "The current issuance policy is unavailable."
+        },
+        {
+          "name": "TargetResolutionFailed",
+          "description": "The optional account target could not be resolved."
+        },
+        {
+          "name": "TargetNotFound",
+          "description": "The optional record target could not be found or verified."
+        },
+        {
+          "name": "StorageUnavailable",
+          "description": "Label state could not be read because storage is unavailable."
+        },
+        {
+          "name": "ServiceUnavailable",
+          "description": "The labeler service is temporarily unavailable."
+        }
+      ]
+    }
+  }
+}

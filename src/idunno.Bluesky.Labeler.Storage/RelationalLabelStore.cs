@@ -25,7 +25,7 @@ namespace idunno.Bluesky.Labeler.Storage;
 internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetrics metrics)
     : ILabelStore, ILabelAdministrationStore, ILabelMaintenanceStore, ILabelSigningKeySelectionStore, ILabelModerationStore, ILabelPolicyStore, ILabelReportStore, ILabelAppealStore, ILabelTableStore, ILabelSearchStore, ILabelDeletedPostStore, ILabelPolicyAlertStore, ILabelOzoneStore
 {
-    private const int SchemaVersion = 14;
+    private const int SchemaVersion = 16;
     private const long MaximumSequence = 9_007_199_254_740_991;
     private static readonly UTF8Encoding s_strictUtf8 = new(false, true);
     /// <summary>Gets or sets the test hook for failures known to occur before commit submission.</summary>
@@ -53,7 +53,7 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
     protected abstract bool IsTransient(DbException exception);
 
     /// <summary>Applies repeatable additive schema steps and records their completion without rebuilding signed history.</summary>
-    protected static async Task ApplySchemaAsync(DbConnection connection, DbTransaction? transaction, CancellationToken token)
+    protected async Task ApplySchemaAsync(DbConnection connection, DbTransaction? transaction, CancellationToken token)
     {
         using Stream stream = typeof(RelationalLabelStore).Assembly.GetManifestResourceStream("LabelSchema")
             ?? throw new InvalidOperationException("The packaged label schema is missing.");
@@ -80,7 +80,13 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
             transaction: transaction,
             sql: schema,
             token: token).ConfigureAwait(false);
-        // Backfill is repeatable after interrupted nontransactional MySQL DDL. Old writers reject v14.
+        // Fence old writers before resumable, nontransactional MySQL DDL.
+        await ExecuteAsync(
+            connection: connection,
+            transaction: transaction,
+            sql: "UPDATE label_schema SET version=16 WHERE id=1",
+            token: token).ConfigureAwait(false);
+        await UpgradeCaseStatusAsync(connection, transaction, schema, token).ConfigureAwait(false);
         await BackfillDistributionAsync(connection, transaction, token).ConfigureAwait(false);
         await BackfillDecisionIndexAsync(connection, transaction, token).ConfigureAwait(false);
         await BackfillSubjectIndexAsync(connection, transaction, token).ConfigureAwait(false);
@@ -97,7 +103,7 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
         await ExecuteAsync(
             connection: connection,
             transaction: transaction,
-            sql: "UPDATE label_schema SET version=14 WHERE id=1",
+            sql: "UPDATE label_schema SET version=16 WHERE id=1",
             token: token).ConfigureAwait(false);
     }
 

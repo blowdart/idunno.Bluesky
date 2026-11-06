@@ -117,7 +117,7 @@ internal abstract partial class RelationalLabelStore
         {
             CreatedAt = DateTimeOffset.FromUnixTimeMilliseconds(
                 await DatabaseTimeAsync(connection, transaction, token).ConfigureAwait(false)),
-            ChangeDescription = succeeded && ActiveAdministratorCount(administration) > 1 ? changeDescription : null
+            ChangeDescription = succeeded ? changeDescription : null
         };
         await ExecuteAsync(
             connection: connection,
@@ -484,7 +484,10 @@ internal abstract partial class RelationalLabelStore
             }
 
             team.Members.TryGetValue(change.Target.Value, out AdministrationMember? previousMember);
-            string? failure = ApplyTeamChange(team, change);
+            string? ownerDid = await ResolveOwnerDidAsync(connection, transaction, team, cancellationToken).ConfigureAwait(false);
+            string? failure = ownerDid is null
+                ? "The labeler owner could not be established. No team change was made."
+                : ApplyTeamChange(team, change, caller.Actor);
             string? description = change.Action switch
             {
                 LabelTeamAction.Enroll => $"Team member {change.Target.Value} was added with the {change.Role} role.",
@@ -497,6 +500,7 @@ internal abstract partial class RelationalLabelStore
                     $"Access credentials for team member {change.Target.Value} were invalidated.",
                 LabelTeamAction.BindLocal => $"Local CLI access for {change.Target.Value} was granted or replaced.",
                 LabelTeamAction.RevokeLocal => $"Local CLI access for {change.Target.Value} was revoked.",
+                LabelTeamAction.TransferOwnership => $"Labeler ownership was transferred from {caller.Actor.Value} to {change.Target.Value}.",
                 _ => null
             };
             LabelAdministrationReceipt receipt = await AuditAdministrationAsync(
@@ -601,10 +605,17 @@ internal abstract partial class RelationalLabelStore
     }
 
     /// <summary>Applies a bounded team change after all invariant checks, leaving denied state unchanged.</summary>
-    private static string? ApplyTeamChange(AdministrationState team, LabelTeamChange change)
+    private static string? ApplyTeamChange(AdministrationState team, LabelTeamChange change, Did actor)
     {
         string did = change.Target.Value;
         team.Members.TryGetValue(did, out AdministrationMember? member);
+        if (actor.Value != team.OwnerDid && change.Action == LabelTeamAction.BindLocal &&
+            team.Bindings.TryGetValue(change.Credential!, out AdministrationBinding? existingBinding) &&
+            existingBinding.Did == team.OwnerDid)
+        {
+            return "Only the labeler owner can change their own access credentials.";
+        }
+
         if (change.Action == LabelTeamAction.Enroll)
         {
             if (member is { Removed: false } || member is null && team.Members.Count >= 1000)
@@ -619,6 +630,37 @@ internal abstract partial class RelationalLabelStore
         if (member is null || member.Removed)
         {
             return "This account is not a team member.";
+        }
+
+        if (change.Action == LabelTeamAction.TransferOwnership)
+        {
+            if (team.OwnerDid != actor.Value)
+            {
+                return "Only the current owner can transfer labeler ownership.";
+            }
+
+            if (did == team.OwnerDid || member is not { Active: true, Role: LabelTeamRole.Administrator })
+            {
+                return "Choose another active administrator as the new owner.";
+            }
+
+            team.OwnerDid = did;
+            return null;
+        }
+
+        if (did == team.OwnerDid)
+        {
+            if (change.Action is LabelTeamAction.Suspend or LabelTeamAction.Remove ||
+                change.Action == LabelTeamAction.SetRole && change.Role != LabelTeamRole.Administrator)
+            {
+                return "The labeler owner cannot be removed, suspended or demoted. Transfer ownership first.";
+            }
+
+            if (actor.Value != team.OwnerDid &&
+                change.Action is LabelTeamAction.SetRole or LabelTeamAction.Reinstate or LabelTeamAction.BindLocal or LabelTeamAction.RevokeLocal)
+            {
+                return "Only the labeler owner can change their own access credentials.";
+            }
         }
 
         bool losesAdmin = member is { Active: true, Role: LabelTeamRole.Administrator } &&
@@ -693,10 +735,13 @@ internal abstract partial class RelationalLabelStore
                 caller: caller,
                 permission: LabelAdministrationPermission.ManageTeam,
                 token: cancellationToken).ConfigureAwait(false);
-            await AuditAdministrationAsync(
-                connection: connection, transaction: transaction, administration: team, actor: caller.Actor,
-                localIdentity: caller.LocalIdentity, operationId: string.Empty, action: "team-read",
-                reason: "Inspect team.", succeeded: allowed, token: cancellationToken).ConfigureAwait(false);
+            if (!allowed)
+            {
+                await AuditAdministrationAsync(
+                    connection: connection, transaction: transaction, administration: team, actor: caller.Actor,
+                    localIdentity: caller.LocalIdentity, operationId: string.Empty, action: "team-read",
+                    reason: "Inspect team.", succeeded: false, token: cancellationToken).ConfigureAwait(false);
+            }
             if (allowed)
             {
                 await ReconcileAssignmentsAsync(connection, transaction, team, caller, cancellationToken).ConfigureAwait(false);
@@ -826,7 +871,7 @@ internal abstract partial class RelationalLabelStore
                     reason: "Owner-only remote administration change denied.",
                     succeeded: false,
                     token: cancellationToken).ConfigureAwait(false);
-                return AdminFailure<LabelAdministrationReceipt>("Only the account that originally set up this labeler can change remote administration.");
+                return AdminFailure<LabelAdministrationReceipt>("Only the current labeler owner can change remote administration.");
             }
 
             LabelServiceResult<LabelAdministrationReceipt>? original = await AdministrationReceiptAsync(

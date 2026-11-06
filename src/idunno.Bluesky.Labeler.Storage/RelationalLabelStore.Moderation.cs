@@ -119,6 +119,7 @@ internal abstract partial class RelationalLabelStore
                     LabelCaseAction.Open or LabelCaseAction.OpenAppeal => current?.Status ?? LabelCaseStatus.Open,
                     LabelCaseAction.Note => current!.Status,
                     LabelCaseAction.StartReview when current!.Status == LabelCaseStatus.Open => LabelCaseStatus.InReview,
+                    LabelCaseAction.Escalate when current!.Status != LabelCaseStatus.Resolved => LabelCaseStatus.Escalated,
                     LabelCaseAction.Assign when current!.Status != LabelCaseStatus.Resolved => current.Status,
                     LabelCaseAction.Resolve when current!.Status != LabelCaseStatus.Resolved => LabelCaseStatus.Resolved,
                     LabelCaseAction.Reopen when current!.Status == LabelCaseStatus.Resolved => LabelCaseStatus.Open,
@@ -153,11 +154,11 @@ internal abstract partial class RelationalLabelStore
                     sql: "SELECT COALESCE(MAX(case_id),0) FROM label_cases",
                     token: cancellationToken).ConfigureAwait(false)) + 1);
                 string? assigneeDid = change.Action == LabelCaseAction.Assign ? change.Assignee?.Value : current?.Assignee;
-                if (!opening && change.Action != LabelCaseAction.Assign)
+                if (!opening && change.Action is not (LabelCaseAction.Assign or LabelCaseAction.Escalate))
                 {
                     assigneeDid ??= caller.Actor.Value;
                 }
-                if (status != LabelCaseStatus.Resolved && SoleModerator(administration) is string sole)
+                if (change.Action != LabelCaseAction.Escalate && status != LabelCaseStatus.Resolved && SoleModerator(administration) is string sole)
                 {
                     assigneeDid = sole;
                 }
@@ -170,7 +171,8 @@ internal abstract partial class RelationalLabelStore
                     Status: status.Value,
                     Assignee: assigneeDid,
                     CreatedAt: current?.CreatedAt ?? timestamp,
-                    UpdatedAt: timestamp);
+                    UpdatedAt: timestamp,
+                    RecordResolution: current?.RecordResolution);
                 await SaveCaseAsync(
                     connection: connection, transaction: transaction, next: next, subject: change.Subject,
                     insert: current is null, token: cancellationToken).ConfigureAwait(false);

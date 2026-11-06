@@ -50,6 +50,12 @@ authorization and policy implementations and identity/key management.
 The [ASP.NET distribution host](hosting.md) supplies durable publication, queries,
 subscriptions, health checks and metrics without requiring Ozone.
 
+[Ozone compatibility](administration.md#optional-ozone-compatibility) is optional and
+intentionally limited. Xenon/native views provide the complete moderation workflow.
+Stock Ozone does not visibly warn when unresolved URI-only records are omitted from
+its event/status projections, so it must not be the sole moderation inventory.
+This is an accepted compatibility limitation, not full Ozone parity.
+
 Of course, a keyword match raises questions. Do coffee beans count? Jelly beans? What happens when
 someone appeals because they were discussing a Java bean? Let's follow the Bureau from its first
 policy decision to the day it closes its tin for good.

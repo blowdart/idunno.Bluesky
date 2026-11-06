@@ -133,6 +133,8 @@ items:
             href: labeler/hosting.md
           - name: Administrative authentication and teams
             href: labeler/administration.md
+          - name: Remote labeler client for bots
+            href: labeler/agent.md
           - name: Administration CLI
             href: labeler/cli.md
           - name: Optional Xenon moderation

@@ -13,6 +13,42 @@ namespace idunno.Bluesky.Labeler.Storage;
 
 internal abstract partial class RelationalLabelStore
 {
+    /// <summary>Reads caller-scoped settings under the issuer lock and current membership checks.</summary>
+    Task<LabelServiceResult<LabelMediaPreferences>> ILabelTableStore.ReadMediaPreferencesAsync(
+        LabelAdministrationCaller caller,
+        CancellationToken cancellationToken) =>
+        ModerationAsync(
+            caller: caller,
+            permission: LabelAdministrationPermission.Inspect,
+            operationId: string.Empty,
+            reason: "Read personal media display preferences.",
+            action: (_, _, team) => Task.FromResult(LabelServiceResult<LabelMediaPreferences>.Success(
+                team.Members[caller.Actor.Value].MediaPreferences ?? new())),
+            token: cancellationToken,
+            auditAction: "personal-media-preferences");
+
+    /// <summary>Changes only the authenticated member's settings in the existing bounded team aggregate.</summary>
+    Task<LabelServiceResult<LabelMediaPreferences>> ILabelTableStore.SaveMediaPreferencesAsync(
+        LabelAdministrationCaller caller,
+        LabelMediaPreferences preferences,
+        CancellationToken cancellationToken)
+    {
+        preferences.Validate();
+        return ModerationAsync(
+            caller: caller,
+            permission: LabelAdministrationPermission.Inspect,
+            operationId: string.Empty,
+            reason: "Save personal media display preferences.",
+            action: async (connection, transaction, team) =>
+            {
+                team.Members[caller.Actor.Value] = team.Members[caller.Actor.Value] with { MediaPreferences = preferences };
+                await SaveAdministrationAsync(connection, transaction, team, cancellationToken).ConfigureAwait(false);
+                return LabelServiceResult<LabelMediaPreferences>.Success(preferences);
+            },
+            token: cancellationToken,
+            auditAction: "personal-media-preferences");
+    }
+
     /// <summary>Reads issuer-local manual label state under live team authorization, without resolving remote records.</summary>
     Task<LabelServiceResult<StoredLabel[]>> ILabelTableStore.ReadTargetLabelsAsync(
         LabelAdministrationCaller caller,
@@ -111,6 +147,19 @@ internal abstract partial class RelationalLabelStore
         $"({TableJsonField("DecisionOperationId")} IS NULL OR {TableJsonField("DecisionOperationId")}='null')"
             .Replace("t.payload", alias + ".payload", StringComparison.Ordinal);
 
+    /// <summary>Keeps subject-wide temporary mutes consistent across counted workflows and exact-CID cases.</summary>
+    private string UnmutedSubjectFilter(string alias = "t")
+    {
+        string subject = TableJsonField("Subject").Replace("t.payload", alias + ".payload", StringComparison.Ordinal);
+        string key = Provider switch
+        {
+            "postgresql" => $"convert_to({subject},'UTF8')",
+            "mysql" => $"CONVERT({subject} USING BINARY)",
+            _ => $"CAST({subject} AS BLOB)"
+        };
+        return $"NOT EXISTS(SELECT 1 FROM label_mutes m WHERE m.kind=0 AND m.until_ms>@muteNow AND m.subject_key={key})";
+    }
+
     /// <summary>Reuses bounded indexed label capture under live authorization without creating an appeal.</summary>
     Task<LabelServiceResult<StoredLabel[]>> ILabelTableStore.ReadSubjectLabelsAsync(
         LabelAdministrationCaller caller,
@@ -143,14 +192,16 @@ internal abstract partial class RelationalLabelStore
             reason: "Inspect open moderation totals.",
             action: async (connection, transaction, _) =>
             {
+                long now = await DatabaseTimeAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
                 long cases = Integer(await ScalarAsync(
                     connection: connection, transaction: transaction,
-                    sql: "SELECT COUNT(*) FROM label_cases WHERE status<>2", token: cancellationToken).ConfigureAwait(false));
+                    sql: $"SELECT COUNT(*) FROM label_cases t WHERE status<>2 AND {UnmutedSubjectFilter()}",
+                    token: cancellationToken, ("@muteNow", now)).ConfigureAwait(false));
                 long reports = Integer(await ScalarAsync(
                     connection: connection, transaction: transaction,
-                    sql: $"SELECT (SELECT COUNT(*) FROM label_reports t WHERE {UnhandledReportFilter()}) + " +
+                    sql: $"SELECT (SELECT COUNT(*) FROM label_reports t WHERE {UnhandledReportFilter()} AND {UnmutedSubjectFilter()}) + " +
                         "(SELECT COUNT(*) FROM label_pending_reports WHERE pending=TRUE)",
-                    token: cancellationToken).ConfigureAwait(false));
+                    token: cancellationToken, ("@muteNow", now)).ConfigureAwait(false));
                 long appeals = Integer(await ScalarAsync(
                     connection: connection, transaction: transaction,
                     sql: "SELECT COUNT(*) FROM label_appeals WHERE status=0", token: cancellationToken).ConfigureAwait(false));
@@ -303,11 +354,13 @@ internal abstract partial class RelationalLabelStore
                     _ => "seq"
                 };
                 string filter = TableFilter(query);
+                long muteNow = await DatabaseTimeAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
                 object? count = await ScalarAsync(
                     connection: connection,
                     transaction: transaction,
                     sql: $"SELECT COUNT(*) FROM {table} t WHERE {filter}",
                     token: cancellationToken,
+                    ("@muteNow", muteNow),
                     ("@actor", s_strictUtf8.GetBytes(caller.Actor.Value)),
                     ("@auditActor", query.AuditActor),
                     ("@auditAfter", query.AuditAfterSequence),
@@ -344,10 +397,13 @@ internal abstract partial class RelationalLabelStore
                 string appealCount = query.Kind == LabelTableKind.Cases
                     ? "(SELECT COUNT(*) FROM label_appeals a WHERE a.case_id=t.case_id AND a.status=0)"
                     : "0";
+                string escalated = query.Kind is LabelTableKind.Cases or LabelTableKind.Reports or LabelTableKind.Appeals
+                    ? "(SELECT COUNT(*) FROM label_cases c WHERE c.case_id=t.case_id AND c.status=3)" : "0";
                 DbCommand command = Command(
                     connection: connection,
                     transaction: transaction,
-                    sql: $"SELECT t.payload,{appealCount} FROM {table} t WHERE {filter} ORDER BY {unknownTimesLast}{column} {direction},t.{number} {direction} LIMIT @limit OFFSET @offset",
+                    sql: $"SELECT t.payload,{appealCount},{escalated} FROM {table} t WHERE {filter} ORDER BY {unknownTimesLast}{column} {direction},t.{number} {direction} LIMIT @limit OFFSET @offset",
+                    ("@muteNow", muteNow),
                     ("@actor", s_strictUtf8.GetBytes(caller.Actor.Value)),
                     ("@auditActor", query.AuditActor),
                     ("@auditAfter", query.AuditAfterSequence),
@@ -364,6 +420,7 @@ internal abstract partial class RelationalLabelStore
                 List<LabelAppeal> appeals = [];
                 List<LabelAdministrationReceipt> audit = [];
                 List<long> appealedCases = [];
+                HashSet<long> escalatedCases = [];
                 await using (command.ConfigureAwait(false))
                 {
                     DbDataReader reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
@@ -377,19 +434,33 @@ internal abstract partial class RelationalLabelStore
                                 case LabelTableKind.Cases:
                                     LabelModerationCase moderationCase = DecodeCase(bytes).ToCase();
                                     cases.Add(moderationCase);
+                                    if (moderationCase.Status == LabelCaseStatus.Escalated)
+                                    {
+                                        escalatedCases.Add(moderationCase.Id);
+                                    }
                                     if (Convert.ToInt64(reader.GetValue(1), CultureInfo.InvariantCulture) > 0)
                                     {
                                         appealedCases.Add(moderationCase.Id);
                                     }
                                     break;
                                 case LabelTableKind.Reports:
-                                    reports.Add(DecodeReport(bytes).ToReport());
+                                    LabelModerationReport report = DecodeReport(bytes).ToReport();
+                                    reports.Add(report);
+                                    if (Integer(reader.GetValue(2)) > 0)
+                                    {
+                                        escalatedCases.Add(report.CaseId);
+                                    }
                                     break;
                                 case LabelTableKind.PendingReports:
                                     pendingReports.Add(DecodePendingReport(bytes).ToPendingReport());
                                     break;
                                 case LabelTableKind.Appeals:
-                                    appeals.Add(DecodeAppeal(bytes).ToAppeal());
+                                    LabelAppeal appeal = DecodeAppeal(bytes).ToAppeal();
+                                    appeals.Add(appeal);
+                                    if (Integer(reader.GetValue(2)) > 0)
+                                    {
+                                        escalatedCases.Add(appeal.CaseId);
+                                    }
                                     break;
                                 default:
                                     audit.Add((JsonSerializer.Deserialize(bytes, AdministrationJsonContext.Default.AdministrationAudit)
@@ -412,7 +483,8 @@ internal abstract partial class RelationalLabelStore
                     Appeals: appeals,
                     Audit: audit,
                     AuthorSummaries: summaries,
-                    PendingAppealCaseIds: appealedCases));
+                    PendingAppealCaseIds: appealedCases,
+                    EscalatedCaseIds: [.. escalatedCases]));
             },
             token: cancellationToken,
             auditAction: "table-read").ConfigureAwait(false);
@@ -536,10 +608,13 @@ internal abstract partial class RelationalLabelStore
             {
                 LabelCaseWorkflow.Unresolved => UnhandledReportFilter(),
                 LabelCaseWorkflow.InReview => $"({UnhandledReportFilter()}) AND EXISTS(SELECT 1 FROM label_cases c WHERE c.case_id=t.case_id AND c.status=1)",
+                LabelCaseWorkflow.Escalated => $"({UnhandledReportFilter()}) AND EXISTS(SELECT 1 FROM label_cases c WHERE c.case_id=t.case_id AND c.status=3)",
                 LabelCaseWorkflow.Resolved => $"NOT ({UnhandledReportFilter()})",
                 _ => "1=1"
             };
-            return $"({handled}) AND ({workflow})";
+            string muted = query.Workflow is LabelCaseWorkflow.Unresolved or LabelCaseWorkflow.InReview or LabelCaseWorkflow.Escalated ||
+                query.ReportHandled == false ? UnmutedSubjectFilter() : "1=1";
+            return $"({handled}) AND ({workflow}) AND ({muted})";
         }
 
         if (query.Kind == LabelTableKind.PendingReports)
@@ -554,6 +629,7 @@ internal abstract partial class RelationalLabelStore
             {
                 LabelCaseWorkflow.Unresolved => "t.status=0",
                 LabelCaseWorkflow.InReview => "t.status=0 AND EXISTS(SELECT 1 FROM label_cases c WHERE c.case_id=t.case_id AND c.status=1)",
+                LabelCaseWorkflow.Escalated => "t.status=0 AND EXISTS(SELECT 1 FROM label_cases c WHERE c.case_id=t.case_id AND c.status=3)",
                 LabelCaseWorkflow.Resolved => "t.status<>0",
                 _ => "1=1"
             };
@@ -565,17 +641,20 @@ internal abstract partial class RelationalLabelStore
             return "1=1";
         }
 
-        return query.Queue switch
+        string caseStatus = query.Queue switch
         {
             LabelCaseWorkflow.All => "1=1",
             LabelCaseWorkflow.Open => "t.status=0",
             LabelCaseWorkflow.InReview => "t.status=1",
+            LabelCaseWorkflow.Escalated => "t.status=3",
             LabelCaseWorkflow.Resolved => "t.status=2",
             LabelCaseWorkflow.Unassigned => "t.status<>2 AND t.assignee_hash IS NULL",
             LabelCaseWorkflow.AssignedToMe => "t.status<>2 AND t.assignee_key=@actor",
             LabelCaseWorkflow.PendingAppeals => "t.status<>2 AND EXISTS(SELECT 1 FROM label_appeals a WHERE a.case_id=t.case_id AND a.status=0)",
             _ => "t.status<>2"
         };
+        return query.Queue is LabelCaseWorkflow.All or LabelCaseWorkflow.PendingAppeals
+            ? caseStatus : $"({caseStatus}) AND {UnmutedSubjectFilter()}";
     }
 
     /// <summary>Compares persisted UTC timestamps numerically across provider JSON and date representations, keeping legacy times null.</summary>

@@ -25,6 +25,19 @@ public class ReportAdmissionNoticeTests
     }
 
     [Theory]
+    [InlineData(5000, true)]
+    [InlineData(5001, false)]
+    public void VerificationLinkRespectsDatabaseClockRollbackTolerance(int rollbackMilliseconds, bool expected)
+    {
+        DateTimeOffset start = new(2030, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        Assert.Equal(expected, ReportPage.IsVerificationCurrent(
+            "VerifiedActive",
+            start.AddMinutes(30),
+            start.AddMilliseconds(-rollbackMilliseconds),
+            30 * 60 * 1000));
+    }
+
+    [Theory]
     [InlineData("Unverified", "Active", false, 10, "until an administrator verifies")]
     [InlineData("Publishing", "Active", true, 10, "while the policy update completes")]
     [InlineData("Withdrawing", "Active", true, 10, "while the policy update completes")]

@@ -8,6 +8,14 @@
 }
 @if (Model.Subject)
 {
+    @if (Model.HasDetails)
+    {
+        <a class="subject-detail-link" asp-area="Xenon" asp-page="/Subjects/Detail" asp-route-target="@Model.Value"
+           target="_blank" rel="noopener noreferrer" aria-label="View @Model.SubjectDescription.Kind details (opens in a new tab)"
+           title="View @Model.SubjectDescription.Kind details">
+            <span class="fa-icon fa-arrow-up-right-from-square" aria-hidden="true"></span>
+        </a>
+    }
     <span class="subject-icon fa-@icon" aria-hidden="true"></span>
 }
 @if (handle is { IsValid: true })

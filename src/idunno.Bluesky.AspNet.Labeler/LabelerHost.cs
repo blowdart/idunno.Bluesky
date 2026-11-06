@@ -37,6 +37,9 @@ internal sealed partial class LabelerHost(
     IHostApplicationLifetime applicationLifetime) : BackgroundService, Microsoft.Extensions.Diagnostics.HealthChecks.IHealthCheck
 {
     internal const long MaximumSequence = 9_007_199_254_740_991;
+    /// <summary>Gets the DID advertised by the public server description endpoint.</summary>
+    internal Did Issuer => issuer;
+
     private readonly Guid _instanceId = Guid.NewGuid();
 #if NET9_0_OR_GREATER
     private readonly Lock _admissionLock = new();
@@ -73,17 +76,23 @@ internal sealed partial class LabelerHost(
     /// <summary>Validates initialized storage before admitting traffic; never migrates under serving credentials.</summary>
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
-        LabelStoreState state = await store.GetStateAsync(cancellationToken).ConfigureAwait(false);
+        LabelStoreState state = await RetryStartupDatabaseAsync(
+            token => store.GetStateAsync(token),
+            "host startup state",
+            cancellationToken).ConfigureAwait(false);
         if (state.Issuer != issuer.Value || state.IssuedThrough > MaximumSequence)
         {
             throw new InvalidOperationException("The initialized store issuer or sequence range is incompatible with hosting.");
         }
 
         _streamId = state.StreamId;
-        LabelMaintenanceState maintenance = await maintenanceStore.RegisterHostWithSigningRoleAsync(
-            instanceId: _instanceId,
-            requiresSigningKey: signingKeyRing is not null,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
+        LabelMaintenanceState maintenance = await RetryStartupDatabaseAsync(
+            token => maintenanceStore.RegisterHostWithSigningRoleAsync(
+                instanceId: _instanceId,
+                requiresSigningKey: signingKeyRing is not null,
+                cancellationToken: token),
+            "host registration",
+            cancellationToken).ConfigureAwait(false);
         _registered = true;
         ApplyMaintenanceState(maintenance);
         _stoppingRegistration = applicationLifetime.ApplicationStopping.Register(BeginLocalDrain);
@@ -97,11 +106,14 @@ internal sealed partial class LabelerHost(
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                LabelMaintenanceState maintenance = await RefreshMaintenanceStateAsync(stoppingToken).ConfigureAwait(false);
+                LabelMaintenanceState maintenance = await RetryDatabaseAsync(
+                    RefreshMaintenanceStateAsync,
+                    "maintenance state refresh",
+                    stoppingToken).ConfigureAwait(false);
 
                 LabelStoreState state = maintenance.IsActive
-                    ? await store.GetStateAsync(stoppingToken).ConfigureAwait(false)
-                    : await store.PublishAsync(options.BatchSize, stoppingToken).ConfigureAwait(false);
+                    ? await RetryDatabaseAsync(token => store.GetStateAsync(token), "label state read", stoppingToken).ConfigureAwait(false)
+                    : await RetryDatabaseAsync(token => store.PublishAsync(options.BatchSize, token), "label publication", stoppingToken).ConfigureAwait(false);
                 CheckState(state);
                 metrics.Pending(state.IssuedThrough - state.PublishedThrough);
                 if (maintenance.IsActive)
@@ -109,7 +121,7 @@ internal sealed partial class LabelerHost(
                     _ready = false;
                     if (maintenance.Phase == LabelMaintenancePhase.Draining && state.PublishedThrough < state.IssuedThrough)
                     {
-                        state = await store.PublishAsync(options.BatchSize, stoppingToken).ConfigureAwait(false);
+                        state = await RetryDatabaseAsync(token => store.PublishAsync(options.BatchSize, token), "maintenance label publication", stoppingToken).ConfigureAwait(false);
                         CheckState(state);
                     }
 
@@ -118,19 +130,26 @@ internal sealed partial class LabelerHost(
                     {
                         try
                         {
-                            await maintenanceStore.AcknowledgeHostDrainedAsync(
-                                operationId: maintenance.OperationId!,
-                                instanceId: _instanceId,
-                                cancellationToken: stoppingToken).ConfigureAwait(false);
+                            await RetryDatabaseAsync(
+                                token => maintenanceStore.AcknowledgeHostDrainedAsync(
+                                    operationId: maintenance.OperationId!,
+                                    instanceId: _instanceId,
+                                    cancellationToken: token),
+                                "host drain acknowledgement",
+                                stoppingToken).ConfigureAwait(false);
                         }
                         catch (InvalidOperationException)
                         {
-                            LabelMaintenanceState refreshed = await RefreshMaintenanceStateAsync(stoppingToken).ConfigureAwait(false);
+                            LabelMaintenanceState refreshed = await RetryDatabaseAsync(
+                                RefreshMaintenanceStateAsync,
+                                "maintenance state refresh",
+                                stoppingToken).ConfigureAwait(false);
                             if (refreshed.OperationId == maintenance.OperationId && refreshed.IsActive &&
                                 refreshed.Hosts.FirstOrDefault(host => host.InstanceId == _instanceId) is { Acknowledged: false })
                             {
                                 throw;
                             }
+
                         }
                     }
 
@@ -162,6 +181,35 @@ internal sealed partial class LabelerHost(
             _ready = false;
         }
     }
+
+    /// <summary>Keeps the host alive but unhealthy while a database operation waits for storage recovery.</summary>
+    private Task<T> RetryDatabaseAsync<T>(
+        Func<CancellationToken, Task<T>> operation,
+        string description,
+        CancellationToken cancellationToken) =>
+        DatabaseRetry.ExecuteAsync(
+            operation,
+            clock,
+            logger,
+            description,
+            cancellationToken,
+            () =>
+            {
+                _ready = false;
+                metrics.Failure("publication");
+            });
+
+    /// <summary>Limits startup storage recovery to five retries so persistent failures surface to the host supervisor.</summary>
+    private Task<T> RetryStartupDatabaseAsync<T>(
+        Func<CancellationToken, Task<T>> operation,
+        string description,
+        CancellationToken cancellationToken) =>
+        DatabaseRetry.ExecuteStartupAsync(
+            operation,
+            clock,
+            logger,
+            description,
+            cancellationToken);
 
     /// <summary>Stops admission before cancelling publication and all active subscription loops.</summary>
     public override async Task StopAsync(CancellationToken cancellationToken)

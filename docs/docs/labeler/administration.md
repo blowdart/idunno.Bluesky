@@ -12,7 +12,37 @@ must consume this boundary rather than construct actor DIDs from request fields 
 The `dev.idunno.labeler.admin.*` methods are this library's administration protocol, not Ozone or
 standard AT Protocol moderation endpoints.
 
+On Xenon's Team page, the add-member field suggests public Bluesky accounts as you type.
+JavaScript calls `https://public.api.bsky.app/xrpc/app.bsky.actor.searchActorsTypeahead`
+directly from the browser, without cookies, authorization headers or a referrer; there is no
+server-side search proxy. Searches wait for two characters and a 300 ms pause, and superseded
+requests are canceled. Selecting an account fills in its handle. Suggestions are not identity
+verification: enrollment still performs the existing server-side identity and permission checks.
+Manual handle or DID entry works without JavaScript or when search is unavailable.
+Hosts with a Content Security Policy must allow `https://public.api.bsky.app` in `connect-src`
+to enable suggestions.
+The member-search and change-member fields share handle suggestions from the full registered
+team, including suspended and removed members, independently of the table's search and current
+page. Suggestions show membership status and omit accounts whose handles cannot be verified.
+They use the browser's built-in autocomplete and make no network requests. Selecting a
+suggestion fills in the handle; Search still submits the filter. In Change member, selecting a
+member also selects their current role. The server maps the handle to its registered member
+internally; all changes still require an explicit submission and audit reason.
+
 ## Optional Ozone compatibility
+
+**Limited compatibility is intentional and accepted.** This opt-in adapter supports
+the labeler-focused subset listed below, not full Ozone parity. Use Xenon/native
+views as the primary, complete moderation interface; stock Ozone must not be the
+sole source of queue or event-history completeness.
+
+Unresolved URI-only records cannot be represented in Ozone's event/status subject
+unions and are omitted from those projections without blocking other entries.
+They remain in native report/history views and may become representable after
+successful resolution. Stock Ozone does not display the adapter's
+`unresolvedRecordCount` extension or warn about these omissions, so a partial or
+empty Ozone view does not prove that no matching work remains. This limitation
+is accepted for the compatibility subset, not a promise of future full parity.
 
 `app.MapOzoneCompatibility()` explicitly opts an application into the adapter while
 building its pipeline. Omit the call and no Ozone compatibility routes are registered.
@@ -25,7 +55,7 @@ app.MapBlueskyLabeler();
 app.MapLabelerAdministration();
 
 // Optional Ozone compatibility; omit this call for a native-only host.
-app.MapOzoneCompatibility();
+app.MapOzoneCompatibility(["http://127.0.0.1:3000", "https://ozone.example.com"]);
 ```
 
 Configure trusted proxies before calling `UseForwardedHeaders`, as shown below.
@@ -35,28 +65,78 @@ Opting in **does not enable remote administration**:
 authenticated Ozone methods also obey `RemoteMode` and, in `WebUiControlled` mode, the durable
 owner switch. Protected local administration and public report/appeal intake are unchanged.
 
+Pass an explicit allowlist of Ozone UI origins to `MapOzoneCompatibility` to enable browser
+access. Origins include the scheme, host and non-default port, with no trailing slash, path,
+query, fragment, credentials or wildcard. `http://localhost:3000` and
+`http://127.0.0.1:3000` are different origins. The parameterless overload and an empty list
+enable no cross-origin access, including discovery. The helper handles CORS automatically;
+do not add a separate `AddCors` or `UseCors` step for these routes.
+
+The canonical host reads the list from `LabelerOzone:AllowedOrigins`; for example, set
+`LabelerOzone__AllowedOrigins__0=http://127.0.0.1:3000` for a local UI.
+Changes require a host restart. CORS applies only to the mapped Ozone routes, permits their
+GET or POST method and Authorization/Content-Type headers, and does not permit browser
+credentials. Preflight requests need no service token; actual requests still pass every
+existing authentication and authorization check. CORS is not an access-control boundary
+for non-browser clients.
+
 The adapter adds labeler-focused report inspection, subject/history views, label events and
 report resolution to discovery and team inspection. It requires the shared moderation
-services for those operations. **Unmodified Ozone has not yet been exercised end to end**;
-the adapter is not a replacement for an Ozone PDS/AppView or its broader administration APIs.
+services for those operations. Read-only report queues, case history and presence have been
+exercised with unmodified Ozone; this is not comprehensive end-to-end verification.
+The adapter is not a replacement for an Ozone PDS/AppView or its broader administration APIs.
 
 | Endpoint | Current adapter support |
 |---|---|
 | `/.well-known/ozone-metadata.json` | Anonymous configured DID, HTTPS origin and active public `did:key`; no private material |
 | `tools.ozone.server.getConfig` | Authenticated live viewer role; no fabricated PDS, AppView, chat, blob-diversion or verifier service |
 | `tools.ozone.team.listMembers` | Bounded live team pages; DID text search, role/disabled filters and exclusive DID cursors |
+| `tools.ozone.team.listOnlineMembers` | Active team members observed making authenticated Ozone requests on this host within five minutes, latest activity first; optional limit 1–100, default 50 |
 | `tools.ozone.moderation.getEvent`, `queryEvents` | Durable Ozone events, original reports and native workflow comments with disjoint stable event IDs |
 | `tools.ozone.moderation.getRecord`, `getRepo` | Independently resolved repository/record display and retained local labels/status; no PDS administrative authority |
-| `tools.ozone.moderation.queryStatuses` | Native CID-scoped case status and chronological report/review sorting |
+| `tools.ozone.moderation.getRecords`, `getRepos` | Bounded batch hydration for event history; deleted records have explicit not-found views |
+| `app.bsky.actor.getProfile` | Authenticated compatibility read from the public Bluesky AppView; incoming credentials are never forwarded |
+| `app.bsky.feed.getPostThread` | Bounded public AppView thread preview for the requested post URI; unavailable/blocked views retained, no incoming credentials forwarded or original evidence changed |
+| `tools.ozone.setting.listOptions` | Lists the caller's personal media preferences; unconfigured instance settings return an empty listing |
+| `tools.ozone.setting.upsertOption` | Updates only the caller's personal `dev.idunno.labeler.mediaPreferences` option |
+| `tools.ozone.moderation.queryStatuses` | Native CID-scoped case status, subject/collection/reviewer/appeal/mute filters and chronological report/review sorting |
 | `tools.ozone.report.getReport`, `queryReports` | Original report evidence with current handling/assignment status and bounded live pages |
 | `tools.ozone.report.listActivities` | Report closure activities committed by this adapter, including moderator and automation provenance |
-| `tools.ozone.moderation.emitEvent` | Label additions/negations and acknowledgment; unsupported event types/options fail explicitly |
+| `tools.ozone.moderation.emitEvent` | Label additions/negations, acknowledgment, escalation and temporary subject/reporter mute/unmute; unsupported event types/options fail explicitly |
 | `tools.ozone.report.closeReports`, `createActivity` | Subject report closure and explicit single-report close activities; other activities fail explicitly |
 | `tools.ozone.team.addMember`, `deleteMember`, `updateMember` | Explicit authenticated `NotImplemented` error |
 | Other Ozone methods | Not mapped; no claim of support |
 
+An Ozone **Acknowledge** event or nonempty **Label** decision handles all open reports for the submitted subject
+and record version unless an explicit `reportAction` selects a narrower set.
+Optional comments are retained as the handling reason; an explicit report note takes
+precedence for those reports. Acknowledgment leaves labels unchanged; label decisions
+apply the requested additions or negations, including any expiry, atomically with report handling.
+Empty label decisions do not implicitly handle reports. The case resolves only when no
+open reports or pending appeals remain. Account-wide acknowledgment remains unsupported.
+
+The personal media option shares Xenon's durable preferences. Its value contains
+`graphicMediaPrefs`, a Boolean map with keys `graphic-pref-{filter}-{label}`:
+filters are `blur`, `grayscale`, `translucent`; labels are `graphic-media`, `porn`,
+`nudity`, `sexual`, `self-harm`. Upserts replace the whole map; omitted keys mean false.
+Only `key`, `scope: "personal"` and `value` are accepted; arbitrary options, target DIDs,
+descriptions and manager roles cannot be written. The unmodified Ozone graphic-media
+preferences screen still uses browser local storage and does not call this API.
+
+Online presence reflects authenticated Ozone and Xenon request activity, including presence polling, not an
+open browser connection. It is held only in memory on the current host and resets on restart;
+replicas do not share observations. Anonymous requests and CORS preflights do not record activity.
+Every listing rechecks current active team membership and excludes removed or disabled members.
+Xenon shows the count beside the account menu with an expandable member list using verified
+handles, with canonical DIDs available as tooltips. A failed handle lookup is
+shown explicitly as "Handle unavailable". The indicator has no border, matching adjacent controls.
+It refreshes every 30 seconds while the page is visible. The indicator is hidden when fewer than two active
+team members are configured. Revoked access clears the list; refresh failures show an explicit
+unavailable status rather than a stale count. Xenon presence does not require the Ozone adapter
+or remote administration to be enabled.
+
 Discovery reads only the configured public origin and installed key, never an incoming Host
-header. It is anonymously cross-origin readable for a separately hosted Ozone UI. Discovery
+header. It is anonymously readable from explicitly allowed Ozone UI origins. Discovery
 requires a signing key and returns `ServiceUnavailable` on a keyless retired host. Ozone
 independently compares this public metadata to the DID document; successful discovery does
 not establish successful identity publication.
@@ -72,8 +152,37 @@ That mapping does not widen SDK permissions. Ozone derives some visible controls
 roles, so unsupported controls may remain visible and fail explicitly. Team projections omit
 notification email, unverified profiles and unavailable timestamps rather than inventing them.
 Search currently matches DIDs, not handles. Cursors are live continuations, not snapshots.
+Event queries accept the stock UI's `includeAllUserRecords` flag, matching the subject's
+repository when enabled, and `withStrike`, selecting only events with a recorded strike count.
+The labeler does not manufacture strike events or import PDS enforcement history.
+Profile enrichment uses only the fixed public Bluesky AppView endpoint, anonymously, after
+the normal method-bound service authentication and live team checks. This is not a general
+AppView proxy: other `app.bsky.*` methods remain unsupported.
+Subject-status queries accept `subjectType` (`account` or `record`), repeated
+`collections`, `includeAllUserRecords`, `lastReviewedBy`, `appealed`, `includeMuted`
+and `onlyMuted`. Account-wide record matching requires an account DID and preserves
+each original record URI and CID; it does not rewrite account or record evidence.
+`lastReviewedBy` matches the latest qualifying review, not any historical actor.
+Label-only events and assignment/report intake do not claim a review.
+`appealed` means an unresolved native appeal, rather than any past appeal.
+
+Omitted or `false` `includeMuted` excludes actively subject-muted cases. `onlyMuted=true`
+selects cases with an active subject or reporter mute; it does not override `includeMuted`.
+Use both `includeMuted=true&onlyMuted=true` to include subject-muted cases as well.
+The stock Reports screen's `includeMuted=true` is supported without widening permissions.
+Status results remain native-case projections: a mute does not create a case or manufacture
+a subject-status row. Mutes without cases remain visible in Xenon's Mutes list and event history.
 Report, event and status queries keep bounded pages in memory but may scan retained history;
 the page size does not cap total query work.
+
+Subject mute/unmute and reporter mute/unmute events share durable state and audit with
+Xenon. Durations are 6 or 12 hours, or 1, 2, 3, 7, 30 or 90 days; omission on an Ozone
+mute event means 24 hours. Permanent and other durations fail explicitly. Expiry uses the
+database clock. Subject muting covers a DID or record URI across its CID-scoped cases,
+without changing review state, assignment or labels. Reporter muting accepts only account
+DIDs. Its incoming reports remain inspectable with `isMuted=true`, without creating,
+reopening or otherwise changing a review case; unmuting never promotes those historical
+reports. Report details omit a subject-status reference when no case exists.
 
 Label events prepare every action before one shared provider transaction commits the labels,
 selected report outcomes, Ozone event, case history and audit. `createdBy` must match the
@@ -83,7 +192,23 @@ is case-scoped, so it applies to every report in that case. Ozone assignment mut
 implemented. A sole eligible native moderator receives automatic case assignment; use explicit
 report IDs to close those assigned reports. Report closure never implicitly decides a pending appeal.
 Native workflow history remains visible even when its operation ID matches an Ozone operation;
-it is projected as a comment, not an additional label action.
+it is projected as a comment, except native escalation, which uses `modEventEscalate`.
+
+`tools.ozone.moderation.defs#modEventEscalate` accepts an optional `comment` and flags
+existing unresolved cases for the exact account or record/CID subject. It does not
+create cases or reopen resolved cases. Combining escalation with labels, report
+selection, `reportAction` or mute actions is rejected. Assignment, labels, pending
+appeals and report handling remain unchanged. Escalated cases stay available to
+all moderators; subject status is `reviewEscalated` and unhandled reports have
+status `escalated`. Escalation is not a completed review. A later Acknowledge or
+Label decision can handle the reports normally.
+
+On an escalated subject, a Label event without explicit `reportAction` changes
+only labels and preserves escalation and report handling. Ozone's **De-escalate
+the subject and close its review after this action** checkbox sends a separate
+Acknowledge event when checked; that event handles the reports and closes review
+unless a pending native appeal prevents closure. Leaving it unchecked keeps the
+case escalated. Explicit `reportAction` retains its selected-report semantics.
 
 `externalId` is unique for an event type and subject; a duplicate returns `DuplicateExternalId`.
 Fresh requests without that identifier are distinct operations, even with identical content.
@@ -94,20 +219,47 @@ filters and unsupported account-wide/blob/queue/takedown operations are rejected
 Retained pending-verification reports remain in native Xenon/CLI recovery views until promoted;
 they are not represented as Ozone-managed queues.
 
-**CID-less/deleted record limitation:** reports are listed and resolved by their original
-URI/ID without inventing a CID. Display hydration never changes their evidence or signed label
-scope. Unmodified Ozone obtains a record action's CID from `getRecord` or an earlier strong-reference
-event. A deleted record for which no CID was ever supplied cannot produce such an action;
-use Xenon/CLI for label actions in that precise case. Accounts do not require a record CID.
-The basic `queryEvents` and subject-status reference unions also have no URI-only record variant.
-A query matching such an event/status returns `NotImplemented`, rather than emitting an invalid
-DID or inventing a CID. URI-only reports omit the optional subject-status reference. Use report
-detail/detailed `getEvent` views or native history for that evidence.
+**CID-less/deleted record resolution:** authenticated intake observes the latest real CID
+from the independently DID-resolved PDS and stores the result separately from immutable
+URI-only report evidence. The first successful case observation is pinned for Ozone
+references, preserving native case ID and label scope. Existing and failed observations
+can recover on authenticated status/history inspection; unavailable/deleted records
+remain in native reports rather than blocking all other queue entries.
 
-Schema fourteen adds `label_ozone_events` to every relational provider. Initialization is
-additive; do not deploy an older writer against the upgraded schema. Include the event table
-in whole-database backups: it retains operation identities and confidential moderation history,
-not private signing keys. Public signed-label distribution is unchanged.
+Ozone's basic event/status unions cannot represent an unresolved URI-only record.
+Those entries alone are omitted, with an explicit `unresolvedRecordCount` response field
+for clients that understand this adapter extension. Stock Ozone does not display this
+count or warn that results are incomplete; its queue and event views are not a complete
+inventory when unresolved records exist. Use Xenon/native report/history views for
+complete retained evidence. The adapter does not send the deprecated HTTP `Warning` header.
+The count applies to matching entries (events for `queryEvents`, cases for `queryStatuses`),
+not the page size; clients must not interpret a partial or empty projection as a complete
+queue. No account reference or synthetic CID is substituted. Report detail retains the
+original URI and a separate intake observation, and includes a subject status when resolved.
+An Ozone CID-scoped action's implicit report selection matches submitted or independently
+resolved report CIDs; it cannot silently close reports pinned to another version.
+Explicit report-ID selection retains the existing cross-version review contract for
+the same record URI: moderators can deliberately handle those reports without changing
+their evidence or the label action's CID scope. URI-wide native actions and
+explicit URI-wide report closure retain their existing scope. If no real CID can be
+obtained, use Xenon/CLI for label actions; accounts do not require a record CID.
+
+Resolution metadata is additive optional JSON within schema fifteen, not a new table or
+schema version. Preserve these payloads in backups and avoid older writers that would
+discard the metadata.
+
+Schema fourteen added `label_ozone_events`; schema fifteen adds `label_mutes` to every
+relational provider. Initialization is additive; do not deploy an older writer against the
+upgraded schema. Include both tables and retained reports in whole-database backups: they
+retain deadlines, operation identities and confidential moderation history, not private
+signing keys. Public signed-label distribution is unchanged.
+
+Schema sixteen expands the persisted case-status constraint to include escalation
+without changing existing status values. SQLite rebuilds the case table while
+preserving dependent history and validating foreign keys; PostgreSQL and MySQL
+replace the status check. Stop older writers and take a whole-database backup
+before initialization. Older schema-fifteen hosts cannot write to schema sixteen;
+rollback requires a compatible host or restoring the pre-upgrade backup.
 
 The reference contract was inspected against Ozone commit
 `bd619ed5b930cb62be65d99cd1e080327e1e7cf6` and AT Protocol lexicon commit
@@ -165,7 +317,7 @@ After registering storage and an `ILabelIssuancePolicyProvider`, opt in explicit
 
 ```csharp
 AtProtoServiceReference audience = new(
-    new Did("did:web:labeler.example"), "labeler_admin");
+    new Did("did:web:labeler.example"), Audience.Administration);
 
 builder.Services.AddLabelerAdministration(
     audience: audience,
@@ -215,7 +367,7 @@ example above explicitly chooses its own `Labeler:Administration` section instea
 |---|---|
 | `Disabled` | Always unavailable; this is the default. |
 | `Enabled` | Available after the existing HTTPS, method-bound service-token and live-team checks. |
-| `WebUiControlled` | Available only while the bootstrap owner has enabled the durable switch in Xenon. |
+| `WebUiControlled` | Available only while the current labeler owner has enabled the durable switch in Xenon. |
 
 When `RemoteMode` is configured, it takes precedence over the legacy
 `LabelerAdministration:RemoteEnabled` Boolean in the standalone host. If `RemoteMode` is absent, `RemoteEnabled`
@@ -226,12 +378,26 @@ Invalid enum text fails configuration binding; an undefined numeric enum value i
 the request gate. Neither falls back to enabling access through the legacy Boolean.
 
 In `WebUiControlled` mode, the switch starts disabled and is changed from **Team and membership**
-in Xenon. The owner is the DID that completed the one-time OS-authorized local bootstrap, not the
+in Xenon. The initial owner is the DID that completed the one-time OS-authorized local bootstrap, not the
 issuer DID by assumption and not every team member with the Administrator role. The store checks
 current Administrator authority and the owner DID inside the same transaction that changes the
 persisted setting and appends its audit receipt. Legacy installations recover the bootstrap DID
 from their first durable bootstrap audit event; if that evidence is missing, no owner is inferred
 and remote control fails closed. Other Administrators may inspect status but cannot change it.
+The current owner cannot be removed, suspended or demoted, including by themselves. Other
+Administrators cannot invalidate or replace the owner's local access bindings, including by
+rebinding an owner's OS identity to another member.
+
+Only the current owner can transfer ownership to another active Administrator. In Xenon, use
+**Team and membership > Labeler ownership**, select the new owner's handle, give a reason and
+confirm the transfer. The CLI exposes the same operation as
+`change-team <administrator-DID> --action TransferOwnership` with the usual transport, operation
+ID and reason options. Ownership protection and control of the remote CLI switch move together
+in one audited transaction. The switch's enabled state, both members' roles and existing local
+bindings are unchanged. The former owner remains an ordinary Administrator and can then be
+removed, suspended or demoted. Only the new owner can transfer ownership back.
+Upgrade every host sharing the database before relying on these protections; older hosts do not enforce them.
+
 Protected local administration remains available in all three modes. Neither mode selection nor
 the Xenon switch bypasses HTTPS, service-token method binding, authentication or live authorization.
 
@@ -359,8 +525,12 @@ administration continues to request only its method-bound service permission.
 Metadata can supply a name/logo, but an authorization server need not display untrusted branding.
 
 After OAuth establishes the expected account DID and authoritative PDS/authorization-server
-relationship, call `GetServiceAuth` using the new `AtProtoServiceReference` overload. Request the
-**exact** audience `did:web:labeler.example#labeler_admin` and exact `lxm`. `GetServiceAuth` requests
+relationship, call `GetServiceAuth` using the new `AtProtoServiceReference` overload. Administrative
+methods request the **exact** audience `did:web:labeler.example#labeler_admin` and exact `lxm`.
+The labeler-agent issuance procedures use `did:web:labeler.example#labeler_issuance` on the separate
+`dev.idunno.labeler.issuance` namespace. The host derives this audience from the configured administration
+audience's DID; it is not accepted on `dev.idunno.labeler.admin` routes, and `labeler_admin` is not
+accepted on issuance routes. `GetServiceAuth` requests
 a token expiring in 14 minutes 55 seconds by default, leaving five seconds of client/PDS clock-skew
 headroom below the verifier maximum; specify a different positive `expiry` when acquiring the token. The
 labeler accepts up to 15 minutes by default; set `maximumServiceTokenLifetime` when registering
@@ -406,6 +576,12 @@ Suspend or remove a member to revoke their team access. Do not put raw credentia
 `issueLabel` and `negateLabel` use `operationId`, `target`, `value`, `reason`, and optional `cid`,
 `expiresAt` (issue only), and `correlationId`. The shared issuance service still enforces policy,
 target verification, lifecycle and semantic retries. `getOperation` requires `operationId`;
+these methods remain in the `dev.idunno.labeler.admin` namespace for administrator clients. The
+labeler-agent client uses the separate `dev.idunno.labeler.issuance.issueLabel`,
+`dev.idunno.labeler.issuance.negateLabel`, `dev.idunno.labeler.issuance.getOperationReceipt`, and
+`dev.idunno.labeler.issuance.getAvailableLabels` procedures, authenticated with the
+`labeler_issuance` audience. Both namespaces enter the same team authorization, issuance policy,
+replay protection and storage boundary.
 `getAudit` accepts `afterSequence` and `limit` (1-16), bounding the maximum serialized audit
 response below the local transport's 1 MiB frame limit even when reasons require JSON escaping;
 read queries may include `reason`. Both HTTP and local read commands use

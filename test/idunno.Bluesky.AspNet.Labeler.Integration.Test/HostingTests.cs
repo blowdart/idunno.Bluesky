@@ -28,6 +28,34 @@ public class HostingTests
         offset: TimeSpan.Zero);
 
     [Fact]
+    public async Task DescribeServerReturnsLabelerIssuerForAuthenticatedServiceDiscovery()
+    {
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
+            fallbackAuthorizationRequired: true,
+            options: new LabelerHostingOptions
+            {
+                Contact = new idunno.AtProto.Server.Contact("support@example.test"),
+                Links = new idunno.AtProto.Server.Links
+                {
+                    PrivacyPolicy = new Uri("https://labels.example/privacy"),
+                    TermsOfService = new Uri("https://labels.example/terms")
+                }
+            });
+
+        AtProtoHttpResult<idunno.AtProto.Server.ServerDescription> result = await AtProtoServer.DescribeServer(
+            service: fixture.Address,
+            httpClient: fixture.Client,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(TestServerBuilder.s_issuer, result.Result.Did);
+        Assert.Empty(result.Result.AvailableUserDomains);
+        Assert.Equal("support@example.test", result.Result.Contact?.Email);
+        Assert.Equal(new Uri("https://labels.example/privacy"), result.Result.Links?.PrivacyPolicy);
+        Assert.Equal(new Uri("https://labels.example/terms"), result.Result.Links?.TermsOfService);
+    }
+
+    [Fact]
     public async Task PublicationBacklogWaitsForPollAndSharedBudgetWithoutLosingReadiness()
     {
         CancellationToken token = TestContext.Current.CancellationToken;

@@ -1,0 +1,59 @@
+{
+  "lexicon": 1,
+  "id": "dev.idunno.labeler.issuance.getOperationReceipt",
+  "defs": {
+    "main": {
+      "type": "query",
+      "description": "Reads the durable receipt for a label operation.",
+      "parameters": {
+        "type": "params",
+        "required": [
+          "operationId"
+        ],
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "The stable identifier supplied with the label operation."
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "description": "An optional explanation for inspecting the operation receipt."
+          }
+        }
+      },
+      "output": {
+        "encoding": "application/json",
+        "schema": {
+          "type": "ref",
+          "ref": "dev.idunno.labeler.issuance.defs#operationReceipt"
+        }
+      },
+      "errors": [
+        {
+          "name": "InvalidRequest",
+          "description": "The operation identifier is malformed."
+        },
+        {
+          "name": "Forbidden",
+          "description": "The authenticated caller does not have permission to inspect operations."
+        },
+        {
+          "name": "OperationNotFound",
+          "description": "No matching durable operation receipt exists."
+        },
+        {
+          "name": "StorageUnavailable",
+          "description": "The operation receipt could not be read because storage is unavailable."
+        },
+        {
+          "name": "ServiceUnavailable",
+          "description": "The labeler service is temporarily unavailable."
+        }
+      ]
+    }
+  }
+}

@@ -342,15 +342,15 @@ internal static partial class Program
         return command;
     }
 
-    /// <summary>Creates a team role, suspension, reinstatement, removal, or local-binding command.</summary>
+    /// <summary>Creates a team role, membership, local-binding or ownership-transfer command.</summary>
     private static Command CreateChangeTeamCommand()
     {
-        Command command = new("change-team", "Change a member's role, status, or local binding.");
+        Command command = new("change-team", "Change a member's role, status or local binding, or transfer ownership.");
         TransportOptions transport = AddTransportOptions(command);
         Argument<string> target = new("target") { Description = "The target member's DID." };
         Option<string> action = new("--action")
         {
-            Description = "SetRole, Suspend, Reinstate, Remove, BindLocal, or RevokeLocal.",
+            Description = "SetRole, Suspend, Reinstate, Remove, BindLocal, RevokeLocal, or TransferOwnership (owner only).",
             Required = true
         };
         Option<string?> role = new("--role") { Description = "The new role for SetRole." };
@@ -400,7 +400,9 @@ internal static partial class Program
                 parsedRole = result;
             }
 
-            string prompt = $"{parsedAction} for '{did}'?";
+            string prompt = parsedAction == LabelTeamAction.TransferOwnership
+                ? $"Transfer labeler ownership to '{did}'? You will remain an administrator, but only the new owner can transfer ownership back."
+                : $"{parsedAction} for '{did}'?";
             if (!await ConfirmAsync(parseResult.GetValue(yes), prompt, cancellationToken).ConfigureAwait(false))
             {
                 return 2;

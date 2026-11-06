@@ -18,9 +18,553 @@ namespace idunno.Bluesky.AspNet.Labeler.Integration.Test;
 public partial class ModerationTests
 {
     [Theory]
+    [InlineData(false, false, false)]
+    [InlineData(false, true, false)]
+    [InlineData(true, false, false)]
+    [InlineData(true, true, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, true)]
+    public async Task OzoneLabelPreservesEscalatedReviewUntilExplicitAcknowledgment(bool acknowledge, bool withReports, bool record)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(key: key, identity: identity, remoteEnabled: true, ozone: true);
+        await fixture.Clock.PolicyVerificationRegistrations.Reader.ReadAsync(token);
+        await VerifyPolicyAsync(fixture);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        LabelAdministrationCaller caller = (await team.AuthenticateLocalAsync("uid:0", token)).Result!;
+        ILabelModerationStore cases = fixture.Services.GetRequiredService<ILabelModerationStore>();
+        ILabelReportStore reports = fixture.Services.GetRequiredService<ILabelReportStore>();
+        const string uri = "at://did:plc:reporter/app.bsky.feed.post/3loqo3h6jbb2g";
+        LabelReportSubject subject = record
+            ? LabelReportSubject.Record(new(uri), new(Cid))
+            : LabelReportSubject.Account(new("did:plc:subject"));
+        string wireSubject = record
+            ? $$$"""{"$type":"com.atproto.repo.strongRef","uri":"{{{uri}}}","cid":"{{{Cid}}}"}"""
+            : """{"$type":"com.atproto.admin.defs#repoRef","did":"did:plc:subject"}""";
+        LabelModerationCase opened = (await cases.ChangeCaseAsync(
+            caller: caller,
+            change: new(
+                operationId: "checkbox-case",
+                subject: subject,
+                action: LabelCaseAction.Open,
+                reason: "Verify escalation checkbox behavior."),
+            cancellationToken: token)).Result!.Case;
+        if (withReports)
+        {
+            for (int index = 0; index < 2; index++)
+            {
+                string reportBody = """
+                    {"reasonType":"com.atproto.moderation.defs#reasonOther","reason":"Review this subject.","subject":
+                    """ + wireSubject + "}";
+                using HttpRequestMessage request = ReportRequest(key, fixture.Clock.GetUtcNow(), reportBody);
+                using HttpResponseMessage accepted = await fixture.Client.SendAsync(request, token);
+                Assert.Equal(HttpStatusCode.OK, accepted.StatusCode);
+            }
+        }
+        string prefix = """{"createdBy":"did:plc:administration-actor","subject":""" + wireSubject + ""","event":""";
+        using HttpResponseMessage escalation = await SendOzoneAsync(
+            fixture: fixture,
+            key: key,
+            method: "tools.ozone.moderation.emitEvent",
+            body: prefix + """{"$type":"tools.ozone.moderation.defs#modEventEscalate"}}""");
+        Assert.Equal(HttpStatusCode.OK, escalation.StatusCode);
+        foreach (bool negate in new[] { false, true })
+        {
+            string labelEvent = negate
+                ? """{"$type":"tools.ozone.moderation.defs#modEventLabel","createLabelVals":[],"negateLabelVals":["spam"]}}"""
+                : """{"$type":"tools.ozone.moderation.defs#modEventLabel","createLabelVals":["spam"],"negateLabelVals":[]}}""";
+            using HttpResponseMessage labeled = await SendOzoneAsync(
+                fixture: fixture, key: key, method: "tools.ozone.moderation.emitEvent", body: prefix + labelEvent);
+            Assert.True(labeled.StatusCode == HttpStatusCode.OK, await labeled.Content.ReadAsStringAsync(token));
+            LabelModerationCase current = (await cases.GetCaseAsync(caller, opened.Id, token)).Result!;
+            Assert.Equal(LabelCaseStatus.Escalated, current.Status);
+            Assert.Equal(opened.Assignee, current.Assignee);
+            IReadOnlyList<LabelModerationReport> submissions = (await reports.GetReportsAsync(
+                caller: caller, caseId: opened.Id, cancellationToken: token)).Result!;
+            Assert.Equal(withReports ? 2 : 0, submissions.Count);
+            Assert.All(submissions, report => Assert.Null(report.HandledAt));
+        }
+        Assert.Equal(2, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
+        if (acknowledge)
+        {
+            using HttpResponseMessage acknowledged = await SendOzoneAsync(
+                fixture: fixture,
+                key: key,
+                method: "tools.ozone.moderation.emitEvent",
+                body: prefix + """
+                    {"$type":"tools.ozone.moderation.defs#modEventAcknowledge","comment":"[DEFINITIVE_PREVIOUS_ACTION]"}}
+                    """);
+            Assert.True(acknowledged.StatusCode == HttpStatusCode.OK, await acknowledged.Content.ReadAsStringAsync(token));
+        }
+        Assert.Equal(acknowledge ? LabelCaseStatus.Resolved : LabelCaseStatus.Escalated,
+            (await cases.GetCaseAsync(caller, opened.Id, token)).Result!.Status);
+        Assert.All((await reports.GetReportsAsync(caller: caller, caseId: opened.Id, cancellationToken: token)).Result!,
+            report => Assert.Equal(acknowledge, report.HandledAt is not null));
+    }
+
+    [Fact]
+    public async Task OzoneEscalationPreservesExactRecordVersionsAndProjectsNativeEscalation()
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(key: key, identity: identity, remoteEnabled: true, ozone: true);
+        await VerifyPolicyAsync(fixture);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        LabelAdministrationCaller caller = (await team.AuthenticateLocalAsync("uid:0", token)).Result!;
+        ILabelModerationStore cases = fixture.Services.GetRequiredService<ILabelModerationStore>();
+        const string uri = "at://did:plc:subject/app.bsky.feed.post/one";
+        const string secondCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+        List<LabelModerationCase> opened = [];
+        foreach (string cid in new[] { Cid, secondCid })
+        {
+            LabelServiceResult<LabelCaseReceipt> result = await cases.ChangeCaseAsync(
+                caller: caller,
+                change: new(
+                    operationId: "record-escalation-" + cid,
+                    subject: LabelReportSubject.Record(new(uri), new(cid)),
+                    action: LabelCaseAction.Open,
+                    reason: "Review this record version."),
+                cancellationToken: token);
+            Assert.True(result.Succeeded, result.Error?.Message);
+            opened.Add(result.Result!.Case);
+        }
+        Assert.Equal(HttpStatusCode.BadRequest, await EscalateAsync(uri + "missing", Cid));
+        Assert.Equal(HttpStatusCode.OK, await EscalateAsync(uri, Cid));
+        LabelModerationCase first = (await cases.GetCaseAsync(caller, opened[0].Id, token)).Result!;
+        LabelModerationCase second = (await cases.GetCaseAsync(caller, opened[1].Id, token)).Result!;
+        Assert.Equal(LabelCaseStatus.Escalated, first.Status);
+        Assert.Equal(LabelCaseStatus.Open, second.Status);
+        Assert.Equal(opened[0].Assignee, first.Assignee);
+        Assert.True((await cases.ChangeCaseAsync(
+            caller: caller,
+            change: new(
+                operationId: "native-record-escalation",
+                subject: second.Subject,
+                action: LabelCaseAction.Escalate,
+                reason: "Native moderator escalation.",
+                caseId: second.Id,
+                expectedRevision: second.Revision),
+            cancellationToken: token)).Succeeded);
+        using HttpResponseMessage events = await SendOzoneAsync(
+            fixture: fixture,
+            key: key,
+            method: "tools.ozone.moderation.queryEvents",
+            query: "?types=tools.ozone.moderation.defs%23modEventEscalate");
+        using JsonDocument history = JsonDocument.Parse(await events.Content.ReadAsByteArrayAsync(token));
+        Assert.Equal(2, history.RootElement.GetProperty("events").GetArrayLength());
+        Assert.True((await cases.ChangeCaseAsync(
+            caller: caller,
+            change: new(
+                operationId: "resolve-record-escalation",
+                subject: first.Subject,
+                action: LabelCaseAction.Resolve,
+                reason: "Review complete.",
+                caseId: first.Id,
+                expectedRevision: first.Revision),
+            cancellationToken: token)).Succeeded);
+        Assert.Equal(HttpStatusCode.BadRequest, await EscalateAsync(uri, Cid));
+        Assert.Equal(0, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
+
+        async Task<HttpStatusCode> EscalateAsync(string recordUri, string cid)
+        {
+            string body = $$$"""
+                {"createdBy":"{{{s_administrator}}}",
+                 "subject":{"$type":"com.atproto.repo.strongRef","uri":"{{{recordUri}}}","cid":"{{{cid}}}"},
+                 "event":{"$type":"tools.ozone.moderation.defs#modEventEscalate"}}
+                """;
+            using HttpResponseMessage response = await SendOzoneAsync(
+                fixture: fixture, key: key, method: "tools.ozone.moderation.emitEvent", body: body);
+            return response.StatusCode;
+        }
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task OzoneLabelsAndSelectedReportResolutionCommitTogether(bool resolveReports)
+    public async Task OzoneEscalationPreservesReportsAssignmentAndLabelsAndProjectsItsQueue(bool remarks)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(key: key, identity: identity, remoteEnabled: true, ozone: true);
+        await VerifyPolicyAsync(fixture);
+        List<long> reportIds = [];
+        foreach (string did in new[] { "did:plc:subject", "did:plc:subject", "did:plc:another" })
+        {
+            string report = $$$"""
+                {"reasonType":"com.atproto.moderation.defs#reasonOther","reason":"Review this account.",
+                "subject":{"$type":"com.atproto.admin.defs#repoRef","did":"{{{did}}}"}}
+                """;
+            using HttpRequestMessage request = ReportRequest(key, fixture.Clock.GetUtcNow(), report);
+            using HttpResponseMessage accepted = await fixture.Client.SendAsync(request, token);
+            Assert.Equal(HttpStatusCode.OK, accepted.StatusCode);
+            using JsonDocument reportResponse = JsonDocument.Parse(await accepted.Content.ReadAsByteArrayAsync(token));
+            reportIds.Add(reportResponse.RootElement.GetProperty("id").GetInt64());
+        }
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        LabelAdministrationCaller caller = (await team.AuthenticateLocalAsync("uid:0", token)).Result!;
+        ILabelReportStore reports = fixture.Services.GetRequiredService<ILabelReportStore>();
+        ILabelModerationStore cases = fixture.Services.GetRequiredService<ILabelModerationStore>();
+        LabelModerationReport first = (await reports.GetReportAsync(caller, reportIds[0], token)).Result!;
+        LabelModerationCase before = (await cases.GetCaseAsync(caller, first.CaseId, token)).Result!;
+        string body = $$$"""
+            {"createdBy":"{{{s_administrator}}}","externalId":"escalation-test",
+             "subject":{"$type":"com.atproto.admin.defs#repoRef","did":"did:plc:subject"},
+             "event":{"$type":"tools.ozone.moderation.defs#modEventEscalate"
+             {{{(remarks ? ",\"comment\":\"Needs a second opinion.\"" : "")}}}}}
+            """;
+        using HttpResponseMessage response = await SendOzoneAsync(
+            fixture: fixture, key: key, method: "tools.ozone.moderation.emitEvent", body: body);
+        Assert.True(response.StatusCode == HttpStatusCode.OK, await response.Content.ReadAsStringAsync(token));
+        LabelModerationCase escalated = (await cases.GetCaseAsync(caller, first.CaseId, token)).Result!;
+        Assert.Equal(LabelCaseStatus.Escalated, escalated.Status);
+        Assert.Equal(before.Assignee, escalated.Assignee);
+        foreach (long id in reportIds)
+        {
+            Assert.Null((await reports.GetReportAsync(caller, id, token)).Result!.HandledAt);
+        }
+        Assert.Equal(LabelCaseStatus.Open, (await cases.GetCaseAsync(caller,
+            (await reports.GetReportAsync(caller, reportIds[2], token)).Result!.CaseId, token)).Result!.Status);
+        Assert.Equal(0, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
+        using HttpResponseMessage duplicate = await SendOzoneAsync(
+            fixture: fixture, key: key, method: "tools.ozone.moderation.emitEvent", body: body);
+        Assert.Equal(HttpStatusCode.BadRequest, duplicate.StatusCode);
+        using HttpResponseMessage statuses = await SendOzoneAsync(
+            fixture: fixture, key: key, method: "tools.ozone.moderation.queryStatuses",
+            query: "?reviewState=tools.ozone.moderation.defs%23reviewEscalated");
+        using JsonDocument statusPage = JsonDocument.Parse(await statuses.Content.ReadAsByteArrayAsync(token));
+        Assert.Equal("tools.ozone.moderation.defs#reviewEscalated",
+            Assert.Single(statusPage.RootElement.GetProperty("subjectStatuses").EnumerateArray()).GetProperty("reviewState").GetString());
+        using HttpResponseMessage queued = await SendOzoneAsync(
+            fixture: fixture, key: key, method: "tools.ozone.report.queryReports", query: "?status=escalated");
+        using JsonDocument queue = JsonDocument.Parse(await queued.Content.ReadAsByteArrayAsync(token));
+        Assert.Equal(2, queue.RootElement.GetProperty("reports").GetArrayLength());
+        string invalid = body.Replace("\"externalId\":\"escalation-test\",", "\"reportAction\":{\"all\":true},", StringComparison.Ordinal);
+        using HttpResponseMessage rejected = await SendOzoneAsync(
+            fixture: fixture, key: key, method: "tools.ozone.moderation.emitEvent", body: invalid);
+        Assert.Equal(HttpStatusCode.BadRequest, rejected.StatusCode);
+        Assert.Equal(escalated.Revision, (await cases.GetCaseAsync(caller, first.CaseId, token)).Result!.Revision);
+        string acknowledge = body.Replace("\"externalId\":\"escalation-test\",", "", StringComparison.Ordinal)
+            .Replace("#modEventEscalate", "#modEventAcknowledge", StringComparison.Ordinal);
+        using HttpResponseMessage resolved = await SendOzoneAsync(
+            fixture: fixture, key: key, method: "tools.ozone.moderation.emitEvent", body: acknowledge);
+        Assert.Equal(HttpStatusCode.OK, resolved.StatusCode);
+        Assert.Equal(LabelCaseStatus.Resolved, (await cases.GetCaseAsync(caller, first.CaseId, token)).Result!.Status);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task OzoneAcknowledgmentHandlesReportsAndResolvesOnlyTheSubmittedSubject(bool remarks, bool selectedOnly)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(key: key, identity: identity, remoteEnabled: true, ozone: true);
+        await VerifyPolicyAsync(fixture);
+        List<long> reportIds = [];
+        foreach (string subject in new[] { "did:plc:subject", "did:plc:subject", "did:plc:another" })
+        {
+            string report = $$$"""
+                {"reasonType":"com.atproto.moderation.defs#reasonOther","reason":"Review this account.",
+                 "subject":{"$type":"com.atproto.admin.defs#repoRef","did":"{{{subject}}}"}}
+                """;
+            using HttpRequestMessage request = ReportRequest(key, fixture.Clock.GetUtcNow(), report);
+            using HttpResponseMessage accepted = await fixture.Client.SendAsync(request, token);
+            Assert.Equal(HttpStatusCode.OK, accepted.StatusCode);
+            using JsonDocument response = JsonDocument.Parse(await accepted.Content.ReadAsByteArrayAsync(token));
+            reportIds.Add(response.RootElement.GetProperty("id").GetInt64());
+        }
+        string body = $$"""
+            {"createdBy":"{{s_administrator}}","subject":{"$type":"com.atproto.admin.defs#repoRef","did":"did:plc:subject"},
+             "event":{"$type":"tools.ozone.moderation.defs#modEventAcknowledge","acknowledgeAccountSubjects":false
+             {{(remarks ? ",\"comment\":\"Reviewed; no label change needed.\"" : "")}}}
+             {{(selectedOnly ? ",\"reportAction\":{\"ids\":[" + reportIds[0] + "],\"note\":\"Selected report reviewed.\"}" : "")}}}
+            """;
+        using HttpResponseMessage acknowledged = await SendOzoneAsync(
+            fixture: fixture,
+            key: key,
+            method: "tools.ozone.moderation.emitEvent",
+            body: body);
+        Assert.Equal(HttpStatusCode.OK, acknowledged.StatusCode);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        LabelServiceResult<LabelAdministrationCaller> callerResult = await team.AuthenticateLocalAsync("uid:0", token);
+        Assert.True(callerResult.Succeeded, $"{callerResult.Error?.Code}: {callerResult.Error?.Message}\n{callerResult.Error?.Exception}");
+        LabelAdministrationCaller caller = callerResult.Result;
+        ILabelReportStore reports = fixture.Services.GetRequiredService<ILabelReportStore>();
+        LabelServiceResult<LabelModerationReport> firstResult = await reports.GetReportAsync(caller, reportIds[0], token);
+        Assert.True(firstResult.Succeeded, $"Report {reportIds[0]}: {firstResult.Error?.Code}: {firstResult.Error?.Message}\n{firstResult.Error?.Exception}");
+        LabelModerationReport first = firstResult.Result;
+        Assert.NotNull(first.HandledAt);
+        Assert.Equal(
+            selectedOnly ? "Selected report reviewed." : remarks ? "Reviewed; no label change needed." : "Ozone moderation event.",
+            first.ResolutionReason);
+        LabelServiceResult<LabelModerationReport> secondResult = await reports.GetReportAsync(caller, reportIds[1], token);
+        Assert.True(secondResult.Succeeded, $"Report {reportIds[1]}: {secondResult.Error?.Code}: {secondResult.Error?.Message}\n{secondResult.Error?.Exception}");
+        LabelModerationReport second = secondResult.Result;
+        Assert.Equal(!selectedOnly, second.HandledAt is not null);
+        LabelServiceResult<LabelModerationReport> thirdResult = await reports.GetReportAsync(caller, reportIds[2], token);
+        Assert.True(thirdResult.Succeeded, $"Report {reportIds[2]}: {thirdResult.Error?.Code}: {thirdResult.Error?.Message}\n{thirdResult.Error?.Exception}");
+        Assert.Null(thirdResult.Result.HandledAt);
+        LabelServiceResult<LabelModerationCase> caseResult = await fixture.Services.GetRequiredService<ILabelModerationStore>()
+            .GetCaseAsync(caller, first.CaseId, token);
+        Assert.True(caseResult.Succeeded, $"Case {first.CaseId}: {caseResult.Error?.Code}: {caseResult.Error?.Message}\n{caseResult.Error?.Exception}");
+        LabelModerationCase moderationCase = caseResult.Result;
+        Assert.Equal(!selectedOnly, moderationCase.Status == LabelCaseStatus.Resolved);
+        Assert.Equal(0, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
+        using HttpResponseMessage queued = await SendOzoneAsync(
+            fixture: fixture,
+            key: key,
+            method: "tools.ozone.report.queryReports",
+            query: "?status=closed");
+        Assert.Equal(HttpStatusCode.OK, queued.StatusCode);
+        using JsonDocument queue = JsonDocument.Parse(await queued.Content.ReadAsByteArrayAsync(token));
+        Assert.Equal(selectedOnly ? 1 : 2, queue.RootElement.GetProperty("reports").GetArrayLength());
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    [InlineData(5)]
+    [InlineData(6)]
+    [InlineData(7)]
+    public async Task OzonePersonalMediaPreferencesRoundTripThroughXenon(int filters)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(
+            key: key,
+            identity: identity,
+            remoteEnabled: true,
+            xenonUi: true,
+            ozone: true);
+        using HttpResponseMessage initial = await SendOzoneAsync(
+            fixture: fixture,
+            key: key,
+            method: "tools.ozone.setting.listOptions",
+            query: "?scope=personal");
+        Assert.Equal(HttpStatusCode.OK, initial.StatusCode);
+        using JsonDocument initialBody = JsonDocument.Parse(await initial.Content.ReadAsByteArrayAsync(token));
+        JsonElement option = Assert.Single(initialBody.RootElement.GetProperty("options").EnumerateArray());
+        Assert.Equal(s_administrator.Value, option.GetProperty("did").GetString());
+        Assert.Equal(s_administrator.Value, option.GetProperty("createdBy").GetString());
+        Assert.Equal(s_administrator.Value, option.GetProperty("lastUpdatedBy").GetString());
+        Assert.True(option.GetProperty("value").GetProperty("graphicMediaPrefs").GetProperty("graphic-pref-blur-porn").GetBoolean());
+        string body = $$$"""
+            {"key":"dev.idunno.labeler.mediaPreferences","scope":"personal","value":{"graphicMediaPrefs":{
+            "graphic-pref-blur-porn":{{{((filters & 1) != 0 ? "true" : "false")}}},
+            "graphic-pref-grayscale-porn":{{{((filters & 2) != 0 ? "true" : "false")}}},
+            "graphic-pref-translucent-porn":{{{((filters & 4) != 0 ? "true" : "false")}}}
+            }
+            }
+            }
+            """;
+        using HttpResponseMessage saved = await SendOzoneAsync(
+            fixture: fixture,
+            key: key,
+            method: "tools.ozone.setting.upsertOption",
+            body: body);
+        Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
+        using JsonDocument savedBody = JsonDocument.Parse(await saved.Content.ReadAsByteArrayAsync(token));
+        JsonElement preferences = savedBody.RootElement.GetProperty("option").GetProperty("value").GetProperty("graphicMediaPrefs");
+        Assert.Equal(15, preferences.EnumerateObject().Count());
+        Assert.Equal((filters & 1) != 0, preferences.GetProperty("graphic-pref-blur-porn").GetBoolean());
+        Assert.False(preferences.GetProperty("graphic-pref-blur-nudity").GetBoolean());
+        using HttpRequestMessage pageRequest = new(HttpMethod.Get, "/Xenon/Preferences");
+        pageRequest.Headers.Add("X-Test-Did", s_administrator.Value);
+        using HttpResponseMessage page = await fixture.Client.SendAsync(pageRequest, token);
+        Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+        string html = await page.Content.ReadAsStringAsync(token);
+        foreach ((string name, int bit) in new[] { ("blur", 1), ("grayscale", 2), ("translucent", 4) })
+        {
+            Assert.Equal((filters & bit) != 0, html.Contains($"name=\"{name}\" value=\"porn\" checked=\"checked\"", StringComparison.Ordinal));
+        }
+        string csrf = System.Net.WebUtility.HtmlDecode(
+            PreferencesAntiforgeryRegex().Match(html).Groups[1].Value);
+        Assert.NotEmpty(csrf);
+        using HttpRequestMessage xenonSave = new(HttpMethod.Post, "/Xenon/Preferences")
+        {
+            Content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = csrf,
+                ["blur"] = "nudity"
+            })
+        };
+        xenonSave.Headers.Add("X-Test-Did", s_administrator.Value);
+        xenonSave.Headers.Add("Cookie", string.Join("; ", page.Headers.GetValues("Set-Cookie").Select(cookie => cookie.Split(';')[0])));
+        using HttpResponseMessage xenonSaved = await fixture.Client.SendAsync(xenonSave, token);
+        Assert.Equal(HttpStatusCode.Redirect, xenonSaved.StatusCode);
+        using HttpResponseMessage reloaded = await SendOzoneAsync(
+            fixture: fixture,
+            key: key,
+            method: "tools.ozone.setting.listOptions",
+            query: "?scope=personal&keys=dev.idunno.labeler.mediaPreferences");
+        Assert.Equal(HttpStatusCode.OK, reloaded.StatusCode);
+        using JsonDocument reloadedBody = JsonDocument.Parse(await reloaded.Content.ReadAsByteArrayAsync(token));
+        JsonElement reloadedFilters = Assert.Single(reloadedBody.RootElement.GetProperty("options").EnumerateArray())
+            .GetProperty("value").GetProperty("graphicMediaPrefs");
+        Assert.True(reloadedFilters.GetProperty("graphic-pref-blur-nudity").GetBoolean());
+        Assert.False(reloadedFilters.GetProperty("graphic-pref-blur-porn").GetBoolean());
+    }
+
+    [Theory]
+    [InlineData("", 0, HttpStatusCode.OK)]
+    [InlineData("?scope=instance", 0, HttpStatusCode.OK)]
+    [InlineData("?scope=personal", 1, HttpStatusCode.OK)]
+    [InlineData("?scope=personal&prefix=dev.idunno", 1, HttpStatusCode.OK)]
+    [InlineData("?scope=personal&prefix=other", 0, HttpStatusCode.OK)]
+    [InlineData("?scope=personal&keys=dev.idunno.other", 0, HttpStatusCode.OK)]
+    [InlineData("?scope=personal&prefix=dev.idunno&keys=invalid", 1, HttpStatusCode.OK)]
+    [InlineData("?scope=personal&keys=invalid", 0, HttpStatusCode.BadRequest)]
+    [InlineData("?scope=wrong", 0, HttpStatusCode.BadRequest)]
+    [InlineData("?scope=personal&cursor=invalid", 0, HttpStatusCode.BadRequest)]
+    [InlineData("?scope=personal&limit=0", 0, HttpStatusCode.BadRequest)]
+    [InlineData("?scope=personal&limit=101", 0, HttpStatusCode.BadRequest)]
+    [InlineData("?scope=personal&did=did:plc:another", 0, HttpStatusCode.BadRequest)]
+    public async Task OzonePersonalMediaPreferencesListIsNarrowlyFiltered(string query, int count, HttpStatusCode expected)
+    {
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(key: key, identity: identity, remoteEnabled: true, ozone: true);
+        using HttpResponseMessage response = await SendOzoneAsync(
+            fixture: fixture,
+            key: key,
+            method: "tools.ozone.setting.listOptions",
+            query: query);
+        Assert.Equal(expected, response.StatusCode);
+        if (expected == HttpStatusCode.OK)
+        {
+            using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(count, document.RootElement.GetProperty("options").GetArrayLength());
+            Assert.True(response.Headers.CacheControl?.NoStore);
+        }
+    }
+
+    [Theory]
+    [InlineData("""{"key":"dev.idunno.other","scope":"personal","value":{}}""")]
+    [InlineData("""{"key":"dev.idunno.labeler.mediaPreferences","scope":"instance","value":{}}""")]
+    [InlineData("""{"key":"dev.idunno.labeler.mediaPreferences","scope":"personal","value":{"graphicMediaPrefs":{"graphic-pref-blur-porn":"true"}}}""")]
+    [InlineData("""{"key":"dev.idunno.labeler.mediaPreferences","scope":"personal","value":{"graphicMediaPrefs":{"unknown":true}}}""")]
+    [InlineData("""{"key":"dev.idunno.labeler.mediaPreferences","scope":"personal","value":{"graphicMediaPrefs":{"graphic-pref-blur-porn":true,"graphic-pref-blur-porn":false}}}""")]
+    [InlineData("""{"key":"dev.idunno.labeler.mediaPreferences","scope":"personal","value":{"graphicMediaPrefs":{}},"did":"did:plc:another"}""")]
+    [InlineData("""{"key":"dev.idunno.labeler.mediaPreferences","scope":"personal","value":{}}""")]
+    [InlineData("""{"key":"dev.idunno.labeler.mediaPreferences","scope":"personal","value":{"graphicMediaPrefs":{}},"managerRole":"tools.ozone.team.defs#roleAdmin"}""")]
+    public async Task OzonePersonalMediaPreferencesRejectUnsupportedWritesWithoutChangingPreferences(string body)
+    {
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(key: key, identity: identity, remoteEnabled: true, ozone: true);
+        using HttpResponseMessage response = await SendOzoneAsync(
+            fixture: fixture,
+            key: key,
+            method: "tools.ozone.setting.upsertOption",
+            body: body);
+        Assert.False(response.IsSuccessStatusCode);
+        using HttpResponseMessage reloaded = await SendOzoneAsync(
+            fixture: fixture,
+            key: key,
+            method: "tools.ozone.setting.listOptions",
+            query: "?scope=personal");
+        Assert.Equal(HttpStatusCode.OK, reloaded.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await reloaded.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken));
+        Assert.True(Assert.Single(document.RootElement.GetProperty("options").EnumerateArray())
+            .GetProperty("value").GetProperty("graphicMediaPrefs").GetProperty("graphic-pref-blur-porn").GetBoolean());
+    }
+
+    [Theory]
+    [InlineData(false, "true")]
+    [InlineData(false, "false")]
+    [InlineData(true, "true")]
+    [InlineData(true, "false")]
+    public async Task OzoneSubjectStatusesAcceptIncludeMutedWithoutChangingNativeCaseResults(bool populated, string includeMuted)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(
+            key: key,
+            identity: identity,
+            remoteEnabled: true,
+            ozone: true);
+        if (populated)
+        {
+            await VerifyPolicyAsync(fixture);
+            using HttpRequestMessage report = ReportRequest(key, fixture.Clock.GetUtcNow());
+            using HttpResponseMessage accepted = await fixture.Client.SendAsync(report, token);
+            Assert.Equal(HttpStatusCode.OK, accepted.StatusCode);
+        }
+
+        const string query = "?limit=100&sortField=lastReportedAt&sortDirection=desc";
+        using HttpResponseMessage baseline = await SendOzoneAsync(
+            fixture: fixture,
+            key: key,
+            method: "tools.ozone.moderation.queryStatuses",
+            query: query);
+        Assert.Equal(HttpStatusCode.OK, baseline.StatusCode);
+        string expected = await baseline.Content.ReadAsStringAsync(token);
+        using JsonDocument body = JsonDocument.Parse(expected);
+        Assert.Equal(populated ? 1 : 0, body.RootElement.GetProperty("subjectStatuses").GetArrayLength());
+
+        using HttpResponseMessage response = await SendOzoneAsync(
+            fixture: fixture,
+            key: key,
+            method: "tools.ozone.moderation.queryStatuses",
+            query: query + "&includeMuted=" + includeMuted);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expected, await response.Content.ReadAsStringAsync(token));
+
+        using HttpResponseMessage subject = await SendOzoneAsync(
+            fixture: fixture,
+            key: key,
+            method: "tools.ozone.moderation.queryStatuses",
+            query: "?subject=did:plc:subject&includeMuted=" + includeMuted + "&limit=1");
+        Assert.Equal(HttpStatusCode.OK, subject.StatusCode);
+        using JsonDocument subjectBody = JsonDocument.Parse(await subject.Content.ReadAsStringAsync(token));
+        Assert.Equal(populated ? 1 : 0, subjectBody.RootElement.GetProperty("subjectStatuses").GetArrayLength());
+        Assert.Equal(0, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
+    }
+
+    [Theory]
+    [InlineData("?includeMuted=")]
+    [InlineData("?includeMuted=invalid")]
+    [InlineData("?includeMuted=1")]
+    [InlineData("?includeMuted=true&includeMuted=false")]
+    [InlineData("?onlyMuted=invalid")]
+    public async Task OzoneSubjectStatusesRejectMalformedMuteFlagsAndUnsupportedFiltersEvenWithoutCases(string query)
+    {
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(
+            key: key,
+            identity: identity,
+            remoteEnabled: true,
+            ozone: true);
+        using HttpResponseMessage response = await SendOzoneAsync(
+            fixture: fixture,
+            key: key,
+            method: "tools.ozone.moderation.queryStatuses",
+            query: query);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        using JsonDocument error = JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        Assert.Equal("InvalidRequest", error.RootElement.GetProperty("error").GetString());
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task OzoneLabelsAndSelectedReportResolutionCommitTogether(bool selectedOnly, bool temporary)
     {
         CancellationToken token = TestContext.Current.CancellationToken;
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
@@ -33,23 +577,31 @@ public partial class ModerationTests
             remoteEnabled: true,
             declarationJson: declaration,
             ozone: true);
+        await fixture.Clock.PolicyVerificationRegistrations.Reader.ReadAsync(token);
         await VerifyPolicyAsync(fixture);
+        DateTimeOffset requestedAt = fixture.Clock.GetUtcNow();
         using HttpRequestMessage reportRequest = ReportRequest(key, fixture.Clock.GetUtcNow());
         using HttpResponseMessage accepted = await fixture.Client.SendAsync(reportRequest, token);
         Assert.Equal(HttpStatusCode.OK, accepted.StatusCode);
         using JsonDocument reportBody = JsonDocument.Parse(await accepted.Content.ReadAsByteArrayAsync(token));
         long reportId = reportBody.RootElement.GetProperty("id").GetInt64();
+        using HttpRequestMessage anotherReport = ReportRequest(key, fixture.Clock.GetUtcNow());
+        using HttpResponseMessage anotherAccepted = await fixture.Client.SendAsync(anotherReport, token);
+        Assert.Equal(HttpStatusCode.OK, anotherAccepted.StatusCode);
+        using JsonDocument anotherBody = JsonDocument.Parse(await anotherAccepted.Content.ReadAsByteArrayAsync(token));
+        long anotherId = anotherBody.RootElement.GetProperty("id").GetInt64();
         string body = $$"""
             {"createdBy":"{{s_administrator}}","subject":{"$type":"com.atproto.admin.defs#repoRef","did":"did:plc:subject"},
-             "event":{"$type":"tools.ozone.moderation.defs#modEventLabel","createLabelVals":["spam","porn"],"negateLabelVals":[]}
-             {{(resolveReports ? ",\"reportAction\":{\"ids\":[" + reportId + "]}" : "")}}}
+             "event":{"$type":"tools.ozone.moderation.defs#modEventLabel","comment":"Reviewed and labeled.","createLabelVals":["spam","porn"],"negateLabelVals":[]
+             {{(temporary ? ",\"durationInHours\":24" : "")}}}
+             {{(selectedOnly ? ",\"reportAction\":{\"ids\":[" + reportId + "],\"note\":\"Selected report handled.\"}" : "")}}}
             """;
         using HttpResponseMessage response = await SendOzoneAsync(
             fixture: fixture,
             key: key,
             method: "tools.ozone.moderation.emitEvent",
             body: body);
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync(token));
         using JsonDocument result = JsonDocument.Parse(await response.Content.ReadAsByteArrayAsync(token));
         Assert.True(result.RootElement.GetProperty("id").GetInt64() > 0);
         Assert.Equal("did:plc:subject", result.RootElement.GetProperty("subject").GetProperty("did").GetString());
@@ -58,10 +610,69 @@ public partial class ModerationTests
             fixture: fixture,
             key: key,
             method: "tools.ozone.report.queryReports",
-            query: "?status=" + (resolveReports ? "closed" : "assigned"));
+            query: "?status=closed");
         Assert.Equal(HttpStatusCode.OK, query.StatusCode);
         using JsonDocument reports = JsonDocument.Parse(await query.Content.ReadAsByteArrayAsync(token));
-        Assert.Equal(reportId, Assert.Single(reports.RootElement.GetProperty("reports").EnumerateArray()).GetProperty("id").GetInt64());
+        Assert.Contains(reports.RootElement.GetProperty("reports").EnumerateArray(), item => item.GetProperty("id").GetInt64() == reportId);
+        Assert.Equal(selectedOnly ? 1 : 2, reports.RootElement.GetProperty("reports").GetArrayLength());
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        LabelAdministrationCaller caller = (await team.AuthenticateLocalAsync("uid:0", token)).Result!;
+        ILabelReportStore reportStore = fixture.Services.GetRequiredService<ILabelReportStore>();
+        LabelModerationReport handled = (await reportStore.GetReportAsync(caller, reportId, token)).Result!;
+        Assert.NotNull(handled.HandledAt);
+        Assert.Equal(selectedOnly ? "Selected report handled." : "Reviewed and labeled.", handled.ResolutionReason);
+        Assert.Equal(!selectedOnly, (await reportStore.GetReportAsync(caller, anotherId, token)).Result!.HandledAt is not null);
+        LabelModerationCase moderationCase = (await fixture.Services.GetRequiredService<ILabelModerationStore>()
+            .GetCaseAsync(caller, handled.CaseId, token)).Result!;
+        Assert.Equal(!selectedOnly, moderationCase.Status == LabelCaseStatus.Resolved);
+        await fixture.PublishAllAsync();
+        idunno.Bluesky.Labeler.Storage.LabelStoreState state = await fixture.Store.GetStateAsync(token);
+        idunno.Bluesky.Labeler.Storage.LabelPage labels = await fixture.Store.ReplayAsync(
+            streamId: state.StreamId,
+            after: 0,
+            through: state.PublishedThrough,
+            cancellationToken: token);
+        Assert.Equal(2, labels.Labels.Count);
+        Assert.All(labels.Labels, label => Assert.Equal(
+            temporary ? requestedAt.AddDays(1) : (DateTimeOffset?)null,
+            label.SignedLabel.Label.ExpiresAt));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task OzoneEmptyOrInvalidLabelDecisionsDoNotHandleReports(bool invalid)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(key: key, identity: identity, remoteEnabled: true, ozone: true);
+        await VerifyPolicyAsync(fixture);
+        using HttpRequestMessage reportRequest = ReportRequest(key, fixture.Clock.GetUtcNow());
+        using HttpResponseMessage accepted = await fixture.Client.SendAsync(reportRequest, token);
+        Assert.Equal(HttpStatusCode.OK, accepted.StatusCode);
+        using JsonDocument reportBody = JsonDocument.Parse(await accepted.Content.ReadAsByteArrayAsync(token));
+        long reportId = reportBody.RootElement.GetProperty("id").GetInt64();
+        string body = $$"""
+            {"createdBy":"{{s_administrator}}","subject":{"$type":"com.atproto.admin.defs#repoRef","did":"did:plc:subject"},
+             "event":{"$type":"tools.ozone.moderation.defs#modEventLabel",
+             "createLabelVals":{{(invalid ? "[\"spam\",\"unlisted\"]" : "[]")}},"negateLabelVals":[]}
+            }
+            """;
+        using HttpResponseMessage response = await SendOzoneAsync(
+            fixture: fixture,
+            key: key,
+            method: "tools.ozone.moderation.emitEvent",
+            body: body);
+        Assert.Equal(!invalid, response.IsSuccessStatusCode);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        LabelAdministrationCaller caller = (await team.AuthenticateLocalAsync("uid:0", token)).Result!;
+        LabelModerationReport retained = (await fixture.Services.GetRequiredService<ILabelReportStore>()
+            .GetReportAsync(caller, reportId, token)).Result!;
+        Assert.Null(retained.HandledAt);
+        Assert.NotEqual(LabelCaseStatus.Resolved, (await fixture.Services.GetRequiredService<ILabelModerationStore>()
+            .GetCaseAsync(caller, retained.CaseId, token)).Result!.Status);
+        Assert.Equal(0, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
     }
 
     [Theory]
@@ -231,7 +842,7 @@ public partial class ModerationTests
         Assert.Equal(HttpStatusCode.OK, reportView.StatusCode);
         using JsonDocument reportJson = JsonDocument.Parse(await reportView.Content.ReadAsByteArrayAsync(token));
         Assert.Equal(uri, reportJson.RootElement.GetProperty("subject").GetProperty("subject").GetString());
-        Assert.False(reportJson.RootElement.TryGetProperty("subjectStatus", out _));
+        Assert.True(reportJson.RootElement.TryGetProperty("subjectStatus", out _));
         handler.MissingSubjectRecord = true;
         using HttpResponseMessage eventView = await SendOzoneAsync(
             fixture: fixture,
@@ -247,7 +858,7 @@ public partial class ModerationTests
             key: key,
             method: "tools.ozone.moderation.queryEvents",
             query: "?subject=" + Uri.EscapeDataString(uri));
-        Assert.Equal(HttpStatusCode.NotImplemented, history.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, history.StatusCode);
         using HttpResponseMessage activities = await SendOzoneAsync(
             fixture: fixture,
             key: key,
@@ -330,8 +941,10 @@ public partial class ModerationTests
             .Select(item => item.GetProperty("id").GetInt64()).Distinct().Count());
     }
 
-    [Fact]
-    public async Task OzoneReportResolutionPreservesAnUnreviewedOwnerAppeal()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task OzoneReportResolutionPreservesAnUnreviewedOwnerAppeal(bool acknowledge)
     {
         CancellationToken token = TestContext.Current.CancellationToken;
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
@@ -351,7 +964,7 @@ public partial class ModerationTests
             key: key,
             method: "tools.ozone.moderation.emitEvent",
             body: issue);
-        Assert.Equal(HttpStatusCode.OK, issued.StatusCode);
+        Assert.True(issued.StatusCode == HttpStatusCode.OK, await issued.Content.ReadAsStringAsync(token));
         await fixture.PublishAllAsync();
         const string appeal = """
             {"subject":{"$type":"com.atproto.admin.defs#repoRef","did":"did:plc:reporter"},
@@ -363,7 +976,7 @@ public partial class ModerationTests
             method: "tools.ozone.inbox.appealActionedSubject",
             body: appeal,
             actor: s_reporter.Value);
-        Assert.Equal(HttpStatusCode.OK, accepted.StatusCode);
+        Assert.True(accepted.StatusCode == HttpStatusCode.OK, await accepted.Content.ReadAsStringAsync(token));
         ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
         LabelServiceResult<LabelAdministrationCaller> authentication = await team.AuthenticateLocalAsync("uid:0", token);
         Assert.True(authentication.Succeeded);
@@ -373,15 +986,21 @@ public partial class ModerationTests
             cancellationToken: token);
         Assert.True(reportPage.Succeeded);
         LabelModerationReport report = Assert.Single(reportPage.Result);
-        string close = $$"""
+        string close = acknowledge ? """
+            {"createdBy":"did:plc:administration-actor","subject":{"$type":"com.atproto.admin.defs#repoRef","did":"did:plc:reporter"},
+             "event":{"$type":"tools.ozone.moderation.defs#modEventAcknowledge","comment":"Report acknowledged, appeal awaits review."}}
+            """ : $$"""
             {"reportId":{{report.Id}},"activity":{"$type":"tools.ozone.report.defs#closeActivity"},"internalNote":"Report acknowledged, appeal awaits review."}
             """;
         using HttpResponseMessage closed = await SendOzoneAsync(
             fixture: fixture,
             key: key,
-            method: "tools.ozone.report.createActivity",
+            method: acknowledge ? "tools.ozone.moderation.emitEvent" : "tools.ozone.report.createActivity",
             body: close);
-        Assert.Equal(HttpStatusCode.OK, closed.StatusCode);
+        Assert.True(closed.StatusCode == HttpStatusCode.OK, await closed.Content.ReadAsStringAsync(token));
+        LabelModerationReport handled = (await reports.GetReportAsync(authentication.Result, report.Id, token)).Result!;
+        Assert.NotNull(handled.HandledAt);
+        Assert.Equal("Report acknowledged, appeal awaits review.", handled.ResolutionReason);
         LabelServiceResult<IReadOnlyList<LabelAppeal>> appeals = await fixture.Services.GetRequiredService<ILabelAppealStore>()
             .GetAppealsAsync(caller: authentication.Result, cancellationToken: token);
         Assert.True(appeals.Succeeded);
@@ -498,7 +1117,7 @@ public partial class ModerationTests
                 key: key,
                 method: "tools.ozone.moderation.emitEvent",
                 body: body);
-            Assert.Equal(HttpStatusCode.OK, acknowledged.StatusCode);
+            Assert.True(acknowledged.StatusCode == HttpStatusCode.OK, await acknowledged.Content.ReadAsStringAsync(token));
             LabelServiceResult<IReadOnlyList<LabelCaseReceipt>> projected = await cases.GetCaseHistoryAsync(
                 caller: caller.Result,
                 caseId: opened.Result.Case.Id,
@@ -563,4 +1182,8 @@ public partial class ModerationTests
                 actor: actor));
         return await fixture.Client.SendAsync(request, TestContext.Current.CancellationToken);
     }
+
+    /// <summary>Extracts the unchanged antiforgery field from the preferences form.</summary>
+    [System.Text.RegularExpressions.GeneratedRegex("name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"")]
+    private static partial System.Text.RegularExpressions.Regex PreferencesAntiforgeryRegex();
 }

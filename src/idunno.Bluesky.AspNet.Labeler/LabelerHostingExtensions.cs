@@ -1,7 +1,11 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
 using idunno.AtProto;
+using idunno.AtProto.Server;
 using idunno.Bluesky.Labeler.Maintenance;
 using idunno.Bluesky.Labeler.Signing;
 using idunno.Bluesky.Labeler.Storage;
@@ -89,6 +93,25 @@ public static class LabelerHostingExtensions
     {
         ArgumentNullException.ThrowIfNull(endpoints);
         LabelerHost host = endpoints.ServiceProvider.GetRequiredService<LabelerHost>();
+        LabelerHostingOptions options = endpoints.ServiceProvider.GetRequiredService<LabelerHostingOptions>();
+        endpoints.MapGet(
+            "/xrpc/com.atproto.server.describeServer",
+            (RequestDelegate)(async context =>
+            {
+                ServerDescription description = new(
+                    did: host.Issuer,
+                    inviteCodeRequired: null,
+                    phoneVerificationRequired: null,
+                    blobUploadLimit: null,
+                    availableUserDomains: [],
+                    links: options.Links,
+                    contact: options.Contact);
+                byte[] payload = JsonSerializer.SerializeToUtf8Bytes(
+                    description,
+                    LabelerHostingJsonContext.Default.ServerDescription);
+                context.Response.ContentType = "application/json";
+                await context.Response.Body.WriteAsync(payload, context.RequestAborted).ConfigureAwait(false);
+            })).AllowAnonymous();
         endpoints.Map("/xrpc/com.atproto.label.queryLabels", (RequestDelegate)host.QueryAsync).AllowAnonymous();
         endpoints.Map("/xrpc/com.atproto.label.subscribeLabels", (RequestDelegate)host.SubscribeAsync).AllowAnonymous();
         endpoints.MapHealthChecks("/health/labeler/live", new HealthCheckOptions { Predicate = _ => false }).AllowAnonymous();
@@ -96,3 +119,11 @@ public static class LabelerHostingExtensions
         return endpoints;
     }
 }
+
+/// <summary>Provides source-generated JSON metadata for the standard AT Protocol server description.</summary>
+[JsonSourceGenerationOptions(
+    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+    GenerationMode = JsonSourceGenerationMode.Metadata,
+    PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+[JsonSerializable(typeof(ServerDescription))]
+internal sealed partial class LabelerHostingJsonContext : JsonSerializerContext;

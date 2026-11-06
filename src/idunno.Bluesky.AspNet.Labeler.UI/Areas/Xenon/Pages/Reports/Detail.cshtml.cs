@@ -23,6 +23,9 @@ public sealed class DetailModel : PageModel
     /// <summary>Gets the compact subject and author label display, or null when loading failed.</summary>
     internal ReviewLabelDisplay? Labels { get; private set; }
 
+    /// <summary>Gets the case's review state independently of whether this individual report was handled.</summary>
+    internal string? CaseStatus { get; private set; }
+
     /// <summary>Gets the bounded shared case and report activity.</summary>
     internal ModerationActivityPageView? History { get; private set; }
 
@@ -62,10 +65,13 @@ public sealed class DetailModel : PageModel
                     Moderation: new(CaseId: reportViews[0].CaseId))).ConfigureAwait(false);
             if (labels.Succeeded && labels.Moderation is { } observed)
             {
+                CaseStatus = observed.Case?.Status;
                 Labels = new(
                     subject.TryGetProperty("uri", out _),
                     observed.AccountLabels ?? [],
-                    observed.LabelChoices?.Where(label => label.Applied).Select(label => label.Value).ToArray() ?? []);
+                    observed.LabelChoices?.Where(label => label.Applied).Select(label => label.Value).ToArray() ?? [],
+                    observed.LabelChoices,
+                    observed.AccountLabelChoices);
             }
 
             AdministrationResponse history = await UiPageHelpers.DispatchAsync(

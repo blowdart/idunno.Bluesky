@@ -36,6 +36,12 @@ public static class LabelerUIExtensions
             throw new InvalidOperationException("Register labeler administration before adding the Xenon UI.");
         }
 
+        services.TryAddSingleton(serviceProvider =>
+        {
+            Uri? origin = serviceProvider.GetService<idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions>()?.PublicEndpoint;
+            return new idunno.Bluesky.AspNet.Labeler.LabelerEmailUiLink(
+                origin is null ? null : new Uri(origin, "/Xenon/"));
+        });
         services.AddRazorPages(options =>
         {
             options.Conventions.AddAreaFolderApplicationModelConvention(
@@ -63,6 +69,7 @@ public static class LabelerUIExtensions
         services.TryAddScoped<idunno.Bluesky.AspNet.Labeler.UI.LabelerUiAdministration>(
             serviceProvider => new idunno.Bluesky.AspNet.Labeler.UI.LabelerUiAdministration(
                 serviceProvider.GetRequiredService<idunno.Bluesky.Labeler.Administration.ILabelAdministrationStore>(),
+                serviceProvider.GetRequiredService<idunno.Bluesky.Labeler.Storage.ILabelStore>(),
                 serviceProvider.GetRequiredService<idunno.Bluesky.AspNet.Labeler.AdministrationDispatcher>()));
         services.TryAddSingleton<IDidHandleResolver>(serviceProvider => new DidHandleCache(new DidHandleCacheOptions
         {

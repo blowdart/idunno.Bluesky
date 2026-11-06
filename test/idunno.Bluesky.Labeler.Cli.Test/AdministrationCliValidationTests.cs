@@ -247,6 +247,7 @@ public class AdministrationCliValidationTests
     [InlineData("SetRole", LabelTeamAction.SetRole)]
     [InlineData("suspend", LabelTeamAction.Suspend)]
     [InlineData("RevokeLocal", LabelTeamAction.RevokeLocal)]
+    [InlineData("TransferOwnership", LabelTeamAction.TransferOwnership)]
     public void ParsesSupportedTeamActions(string text, LabelTeamAction expected)
     {
         Assert.True(Program.TryParseAction(text, out LabelTeamAction action));
@@ -272,6 +273,9 @@ public class AdministrationCliValidationTests
     [InlineData(LabelTeamAction.BindLocal, false, false, false)]
     [InlineData(LabelTeamAction.RevokeLocal, false, true, true)]
     [InlineData(LabelTeamAction.Remove, false, true, false)]
+    [InlineData(LabelTeamAction.TransferOwnership, false, false, true)]
+    [InlineData(LabelTeamAction.TransferOwnership, true, false, false)]
+    [InlineData(LabelTeamAction.TransferOwnership, false, true, false)]
     public void TeamChangeOptionsMatchTheSelectedAction(
         LabelTeamAction action,
         bool hasRole,

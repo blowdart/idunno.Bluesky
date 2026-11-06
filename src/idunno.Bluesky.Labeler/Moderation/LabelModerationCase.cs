@@ -33,6 +33,8 @@ public sealed class LabelModerationCase
     public long Revision { get; }
     /// <summary>Gets the exact subject.</summary>
     public LabelReportSubject Subject { get; }
+    /// <summary>Gets the pinned display reference independently of the native case's label scope.</summary>
+    internal LabelRecordResolution? RecordResolution { get; init; }
     /// <summary>Gets the workflow status.</summary>
     public LabelCaseStatus Status { get; }
     /// <summary>Gets the assigned DID, which may subsequently have lost team authority.</summary>

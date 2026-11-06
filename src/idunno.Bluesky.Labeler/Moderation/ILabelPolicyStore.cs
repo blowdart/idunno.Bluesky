@@ -8,13 +8,13 @@ using idunno.Bluesky.Labeler.Administration;
 
 namespace idunno.Bluesky.Labeler.Moderation;
 
-/// <summary>Persists immutable policies and commit-valid declaration gates on the shared issuer store.</summary>
+/// <summary>Persists editable drafts, protected publication snapshots and commit-valid declaration gates on the shared issuer store.</summary>
 /// <remarks><para>This is trusted application infrastructure, not an HTTP contract. Verification
 /// observations must originate from an independent trusted PDS reader, never an administrative request
 /// body's assertion of success. Publication credentials are not stored here.</para></remarks>
 public interface ILabelPolicyStore
 {
-    /// <summary>Reads a retained immutable policy version after checking live inspection authority.</summary>
+    /// <summary>Reads a retained policy version after checking live inspection authority.</summary>
     /// <param name="caller">The provider-issued viewer or higher.</param>
     /// <param name="version">The exact policy version.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
@@ -24,7 +24,7 @@ public interface ILabelPolicyStore
         string version,
         CancellationToken cancellationToken = default);
 
-    /// <summary>Reads a bounded ascending page of immutable versions.</summary>
+    /// <summary>Reads a bounded ascending page of retained versions.</summary>
     /// <param name="caller">The provider-issued viewer or higher.</param>
     /// <param name="afterVersion">The exclusive version boundary, or <see langword="null"/> for the first page.</param>
     /// <param name="limit">The maximum results, between one and one hundred.</param>
@@ -67,13 +67,15 @@ public interface ILabelPolicyStore
     /// rather than silently changing an established cross-host contract.</para></remarks>
     Task<LabelPolicyState> InitializePolicyAsync(TimeSpan? verificationFreshness = null, CancellationToken cancellationToken = default);
 
-    /// <summary>Retains an immutable draft without disrupting the active declaration.</summary>
+    /// <summary>Saves or updates an unpublished draft without disrupting the active declaration.</summary>
     /// <param name="caller">The provider-issued administrator.</param>
     /// <param name="operationId">The stable same-intent operation identity.</param>
     /// <param name="policy">The complete draft.</param>
     /// <param name="reason">The administrative reason.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The retained draft or a classified failure.</returns>
+    /// <remarks><para>Updates require a new operation identity and preserve prior operation results and history.
+    /// Versions selected for publication cannot be changed. Deleted draft IDs may be reused by a new save.</para></remarks>
     Task<LabelServiceResult<LabelPolicyDefinition>> SavePolicyAsync(
         LabelAdministrationCaller caller, string operationId, LabelPolicyDefinition policy, string reason, CancellationToken cancellationToken = default);
 

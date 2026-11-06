@@ -1,0 +1,98 @@
+{
+  "lexicon": 1,
+  "id": "dev.idunno.labeler.issuance.negateLabel",
+  "defs": {
+    "main": {
+      "type": "procedure",
+      "description": "Negates a policy-declared label for an account or record.",
+      "input": {
+        "encoding": "application/json",
+        "schema": {
+          "type": "ref",
+          "ref": "dev.idunno.labeler.issuance.defs#labelOperation"
+        }
+      },
+      "output": {
+        "encoding": "application/json",
+        "schema": {
+          "type": "ref",
+          "ref": "dev.idunno.labeler.issuance.defs#operationReceipt"
+        }
+      },
+      "errors": [
+        {
+          "name": "InvalidRequest",
+          "description": "The operation or target is malformed."
+        },
+        {
+          "name": "InvalidTarget",
+          "description": "The target is not a valid account or complete record identity."
+        },
+        {
+          "name": "Forbidden",
+          "description": "The authenticated issuer does not have permission to issue labels."
+        },
+        {
+          "name": "PolicyUnavailable",
+          "description": "The issuance policy is unavailable."
+        },
+        {
+          "name": "ValueNotDeclared",
+          "description": "The label value is not declared by the current policy."
+        },
+        {
+          "name": "TargetNotAllowed",
+          "description": "The current policy does not allow labels for this target."
+        },
+        {
+          "name": "TargetResolutionFailed",
+          "description": "The target could not be resolved."
+        },
+        {
+          "name": "TargetNotFound",
+          "description": "The target record could not be found or verified."
+        },
+        {
+          "name": "CidMismatch",
+          "description": "The requested record version does not match the current record."
+        },
+        {
+          "name": "TimestampExhausted",
+          "description": "A representable creation timestamp could not be chosen."
+        },
+        {
+          "name": "StaleDecision",
+          "description": "The label state changed during the operation."
+        },
+        {
+          "name": "IssuanceClosed",
+          "description": "The labeler is not accepting issuance operations."
+        },
+        {
+          "name": "IdempotencyConflict",
+          "description": "The operation identifier was already used for a different request."
+        },
+        {
+          "name": "MaintenanceActive",
+          "description": "Label changes are paused during signing-key maintenance."
+        },
+        {
+          "name": "SigningFailed",
+          "description": "The labeler could not sign the negation."
+        },
+        {
+          "name": "StorageUnavailable",
+          "description": "The operation could not be completed because storage is unavailable."
+        },
+        {
+          "name": "OutcomeUnknown",
+          "description": "The operation outcome is uncertain; recover it using the same operation identifier."
+        },
+        {
+          "name": "ServiceUnavailable",
+          "description": "The labeler service is temporarily unavailable."
+        }
+      ]
+    }
+  }
+}

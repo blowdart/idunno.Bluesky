@@ -53,6 +53,7 @@
     <File Path=".github/workflows/codeql-analysis.yml" />
     <File Path=".github/workflows/dependency-review.yml" />
     <File Path=".github/workflows/generate-publish-docs.yml" />
+    <File Path=".github/workflows/lexicon.yml" />
     <File Path=".github/workflows/openssf-scorecard.yml" />
     <File Path=".github/workflows/prerelease.yml" />
     <File Path=".github/workflows/release.yml" />
@@ -127,6 +128,7 @@
   </Folder>
   <Folder Name="/docs/docs/labeler/">
     <File Path="docs/docs/labeler/administration.md" />
+    <File Path="docs/docs/labeler/agent.md" />
     <File Path="docs/docs/labeler/cli.md" />
     <File Path="docs/docs/labeler/deployment.md" />
     <File Path="docs/docs/labeler/hosting.md" />
@@ -218,6 +220,13 @@
     <File Path="docs/docs/tutorials/code/lists.cs" />
     <File Path="docs/docs/tutorials/code/manageLists.cs" />
   </Folder>
+  <Folder Name="/lexicons/dev/idunno/labeler/issuance/">
+    <File Path="lexicons/dev/idunno/labeler/issuance/defs.json" />
+    <File Path="lexicons/dev/idunno/labeler/issuance/getAvailableLabels.json" />
+    <File Path="lexicons/dev/idunno/labeler/issuance/getOperationReceipt.json" />
+    <File Path="lexicons/dev/idunno/labeler/issuance/issueLabel.json" />
+    <File Path="lexicons/dev/idunno/labeler/issuance/negateLabel.json" />
+  </Folder>
   <Folder Name="/samples/">
     <File Path="samples/Directory.Build.Props" />
     <File Path="samples/readme.md" />
@@ -278,6 +287,10 @@
       <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="samples/Samples.Logging/Samples.Logging.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.LabelerAgent/Samples.LabelerAgent.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>
@@ -343,6 +356,7 @@
     <File Path="regeneratePublicApiFiles.ps1" />
     <File Path="SECURITY.md" />
     <File Path="sleet.json" />
+    <File Path="test.ps1" />
     <File Path="testconfig.json" />
     <File Path="THIRD-PARTY-NOTICES.txt" />
     <File Path="ToDo.md" />
@@ -370,6 +384,7 @@
     <Project Path="src/idunno.Bluesky.Labeler.MySQL/idunno.Bluesky.Labeler.MySQL.csproj" />
     <Project Path="src/idunno.Bluesky.Labeler.PostgreSQL/idunno.Bluesky.Labeler.PostgreSQL.csproj" />
     <Project Path="src/idunno.Bluesky.Labeler.SQLite/idunno.Bluesky.Labeler.SQLite.csproj" />
+    <Project Path="src/idunno.Bluesky.Labeler.Agent/idunno.Bluesky.Labeler.Agent.csproj" />
     <Project Path="src/idunno.Bluesky.Labeler.Cli/idunno.Bluesky.Labeler.Cli.csproj" />
     <Project Path="src/idunno.Bluesky.Labeler.Host/idunno.Bluesky.Labeler.Host.csproj" />
     <Project Path="src/idunno.Bluesky.Labeler/idunno.Bluesky.Labeler.csproj" />
@@ -476,6 +491,9 @@
       <Build Solution="CodeQL|*" Project="false" />
     </Project>
     <Project Path="test/idunno.Bluesky.AspNet.Labeler.Integration.Test/idunno.Bluesky.AspNet.Labeler.Integration.Test.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+    </Project>
+    <Project Path="test/idunno.Bluesky.Labeler.Agent.Test/idunno.Bluesky.Labeler.Agent.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
     </Project>
     <Project Path="test/idunno.Bluesky.BotSdk.Test/idunno.Bluesky.BotSdk.Test.csproj">

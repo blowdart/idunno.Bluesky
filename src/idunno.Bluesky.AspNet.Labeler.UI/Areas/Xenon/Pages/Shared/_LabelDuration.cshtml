@@ -1,0 +1,24 @@
+@model LabelDurationDisplay
+<label class="field"><span><partial name="_LabelClock" /> New label duration (optional)</span>
+    <select name="labelDurationHours" disabled="@Model.Frozen">
+        @foreach (int hours in LabelDuration.s_hours)
+        {
+            string title = hours switch
+            {
+                0 => "No expiry",
+                1 => "1 hour",
+                24 => "1 day",
+                72 => "3 days",
+                168 => "7 days",
+                720 => "30 days",
+                _ => $"{hours} hours"
+            };
+            <option value="@hours" selected="@(Model.Hours == hours)">@title</option>
+        }
+    </select>
+</label>
+@if (Model.Frozen)
+{
+    <input type="hidden" name="labelDurationHours" value="@Model.Hours" />
+}
+<p class="muted">Applies only to newly added labels, starting when submitted. Existing labels keep their expiry; removals are not delayed.</p>

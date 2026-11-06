@@ -14,10 +14,16 @@ and fixed-width identifiers use locally bundled Google Sans Code with programmin
 ligatures disabled. Its normal and italic variable fonts, SIL Open Font License
 1.1, and trademark notice are also included and linked from the footer.
 
-On Team, select a member's handle (or DID when no handle is available) to fill the
-Change member form with their canonical DID and current role. Select an action,
+On Team, select a member's verified handle to fill the
+Change member form with their handle and current role. Select an action,
 provide a reason, and choose **Update**. Enrollment and membership updates use the
 submit button without an additional confirmation checkbox.
+The current owner also has a **Labeler ownership** panel at the bottom of Team, collapsed
+by default. Expand it, enter another active
+Administrator's handle and a reason, confirm the handover, and choose **Transfer ownership**.
+The new owner receives protection from removal, suspension and demotion, along with control
+of the remote CLI switch. The former owner remains an ordinary Administrator. Only the
+new owner can transfer ownership back; the handover does not change roles or local bindings.
 Role names have eye (Viewer), gavel (Moderator) and user-gear (Administrator)
 glyphs. Removed members use muted text while retaining their identity links and
 explicit Removed status. A single Status column distinguishes Active, Suspended
@@ -59,6 +65,85 @@ List counts use singular wording for one item. Terms and Privacy explain operato
 responsibilities, sign-in storage, external requests and data retention in plain
 language without replacing the operator's required service-specific disclosures.
 
+## Account reports and reason compatibility
+
+Loading a current policy or saved draft shows its stored report scope unchanged.
+**Match policy reporting scope**, under **Where moderators can apply labels**,
+copies the current editor declaration's account, content and content-type permissions
+to the label-issuance controls. An omitted content-type restriction allows all types;
+an empty restriction allows none. Save or update the draft to retain the change;
+the button neither saves nor publishes it.
+Draft save/update results return to the page introduction so confirmation and error
+messages remain visible, while retaining the submitting editor tab.
+Account-report compatibility normalization is applied when editing report controls
+or saving a draft, not when loading it. Adding `app.bsky.actor.profile` to a draft
+does not change the public policy until that draft is published.
+
+Loading an unpublished draft prefills its Policy ID and changes the section heading
+to **Update a draft policy**, with an **Update draft** save action. Updates replace that draft's current contents while preserving
+prior audit and operation history. **Delete draft** is also available in the editor.
+Loading the current policy or clearing the editor starts a new draft instead.
+Policies already selected for publication cannot be edited or deleted.
+Saving or updating a draft retains the Labels, Moderation Policy, or Advanced tab
+from which it was submitted. The Current State tab lists unpublished drafts for
+loading, publication, and deletion; listed drafts are not necessarily active policies.
+The editor identifies its shared working copy as **Working on policy draft:**
+across Labels, Moderation Policy, and Advanced. Its action row contains **Clear all**,
+**Delete draft** (when editing a saved draft), and **Reset to current policy**.
+Resetting starts a new draft based on the current policy without changing saved drafts.
+For a saved draft, **Publish policy** opens Publication with that draft preselected.
+It does not publish automatically; save any unsaved edits before publication.
+
+The policy editor automatically includes `app.bsky.actor.profile` in a restricted
+report collection list when account reports are selected, because Bluesky applies
+that filter to account report destinations too. This also permits profile-record
+reports when record reports are enabled. Unrestricted collection lists remain
+unrestricted, and label-issuance permissions are unchanged. Removing account report
+support does not remove explicitly listed profile-record support.
+
+In report reasons, **General Other** is `tools.ozone.report.defs#reasonOther` and
+**Other (legacy)** is `com.atproto.moderation.defs#reasonOther`. They express the same
+reason using different identifiers; select both to accept either.
+
+## Account and record details
+
+Use the arrow-up-right-from-square glyph beside an account or record in Cases,
+Reports, Appeals, Search or Mutes to open its read-only Xenon details in a new
+tab. The glyph matches Ozone's arrow-out-of-a-square navigation. Details separate
+the handle, DID, collection, record key, URI and current CID, and include expandable
+formatted record JSON. Account subjects show account-level labels; record subjects
+show this labeler's labels applying to the current record version, not labels for
+another version. Self-labels and Bluesky moderation labels are shown separately;
+failed checks are not reported as "None".
+
+Account details include the public profile record and preview without treating
+profile-record labels as account labels. Posts, profiles, lists and starter packs
+also have rendered previews using personal media-warning preferences. Other record
+collections have metadata, labels and JSON without a rendered preview. The current
+CID appears only in the metadata, and the standalone preview has no separator line.
+
+These pages require active team membership and do not change moderation state.
+They display current public content, not archived report evidence. The original
+reported URI and any supplied CID remain on the report and case pages.
+
+## Escalated review
+
+Moderators can choose **Escalate case**, optionally supplying a reason, to flag an
+unresolved case for further review. Escalation keeps the current assignee, reports,
+appeals and labels unchanged; it does not restrict the case to administrators.
+The **Escalated** filter is available in Cases, Reports and Appeals. An amber
+Font Awesome `triangle-exclamation` badge and explicit **Escalated** text highlight
+the case in lists and details, alongside any independent appeal/report outcome.
+Normal moderation decisions can handle the escalated work and resolve the case;
+if selected work remains, the case returns to **In review**.
+
+**Acknowledge and close case** marks the exact case's reports as reviewed without
+changing labels. It also ends escalation. Pending appeals are not decided by
+acknowledgment and keep the case in review; use the appeal decision controls to
+review them explicitly. The optional reason, protected case revision and stable
+operation identity use the same atomic decision and unchanged-retry handling as
+label review.
+
 ## Enabling the UI in the standalone host
 
 The canonical labeler host keeps the UI disabled by default. Enable optional
@@ -76,7 +161,7 @@ and remote CLI administration remain independently configurable.
 Set `LabelerAdministration__RemoteMode=WebUiControlled` in the standalone host to let
 the owner control remote access from Xenon. In that mode, the **Team and
 membership** page displays the effective remote-access status and offers the durable
-switch only to the DID that completed the one-time local bootstrap. Administrator
+switch only to the current owner, initially the DID that completed the one-time local bootstrap. Administrator
 role alone is insufficient. Every change is committed with its audit event; protected
 local administration remains available when the switch is off. See the
 [remote administration control modes](administration.md#remote-administration-control-modes)
@@ -258,7 +343,7 @@ The general current-content disclaimer and duplicate current CID are omitted whe
 matches the reported CID; it remains when no comparison is possible or the CIDs differ.
 Images are limited to ten MiB each, with up to four post images or twenty gallery
 images. Profile avatars and banners come from their repository blob references.
-Images start blurred when the current record self-labels adult, sexual, nude or
+Media starts blurred when the current record self-labels adult, sexual, nude or
 graphic content, or Bluesky moderation applies those warnings or `!hide`/`!warn`.
 Xenon also respects Bluesky's custom label definitions marked adult-only or
 media-blurring (including sensitive content and self-harm); ordinary spam and
@@ -269,19 +354,47 @@ different-CID labels are not applied.
 
 The smaller warning below the preview has an exclamation-circle icon and identifies
 self-labels separately from Bluesky moderation, without repeating control instructions.
-Only video previews show "Videos require opening the player."
-Their accessible play-circle button opens a viewport-bounded player sized to the
-record's declared aspect ratio when valid, or a temporary widescreen layout otherwise.
-Loaded video metadata corrects the ratio, and resizing the window refits the player.
-An eye button over each image reveals the images in that preview only, then changes to
-a crossed-out eye to restore blurring. These buttons support keyboard activation and
-accessible Show images / Blur images labels; clicking the image itself does nothing.
-Image descriptions, when supplied, appear beneath the images. **Blur images** restores
-protection. The choice is not saved across page loads. Images stay blurred without
-JavaScript, and their descriptions are excluded from the accessibility tree until
-revealed. Videos remain behind their explicit open-player control. If a bounded
+Videos use inline, viewport-bounded native controls with `preload="none"` and no autoplay.
+The browser does not need to open a dialog; playback starts only at the moderator's request.
+The existing authorized, expiring local media route still fetches the bounded MP4 blob;
+the browser never receives an arbitrary upstream media URL.
+
+**Preferences** under the user dropdown configures **Blur**, **Grayscale** and
+**Translucent** independently for `graphic-media`, `porn`, `nudity`, `sexual` and
+`self-harm`. Settings are private to the authenticated team member on this labeler,
+persist on the server across browsers and restarts, and default to blur only.
+They apply to trusted Bluesky moderation labels and corresponding record self-labels.
+Other supported content warnings keep their blur protection. When several warnings
+apply, the filters are combined. These choices do not change labels or report evidence
+and are not published to Bluesky. They are also available through the personal
+Ozone-compatible `dev.idunno.labeler.mediaPreferences` setting described in
+[administration](administration.md). Stock Ozone's preference screen remains
+browser-local and does not synchronize with this setting.
+
+Cases, reports and appeals lists refresh every 30 seconds while the page is visible,
+using the same submitted filters, sort order and page. Filter controls are not replaced.
+Updates pause while a result has keyboard focus or an expanded details panel, so
+reading is not interrupted. Failed updates show an explicit stale-results notice;
+lost access clears the results and stops updates. Background reads do not submit
+moderation actions.
+
+Case/report decisions and Manual labels offer an optional **New label duration** with
+a clock glyph: **No expiry** (the default), **1 hour**, **6 hours**, **12 hours**,
+**1 day**, **3 days**, **7 days** or **30 days**. The duration applies only to newly
+added labels, starting at submission. Keeping an existing label selected preserves
+its original expiry; removing it is immediate. Applied timed labels display a clock,
+**Time limited** and their expiry timestamp, including labels created through Ozone.
+Retries retain the originally submitted absolute expiry rather than extending it.
+
+An eye button reveals filtered media in that preview only, then changes to
+a crossed-out eye to restore the saved filters. These buttons support keyboard activation
+and accessible Show media / Restore media filters labels; clicking an image itself does nothing.
+Image descriptions, when supplied, appear beneath the images. Temporary revealing is
+not saved across page loads. Filtered media stays filtered without JavaScript and is
+excluded from the accessibility tree until revealed. A filtered video's controls are
+available only after revealing it; restoring filters also pauses the video. If a bounded
 moderation lookup fails or is incomplete, a visible notice explains that labels
-could not be fully checked: known warnings still blur images, while images without
+could not be fully checked: known warnings still use the chosen filters, while media without
 a known warning remain visible. This is a viewing aid, not a moderation decision,
 and does not change any labels, reports or audit records.
 Gallery images stay in one horizontally scrollable row, which can also receive
@@ -587,7 +700,8 @@ reason and submission, without a confirmation checkbox.
 Cancel action, including without JavaScript. Confirmed deletion prevents future
 loading or publication and hides the draft from available-version lists. Its
 definition, original operation receipts, deletion receipt and audit history remain
-retained for accountability, and the deleted version identifier cannot be reused.
+retained for accountability. A new unpublished draft can reuse the deleted draft's
+identifier; the latest save makes it available for editing and publication again.
 Deletion and publication are fenced in the same provider transaction; selected
 and previously published definitions cannot be deleted.
 

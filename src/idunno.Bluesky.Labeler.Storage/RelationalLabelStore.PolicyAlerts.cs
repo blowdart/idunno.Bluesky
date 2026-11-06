@@ -13,9 +13,25 @@ namespace idunno.Bluesky.Labeler.Storage;
 
 internal abstract partial class RelationalLabelStore
 {
-    /// <summary>Counts current active administrators independently of registered email addresses.</summary>
-    private static int ActiveAdministratorCount(AdministrationState team) =>
-        team.Members.Values.Count(member => member is { Active: true, Removed: false, Role: LabelTeamRole.Administrator });
+    /// <summary>Establishes a durable first-enable boundary without deleting audit history or resetting retries.</summary>
+    public Task InitializeNotificationsAsync(CancellationToken cancellationToken = default) =>
+        RunAsync(
+            operation: "policy-alert-initialize",
+            action: async (connection, transaction, _) =>
+            {
+                AdministrationState team = await ReadAdministrationAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+                if (!team.NotificationsInitialized)
+                {
+                    if (team.ChangeNotificationThrough == 0 && team.PendingChangeAlert is null)
+                    {
+                        team.ChangeNotificationThrough = team.Sequence;
+                    }
+                    team.NotificationsInitialized = true;
+                    await SaveAdministrationAsync(connection, transaction, team, cancellationToken).ConfigureAwait(false);
+                }
+                return true;
+            },
+            token: cancellationToken);
 
     /// <summary>Persists one alert obligation per continuous verification-failure incident.</summary>
     public Task RecordVerificationFailureAsync(string category, CancellationToken cancellationToken = default)
@@ -106,13 +122,6 @@ internal abstract partial class RelationalLabelStore
                         recipients: recipients);
                 }
 
-                if (ActiveAdministratorCount(team) <= 1)
-                {
-                    team.ChangeNotificationThrough = team.Sequence;
-                    team.PendingChangeAlert = null;
-                    await SaveAdministrationAsync(connection, transaction, team, cancellationToken).ConfigureAwait(false);
-                    return null;
-                }
                 if (recipients.Length == 0)
                 {
                     return null;

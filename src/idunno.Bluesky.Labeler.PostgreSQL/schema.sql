@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS label_cases (
     case_id BIGINT PRIMARY KEY CHECK(case_id>0),
     subject_hash BYTEA NOT NULL CHECK(octet_length(subject_hash)=32),
     subject_key BYTEA NOT NULL,
-    status INTEGER NOT NULL CHECK(status BETWEEN 0 AND 2),
+    status INTEGER NOT NULL CHECK(status BETWEEN 0 AND 3),
     assignee_hash BYTEA NULL CHECK(assignee_hash IS NULL OR octet_length(assignee_hash)=32),
     assignee_key BYTEA NULL,
     payload BYTEA NOT NULL
@@ -211,4 +211,12 @@ CREATE TABLE IF NOT EXISTS label_post_review_checks (
     case_id BIGINT PRIMARY KEY REFERENCES label_cases(case_id),
     checked_ms BIGINT NOT NULL
 );
-INSERT INTO label_schema(id, version) VALUES(1, 14) ON CONFLICT DO NOTHING;
+CREATE TABLE IF NOT EXISTS label_mutes (
+    kind INTEGER NOT NULL CHECK(kind IN (0,1)),
+    event_id BIGINT NOT NULL,
+    subject_hash BYTEA NOT NULL CHECK(octet_length(subject_hash)=32),
+    subject_key BYTEA NOT NULL,
+    until_ms BIGINT NOT NULL,
+    PRIMARY KEY(kind,subject_hash)
+);
+INSERT INTO label_schema(id, version) VALUES(1, 16) ON CONFLICT DO NOTHING;

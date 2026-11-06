@@ -72,7 +72,7 @@ public class KeylessRetiredHostTests
         }
 
         Task ValidateAsync() => HostProgram.ValidateKeylessHostingAsync(
-            issuer: HostStorage.Issuer,
+            issuer: HostStorage.s_issuer,
             store: fixture.Store,
             maintenance: fixture.Maintenance,
             policies: null,
@@ -112,7 +112,7 @@ public class KeylessRetiredHostTests
             replacementPublicKey: replacement.ExportPublicKeyMultibase(),
             cancellationToken: token);
         await Assert.ThrowsAsync<InvalidOperationException>(() => HostProgram.ValidateKeylessHostingAsync(
-            issuer: HostStorage.Issuer,
+            issuer: HostStorage.s_issuer,
             store: fixture.Store,
             maintenance: fixture.Maintenance,
             policies: null,
@@ -125,7 +125,7 @@ public class KeylessRetiredHostTests
         await using HostStorage fixture = await HostStorage.CreateAsync(initialize: false);
         CancellationToken token = TestContext.Current.CancellationToken;
         await Assert.ThrowsAsync<SqliteException>(() => HostProgram.ValidateKeylessHostingAsync(
-            issuer: HostStorage.Issuer,
+            issuer: HostStorage.s_issuer,
             store: fixture.Store,
             maintenance: fixture.Maintenance,
             policies: null,
@@ -136,7 +136,7 @@ public class KeylessRetiredHostTests
     /// <summary>Keeps test databases within the checkout and disposes provider connections before removing them.</summary>
     private sealed class HostStorage(ServiceProvider services, string path, string connectionString) : IAsyncDisposable
     {
-        internal static readonly Did Issuer = new("did:plc:keyless-host");
+        internal static readonly Did s_issuer = new("did:plc:keyless-host");
         internal string ConnectionString => connectionString;
         internal ILabelStore Store => services.GetRequiredService<ILabelStore>();
         internal ILabelMaintenanceStore Maintenance => services.GetRequiredService<ILabelMaintenanceStore>();
@@ -152,7 +152,7 @@ public class KeylessRetiredHostTests
             HostStorage fixture = new(services.BuildServiceProvider(), path, connectionString);
             if (initialize)
             {
-                await fixture.Store.InitializeAsync(Issuer, TestContext.Current.CancellationToken);
+                await fixture.Store.InitializeAsync(s_issuer, TestContext.Current.CancellationToken);
             }
             return fixture;
         }

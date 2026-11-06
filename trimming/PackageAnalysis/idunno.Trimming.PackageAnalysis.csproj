@@ -26,6 +26,7 @@
     <ProjectReference Include="..\..\src\idunno.Bluesky.BotSdk.PostgreSQL\idunno.Bluesky.BotSdk.PostgreSQL.csproj" />
     <ProjectReference Include="..\..\src\idunno.Bluesky.BotSdk.SQLite\idunno.Bluesky.BotSdk.SQLite.csproj" />
     <ProjectReference Include="..\..\src\idunno.Bluesky.Labeler\idunno.Bluesky.Labeler.csproj" />
+    <ProjectReference Include="..\..\src\idunno.Bluesky.Labeler.Agent\idunno.Bluesky.Labeler.Agent.csproj" />
     <ProjectReference Include="..\..\src\idunno.Bluesky.Labeler.MySQL\idunno.Bluesky.Labeler.MySQL.csproj" />
     <ProjectReference Include="..\..\src\idunno.Bluesky.Labeler.PostgreSQL\idunno.Bluesky.Labeler.PostgreSQL.csproj" />
     <ProjectReference Include="..\..\src\idunno.Bluesky.Labeler.SQLite\idunno.Bluesky.Labeler.SQLite.csproj" />
@@ -47,6 +48,7 @@
     <PackageReference Include="idunno.Bluesky.BotSdk.PostgreSQL" VersionOverride="$(IdunnoPackageVersion)" />
     <PackageReference Include="idunno.Bluesky.BotSdk.SQLite" VersionOverride="$(IdunnoPackageVersion)" />
     <PackageReference Include="idunno.Bluesky.Labeler" VersionOverride="$(IdunnoPackageVersion)" />
+    <PackageReference Include="idunno.Bluesky.Labeler.Agent" VersionOverride="$(IdunnoPackageVersion)" />
     <PackageReference Include="idunno.Bluesky.Labeler.MySQL" VersionOverride="$(IdunnoPackageVersion)" />
     <PackageReference Include="idunno.Bluesky.Labeler.PostgreSQL" VersionOverride="$(IdunnoPackageVersion)" />
     <PackageReference Include="idunno.Bluesky.Labeler.SQLite" VersionOverride="$(IdunnoPackageVersion)" />
@@ -68,6 +70,7 @@
     <TrimmerRootAssembly Include="idunno.Bluesky.BotSdk.PostgreSQL" />
     <TrimmerRootAssembly Include="idunno.Bluesky.BotSdk.SQLite" />
     <TrimmerRootAssembly Include="idunno.Bluesky.Labeler" />
+    <TrimmerRootAssembly Include="idunno.Bluesky.Labeler.Agent" />
     <TrimmerRootAssembly Include="idunno.Bluesky.Labeler.MySQL" />
     <TrimmerRootAssembly Include="idunno.Bluesky.Labeler.PostgreSQL" />
     <TrimmerRootAssembly Include="idunno.Bluesky.Labeler.SQLite" />

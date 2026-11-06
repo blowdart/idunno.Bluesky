@@ -14,7 +14,7 @@ DTOs are built from the AtProto and Bluesky [lexicon]https://github.com/bluesky-
 * Run a single test project: `dotnet test --project test/idunno.Bluesky.Test/idunno.Bluesky.Test.csproj`.
 * Run a single test class: `dotnet test --project test/idunno.Bluesky.Test/idunno.Bluesky.Test.csproj --filter-class idunno.Bluesky.Test.PostBuilderTests`. Use `--filter-method` with a fully qualified method name for a single test.
 * Tests multi-target `net8.0;net9.0;net10.0`. Restrict to one framework with `-f net10.0` to iterate faster.
-* Linting is not a separate step: analyzers (SonarAnalyzer, PublicApiAnalyzers, documentation analyzers) run during `dotnet build`, and `<TreatWarningsAsErrors>` is on, so a clean build is the lint gate.
+* Build analyzers (SonarAnalyzer, PublicApiAnalyzers, documentation analyzers) run during `dotnet build`, and `<TreatWarningsAsErrors>` is on. The pre-commit gate also requires separate informational-severity style and analyzer checks; a clean build alone does not establish that informational diagnostics are clean.
 * **CI builds `Debug`, not `Release`.** Some analyzers, notably the documentation analyzers (`CSENSE*`), only run in `Debug`, so a clean `Release` build proves nothing about CI.
 * **Never trust an incremental build as a pre-commit gate.** If you have just built an individual project, a subsequent solution build reuses that result and silently skips its analyzers. Pass `--no-incremental`.
 * **Windows toolchain discovery.** Do not assume build tools are on `PATH` or installed on `C:`. Before concluding that a toolchain is unavailable, inspect Visual Studio's registered installation locations and search other mounted drives for its environment scripts (such as `vcvars64.bat`) or required executables.
@@ -53,12 +53,37 @@ Report new findings, previously missed findings, and older findings that remain 
 
 ## Pre-commit gate
 
-Before *every* commit, run both of these from the repository root and require both to be clean:
+### Disposable database prerequisites
+
+Before **every full test run**, provision fresh, disposable PostgreSQL 17 and MySQL 8.4 Docker containers. Do not start the suite with missing database configuration and rediscover the same prerequisite failures.
+
+Use `pwsh -File ./test.ps1` for the full local gate. It runs the required clean Debug build, provisions the databases,
+verifies authenticated access from the runner, runs every test project/framework, records timings/logs and cleans up.
+
+* Set `LABELER_TEST_POSTGRESQL_CONNECTION` and `LABELER_TEST_MYSQL_CONNECTION` in the test process to administrative connections on those disposable servers. The labeler fixtures create and drop their own databases; never point them at a live labeler database or reuse production containers, credentials, or volumes.
+* Use unique test-container names, generated temporary passwords, disposable storage, and loopback-only published ports. Verify authenticated database connections through the published ports from the test runner before launching the full suite; a running container or an in-container readiness probe alone is insufficient.
+* Bound **both** module and xUnit collection concurrency: `dotnet test --max-parallel-test-modules 4 --max-threads 4`. Labeler fixtures use bounded pools keyed by unique per-test databases and clear only their own pool before dropping the database. Do not disable pooling, clear all pools, change machine-wide TCP settings or weaken fixture isolation to work around resource exhaustion.
+* Record the elapsed time and preserve the complete test log and database diagnostics. In a `finally` block, remove only the containers and disposable storage created for that run, including when tests fail. Do not report the commit gate as passed unless every required test passes.
+
+These database prerequisites also apply to targeted runs that include PostgreSQL or MySQL labeler conformance tests.
+
+Before *every* commit, run all of these from the repository root and require every step to be clean:
 
 1. `dotnet build idunno.Bluesky.slnx -c Debug --no-incremental` — must report 0 warnings and 0 errors.
 2. `dotnet test` — every test in every test project must pass.
+3. `dotnet format style idunno.Bluesky.slnx --no-restore --severity info --verify-no-changes` — must exit 0 with no outstanding style diagnostics.
+4. `dotnet format analyzers idunno.Bluesky.slnx --no-restore --severity info --verify-no-changes` — must exit 0 with no outstanding analyzer diagnostics.
 
-Do not commit on the strength of a single project build, a `Release` build, an incremental build, or a filtered test run. Those are for iterating; this gate is what CI actually checks. If either step fails, fix it before committing rather than pushing and waiting for CI to tell you.
+`test.ps1` covers the build and full-suite steps; run both `dotnet format` checks separately afterward.
+Run the checks sequentially, not in parallel with each other or other build/test commands: concurrent workspace
+loading can contend over generated files and produce misleading diagnostics. `--verify-no-changes` must remain
+enabled so verification does not edit files. If workspace-loading warnings appear, rerun the affected check with
+`--verbosity diagnostic` and investigate them before treating the result as conclusive.
+
+Do not commit on the strength of a single project build, a `Release` build, an incremental build, a filtered test run, or a clean build without the informational checks. Those are for iterating; the full gate includes CI's build/test validation and the additional informational checks. If any step fails, fix it before committing rather than pushing and waiting for CI to tell you.
+
+The build/test gate does not replace separate CI validation: run `trimTest.ps1` when changing package inventories,
+trimming/AOT surfaces or their analysis projects. Validate changed Linux-only behavior on Linux; a Windows skip is not evidence that it works.
 
 ## Architecture
 
@@ -172,7 +197,7 @@ Before considering a change complete, identify the assumptions and invariants it
 
 ## Checkin conventions
 
-* Run the pre-commit gate above (full `Debug` `--no-incremental` solution build plus the whole test suite) and require it to be clean before committing. Never commit on the strength of a partial or incremental build.
+* Run the pre-commit gate above (full `Debug` `--no-incremental` solution build, whole test suite, and sequential informational style/analyzer verification) and require it to be clean before committing. Never commit on the strength of a partial or incremental build.
 * **Branch naming.** When the branch-creation mechanism supports slash-separated names, name new work branches `wip/{github-username}/{short-kebab-case-subject}` (for example, `wip/blowdart/add-feed-filter`). Determine the username from the authenticated GitHub account; do not guess it. Keep the subject concise and descriptive. If the mechanism requires a different format, follow its constraints; do not use raw Git commands or other workarounds to force the requested format.
 * Do not make verbose commit messages. Use the imperative mood and keep it short (e.g., "Add X", "Fix Y", "Update Z").
 * Never commit directly to `main`. Use a feature branch and open a pull request. The PR description should summarize the change, link to any relevant issues, and note any breaking changes.

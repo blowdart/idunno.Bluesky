@@ -420,7 +420,7 @@ public class LabelReportStoreTests
         ModerationReportAuthenticationResult reporter = await ReportTestAuthentication.CreateAsync(s_reporter, policy.DatabaseTime, "valid");
         Assert.Equal(LabelServiceErrorCode.PolicyUnavailable,
             (await store.SubmitReportAsync(reporter, new(s_account, Reason), policy.Revision - 1, token)).Error!.Code);
-        ILabelReportStore rolledBack = (ILabelReportStore)fixture.NewStore(new(policy.DatabaseTime.AddMilliseconds(-430)));
+        ILabelReportStore rolledBack = (ILabelReportStore)fixture.NewStore(new(policy.DatabaseTime.AddMilliseconds(-5001)));
         Assert.Equal(LabelServiceErrorCode.PolicyUnavailable,
             (await rolledBack.SubmitReportAsync(reporter, new(s_account, Reason), policy.Revision, token)).Error!.Code);
         foreach (string appeal in new[] { "com.atproto.moderation.defs#reasonAppeal", "tools.ozone.report.defs#reasonAppeal" })
@@ -432,6 +432,42 @@ public class LabelReportStoreTests
         Assert.Empty(Success(await store.GetReportsAsync(administrator, cancellationToken: token)));
         Assert.Empty(Success(await ((ILabelModerationStore)fixture.Store).GetCasesAsync(administrator, cancellationToken: token)));
         Assert.True((await store.SubmitReportAsync(reporter, new(s_account, Reason), policy.Revision, token)).Succeeded);
+    }
+
+    [Theory]
+    [InlineData("sqlite", 5000, true)]
+    [InlineData("sqlite", 5001, false)]
+    [InlineData("postgresql", 5000, true)]
+    [InlineData("postgresql", 5001, false)]
+    [InlineData("mysql", 5000, true)]
+    [InlineData("mysql", 5001, false)]
+    public async Task ReportAdmissionAndPendingPromotionRespectDatabaseRollbackTolerance(
+        string engine,
+        int rollbackMilliseconds,
+        bool expected)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        (_, LabelPolicyState policy) = await ActivateAsync(fixture);
+        ILabelReportStore store = (ILabelReportStore)fixture.Store;
+        ModerationReportAuthenticationResult pending = await ReportTestAuthentication.CreateAsync(s_reporter, policy.DatabaseTime, "rollback-pending");
+        Success(await store.AcceptReportAsync(
+            authentication: pending,
+            submission: new(s_account, Reason),
+            expectedPolicyRevision: null,
+            maximumPendingReports: 10,
+            cancellationToken: token));
+
+        ILabelReportStore rolledBack = (ILabelReportStore)fixture.NewStore(new(policy.DatabaseTime.AddMilliseconds(-rollbackMilliseconds)));
+        ModerationReportAuthenticationResult reporter = await ReportTestAuthentication.CreateAsync(s_reporter, policy.DatabaseTime, "rollback-direct");
+        LabelReportIntakeReceipt receipt = Success(await rolledBack.AcceptReportAsync(
+            authentication: reporter,
+            submission: new(s_account, Reason),
+            expectedPolicyRevision: policy.Revision,
+            maximumPendingReports: 10,
+            cancellationToken: token));
+        Assert.Equal(!expected, receipt.PendingVerification);
+        Assert.Equal(expected, (await rolledBack.ProcessPendingReportsAsync(policy.Revision, 10, token)).Succeeded);
     }
 
     [Theory]

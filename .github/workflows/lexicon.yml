@@ -1,0 +1,73 @@
+name: Publish Lexicon
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lexicon
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Validate and publish lexicons
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: lexicon
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+      with:
+        egress-policy: audit
+
+    - name: Checkout
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
+
+    - name: Install goat
+      run: |
+        set -euo pipefail
+        tool_dir="${RUNNER_TEMP}/goat"
+        mkdir -p "${tool_dir}"
+        curl --fail --silent --show-error --location \
+          https://github.com/bluesky-social/goat/releases/download/v0.2.8/goat_Linux_x86_64.tar.gz \
+          --output "${tool_dir}/goat.tar.gz"
+        echo "5b35f122f4e97787ac8c5ca1fc26d7afe5541f2999ecfa2eac725a7443798d08  ${tool_dir}/goat.tar.gz" | sha256sum --check
+        tar -xzf "${tool_dir}/goat.tar.gz" -C "${tool_dir}" goat
+        echo "${tool_dir}" >> "${GITHUB_PATH}"
+
+    - name: Lint lexicons
+      run: goat lex lint
+
+    - name: Verify namespace DNS resolution
+      run: |
+        set -euo pipefail
+        while IFS= read -r -d '' schema; do
+          nsid="$(jq --exit-status --raw-output '.id' "${schema}")"
+          goat lex resolve --did "${nsid}"
+        done < <(find lexicons -type f -name '*.json' -print0)
+
+    - name: Check compatibility with published lexicons
+      run: goat lex breaking
+
+    - name: Publish new and changed lexicons
+      env:
+        GOAT_USERNAME: ${{ vars.GOAT_USERNAME }}
+        GOAT_PASSWORD: ${{ secrets.GOAT_PASSWORD }}
+      run: |
+        set -euo pipefail
+        if [[ -z "${GOAT_USERNAME}" || -z "${GOAT_PASSWORD}" ]]; then
+          echo "::error::Configure GOAT_USERNAME and GOAT_PASSWORD in the lexicon environment."
+          exit 1
+        fi
+        goat lex publish --update

@@ -1,4 +1,10 @@
 #nullable enable
+idunno.Bluesky.Labeler.Audience
+const idunno.Bluesky.Labeler.Audience.Administration = "labeler_admin" -> string!
+const idunno.Bluesky.Labeler.Audience.Issuance = "labeler_issuance" -> string!
+idunno.Bluesky.Labeler.Moderation.LabelCaseStatus.Escalated = 3 -> idunno.Bluesky.Labeler.Moderation.LabelCaseStatus
+idunno.Bluesky.Labeler.Moderation.LabelCaseAction.Escalate = 8 -> idunno.Bluesky.Labeler.Moderation.LabelCaseAction
+idunno.Bluesky.Labeler.Moderation.LabelCaseWorkflow.Escalated = 8 -> idunno.Bluesky.Labeler.Moderation.LabelCaseWorkflow
 idunno.Bluesky.Labeler.Moderation.LabelPolicyPhase.Withdrawing = 4 -> idunno.Bluesky.Labeler.Moderation.LabelPolicyPhase
 idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.CreatedAt.get -> System.DateTimeOffset?
 idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.CreatedAt.init -> void
@@ -571,6 +577,7 @@ idunno.Bluesky.Labeler.Administration.LabelTeamAction.Remove = 4 -> idunno.Blues
 idunno.Bluesky.Labeler.Administration.LabelTeamAction.RevokeLocal = 6 -> idunno.Bluesky.Labeler.Administration.LabelTeamAction
 idunno.Bluesky.Labeler.Administration.LabelTeamAction.SetRole = 1 -> idunno.Bluesky.Labeler.Administration.LabelTeamAction
 idunno.Bluesky.Labeler.Administration.LabelTeamAction.Suspend = 2 -> idunno.Bluesky.Labeler.Administration.LabelTeamAction
+idunno.Bluesky.Labeler.Administration.LabelTeamAction.TransferOwnership = 7 -> idunno.Bluesky.Labeler.Administration.LabelTeamAction
 idunno.Bluesky.Labeler.Administration.LabelTeamAuthorizer
 idunno.Bluesky.Labeler.Administration.LabelTeamAuthorizer.AuthorizeAsync(idunno.Bluesky.Labeler.Issuance.LabelAuthorizationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Issuance.LabelAuthorizationGrant!>!>!
 idunno.Bluesky.Labeler.Administration.LabelTeamAuthorizer.LabelTeamAuthorizer(idunno.Bluesky.Labeler.Administration.ILabelAdministrationStore! store, idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller! caller) -> void
@@ -703,6 +710,7 @@ idunno.Bluesky.Labeler.Moderation.LabelPolicyState.PublicationOperationId.get ->
 idunno.Bluesky.Labeler.Moderation.ILabelPolicyAlertStore
 idunno.Bluesky.Labeler.Moderation.ILabelPolicyAlertStore.ClaimPendingAlertAsync(string! leaseId, System.TimeSpan leaseDuration, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.Moderation.LabelPolicyAlertDelivery?>!
 idunno.Bluesky.Labeler.Moderation.ILabelPolicyAlertStore.CompleteAlertDeliveryAsync(string! alertId, string! leaseId, bool delivered, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+idunno.Bluesky.Labeler.Moderation.ILabelPolicyAlertStore.InitializeNotificationsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 idunno.Bluesky.Labeler.Moderation.ILabelPolicyAlertStore.RecordVerificationFailureAsync(string! category, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 idunno.Bluesky.Labeler.Moderation.ILabelPolicyAlertStore.RecordVerificationSuccessAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 idunno.Bluesky.Labeler.Moderation.LabelPolicyAlertDelivery

@@ -46,6 +46,53 @@ When creating a pull request please create an issue first, unless it's a simple 
 
 Tests use the new MTP runner. If you attempt to `dotnet test --nologo` it will report "Zero tests ran" with an exit code of 5. Remove the `--nologo` parameter.
 
+### Full local validation
+
+Run `pwsh -File ./test.ps1` from the repository root with Docker running Linux containers. This runs the
+non-incremental Debug solution build and all test projects and frameworks. The script creates disposable PostgreSQL 17
+and MySQL 8.4 containers with random credentials, temporary storage and loopback-only ports; verifies database access
+from the test runner; and removes only its own containers in `finally`. Logs, a uniquely named clean-build binary log,
+and separate build, test and total timings are retained under `.artifacts/test-runs/`. Existing database connection
+environment variables are restored afterward.
+
+Before every commit, also run both informational checks from the repository root after `test.ps1`:
+
+```powershell
+dotnet format style idunno.Bluesky.slnx --no-restore --severity info --verify-no-changes
+dotnet format analyzers idunno.Bluesky.slnx --no-restore --severity info --verify-no-changes
+```
+
+Both must exit successfully with no outstanding diagnostics. Run them sequentially, not concurrently with each
+other or build/test commands, because workspace loading can contend over generated files and produce misleading
+diagnostics. `--verify-no-changes` verifies without editing files. If workspace-loading warnings appear, rerun the
+affected check with `--verbosity diagnostic` and investigate the warnings before treating the result as conclusive.
+A clean build alone does not establish that informational style and analyzer diagnostics are clean.
+
+The full suite uses four parallel test modules and four xUnit workers per module. Labeler fixtures retain a unique
+database per test, reuse bounded connection pools within that database, and clear only their own pool before dropping
+the database. SQLite remains unpooled. Do not remove isolation, clear all pools, use a production database or change
+machine-wide TCP settings to make tests faster.
+
+For targeted database tests, provision disposable servers and set `LABELER_TEST_POSTGRESQL_CONNECTION` and
+`LABELER_TEST_MYSQL_CONNECTION` in the test process. Targeted tests are useful for iteration, not a substitute for the
+full pre-commit gate. Changes affecting trimming, NativeAOT or package coverage also require `pwsh -File ./trimTest.ps1`;
+that validation is separate from the Debug build and test gate.
+
+### Changing lexicons
+
+Lexicon schemas live under `lexicons/`. Keep schemas, endpoint implementations and corresponding DTOs consistent, and add tests covering changed request and response shapes.
+
+Before submitting a pull request, run:
+
+```powershell
+goat lex lint
+goat lex breaking
+```
+
+The second command compares against published schemas and requires network access. If namespace resolution fails or a schema has not been published, there is no compatibility result for that schema.
+
+Changes to published schemas must follow AT Protocol's evolution rules. Breaking changes require a new NSID. Include the validation results and any compatibility implications in your pull request.
+
 ### Dependencies Upgrades
 
 Dependencies in the libraries should only be altered by maintainers.
