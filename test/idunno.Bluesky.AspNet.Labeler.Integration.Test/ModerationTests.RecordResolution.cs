@@ -27,6 +27,7 @@ public partial class ModerationTests
     [InlineData("record-unavailable")]
     [InlineData("inconsistent-record")]
     [InlineData("pds-unavailable")]
+    [InlineData("unsupported-did")]
     public async Task UriOnlyIntakeRetainsOriginalEvidenceAndIndependentObservation(string outcome)
     {
         CancellationToken token = TestContext.Current.CancellationToken;
@@ -47,7 +48,13 @@ public partial class ModerationTests
         await fixture.Clock.PolicyVerificationRegistrations.Reader.ReadAsync(token);
         await VerifyPolicyAsync(fixture);
         await fixture.Clock.DeletedPostReviewRegistrations.Reader.ReadAsync(token);
-        using HttpRequestMessage request = ReportRequest(key, fixture.Clock.GetUtcNow(), ResolutionReport);
+        string reportJson = outcome == "unsupported-did"
+            ? ResolutionReport.Replace("did:plc:reporter", "did:key:unsupported", StringComparison.Ordinal)
+            : ResolutionReport;
+        string recordUri = outcome == "unsupported-did"
+            ? ResolutionRecordUri.Replace("did:plc:reporter", "did:key:unsupported", StringComparison.Ordinal)
+            : ResolutionRecordUri;
+        using HttpRequestMessage request = ReportRequest(key, fixture.Clock.GetUtcNow(), reportJson);
         using HttpResponseMessage accepted = await fixture.Client.SendAsync(request, token);
         Assert.Equal(HttpStatusCode.OK, accepted.StatusCode);
         using JsonDocument receipt = JsonDocument.Parse(await accepted.Content.ReadAsByteArrayAsync(token));
@@ -56,7 +63,7 @@ public partial class ModerationTests
             .AuthenticateLocalAsync("uid:0", token)).Result!;
         LabelModerationReport report = (await fixture.Services.GetRequiredService<ILabelReportStore>()
             .GetReportAsync(caller, id, token)).Result!;
-        Assert.Equal(ResolutionRecordUri, report.Submission.Subject.Subject);
+        Assert.Equal(recordUri, report.Submission.Subject.Subject);
         Assert.Null(report.Submission.Subject.Cid);
         LabelModerationCase moderationCase = (await fixture.Services.GetRequiredService<ILabelModerationStore>()
             .GetCaseAsync(caller, report.CaseId, token)).Result!;
@@ -70,7 +77,7 @@ public partial class ModerationTests
         Assert.Equal(HttpStatusCode.OK, view.StatusCode);
         using JsonDocument details = JsonDocument.Parse(await view.Content.ReadAsByteArrayAsync(token));
         JsonElement observation = details.RootElement.GetProperty("recordResolution");
-        Assert.Equal(outcome, observation.GetProperty("status").GetString());
+        Assert.Equal(outcome == "unsupported-did" ? "pds-unavailable" : outcome, observation.GetProperty("status").GetString());
         Assert.Equal(outcome == "resolved", observation.TryGetProperty("cid", out JsonElement resolved));
         if (outcome == "resolved")
         {

@@ -1424,6 +1424,10 @@ public partial class XenonTestHostTests
             Assert.Equal("Updated draft guidance.", definition.Rules);
             Assert.Equal(["account", "record"], definition.ReportScope.SubjectTypes);
         }
+        LabelPolicyState afterEdit = (await policies.ReadPolicyStateAsync(token))!;
+        Assert.Equal(before.Revision + 1, afterEdit.Revision);
+        Assert.Equal(before.Phase, afterEdit.Phase);
+        Assert.Equal(before.VerifiedUntil, afterEdit.VerifiedUntil);
 
         scopedForm["operationId"] = "policy-missing-id";
         scopedForm["editorTab"] = "policy-moderation";
@@ -1451,7 +1455,7 @@ public partial class XenonTestHostTests
         Assert.Contains("{ invalid JSON</textarea>", invalidHtml, StringComparison.Ordinal);
         Assert.Contains("value=\"retained-invalid-version\"", invalidHtml, StringComparison.Ordinal);
         Assert.Contains("Preserved guidance.</textarea>", invalidHtml, StringComparison.Ordinal);
-        Assert.Equal(before.Revision, (await policies.ReadPolicyStateAsync(token))!.Revision);
+        Assert.Equal(afterEdit.Revision, (await policies.ReadPolicyStateAsync(token))!.Revision);
     }
 
     /// <summary>Checks two-step draft deletion, retry recovery and protection of the selected policy.</summary>
@@ -1531,6 +1535,8 @@ public partial class XenonTestHostTests
         Assert.Contains("data-policy-version=\"reason-editor-none\"", recreatedHtml, StringComparison.Ordinal);
         Assert.Contains("<option value=\"reason-editor-none\">", recreatedHtml, StringComparison.Ordinal);
         Assert.Contains("Recreated unpublished draft.", recreatedHtml, StringComparison.Ordinal);
+        LabelPolicyState afterRecreation = (await policies.ReadPolicyStateAsync(token))!;
+        Assert.Equal(before.Revision + 1, afterRecreation.Revision);
 
         form["version"] = before.Policy!.Issuance.Version;
         form["operationId"] = "editor-delete-current-denied";
@@ -1539,7 +1545,7 @@ public partial class XenonTestHostTests
         active.Content = new FormUrlEncodedContent(form);
         using HttpResponseMessage activeRejected = await client.SendAsync(active, token);
         Assert.Contains("You cannot delete the selected policy or a policy that has been published.", await activeRejected.Content.ReadAsStringAsync(token), StringComparison.Ordinal);
-        Assert.Equal(before.Revision, (await policies.ReadPolicyStateAsync(token))!.Revision);
+        Assert.Equal(afterRecreation.Revision, (await policies.ReadPolicyStateAsync(token))!.Revision);
     }
 
     /// <summary>Renders blocked AppView identities directly from their repositories and protects deferred video streaming.</summary>

@@ -25,6 +25,11 @@ internal static class ReportRecordResolver
         try
         {
             Did did = (Did)uri.Repo;
+            if (did.Method is not ("plc" or "web"))
+            {
+                return new(null, "pds-unavailable", null, clock.GetUtcNow());
+            }
+
             pds = await IdentityResolution.ResolvePdsAsync(did: did, httpClient: client, cancellationToken: linked.Token).ConfigureAwait(false);
             if (pds is null)
             {

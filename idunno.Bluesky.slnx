@@ -356,6 +356,7 @@
     <File Path="regeneratePublicApiFiles.ps1" />
     <File Path="SECURITY.md" />
     <File Path="sleet.json" />
+    <File Path="test.ps1" />
     <File Path="testconfig.json" />
     <File Path="THIRD-PARTY-NOTICES.txt" />
     <File Path="ToDo.md" />

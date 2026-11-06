@@ -1429,9 +1429,13 @@ public partial class AdministrationTests
         {
             using (Socket staleListener = new(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified))
             {
-                staleListener.Bind(new UnixDomainSocketEndPoint(endpoint));
+                string boundEndpoint = Path.Combine(directory, "bound.sock");
+                staleListener.Bind(new UnixDomainSocketEndPoint(boundEndpoint));
+                // Disposal unlinks the bound path; moving it preserves a disconnected socket inode.
+                File.Move(boundEndpoint, endpoint);
+                File.SetUnixFileMode(endpoint, UnixFileMode.UserRead | UnixFileMode.UserWrite);
             }
-            File.SetUnixFileMode(endpoint, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+            Assert.True(Path.Exists(endpoint));
 
             LocalPeer.VerifyDirectory(directory);
             LocalPeer.RemoveStaleSocket(endpoint);

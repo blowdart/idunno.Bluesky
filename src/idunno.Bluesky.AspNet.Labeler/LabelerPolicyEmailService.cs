@@ -183,9 +183,15 @@ internal sealed partial class LabelerPolicyEmailService(
             ? $"An administration change for {issuer.Value} was recorded at {delivery.OccurredAt:O}.\n\n" +
                 $"{description}\n\nReview the Policy or Team page and administration history in Xenon. " +
                 "This notification is sent to active administrators with a registered notification email address."
-            : $"Independent policy verification for {issuer.Value} failed at {delivery.OccurredAt:O} " +
-                $"({delivery.Category}). Authenticated reports remain queued and non-actionable until an " +
-                "administrator restores verified policy state. Review the Xenon moderation health status and server logs.";
+            : $"An independent policy verification attempt for {issuer.Value} failed at {delivery.OccurredAt:O} " +
+                $"({delivery.Category}).\n\n" +
+                "A failed attempt does not immediately invalidate a still-fresh verification. " +
+                "The background worker checks active policies every five minutes and can recover automatically after a transient failure. " +
+                "Verification may already have recovered by the time you read this email.\n\n" +
+                "Authenticated reports are held queued and non-actionable while the policy is not freshly verified. " +
+                "After a successful background check, queued reports are processed automatically.\n\n" +
+                "Review the Xenon moderation health status and server logs for the current state. " +
+                "A policy conflict or persistent verification problem may require administrator action.";
         body = await FormatIdentitiesAsync(body, cancellationToken).ConfigureAwait(false);
         MailMessage message = new()
         {

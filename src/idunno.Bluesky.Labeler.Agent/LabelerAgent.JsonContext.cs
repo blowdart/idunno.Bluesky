@@ -9,7 +9,7 @@ namespace idunno.Bluesky.Labeler.Agent;
 [JsonSourceGenerationOptions(
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-    UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow)]
+    UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip)]
 [JsonSerializable(typeof(AdministrationCommand))]
 [JsonSerializable(typeof(AdministrationResponse))]
 [JsonSerializable(typeof(AdministrationModeration))]

@@ -206,8 +206,10 @@ public sealed class LabelerAgentTests
         Assert.Equal(negateResult.Result.OperationId, operationIds["/xrpc/dev.idunno.labeler.issuance.negateLabel"]);
     }
 
-    [Fact]
-    public async Task ReceiptRecoveryAndAvailableLabelsUseTheirAdministrationMethods()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ReceiptRecoveryAndAvailableLabelsUseTheirAdministrationMethods(bool additionalFields)
     {
         List<string> serviceAuthMethods = [];
         string? receiptOperationId = null;
@@ -227,12 +229,9 @@ public sealed class LabelerAgentTests
                 context.Request.Path == "/xrpc/dev.idunno.labeler.issuance.getOperationReceipt")
             {
                 receiptOperationId = context.Request.Query["operationId"].ToString();
-                await context.Response.WriteAsJsonAsync(new
-                {
-                    operationId = receiptOperationId,
-                    sequence = 17,
-                    changed = false
-                });
+                await context.Response.WriteAsync(additionalFields
+                    ? $$$"""{"$type":"dev.idunno.labeler.issuance.getOperationReceipt#output","operationId":"{{{receiptOperationId}}}","sequence":17,"changed":false,"future":{"value":true}}"""
+                    : $$$"""{"operationId":"{{{receiptOperationId}}}","sequence":17,"changed":false}""");
                 return;
             }
 
@@ -240,6 +239,17 @@ public sealed class LabelerAgentTests
                 context.Request.Path == "/xrpc/dev.idunno.labeler.issuance.getAvailableLabels")
             {
                 availableLabelsReason = context.Request.Query["reason"].ToString();
+                if (additionalFields)
+                {
+                    await context.Response.WriteAsync("""
+                        {"$type":"dev.idunno.labeler.issuance.getAvailableLabels#output","future":true,
+                         "moderation":{"future":{},"labelChoices":[
+                           {"value":"spam","applied":false,"sequence":0,"otherVersion":false,"uriWide":false,"future":[]},
+                           {"value":"misleading","applied":false,"sequence":0,"otherVersion":false,"uriWide":false,"future":null}]}}
+                        """);
+                    return;
+                }
+
                 await context.Response.WriteAsJsonAsync(new
                 {
                     moderation = new

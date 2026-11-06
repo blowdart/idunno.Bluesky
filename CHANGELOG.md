@@ -23,12 +23,13 @@
 * Replay-protected, method-bound service-token administration over HTTPS and protected local administration through Windows named pipes or Linux Unix sockets, with browserless owner setup and live team authorization.
 * Disabled, Enabled and WebUiControlled remote-administration modes, including an audited owner-only switch, without affecting protected local access.
 * Background declaration verification, bounded pending intake during verification outages, restart-resumed policy-label withdrawal and authoritative deleted-post checks. Moderation health is available separately at `/health/labeler/moderation`.
-* Optional administrator email for verification failures, confirmed policy publication, team changes and CLI access changes, using mandatory STARTTLS, durable retries and a link to the sending Xenon UI when enabled. First enablement excludes historical administration changes; notifications also support a single active administrator.
+* Optional administrator email for verification failures, confirmed policy publication, team changes and CLI access changes, using mandatory STARTTLS, durable retries and a link to the sending Xenon UI when enabled. First enablement excludes historical administration changes; notifications also support a single active administrator. Verification-failure emails explain automatic retries, possible recovery before delivery and when administrator action may be needed.
 * Opt-in `MapOzoneCompatibility()` routes for discovery, configuration, team presence, filtered queues, subject/event history, previews, report acknowledgment, escalation, label actions and appeals. Supported workflows share Xenon's policies, authorization and atomic storage; unsupported capabilities fail explicitly.
 * Explicit Ozone browser-origin allowlists with automatic route-scoped CORS preflight and response handling; no cross-origin access is enabled by default.
 * Durable background retirement and local-purge workflows, coordinated multi-host signing-key rotation and maintenance, with live authorization, resumable checkpoints and explicit recovery.
 * Database-outage recovery for labeler startup and hosted workers, with bounded startup retries, unhealthy readiness during runtime retries and safe recovery of stale Linux administration sockets.
 * Structured operational diagnostics and `AddBlueskyLabelerMetrics()` OpenTelemetry registration, without credentials or report contents in diagnostic messages.
+* Unsupported DID methods in URI-only reports are retained as unavailable record-resolution observations rather than failing report intake.
 
 #### idunno.Bluesky.AspNet.Labeler.UI
 
@@ -73,6 +74,7 @@
 * Verified DID/handle enrollment, Administrator/Moderator/Viewer roles, explicit local OS delegations, live revocation, last-administrator protection and append-only administrative audit of changes and denials, without successful team-read polling noise.
 * Protected labeler ownership: the current owner cannot be removed, suspended or demoted, and other administrators cannot replace their local access bindings. Owners can explicitly transfer protection and remote CLI control to another active administrator through Xenon or the CLI, with atomic audit and retry-safe receipts.
 * Editable unpublished policy drafts and retained publication history, independent declaration verification, scope enforcement, conditional publication/recovery and bounded withdrawal of removed labels.
+* Editing an unpublished draft invalidates outstanding publication reviews without changing the active policy's verification deadline.
 * Encrypted local signing-key files with owner-only permissions and create-only backups, public identity publication/verification helpers, durable active-key selection and verified resumable signature replacement.
 * Coordinated maintenance and irreversible retirement, with action-bound confirmations, bounded signed negations, durable checkpoints, explicit grace periods and availability evidence. Local history purge and operator-attested external key removal are separate actions; moderation/audit history, backups and downstream copies are not erased.
 * Feature namespaces for `Issuance`, `Administration`, `Moderation`, `Maintenance`, `Signing`, `Storage` and `Identity`, with common target and result/error types in the root namespace.
@@ -81,6 +83,7 @@
 
 * Added a manual-only Lexicon publishing workflow for `main`, using the dedicated `lexicon` environment, pinned goat tooling, linting and published-schema compatibility checks.
 * Added a remote bot client with borrowed or owned AT Protocol agents, method-bound service authentication, label issue/negate operations, durable receipt recovery, available-label discovery and public applied-label queries.
+* Remote client responses accept unknown JSON fields, including lexicon type discriminators and additive nested fields.
 * Split labeler-agent issuance calls into the `labeler_issuance` service audience and XRPC namespace, separate from `labeler_admin` administration calls. Added public audience fragments and host/sample guidance.
 * Named the issuance lookups `getOperationReceipt` and `getAvailableLabels`, and added lexicons for all four issuance XRPC procedures.
 * Standardized issuance XRPC bodies: successful responses now match their lexicon result DTOs, and failures use AT Protocol error details and HTTP status codes.
@@ -94,6 +97,7 @@
 * Durable Bluesky AppView publication limits: 5 labels per rolling second, 10,000 per rolling hour and 100,000 per rolling 24 hours, including negations. Accounting survives restarts and multiple hosts; excess remains pending.
 * Restartable schema initialization, packaged `schema.sql`, real-engine conformance coverage and setup/backup guidance. MySQL requires InnoDB; older writers reject incompatible schemas, and rollback requires a compatible database backup.
 * Named-volume MySQL/PostgreSQL development helpers and SQLite database creation tooling.
+* Faster isolated real-engine tests through per-database connection pooling and bounded parallelism. Added `test.ps1` to run the clean Debug build and full suite with disposable databases, authenticated preflight, retained logs/timings and automatic cleanup.
 
 #### idunno.AtProto.Types
 

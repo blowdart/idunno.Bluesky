@@ -123,6 +123,11 @@ internal abstract partial class RelationalLabelStore
                         token: cancellationToken,
                         ("@payload", payload),
                         ("@hash", OperationHash(draft.Version))).ConfigureAwait(false);
+                    await SavePolicyGateAsync(
+                        connection: connection,
+                        transaction: transaction,
+                        gate: gate with { Revision = checked(gate.Revision + 1) },
+                        token: cancellationToken).ConfigureAwait(false);
                 }
 
                 if (existing is null)

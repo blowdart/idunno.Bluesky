@@ -34,6 +34,52 @@ public class LabelPolicyStoreTests
     [InlineData("sqlite")]
     [InlineData("postgresql")]
     [InlineData("mysql")]
+    public async Task DraftEditsInvalidatePublicationReviewsWithoutChangingActiveVerification(string engine)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
+        ILabelPolicyStore store = (ILabelPolicyStore)fixture.Store;
+        await ActivateAsync(store, administrator, token);
+        LabelPolicyDefinition original = Policy(version: "v2");
+        Success(await store.SavePolicyAsync(administrator, "original", original, "Save draft.", token));
+        LabelPolicyState reviewed = (await store.ReadPolicyStateAsync(token))!;
+        ILabelPolicyStore otherStore = (ILabelPolicyStore)fixture.NewStore();
+        LabelPolicyDefinition edited = Policy(rules: "Changed after review.", version: "v2");
+        Success(await otherStore.SavePolicyAsync(administrator, "edit", edited, "Edit draft.", token));
+        LabelPolicyState changed = (await store.ReadPolicyStateAsync(token))!;
+        Assert.Equal(reviewed.Revision + 1, changed.Revision);
+        Assert.Equal(LabelPolicyPhase.VerifiedActive, changed.Phase);
+        Assert.Equal(reviewed.Phase, changed.Phase);
+        Assert.Equal(reviewed.VerifiedUntil, changed.VerifiedUntil);
+        Assert.Equal(reviewed.Policy!.Rules, changed.Policy!.Rules);
+        Assert.Equal(LabelServiceErrorCode.StaleDecision, (await store.BeginPolicyPublicationAsync(
+            caller: administrator,
+            operationId: "stale",
+            version: "v2",
+            expectedRevision: reviewed.Revision,
+            previousCid: null,
+            reason: "Publish previously reviewed content.",
+            cancellationToken: token)).Error!.Code);
+        Success(await otherStore.SavePolicyAsync(administrator, "edit", edited, "Edit draft.", token));
+        Success(await otherStore.SavePolicyAsync(administrator, "unchanged", edited, "Save identical draft.", token));
+        Success(await otherStore.SavePolicyAsync(administrator, "original", original, "Save draft.", token));
+        Assert.Equal(changed.Revision, (await store.ReadPolicyStateAsync(token))!.Revision);
+        LabelPolicyState publication = Success(await store.BeginPolicyPublicationAsync(
+            caller: administrator,
+            operationId: "reviewed-edit",
+            version: "v2",
+            expectedRevision: changed.Revision,
+            previousCid: null,
+            reason: "Publish reviewed changes.",
+            cancellationToken: token));
+        Assert.Equal(edited.Rules, publication.Policy!.Rules);
+    }
+
+    [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
     public async Task RetirementClosesNewPolicyWorkflowsButRetainsDraftRecoveryAndInspection(string engine)
     {
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
@@ -129,7 +175,7 @@ public class LabelPolicyStoreTests
             caller: administrator,
             operationId: "publish-recreated",
             version: "v1",
-            expectedRevision: initial.Revision,
+            expectedRevision: (await policies.ReadPolicyStateAsync(token))!.Revision,
             previousCid: null,
             reason: "Publish recreated draft.",
             cancellationToken: token));
@@ -317,8 +363,17 @@ public class LabelPolicyStoreTests
         Assert.Equal(draft.Rules, Success(await store.SavePolicyAsync(administrator, "draft", draft, "Reviewed rules.", token)).Rules);
         Assert.Equal("Different rules.", Success(await store.GetPolicyVersionAsync(administrator, "v1", token)).Rules);
         Success(await store.SavePolicyAsync(administrator, "restore-draft", draft, "Restore reviewed rules.", token));
+        Assert.Equal(LabelServiceErrorCode.StaleDecision, (await store.BeginPolicyPublicationAsync(
+            caller: administrator,
+            operationId: "stale-publish",
+            version: "v1",
+            expectedRevision: initial.Revision,
+            previousCid: null,
+            reason: "Reject an outdated review.",
+            cancellationToken: token)).Error!.Code);
+        long reviewedRevision = (await store.ReadPolicyStateAsync(token))!.Revision;
         LabelPolicyState publishing = Success(await store.BeginPolicyPublicationAsync(
-            caller: administrator, operationId: "publish", version: "v1", expectedRevision: initial.Revision,
+            caller: administrator, operationId: "publish", version: "v1", expectedRevision: reviewedRevision,
             previousCid: null, reason: "Publish reviewed policy.", cancellationToken: token));
         Assert.Equal(LabelPolicyPhase.Publishing, publishing.Phase);
         Assert.Equal("publish", publishing.PublicationOperationId);
@@ -366,7 +421,7 @@ public class LabelPolicyStoreTests
             leaseDuration: TimeSpan.FromMinutes(2),
             cancellationToken: token));
         LabelPolicyState recovered = Success(await store.BeginPolicyPublicationAsync(
-            caller: administrator, operationId: "publish", version: "v1", expectedRevision: initial.Revision,
+            caller: administrator, operationId: "publish", version: "v1", expectedRevision: reviewedRevision,
             previousCid: null, reason: "Publish reviewed policy.", cancellationToken: token));
         Assert.Equal(publishing.Revision, recovered.Revision);
         Assert.Equal("publish", recovered.PublicationOperationId);
@@ -977,10 +1032,13 @@ public class LabelPolicyStoreTests
     }
 
     /// <summary>Creates a complete immutable policy retaining declaration extension data.</summary>
-    private static LabelPolicyDefinition Policy(string rules = "Review evidence before labeling.", string json = Declaration)
+    private static LabelPolicyDefinition Policy(
+        string rules = "Review evidence before labeling.",
+        string json = Declaration,
+        string version = "v1")
     {
         using JsonDocument document = JsonDocument.Parse(json);
-        return new(version: "v1", declaration: document.RootElement, allowAccounts: true, allowRecords: true, rules: rules);
+        return new(version: version, declaration: document.RootElement, allowAccounts: true, allowRecords: true, rules: rules);
     }
 
     /// <summary>Requires a successful classified result without losing failure diagnostics.</summary>

@@ -286,6 +286,19 @@ public class PolicyAlertEmailOptionsTests
             Assert.Contains("Changed by @admin.example (did:plc:email-admin).", message.Body, StringComparison.Ordinal);
             Assert.DoesNotContain("@member.example", delivery.ChangeDescription!, StringComparison.Ordinal);
         }
+        else
+        {
+            Assert.Contains("An independent policy verification attempt", message.Body, StringComparison.Ordinal);
+            Assert.Contains("(Unavailable).\n\nA failed attempt does not immediately invalidate a still-fresh verification.", message.Body, StringComparison.Ordinal);
+            Assert.Contains("checks active policies every five minutes", message.Body, StringComparison.Ordinal);
+            Assert.Contains("can recover automatically after a transient failure", message.Body, StringComparison.Ordinal);
+            Assert.Contains("Verification may already have recovered", message.Body, StringComparison.Ordinal);
+            Assert.Contains("\n\nAuthenticated reports are held queued and non-actionable while the policy is not freshly verified.", message.Body, StringComparison.Ordinal);
+            Assert.Contains("After a successful background check, queued reports are processed automatically.", message.Body, StringComparison.Ordinal);
+            Assert.Contains("\n\nReview the Xenon moderation health status", message.Body, StringComparison.Ordinal);
+            Assert.Contains("A policy conflict or persistent verification problem may require administrator action.", message.Body, StringComparison.Ordinal);
+            Assert.DoesNotContain("until an administrator restores", message.Body, StringComparison.Ordinal);
+        }
         Assert.Contains(change ? "was added" : "Unavailable", message.Body, StringComparison.Ordinal);
         Assert.DoesNotContain("Private audit reason", message.Body, StringComparison.Ordinal);
         Assert.DoesNotContain("uid:0", message.Body, StringComparison.Ordinal);

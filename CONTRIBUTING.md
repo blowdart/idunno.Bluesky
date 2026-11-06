@@ -46,6 +46,24 @@ When creating a pull request please create an issue first, unless it's a simple 
 
 Tests use the new MTP runner. If you attempt to `dotnet test --nologo` it will report "Zero tests ran" with an exit code of 5. Remove the `--nologo` parameter.
 
+### Full local validation
+
+Run `pwsh -File ./test.ps1` from the repository root with Docker running Linux containers. This runs the
+non-incremental Debug solution build and all test projects and frameworks. The script creates disposable PostgreSQL 17
+and MySQL 8.4 containers with random credentials, temporary storage and loopback-only ports; verifies database access
+from the test runner; and removes only its own containers in `finally`. Logs and separate build, test and total timings
+are retained under `.artifacts/test-runs/`. Existing database connection environment variables are restored afterward.
+
+The full suite uses four parallel test modules and four xUnit workers per module. Labeler fixtures retain a unique
+database per test, reuse bounded connection pools within that database, and clear only their own pool before dropping
+the database. SQLite remains unpooled. Do not remove isolation, clear all pools, use a production database or change
+machine-wide TCP settings to make tests faster.
+
+For targeted database tests, provision disposable servers and set `LABELER_TEST_POSTGRESQL_CONNECTION` and
+`LABELER_TEST_MYSQL_CONNECTION` in the test process. Targeted tests are useful for iteration, not a substitute for the
+full pre-commit gate. Changes affecting trimming, NativeAOT or package coverage also require `pwsh -File ./trimTest.ps1`;
+that validation is separate from the Debug build and test gate.
+
 ### Changing lexicons
 
 Lexicon schemas live under `lexicons/`. Keep schemas, endpoint implementations and corresponding DTOs consistent, and add tests covering changed request and response shapes.
