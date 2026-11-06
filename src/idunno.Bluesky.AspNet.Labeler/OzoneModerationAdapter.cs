@@ -699,11 +699,7 @@ internal sealed partial class OzoneModerationAdapter(
         Handle? handle = await IdentityResolution.ResolveVerifiedHandleAsync(
             did: did,
             httpClient: identity,
-            cancellationToken: token).ConfigureAwait(false);
-        if (handle is null)
-        {
-            throw new OzoneOperationException("ServiceUnavailable", "The repository handle could not be verified.");
-        }
+            cancellationToken: token).ConfigureAwait(false) ?? throw new OzoneOperationException("ServiceUnavailable", "The repository handle could not be verified.");
         LabelModerationCase? status = await LatestCaseAsync(
             caller: caller,
             subject: LabelReportSubject.Account(did),
@@ -739,11 +735,7 @@ internal sealed partial class OzoneModerationAdapter(
         {
             throw new JsonException("A complete record URI is required.");
         }
-        Uri? pds = await IdentityResolution.ResolvePdsAsync(did: did, httpClient: identity, cancellationToken: token).ConfigureAwait(false);
-        if (pds is null)
-        {
-            throw new OzoneOperationException("ServiceUnavailable", "The repository PDS could not be resolved.");
-        }
+        Uri? pds = await IdentityResolution.ResolvePdsAsync(did: did, httpClient: identity, cancellationToken: token).ConfigureAwait(false) ?? throw new OzoneOperationException("ServiceUnavailable", "The repository PDS could not be resolved.");
         AtProtoHttpResult<AtProtoRepositoryRecord> result = await AtProtoServer.GetRecord(
             repo: did,
             collection: uri.Collection,
@@ -1523,7 +1515,6 @@ internal sealed partial class OzoneModerationAdapter(
             writer.WriteEndArray();
             if (unresolved > 0)
             {
-                context.Response.Headers["Warning"] = "199 - \"Unresolved record references omitted; use native Xenon reports for complete results\"";
                 writer.WriteNumber("unresolvedRecordCount", unresolved);
             }
             if (items.Count > limit)

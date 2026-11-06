@@ -26,10 +26,12 @@
 * Optional administrator email for verification failures, confirmed policy publication, team changes and CLI access changes, using mandatory STARTTLS, durable retries and a link to the sending Xenon UI when enabled. First enablement excludes historical administration changes; notifications also support a single active administrator. Verification-failure emails explain automatic retries, possible recovery before delivery and when administrator action may be needed.
 * Opt-in `MapOzoneCompatibility()` routes for discovery, configuration, team presence, filtered queues, subject/event history, previews, report acknowledgment, escalation, label actions and appeals. Supported workflows share Xenon's policies, authorization and atomic storage; unsupported capabilities fail explicitly.
 * Explicit Ozone browser-origin allowlists with automatic route-scoped CORS preflight and response handling; no cross-origin access is enabled by default.
+* Ozone partial projections retain an omission count for extension-aware clients without sending the deprecated HTTP `Warning` header. Stock Ozone does not display this count; Xenon/native views retain complete report evidence.
 * Durable background retirement and local-purge workflows, coordinated multi-host signing-key rotation and maintenance, with live authorization, resumable checkpoints and explicit recovery.
 * Database-outage recovery for labeler startup and hosted workers, with bounded startup retries, unhealthy readiness during runtime retries and safe recovery of stale Linux administration sockets.
 * Structured operational diagnostics and `AddBlueskyLabelerMetrics()` OpenTelemetry registration, without credentials or report contents in diagnostic messages.
 * Unsupported DID methods in URI-only reports are retained as unavailable record-resolution observations rather than failing report intake.
+* Target-specific available-label queries use the configured issuance policy without requiring moderation, preserving authenticated access and database-clock expiry checks.
 
 #### idunno.Bluesky.AspNet.Labeler.UI
 

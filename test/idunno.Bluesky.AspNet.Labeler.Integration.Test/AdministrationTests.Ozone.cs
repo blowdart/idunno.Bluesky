@@ -69,7 +69,7 @@ public partial class AdministrationTests
         clock.Advance(TimeSpan.FromMinutes(1));
         presence.Observe(second, team);
         Assert.Equal(second.Value, Assert.Single(presence.List(team, 1)).Did);
-        Assert.Equal(new[] { second.Value, first.Value }, presence.List(team, 100).Select(member => member.Did));
+        Assert.Equal([second.Value, first.Value], presence.List(team, 100).Select(member => member.Did));
         clock.Advance(TimeSpan.FromMinutes(4));
         Assert.Equal(second.Value, Assert.Single(presence.List(team, 100)).Did);
         team[1] = team[1] with { Active = false };

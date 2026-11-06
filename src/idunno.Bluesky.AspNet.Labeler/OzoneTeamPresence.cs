@@ -9,7 +9,11 @@ namespace idunno.Bluesky.AspNet.Labeler;
 /// <summary>Shares bounded, host-local authenticated Ozone and Xenon activity for five minutes.</summary>
 internal sealed class OzoneTeamPresence(TimeProvider clock)
 {
+#if NET9_0_OR_GREATER
+    private readonly Lock _gate = new();
+#else
     private readonly object _gate = new();
+#endif
     private readonly Dictionary<Did, DateTimeOffset> _activity = [];
 
     /// <summary>Records an authorized caller while pruning expired or revoked membership observations.</summary>

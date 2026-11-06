@@ -278,7 +278,7 @@ public partial class ModerationTests
         {
             Assert.Empty(result.RootElement.GetProperty("subjectStatuses").EnumerateArray());
             Assert.Equal(1, result.RootElement.GetProperty("unresolvedRecordCount").GetInt32());
-            Assert.True(response.Headers.Contains("Warning"));
+            Assert.False(response.Headers.Contains("Warning"));
         }
     }
 

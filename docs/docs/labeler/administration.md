@@ -215,7 +215,10 @@ remain in native reports rather than blocking all other queue entries.
 
 Ozone's basic event/status unions cannot represent an unresolved URI-only record.
 Those entries alone are omitted, with an explicit `unresolvedRecordCount` response field
-and HTTP `Warning` header directing staff to complete Xenon/native report/history views.
+for clients that understand this adapter extension. Stock Ozone does not display this
+count or warn that results are incomplete; its queue and event views are not a complete
+inventory when unresolved records exist. Use Xenon/native report/history views for
+complete retained evidence. The adapter does not send the deprecated HTTP `Warning` header.
 The count applies to matching entries (events for `queryEvents`, cases for `queryStatuses`),
 not the page size; clients must not interpret a partial or empty projection as a complete
 queue. No account reference or synthetic CID is substituted. Report detail retains the

@@ -90,7 +90,7 @@ public sealed class IndexModel : PageModel
 
         LabelerModerationOptions? moderationOptions = HttpContext.RequestServices.GetService<LabelerModerationOptions>();
         CanManagePolicyEmail = ViewData["CurrentRole"] is LabelTeamRole.Administrator &&
-            moderationOptions?.PolicyEmail is { Enabled: true, Server: { Length: > 0 } };
+            moderationOptions?.PolicyEmail is { Enabled: true, Server.Length: > 0 };
         await LoadMemberChoicesAsync().ConfigureAwait(false);
         string? actor = User.FindFirst(idunno.AtProto.Authentication.AtProtoClaims.Did)?.Value;
         CurrentNotificationEmail = MemberChoices.FirstOrDefault(member => member.Did == actor)?.NotificationEmail;
@@ -245,7 +245,7 @@ public sealed class IndexModel : PageModel
     {
         LabelerModerationOptions? moderationOptions = HttpContext.RequestServices.GetService<LabelerModerationOptions>();
         if (ViewData["CurrentRole"] is not LabelTeamRole.Administrator ||
-            moderationOptions?.PolicyEmail is not { Enabled: true, Server: { Length: > 0 } })
+            moderationOptions?.PolicyEmail is not { Enabled: true, Server.Length: > 0 })
         {
             return Forbid();
         }
@@ -293,7 +293,7 @@ public sealed class IndexModel : PageModel
     {
         LabelerModerationOptions? options = HttpContext.RequestServices.GetService<LabelerModerationOptions>();
         if (ViewData["CurrentRole"] is not LabelTeamRole.Administrator ||
-            options?.PolicyEmail is not { Enabled: true, Server: { Length: > 0 } })
+            options?.PolicyEmail is not { Enabled: true, Server.Length: > 0 })
         {
             return Forbid();
         }

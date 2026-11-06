@@ -46,7 +46,7 @@ public sealed class PreferencesModel : PageModel
         }
         LabelerModerationOptions? options = HttpContext.RequestServices.GetService<LabelerModerationOptions>();
         CanManagePolicyEmail = ViewData["CurrentRole"] is LabelTeamRole.Administrator &&
-            options?.PolicyEmail is { Enabled: true, Server: { Length: > 0 } };
+            options?.PolicyEmail is { Enabled: true, Server.Length: > 0 };
         if (CanManagePolicyEmail)
         {
             AdministrationResponse team = await UiPageHelpers.DispatchAsync(

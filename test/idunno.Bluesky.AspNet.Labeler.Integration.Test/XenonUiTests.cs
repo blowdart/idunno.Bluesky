@@ -4,6 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 using idunno.AtProto;
 using idunno.AtProto.Labels;
@@ -20,7 +21,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace idunno.Bluesky.AspNet.Labeler.Integration.Test;
 
-public class XenonUiTests
+public partial class XenonUiTests
 {
     private static readonly Did s_administrator = new("did:plc:xenon-admin");
     private static readonly Did s_member = new("did:plc:xenon-member");
@@ -144,17 +145,15 @@ public class XenonUiTests
                 fixture, s_administrator, "/Xenon/Team?member=did:plc:team-member-17" + query);
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             string html = await response.Content.ReadAsStringAsync(token);
-            string memberInput = System.Text.RegularExpressions.Regex.Match(
-                html, """<input name="target"[^>]*data-team-member[^>]*>""").Value;
+            string memberInput = TeamMemberInputRegex().Match(html).Value;
             Assert.NotEmpty(memberInput);
             Assert.Contains("value=\"team-member-17.example\"", memberInput, StringComparison.Ordinal);
             Assert.Contains("list=\"team-search-handles\"", memberInput, StringComparison.Ordinal);
             Assert.DoesNotContain("did:", memberInput, StringComparison.Ordinal);
             Assert.Contains("list=\"team-search-handles\"", html, StringComparison.Ordinal);
-            string searchSuggestions = System.Text.RegularExpressions.Regex.Match(
-                html, """<datalist id="team-search-handles">[\s\S]*?</datalist>""").Value;
+            string searchSuggestions = TeamSearchSuggestionsRegex().Match(html).Value;
             Assert.NotEmpty(searchSuggestions);
-            Assert.Equal(19, System.Text.RegularExpressions.Regex.Matches(searchSuggestions, "<option ").Count);
+            Assert.Equal(19, TeamSearchOptionRegex().Count(searchSuggestions));
             Assert.Contains("value=\"team-member-00.example\" label=\"@team-member-00.example - Suspended\"", searchSuggestions, StringComparison.Ordinal);
             Assert.Contains("value=\"team-member-01.example\" label=\"@team-member-01.example - Removed\"", searchSuggestions, StringComparison.Ordinal);
             Assert.Contains("value=\"team-member-17.example\"", searchSuggestions, StringComparison.Ordinal);
@@ -267,7 +266,7 @@ public class XenonUiTests
         string html = await response.Content.ReadAsStringAsync(token);
         Assert.Contains("/Xenon/js/queue-updates.js", html, StringComparison.Ordinal);
         Assert.Contains("data-queue-update-status", html, StringComparison.Ordinal);
-        Assert.Single(System.Text.RegularExpressions.Regex.Matches(html, "data-live-queue"));
+        Assert.Single(LiveQueueRegex().Matches(html));
         int results = html.IndexOf("data-live-queue", StringComparison.Ordinal);
         Assert.True(html.LastIndexOf("</form>", results, StringComparison.Ordinal) >= 0);
         Assert.Contains("value=\"All\" selected=\"selected\"", html, StringComparison.Ordinal);
@@ -1298,4 +1297,20 @@ public class XenonUiTests
         private static Handle MemberHandle(Did did) =>
             did.Value == "did:plc:unavailable" ? Handle.Invalid : new Handle(did.Value.Split(':')[^1] + ".example");
     }
+
+    /// <summary>Finds the team member input without changing its matching rules.</summary>
+    [GeneratedRegex("""<input name="target"[^>]*data-team-member[^>]*>""")]
+    private static partial Regex TeamMemberInputRegex();
+
+    /// <summary>Extracts the team search suggestions rendered by the page.</summary>
+    [GeneratedRegex("""<datalist id="team-search-handles">[\s\S]*?</datalist>""")]
+    private static partial Regex TeamSearchSuggestionsRegex();
+
+    /// <summary>Counts the suggestion options using the existing literal pattern.</summary>
+    [GeneratedRegex("<option ")]
+    private static partial Regex TeamSearchOptionRegex();
+
+    /// <summary>Finds live queue markers using the existing literal pattern.</summary>
+    [GeneratedRegex("data-live-queue")]
+    private static partial Regex LiveQueueRegex();
 }

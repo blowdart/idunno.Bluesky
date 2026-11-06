@@ -62,6 +62,8 @@ Use `--aturi at://did:plc:example/app.bsky.feed.post/3lxyz...` instead of `--acc
 
 The labeler host derives two service references from its issuer DID: `labeler_admin` for administration APIs and `labeler_issuance` for the labeler-agent issuance APIs. Configure the host's `Labeler:AdministrationAudience` with the issuer DID and `labeler_admin` fragment; the host derives the issuance audience from that same DID. For authenticated commands, the sample discovers the DID and uses `Audience.Issuance` through `LabelerAgentBuilder`, then checks the requested value against the host's available labels before attempting a mutation. The account must still have live team permission to issue labels. The public `query` command calls `com.atproto.label.queryLabels` directly on the selected host without service authentication.
 
+Authenticated `getAvailableLabels` queries use the host's configured issuance policy, including when moderation is disabled. An optional account or record target adds issuer-local applied-label state, with optional CID scope for records. Expired and negated labels are not treated as applied; URI-wide labels and labels on other record versions are distinguished. These lookups still require live team inspection permission.
+
 ## Configure an owned account agent
 
 Use an owned agent when the bot does not already have an authenticated `AtProtoAgent` or `BlueskyAgent`. The `AccountAgent` property exposes the agent for the existing login, logout, credential persistence and refresh lifecycle:

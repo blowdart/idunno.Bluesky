@@ -22,7 +22,11 @@ internal sealed partial class RetirementWorker(
     ILogger<RetirementWorker> logger) : BackgroundService
 {
     private readonly SemaphoreSlim _advanceGate = new(1, 1);
+#if NET9_0_OR_GREATER
+    private readonly Lock _advanceGateLifetimeLock = new();
+#else
     private readonly object _advanceGateLifetimeLock = new();
+#endif
     private readonly TaskCompletionSource _initialIteration = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly LabelRetirementService? _service = store is ILabelRetirementStore retirement
         ? new(store, retirement, keys) : null;

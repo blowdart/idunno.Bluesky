@@ -1656,7 +1656,7 @@ public partial class XenonTestHostTests
             {
                 Assert.Contains($"<dt>{field}</dt>", html, StringComparison.Ordinal);
             }
-            Assert.Single(Regex.Matches(html, "<dt>CID</dt>"));
+            Assert.Single(CidHeadingRegex().Matches(html));
             Assert.DoesNotContain("Current CID:", html, StringComparison.Ordinal);
             Assert.Contains("record-contents", html, StringComparison.Ordinal);
             Assert.Contains("<summary>Contents</summary>", html, StringComparison.Ordinal);
@@ -1667,14 +1667,14 @@ public partial class XenonTestHostTests
             Assert.Contains("Reported content versions remain on the original report", html, StringComparison.Ordinal);
             Assert.DoesNotContain("name=\"decisionState\"", html, StringComparison.Ordinal);
             Assert.DoesNotContain("<form method=\"post\"", html, StringComparison.Ordinal);
-            string localLabels = Regex.Match(html, @"<h3>This labeler</h3>([\s\S]*?)<h3>").Groups[1].Value;
+            string localLabels = LocalLabelsRegex().Match(html).Groups[1].Value;
             bool accountLabel = target == Xenon.TestHost.FixtureHandler.Subject(1).Value ||
                 target == Xenon.TestHost.FixtureHandler.Subject(2).Value;
             bool postLabel = target.Contains("app.bsky.feed.post", StringComparison.Ordinal);
             Assert.Equal(accountLabel, localLabels.Contains("<code>spam</code>", StringComparison.Ordinal));
             Assert.Equal(postLabel, localLabels.Contains("<code>scam</code>", StringComparison.Ordinal));
             Assert.Equal(!accountLabel && !postLabel, localLabels.Contains("None", StringComparison.Ordinal));
-            string json = WebUtility.HtmlDecode(Regex.Match(html, @"<pre><code>([\s\S]*?)</code></pre>").Groups[1].Value);
+            string json = WebUtility.HtmlDecode(RecordContentsRegex().Match(html).Groups[1].Value);
             using JsonDocument contents = JsonDocument.Parse(json);
             Assert.Equal(
                 target.StartsWith("did:", StringComparison.Ordinal) ? "app.bsky.actor.profile" : new AtUri(target).Collection!.ToString(),
@@ -2376,7 +2376,10 @@ public partial class XenonTestHostTests
         caseDecision.Headers.Add("X-Test-Authenticated", "true");
         using HttpResponseMessage caseResult = await client.SendAsync(caseDecision, token);
         Assert.True(caseResult.StatusCode == HttpStatusCode.Redirect, await caseResult.Content.ReadAsStringAsync(token));
-        LabelCaseReceipt last = Xenon.TestHost.SeedData.Require(await cases.GetCaseHistoryAsync(caller, reviewCase.Id, cancellationToken: token)).Last();
+        IReadOnlyList<LabelCaseReceipt> history = Xenon.TestHost.SeedData.Require(
+            await cases.GetCaseHistoryAsync(caller, reviewCase.Id, cancellationToken: token));
+        Assert.NotEmpty(history);
+        LabelCaseReceipt last = history[^1];
         LabelCaseDecisionReceipt decisionReceipt = Xenon.TestHost.SeedData.Require(await cases.GetCaseDecisionAsync(caller, last.OperationId, token));
         Assert.True(decisionReceipt.Request.HandleReportsAcrossRecordVersions);
         Assert.False(decisionReceipt.Request.HandleOtherReports);
@@ -3060,7 +3063,7 @@ public partial class XenonTestHostTests
                 Assert.Matches($"<a (?=[^>]*href=\"[^\"]*Queue={queue}\")(?=[^>]*aria-current=\"page\")[^>]*>", html);
                 Assert.Equal("Number", ReadField(html, "Sort"));
                 Assert.Equal("True", ReadField(html, "Ascending"));
-                foreach (Match sortLink in Regex.Matches(html, "href=\"([^\"]*Sort=[^\"]*)\""))
+                foreach (Match sortLink in SortLinksRegex().Matches(html))
                 {
                     string link = WebUtility.HtmlDecode(sortLink.Groups[1].Value);
                     Assert.Contains($"Queue={queue}", link, StringComparison.Ordinal);
@@ -3280,4 +3283,20 @@ public partial class XenonTestHostTests
 
     [GeneratedRegex("name=\"labelState\"[^>]*data-target=\"([^\"]+)\"")]
     private static partial Regex LabelStateRegex();
+
+    /// <summary>Finds the CID heading using the existing literal pattern.</summary>
+    [GeneratedRegex("<dt>CID</dt>")]
+    private static partial Regex CidHeadingRegex();
+
+    /// <summary>Extracts issuer-local label markup without changing matching rules.</summary>
+    [GeneratedRegex(@"<h3>This labeler</h3>([\s\S]*?)<h3>")]
+    private static partial Regex LocalLabelsRegex();
+
+    /// <summary>Extracts the encoded record contents from the preview.</summary>
+    [GeneratedRegex(@"<pre><code>([\s\S]*?)</code></pre>")]
+    private static partial Regex RecordContentsRegex();
+
+    /// <summary>Finds queue sort links using the existing attribute pattern.</summary>
+    [GeneratedRegex("href=\"([^\"]*Sort=[^\"]*)\"")]
+    private static partial Regex SortLinksRegex();
 }

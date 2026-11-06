@@ -512,6 +512,87 @@ public partial class AdministrationTests
         Assert.Equal(HttpStatusCode.OK, publicResponse.StatusCode);
     }
 
+    [Theory]
+    [InlineData("account")]
+    [InlineData("record")]
+    [InlineData("uri-wide")]
+    [InlineData("other-version")]
+    [InlineData("expired")]
+    [InlineData("negated")]
+    [InlineData("empty")]
+    public async Task TargetLabelChoicesUseStaticPolicyWithoutModeration(string kind)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(
+            key: key,
+            identity: identity,
+            controlDatabaseTime: true);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        Assert.True((await team.BootstrapAsync(s_actor, "uid:0", "bootstrap-target-choices", token)).Succeeded);
+        Assert.Null(await ((idunno.Bluesky.Labeler.Moderation.ILabelPolicyStore)fixture.Store).ReadPolicyStateAsync(token));
+        DateTimeOffset now = fixture.DatabaseClock.GetUtcNow();
+        fixture.Clock.SetUtcNow(now);
+        bool record = kind is "record" or "uri-wide" or "other-version";
+        string target = record ? "at://did:plc:subject/app.bsky.feed.post/test" : "did:plc:subject";
+        Cid cid = new("bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4");
+        Cid otherCid = new("bafyreihw6zqv6pwq3erw5x2rb52tynvb2hmr7e7osetb5w3m6q4h4p5vqm");
+        if (kind != "empty")
+        {
+            await fixture.Store.AppendAsync(
+                operationId: "target-choice-label",
+                labels: [new(key.CreateLabel(
+                    source: TestServerBuilder.s_issuer,
+                    uri: target,
+                    value: "spam",
+                    creationTimestamp: now,
+                    cid: record && kind != "uri-wide" ? cid : null,
+                    expiresAt: kind == "expired" ? now.AddMinutes(1) : null))],
+                cancellationToken: token);
+        }
+        if (kind == "negated")
+        {
+            await fixture.Store.AppendAsync(
+                operationId: "target-choice-negation",
+                labels: [new(key.CreateNegation(
+                    source: TestServerBuilder.s_issuer,
+                    uri: target,
+                    value: "spam",
+                    creationTimestamp: now.AddSeconds(1)))],
+                cancellationToken: token);
+        }
+        fixture.DatabaseClock.Advance(TimeSpan.FromMinutes(2));
+        const string method = "dev.idunno.labeler.issuance.getAvailableLabels";
+        string query = "?reason=Inspect%20target&target=" + Uri.EscapeDataString(target) +
+            (record ? "&cid=" + (kind == "other-version" ? otherCid : cid) : "");
+        using HttpRequestMessage request = new(HttpMethod.Get, "http://localhost/xrpc/" + method + query);
+        AddTrustedProxyHeaders(request);
+        request.Headers.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            Token(
+                key: key,
+                now: now,
+                audience: new AtProtoServiceReference(TestServerBuilder.s_issuer, Audience.Issuance).ToString(),
+                method: method,
+                lifetime: TimeSpan.FromMinutes(5)));
+        using HttpResponseMessage response = await fixture.Client.SendAsync(request, token);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument body = JsonDocument.Parse(await response.Content.ReadAsStringAsync(token));
+        Assert.Equal(target, body.RootElement.GetProperty("target").GetString());
+        JsonElement choice = Assert.Single(body.RootElement.GetProperty("moderation").GetProperty("labelChoices").EnumerateArray());
+        Assert.Equal("spam", choice.GetProperty("value").GetString());
+        Assert.Equal(kind is "account" or "record" or "uri-wide", choice.GetProperty("applied").GetBoolean());
+        Assert.Equal(kind == "other-version", choice.GetProperty("otherVersion").GetBoolean());
+        Assert.Equal(kind == "uri-wide", choice.GetProperty("uriWide").GetBoolean());
+        Assert.Equal(kind == "empty" ? 0 : kind == "negated" ? 2 : 1, choice.GetProperty("sequence").GetInt64());
+
+        using HttpRequestMessage anonymous = new(HttpMethod.Get, "http://localhost/xrpc/" + method + query);
+        AddTrustedProxyHeaders(anonymous);
+        using HttpResponseMessage denied = await fixture.Client.SendAsync(anonymous, token);
+        Assert.Equal(HttpStatusCode.Unauthorized, denied.StatusCode);
+    }
+
     [Fact]
     public async Task IssuanceAudienceIsLimitedToLabelerAgentEndpoints()
     {

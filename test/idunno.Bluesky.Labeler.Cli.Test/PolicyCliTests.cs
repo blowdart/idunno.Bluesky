@@ -36,6 +36,7 @@ public class PolicyCliTests
           "futureField":{"preserve":true}
         }
         """;
+    private static readonly string[] s_updateScopes = ["atproto", "repo:app.bsky.labeler.service?action=create", "repo:app.bsky.labeler.service?action=update"];
 
     [Theory]
     [InlineData(true)]
@@ -47,7 +48,7 @@ public class PolicyCliTests
         Assert.Equal(metadata.AbsoluteUri, options.ClientId);
         Assert.Equal(create
             ? ["atproto", "repo:app.bsky.labeler.service?action=create"]
-            : new[] { "atproto", "repo:app.bsky.labeler.service?action=create", "repo:app.bsky.labeler.service?action=update" }, options.Scopes);
+            : s_updateScopes, options.Scopes);
     }
 
     [Theory]

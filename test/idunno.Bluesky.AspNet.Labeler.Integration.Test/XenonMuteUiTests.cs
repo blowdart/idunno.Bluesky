@@ -227,11 +227,11 @@ public class XenonMuteUiTests
                 token: TestContext.Current.CancellationToken);
         Assert.True(response.Succeeded, response.Message);
         JsonElement data = JsonSerializer.SerializeToElement(response, AdministrationJsonContext.Default.AdministrationResponse);
-        return data.GetProperty("moderation").GetProperty("mutes").EnumerateArray().Select(mute => new MuteView(
+        return [.. data.GetProperty("moderation").GetProperty("mutes").EnumerateArray().Select(mute => new MuteView(
             EventId: mute.GetProperty("eventId").GetInt64(),
             Kind: mute.GetProperty("kind").GetInt32() == 0 ? "Subject" : "Reporter",
             Until: mute.GetProperty("until").GetDateTimeOffset(),
-            Actor: mute.GetProperty("actor").GetString()!)).ToArray();
+            Actor: mute.GetProperty("actor").GetString()!))];
     }
 
     /// <summary>Loads a page using the existing fixture's authenticated browser identity.</summary>

@@ -1,7 +1,7 @@
 @model LabelDurationDisplay
 <label class="field"><span><partial name="_LabelClock" /> New label duration (optional)</span>
     <select name="labelDurationHours" disabled="@Model.Frozen">
-        @foreach (int hours in LabelDuration.Hours)
+        @foreach (int hours in LabelDuration.s_hours)
         {
             string title = hours switch
             {

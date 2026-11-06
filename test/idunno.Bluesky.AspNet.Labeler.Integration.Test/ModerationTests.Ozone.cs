@@ -301,7 +301,9 @@ public partial class ModerationTests
         Assert.Equal(
             selectedOnly ? "Selected report reviewed." : remarks ? "Reviewed; no label change needed." : "Ozone moderation event.",
             first.ResolutionReason);
-        LabelModerationReport second = (await reports.GetReportAsync(caller, reportIds[1], token)).Result!;
+        LabelServiceResult<LabelModerationReport> secondResult = await reports.GetReportAsync(caller, reportIds[1], token);
+        Assert.True(secondResult.Succeeded, secondResult.Error?.ToString());
+        LabelModerationReport second = secondResult.Result;
         Assert.Equal(!selectedOnly, second.HandledAt is not null);
         Assert.Null((await reports.GetReportAsync(caller, reportIds[2], token)).Result!.HandledAt);
         LabelModerationCase moderationCase = (await fixture.Services.GetRequiredService<ILabelModerationStore>()
@@ -380,7 +382,7 @@ public partial class ModerationTests
             Assert.Equal((filters & bit) != 0, html.Contains($"name=\"{name}\" value=\"porn\" checked=\"checked\"", StringComparison.Ordinal));
         }
         string csrf = System.Net.WebUtility.HtmlDecode(
-            System.Text.RegularExpressions.Regex.Match(html, "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value);
+            PreferencesAntiforgeryRegex().Match(html).Groups[1].Value);
         Assert.NotEmpty(csrf);
         using HttpRequestMessage xenonSave = new(HttpMethod.Post, "/Xenon/Preferences")
         {
@@ -1172,4 +1174,8 @@ public partial class ModerationTests
                 actor: actor));
         return await fixture.Client.SendAsync(request, TestContext.Current.CancellationToken);
     }
+
+    /// <summary>Extracts the unchanged antiforgery field from the preferences form.</summary>
+    [System.Text.RegularExpressions.GeneratedRegex("name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"")]
+    private static partial System.Text.RegularExpressions.Regex PreferencesAntiforgeryRegex();
 }

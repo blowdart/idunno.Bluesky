@@ -24,7 +24,11 @@ internal sealed partial class LabelerPolicyEmailService(
 {
     private static readonly TimeSpan s_leaseDuration = TimeSpan.FromMinutes(2);
     private static readonly TimeSpan s_sendDeadline = TimeSpan.FromSeconds(30);
+#if NET9_0_OR_GREATER
+    private readonly Lock _testLock = new();
+#else
     private readonly object _testLock = new();
+#endif
     private DateTimeOffset? _lastTest;
 
     /// <summary>Gets the test-message transport, allowing diagnostic delivery to be exercised without external mail.</summary>

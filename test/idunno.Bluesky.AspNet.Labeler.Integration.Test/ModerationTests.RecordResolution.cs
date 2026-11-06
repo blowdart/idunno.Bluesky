@@ -137,7 +137,7 @@ public partial class ModerationTests
         using JsonDocument unresolvedBody = JsonDocument.Parse(await unresolved.Content.ReadAsByteArrayAsync(token));
         Assert.Single(unresolvedBody.RootElement.GetProperty("subjectStatuses").EnumerateArray());
         Assert.Equal(1, unresolvedBody.RootElement.GetProperty("unresolvedRecordCount").GetInt32());
-        Assert.True(unresolved.Headers.Contains("Warning"));
+        Assert.False(unresolved.Headers.Contains("Warning"));
         handler.MissingSubjectRecord = false;
         using HttpResponseMessage recovered = await SendOzoneAsync(
             fixture: fixture,
