@@ -841,6 +841,32 @@ public partial class ModerationTests
             (await store.ReadPolicyStateAsync(token))!.Phase);
     }
 
+    [Theory]
+    [InlineData(5000, HttpStatusCode.OK)]
+    [InlineData(5001, HttpStatusCode.ServiceUnavailable)]
+    public async Task HealthRespectsDatabaseClockRollbackTolerance(int rollbackMilliseconds, HttpStatusCode expected)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(key, identity, controlDatabaseTime: true);
+        await fixture.Clock.PolicyVerificationRegistrations.Reader.ReadAsync(token);
+        await VerifyPolicyAsync(fixture);
+        LabelPolicyState state = (await fixture.Services.GetRequiredService<ILabelPolicyStore>().ReadPolicyStateAsync(token))!;
+        await using Microsoft.Data.Sqlite.SqliteConnection connection = new($"Data Source={fixture.DatabasePath};Pooling=False");
+        await connection.OpenAsync(token);
+        await using Microsoft.Data.Sqlite.SqliteCommand update = connection.CreateCommand();
+        update.CommandText = """
+            UPDATE label_policy_gate
+            SET payload=CAST(json_set(CAST(payload AS TEXT),'$.VerifiedUntil', @deadline) AS BLOB)
+            WHERE id=1
+            """;
+        update.Parameters.AddWithValue("@deadline", state.VerifiedUntil!.Value.AddMilliseconds(rollbackMilliseconds).ToUnixTimeMilliseconds());
+        Assert.Equal(1, await update.ExecuteNonQueryAsync(token));
+        using HttpResponseMessage response = await fixture.Client.GetAsync("/health/labeler/moderation", token);
+        Assert.Equal(expected, response.StatusCode);
+    }
+
     [Fact]
     public async Task HealthReadsStoredFreshnessWithoutStartingRemoteVerification()
     {
@@ -1624,7 +1650,8 @@ public partial class ModerationTests
         bool xenonUi = false,
         bool ozone = false,
         IDidHandleResolver? handles = null,
-        DeclarationHandler? publicationLookup = null)
+        DeclarationHandler? publicationLookup = null,
+        bool controlDatabaseTime = false)
     {
         TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
             configureAdministration: services =>
@@ -1670,7 +1697,7 @@ public partial class ModerationTests
             moderation: true,
             xenonUi: xenonUi,
             ozoneAdministration: ozone,
-            controlDatabaseTime: ozone);
+            controlDatabaseTime: ozone || controlDatabaseTime);
         return fixture;
     }
 

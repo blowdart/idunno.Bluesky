@@ -31,6 +31,7 @@
 * Durable background retirement and local-purge workflows, coordinated multi-host signing-key rotation and maintenance, with live authorization, resumable checkpoints and explicit recovery.
 * Database-outage recovery for labeler startup and hosted workers, with bounded startup retries, unhealthy readiness during runtime retries and safe recovery of stale Linux administration sockets.
 * Structured operational diagnostics and `AddBlueskyLabelerMetrics()` OpenTelemetry registration, without credentials or report contents in diagnostic messages.
+* Policy verification diagnostics distinguish changed revisions, expired lookups and database-clock rollback. Database-clock rollbacks of up to five seconds are tolerated without extending a new verification deadline.
 * Unsupported DID methods in URI-only reports are retained as unavailable record-resolution observations rather than failing report intake.
 * Target-specific available-label queries use the configured issuance policy without requiring moderation, preserving authenticated access and database-clock expiry checks.
 

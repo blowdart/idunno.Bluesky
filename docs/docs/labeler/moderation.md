@@ -381,14 +381,18 @@ also creates a durable conflict. History retains its CID and JSON `null` as a
 bounded invalid-observation marker, not the malformed payload. Authoritative
 absence instead has no observed CID.
 
-Verification windows use database time. If the database clock moves backwards
-behind the lookup's start, the observation is rejected rather than extending
-permission. Restart independent verification from a fresh database sample;
-do not backdate the observation, weaken the guard or repeat a PDS write merely
-because verification was rejected.
-Previously verified permission also fails closed if database time precedes
-that observation's start, both in cached checks and transactional report and
-issuance commits. Safe negations and recovery reads remain available.
+Verification windows use database time, not the labeler host clock. A database
+clock rollback of up to five seconds is tolerated consistently for cached
+checks, report admission and issuance. If a rollback occurs during a lookup,
+the new deadline is based on the earlier database sample, never the future
+start time. Larger rollbacks fail closed; restart independent verification
+from a fresh database sample and investigate the database clock. Safe
+negations and recovery reads remain available. No PDS write is needed merely
+because a verification was rejected.
+
+Verification logs distinguish a changed policy revision, an expired lookup and
+a database-clock rollback, including relevant revision or time-difference
+details. They do not include declaration contents, report data or credentials.
 
 `AbandonPolicyPublicationAsync` records an explicit fail-closed recovery result.
 It does not cancel an in-flight PDS write or assume rollback. A late write may

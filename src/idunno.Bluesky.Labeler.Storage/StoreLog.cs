@@ -23,4 +23,17 @@ internal static partial class StoreLog
 
     [LoggerMessage(5, LogLevel.Information, "Label storage lifecycle transitioned to {Phase} at revision {Revision}.")]
     internal static partial void Transition(ILogger logger, LabelerLifecyclePhase phase, long revision);
+
+    /// <summary>Records bounded policy observation diagnostics without declaration contents or subject data.</summary>
+    [LoggerMessage(6, LogLevel.Warning, "Policy observation rejected: {Reason}; expected revision {ExpectedRevision}, current revision {CurrentRevision}, time difference {DifferenceMilliseconds} ms.")]
+    internal static partial void PolicyObservationRejected(
+        ILogger logger,
+        string reason,
+        long expectedRevision,
+        long? currentRevision,
+        long differenceMilliseconds);
+
+    /// <summary>Records a tolerated database-clock rollback without including declaration data.</summary>
+    [LoggerMessage(7, LogLevel.Warning, "Policy observation tolerated a database-clock rollback of {DifferenceMilliseconds} ms.")]
+    internal static partial void PolicyClockRollbackTolerated(ILogger logger, long differenceMilliseconds);
 }

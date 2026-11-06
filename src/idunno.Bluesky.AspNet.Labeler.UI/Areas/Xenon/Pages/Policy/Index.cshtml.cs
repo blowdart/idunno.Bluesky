@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
+using idunno.Bluesky.Labeler.Moderation;
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -269,7 +270,7 @@ public sealed class IndexModel : PageModel
         phase == "VerifiedActive" &&
         verifiedUntil is { } deadline &&
         deadline > databaseTime &&
-        databaseTime >= deadline.AddMilliseconds(-freshnessMilliseconds);
+        !PolicyVerificationClock.IsRollbackBeyondTolerance(deadline.AddMilliseconds(-freshnessMilliseconds), databaseTime);
 
     /// <summary>Determines whether an unpublished draft is available to begin publication.</summary>
     internal static bool CanBeginPublication(int draftCount) => draftCount > 0;

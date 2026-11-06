@@ -387,6 +387,13 @@ internal abstract partial class RelationalLabelStore
             long started = verificationStartedAt.ToUnixTimeMilliseconds();
             if (gate is null || gate.Revision != expectedRevision || gate.Policy is null)
             {
+                string reason = gate switch
+                {
+                    null => "gate-missing",
+                    { Revision: var revision } when revision != expectedRevision => "revision-changed",
+                    _ => "policy-missing"
+                };
+                StoreLog.PolicyObservationRejected(logger, reason, expectedRevision, gate?.Revision, 0);
                 return CaseFailure<LabelPolicyState>(LabelServiceErrorCode.StaleDecision, "The policy changed during lookup.");
             }
 
@@ -396,8 +403,9 @@ internal abstract partial class RelationalLabelStore
                     "Label withdrawals must finish and be available from the public label service before the new policy can be checked.");
             }
 
-            if (started > now)
+            if (PolicyVerificationClock.IsRollbackBeyondTolerance(started, now))
             {
+                StoreLog.PolicyObservationRejected(logger, "database-clock-rollback", expectedRevision, gate.Revision, started - now);
                 return CaseFailure<LabelPolicyState>(
                     LabelServiceErrorCode.StaleDecision,
                     $"The verification start is {started - now} milliseconds ahead of the database clock. Restart independent verification.");
@@ -405,7 +413,13 @@ internal abstract partial class RelationalLabelStore
 
             if (started <= now - gate.FreshnessMilliseconds)
             {
+                StoreLog.PolicyObservationRejected(logger, "lookup-expired", expectedRevision, gate.Revision, now - started);
                 return CaseFailure<LabelPolicyState>(LabelServiceErrorCode.StaleDecision, "The policy check expired before the lookup finished. Check it again.");
+            }
+
+            if (started > now)
+            {
+                StoreLog.PolicyClockRollbackTolerated(logger, started - now);
             }
 
             bool matching = gate.Policy.Declaration == observed;
@@ -420,7 +434,7 @@ internal abstract partial class RelationalLabelStore
                 Revision = checked(gate.Revision + 1),
                 Phase = phase,
                 VerifiedCid = matching ? observedCid!.ToString() : null,
-                VerifiedUntil = phase == LabelPolicyPhase.VerifiedActive ? checked(started + gate.FreshnessMilliseconds) : null
+                VerifiedUntil = phase == LabelPolicyPhase.VerifiedActive ? checked(Math.Min(started, now) + gate.FreshnessMilliseconds) : null
             };
             await SavePolicyGateAsync(connection, transaction, next, cancellationToken).ConfigureAwait(false);
             if (gate.Phase != phase || gate.VerifiedCid != next.VerifiedCid || !matching)
@@ -466,7 +480,7 @@ internal abstract partial class RelationalLabelStore
 
         long now = await DatabaseTimeAsync(connection, transaction, token).ConfigureAwait(false);
         if (gate.Phase != LabelPolicyPhase.VerifiedActive || gate.VerifiedUntil is null || gate.VerifiedUntil <= now ||
-            now < gate.VerifiedUntil - gate.FreshnessMilliseconds ||
+            PolicyVerificationClock.IsRollbackBeyondTolerance(gate.VerifiedUntil.Value - gate.FreshnessMilliseconds, now) ||
             gate.Policy is null || gate.Policy.Version != decision.Audit.PolicyVersion)
         {
             return false;

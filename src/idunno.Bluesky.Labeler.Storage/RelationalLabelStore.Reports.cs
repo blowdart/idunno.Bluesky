@@ -124,7 +124,7 @@ internal abstract partial class RelationalLabelStore
                     gate.Phase == LabelPolicyPhase.VerifiedActive &&
                     gate.VerifiedUntil is { } verifiedUntil &&
                     verifiedUntil > now &&
-                    now >= verifiedUntil - gate.FreshnessMilliseconds &&
+                    !PolicyVerificationClock.IsRollbackBeyondTolerance(verifiedUntil - gate.FreshnessMilliseconds, now) &&
                     gate.Policy is not null;
                 bool reporterMuted = await ReadMuteDeadlineAsync(
                     connection: connection,
@@ -217,7 +217,7 @@ internal abstract partial class RelationalLabelStore
             if (gate is null || gate.Revision != expectedPolicyRevision ||
                 gate.Phase != LabelPolicyPhase.VerifiedActive ||
                 gate.VerifiedUntil is not { } validUntil || validUntil <= now ||
-                now < validUntil - gate.FreshnessMilliseconds || gate.Policy is null)
+                PolicyVerificationClock.IsRollbackBeyondTolerance(validUntil - gate.FreshnessMilliseconds, now) || gate.Policy is null)
             {
                 return CaseFailure<LabelPendingReportBatchResult>(
                     LabelServiceErrorCode.PolicyUnavailable,
@@ -533,7 +533,7 @@ internal abstract partial class RelationalLabelStore
         ModerationPolicyGate? gate = await ReadPolicyGateAsync(connection, transaction, token).ConfigureAwait(false);
         if (gate is null || gate.Revision != expectedPolicyRevision || gate.Phase != LabelPolicyPhase.VerifiedActive ||
             gate.VerifiedUntil is null || gate.VerifiedUntil <= now ||
-            now < gate.VerifiedUntil - gate.FreshnessMilliseconds || gate.Policy is null)
+            PolicyVerificationClock.IsRollbackBeyondTolerance(gate.VerifiedUntil.Value - gate.FreshnessMilliseconds, now) || gate.Policy is null)
         {
             return CaseFailure<LabelModerationReport>(LabelServiceErrorCode.PolicyUnavailable, "The verified report policy changed or expired.");
         }

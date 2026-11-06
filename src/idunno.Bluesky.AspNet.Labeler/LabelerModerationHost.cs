@@ -145,7 +145,7 @@ internal sealed partial class LabelerModerationHost(
                 storedPolicy.Issuer == issuer &&
                 storedPolicy.VerificationFreshness == settings.VerificationFreshness &&
                 storedPolicy.DatabaseTime < validUntil &&
-                storedPolicy.DatabaseTime >= validUntil - storedPolicy.VerificationFreshness
+                !PolicyVerificationClock.IsRollbackBeyondTolerance(validUntil - storedPolicy.VerificationFreshness, storedPolicy.DatabaseTime)
                     ? storedPolicy.Revision
                     : null;
             await ResolveRecordAsync(submission, linked.Token).ConfigureAwait(false);
@@ -366,7 +366,7 @@ internal sealed partial class LabelerModerationHost(
                 storedPolicy.Issuer == issuer &&
                 storedPolicy.VerificationFreshness == settings.VerificationFreshness &&
                 storedPolicy.DatabaseTime < validUntil &&
-                storedPolicy.DatabaseTime >= validUntil - storedPolicy.VerificationFreshness
+                !PolicyVerificationClock.IsRollbackBeyondTolerance(validUntil - storedPolicy.VerificationFreshness, storedPolicy.DatabaseTime)
                     ? storedPolicy.Revision
                     : null;
             await ResolveRecordAsync(submission, linked.Token).ConfigureAwait(false);
@@ -457,7 +457,7 @@ internal sealed partial class LabelerModerationHost(
             DateTimeOffset now = gate.DatabaseTime;
             return gate.Phase == LabelPolicyPhase.VerifiedActive &&
                 gate.VerifiedUntil is { } validUntil && now < validUntil &&
-                now >= validUntil - gate.VerificationFreshness
+                !PolicyVerificationClock.IsRollbackBeyondTolerance(validUntil - gate.VerificationFreshness, now)
                 ? HealthCheckResult.Healthy()
                 : HealthCheckResult.Unhealthy("Moderation has no fresh independently verified declaration.");
         }

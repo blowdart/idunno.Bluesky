@@ -143,6 +143,12 @@ return 405 with `Allow: GET`. No new lexicon-specific query error is invented.
 
 ## Subscriptions and reconnect
 
+Production deployments must accept incoming public secure WebSocket connections at
+`wss://<labeler-host>/xrpc/com.atproto.label.subscribeLabels`. The public ingress or
+reverse proxy must forward WebSocket handshakes and long-lived connections to the
+labeler application; outbound WebSocket connectivity alone is insufficient. TLS may
+terminate at a trusted proxy, with the application receiving plain HTTP internally.
+
 Connect with a WebSocket upgrade to `/xrpc/com.atproto.label.subscribeLabels`.
 Both HTTP/1.1 GET upgrades and HTTP/2 extended CONNECT handshakes are supported;
 CONNECT is accepted only when ASP.NET Core recognizes a WebSocket handshake.

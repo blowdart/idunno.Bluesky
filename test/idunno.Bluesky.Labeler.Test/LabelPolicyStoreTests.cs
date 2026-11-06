@@ -12,6 +12,7 @@ using idunno.Bluesky.Labeler.Storage;
 
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Testing;
 
 namespace idunno.Bluesky.Labeler.Test;
 
@@ -471,11 +472,15 @@ public class LabelPolicyStoreTests
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
         LabelPolicyState active = await ActivateAsync((ILabelPolicyStore)fixture.Store, administrator, token);
-        Microsoft.Extensions.Time.Testing.FakeTimeProvider clock = new(active.DatabaseTime.AddMilliseconds(-430));
+        Microsoft.Extensions.Time.Testing.FakeTimeProvider clock = new(active.DatabaseTime.AddMilliseconds(-5001));
         ILabelPolicyStore restarted = (ILabelPolicyStore)fixture.NewStore(clock);
         TargetResolutionHandler handler = new() { Offline = true };
         using HttpClient client = new(handler);
-        LabelPolicyService verifier = new(issuer: StoreFixture.s_issuer, store: restarted, httpClient: client);
+        LabelPolicyService verifier = new(
+            issuer: StoreFixture.s_issuer,
+            store: restarted,
+            httpClient: client,
+            loggerFactory: fixture.Services.GetRequiredService<Microsoft.Extensions.Logging.ILoggerFactory>());
         foreach (bool force in new[] { false, true })
         {
             Assert.Equal(LabelServiceErrorCode.PolicyUnavailable,
@@ -483,10 +488,47 @@ public class LabelPolicyStoreTests
         }
 
         Assert.Equal(0, handler.Requests);
+        Assert.Contains(fixture.Services.GetFakeLogCollector().GetSnapshot(), log =>
+            log.Message.Contains("5001 milliseconds earlier than the saved policy check", StringComparison.Ordinal));
         Assert.Equal(active.Revision, (await restarted.ReadPolicyStateAsync(token))!.Revision);
-        clock.Advance(TimeSpan.FromMilliseconds(430));
+        clock.Advance(TimeSpan.FromMilliseconds(5001));
         Assert.True((await verifier.GetVerifiedStateAsync(cancellationToken: token)).Succeeded);
         Assert.Equal(0, handler.Requests);
+    }
+
+    [Theory]
+    [InlineData("sqlite", 5000, true)]
+    [InlineData("sqlite", 5001, false)]
+    [InlineData("postgresql", 5000, true)]
+    [InlineData("postgresql", 5001, false)]
+    [InlineData("mysql", 5000, true)]
+    [InlineData("mysql", 5001, false)]
+    public async Task IssuanceCommitRespectsDatabaseClockRollbackTolerance(string engine, int rollbackMilliseconds, bool expected)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
+        LabelPolicyState active = await ActivateAsync((ILabelPolicyStore)fixture.Store, administrator, token);
+        ILabelStore rolledBack = fixture.NewStore(new(active.DatabaseTime.AddMilliseconds(-rollbackMilliseconds)));
+        LabelStoreState state = await rolledBack.GetStateAsync(token);
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        LabelTarget target = LabelTarget.Account(new Did("did:plc:subject"));
+        LabelOperationContext context = new(actor: s_administrator, reason: "Review.");
+        LabelDecisionCommit decision = new(
+            request: LabelOperationRequest.Issue(operationId: "rollback-issue", target: target, value: "spam", context: context),
+            resolvedTarget: target,
+            expectedRevision: state.Revision,
+            signedLabel: new(key.CreateLabel(source: StoreFixture.s_issuer, uri: target.Subject, value: "spam", creationTimestamp: active.DatabaseTime)),
+            audit: new(evaluatedAt: active.DatabaseTime, authorizationVersion: "test", policyVersion: "v1", signingKeyMultibase: key.ExportPublicKeyMultibase()))
+        {
+            AdministrationCaller = administrator
+        };
+        LabelServiceResult<LabelOperationReceipt> result = await rolledBack.CommitDecisionAsync(decision, token);
+        Assert.Equal(expected, result.Succeeded);
+        if (!expected)
+        {
+            Assert.Equal(LabelServiceErrorCode.PolicyUnavailable, result.Error!.Code);
+        }
     }
 
     [Theory]
@@ -550,7 +592,7 @@ public class LabelPolicyStoreTests
         {
             (active.Revision - 1, active.DatabaseTime, "policy changed"),
             (active.Revision, active.DatabaseTime.Subtract(active.VerificationFreshness), "check expired"),
-            (active.Revision, active.DatabaseTime.AddMilliseconds(430), "ahead of the database clock"),
+            (active.Revision, active.DatabaseTime.AddMilliseconds(5001), "ahead of the database clock"),
             (active.Revision, active.DatabaseTime.AddDays(1), "ahead of the database clock")
         })
         {
@@ -567,6 +609,65 @@ public class LabelPolicyStoreTests
         LabelPolicyState unchanged = (await store.ReadPolicyStateAsync(token))!;
         Assert.Equal(active.Revision, unchanged.Revision);
         Assert.Equal(active.VerifiedUntil, unchanged.VerifiedUntil);
+
+        string[] diagnostics = [.. fixture.Services.GetFakeLogCollector().GetSnapshot()
+            .Where(log => log.Id == 6)
+            .Select(log => log.Message)];
+        Assert.Contains(diagnostics, message => message.Contains("revision-changed", StringComparison.Ordinal));
+        Assert.Contains(diagnostics, message => message.Contains("lookup-expired", StringComparison.Ordinal));
+        Assert.Contains(diagnostics, message => message.Contains("database-clock-rollback", StringComparison.Ordinal) &&
+            message.Contains("5001 ms", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("sqlite", 0)]
+    [InlineData("sqlite", 4999)]
+    [InlineData("sqlite", 5000)]
+    [InlineData("postgresql", 5000)]
+    [InlineData("mysql", 5000)]
+    public async Task ObservationToleratesClockRollbackWithoutExtendingDeadline(string engine, int rollbackMilliseconds)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
+        ILabelPolicyStore store = (ILabelPolicyStore)fixture.Store;
+        LabelPolicyState active = await ActivateAsync(store, administrator, token);
+        using JsonDocument declaration = JsonDocument.Parse(Declaration);
+        LabelPolicyState observed = Success(await store.ObservePolicyAsync(
+            expectedRevision: active.Revision,
+            verificationStartedAt: active.DatabaseTime.AddMilliseconds(rollbackMilliseconds),
+            observedCid: s_cid,
+            declaration: declaration.RootElement,
+            cancellationToken: token));
+        Assert.Equal(active.DatabaseTime + active.VerificationFreshness, observed.VerifiedUntil);
+        if (rollbackMilliseconds > 0)
+        {
+            Assert.Contains(fixture.Services.GetFakeLogCollector().GetSnapshot(), log =>
+                log.Id == 7 && log.Message.Contains($"{rollbackMilliseconds} ms", StringComparison.Ordinal));
+        }
+    }
+
+    [Theory]
+    [InlineData("sqlite", 4999, true)]
+    [InlineData("sqlite", 5000, true)]
+    [InlineData("sqlite", 5001, false)]
+    [InlineData("postgresql", 5000, true)]
+    [InlineData("postgresql", 5001, false)]
+    [InlineData("mysql", 5000, true)]
+    [InlineData("mysql", 5001, false)]
+    public async Task CachedVerificationAllowsOnlyBoundedDatabaseRollback(string engine, int rollbackMilliseconds, bool expected)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
+        LabelPolicyState active = await ActivateAsync((ILabelPolicyStore)fixture.Store, administrator, token);
+        Microsoft.Extensions.Time.Testing.FakeTimeProvider clock = new(active.DatabaseTime.AddMilliseconds(-rollbackMilliseconds));
+        ILabelPolicyStore restarted = (ILabelPolicyStore)fixture.NewStore(clock);
+        TargetResolutionHandler handler = new() { Offline = true };
+        using HttpClient client = new(handler);
+        LabelPolicyService verifier = new(issuer: StoreFixture.s_issuer, store: restarted, httpClient: client);
+        Assert.Equal(expected, (await verifier.GetVerifiedStateAsync(cancellationToken: token)).Succeeded);
+        Assert.Equal(0, handler.Requests);
     }
 
     [Theory]
@@ -805,7 +906,7 @@ public class LabelPolicyStoreTests
         ILabelStore commitStore;
         if (rollback)
         {
-            commitStore = fixture.NewStore(new(active.DatabaseTime.AddMilliseconds(-430)));
+            commitStore = fixture.NewStore(new(active.DatabaseTime.AddMilliseconds(-5001)));
         }
         else
         {

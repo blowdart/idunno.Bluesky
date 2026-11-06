@@ -147,7 +147,7 @@ public sealed class IndexModel : PageModel
         phase == "VerifiedActive" &&
         verifiedUntil is { } deadline &&
         deadline > databaseTime &&
-        databaseTime >= deadline.AddMilliseconds(-freshnessMilliseconds);
+        !PolicyVerificationClock.IsRollbackBeyondTolerance(deadline.AddMilliseconds(-freshnessMilliseconds), databaseTime);
 
     /// <summary>Explains the current admission gate without treating an empty retained queue as a verification failure.</summary>
     internal static string? DescribeAdmission(

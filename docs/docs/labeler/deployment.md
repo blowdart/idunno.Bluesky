@@ -254,58 +254,6 @@ Never treat a timeout as proof that a process stopped. If a host restarts during
 it reads the durable operation, remains unavailable, and participates in the remaining
 acknowledgements. Do not manually delete maintenance rows or reopen a partial rotation.
 
-### Volume-free hosting on DigitalOcean App Platform
-
-Choose `Labeler__SigningKeyProvider=environment`, use an external PostgreSQL or MySQL database,
-and store its connection string and each private key in App Platform's **encrypted environment
-variables**. Do not use ephemeral SQLite storage. For example, configure these variable names:
-
-```text
-Labeler__SigningKeyProvider=environment
-Labeler__DatabaseProvider=postgresql
-Labeler__ConnectionString=<encrypted external database connection string>
-Labeler__SigningKeys__0__Id=original
-Labeler__SigningKeys__0__PrivateKeyBase64=<encrypted base64-encoded private PEM>
-Labeler__InitialSigningKeyId=original
-```
-
-Base64 only transports the PEM safely as one value; it is not encryption. Protect the original
-key, deployment configuration and access to the running process. Do not put secret values in
-source, image layers, command-line arguments or diagnostic output. The provider imports keys
-into memory without creating private-key files.
-
-On first setup the configured initial identity and its public key are transactionally bound
-to the database's issuer and stream. Later starts use the database selection, ignoring a stale
-initial ID. A missing selected key or a different private key under the same ID prevents startup;
-there is no fallback. The database stores only the key ID and public binding, never the private
-key. Schema version eight adds this selection without guessing one for existing deployments.
-When switching an existing PEM deployment, explicitly seed its current key ID and matching
-private key; a persisted rotation must agree with that ID and, after completion, its public key.
-
-For rotation, add a second encrypted variable (for example,
-`Labeler__SigningKeys__1__PrivateKeyBase64`) and its `Id`, then redeploy through App Platform so
-every signing host has both keys **before beginning rotation**. Keep the original variable during
-that rollout. Use the existing authorized rotation workflow; selection changes are permitted
-only after verified publication, completed re-signing and universal draining. Shared persistence
-does not substitute for each signing host's activation acknowledgement. A restart resumes from
-the database's selection and maintenance checkpoint. After rotation completes and every signing
-host has activated the replacement, the old private key can be removed in a further deployment.
-Do not recycle a key ID with different key material.
-
-Back up the database and protected secret configuration together, and restore a matching set.
-Do not reset selection rows to recover from a missing secret. App Platform redeployments replace
-images/configuration rather than mutating a running container. Configure the platform's HTTP
-readiness check to use `/health/labeler/ready` on the internal port; do not assume it consumes the
-image's Docker health status.
-
-This provider removes the signing-key volume requirement, not other setup requirements.
-The local socket may remain on the ephemeral filesystem without a shared mount. Perform the
-explicit initial administrator bootstrap under the correct OS identity through a supported
-setup execution path; retain the existing authenticated remote-administration requirements.
-Configure explicitly trusted proxy forwarding for the actual deployment topology rather than
-trusting arbitrary forwarded headers. The public origin, issuer, audience and policy settings
-are still required.
-
 ## Run the GHCR image
 
 Release tags publish the standalone `linux/amd64` image to the public package
@@ -366,8 +314,12 @@ Published host ports do not change the internal probe URL. Maintenance and drain
 make readiness fail; do not configure automatic restarts solely on failed readiness. Docker's
 health status does not itself restart a container or remove it from traffic. Configure your
 platform to use readiness for routing and `/health/labeler/live` for separate liveness checks.
-Configure WebSocket
-forwarding, TLS termination, idle timeouts, graceful shutdown and readiness-based traffic
+The public ingress must accept incoming secure WebSocket connections at
+`wss://<labeler-host>/xrpc/com.atproto.label.subscribeLabels` and forward them to the
+application; outbound WebSocket connectivity alone is insufficient. Verify subscription
+delivery, idle-connection behavior and cursor-based reconnect/replay through the public
+endpoint, including after redeployment.
+Configure WebSocket forwarding, TLS termination, idle timeouts, graceful shutdown and readiness-based traffic
 draining at the platform boundary. A filesystem Unix socket can be shared with a host-side
 CLI only when the deployment platform supports a protected bind-mounted socket directory and
 matching service UID; otherwise use the authenticated HTTPS remote transport.
