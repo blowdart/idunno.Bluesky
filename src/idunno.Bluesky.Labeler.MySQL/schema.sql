@@ -122,6 +122,8 @@ CREATE TABLE IF NOT EXISTS label_cases (
     assignee_hash BINARY(32) NULL,
     assignee_key LONGBLOB NULL,
     payload LONGBLOB NOT NULL,
+    mute_subject_hash BINARY(32) NOT NULL,
+    mute_subject_key LONGBLOB NOT NULL,
     INDEX label_cases_subject(subject_hash, status),
     INDEX label_cases_status(status, case_id),
     INDEX label_cases_assignee(assignee_hash, status, case_id)
@@ -142,6 +144,8 @@ CREATE TABLE IF NOT EXISTS label_reports (
     reason_hash BINARY(32) NOT NULL,
     reason_type TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NOT NULL,
     payload LONGBLOB NOT NULL,
+    mute_subject_hash BINARY(32) NOT NULL,
+    mute_subject_key LONGBLOB NOT NULL,
     FOREIGN KEY(case_id) REFERENCES label_cases(case_id),
     INDEX label_reports_case(case_id, report_id),
     INDEX label_reports_reason(reason_hash, case_id)
@@ -185,7 +189,8 @@ CREATE TABLE IF NOT EXISTS label_appeals (
     payload LONGBLOB NOT NULL,
     FOREIGN KEY(case_id) REFERENCES label_cases(case_id),
     INDEX label_appeals_case(case_id, status, appeal_id),
-    INDEX label_appeals_pending(pending_hash, status)
+    INDEX label_appeals_pending(pending_hash, status),
+    INDEX label_appeals_status(status, appeal_id)
 ) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS label_appeal_reports (
     report_id BIGINT PRIMARY KEY,
@@ -239,4 +244,44 @@ CREATE TABLE IF NOT EXISTS label_mutes (
     until_ms BIGINT NOT NULL,
     PRIMARY KEY(kind,subject_hash)
 ) ENGINE=InnoDB;
-INSERT INTO label_schema(id, version) VALUES(1, 16) ON DUPLICATE KEY UPDATE id=id;
+CREATE TABLE IF NOT EXISTS label_case_queries (
+    case_id BIGINT PRIMARY KEY,
+    created_at VARCHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL,
+    assignee_hash BINARY(32) NULL,
+    assignee_key LONGBLOB NULL,
+    FOREIGN KEY(case_id) REFERENCES label_cases(case_id) ON DELETE CASCADE,
+    INDEX label_case_queries_assignee(assignee_hash,created_at,case_id),
+    INDEX label_case_queries_created(created_at,case_id)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_report_queries (
+    report_id BIGINT PRIMARY KEY,
+    case_id BIGINT NOT NULL,
+    subject VARCHAR(8192) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
+    repository_hash BINARY(32) NOT NULL,
+    repository_key LONGBLOB NOT NULL,
+    handled INTEGER NOT NULL CHECK(handled IN (0,1)),
+    created_at VARCHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL,
+    FOREIGN KEY(report_id) REFERENCES label_reports(report_id) ON DELETE CASCADE,
+    INDEX label_report_queries_repository(repository_hash,report_id),
+    INDEX label_report_queries_handled(handled,created_at,report_id),
+    INDEX label_report_queries_created(created_at,report_id),
+    INDEX label_report_queries_subject(subject(512),report_id),
+    INDEX label_report_queries_activity(case_id,created_at,report_id)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_activity_queries (
+    seq BIGINT PRIMARY KEY,
+    case_id BIGINT NOT NULL,
+    created_at VARCHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL,
+    FOREIGN KEY(seq) REFERENCES label_case_events(seq) ON DELETE CASCADE,
+    INDEX label_activity_queries_case(case_id,created_at,seq)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_audit_queries (
+    seq BIGINT PRIMARY KEY,
+    actor VARCHAR(2048) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL,
+    succeeded INTEGER NULL CHECK(succeeded IN (0,1)),
+    created_ms DECIMAL(24,4) NULL,
+    FOREIGN KEY(seq) REFERENCES label_admin_audit(seq) ON DELETE CASCADE,
+    INDEX label_audit_queries_actor(actor(512),succeeded,seq),
+    INDEX label_audit_queries_time(created_ms,seq)
+) ENGINE=InnoDB;
+INSERT INTO label_schema(id, version) VALUES(1, 18) ON DUPLICATE KEY UPDATE id=id;

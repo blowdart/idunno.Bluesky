@@ -64,7 +64,8 @@ public class LabelModerationStoreTests
                 assignee_hash BLOB NULL CHECK(assignee_hash IS NULL OR length(assignee_hash)=32),
                 assignee_key BLOB NULL,
                 payload BLOB NOT NULL);
-            INSERT INTO label_cases_legacy SELECT * FROM label_cases;
+            INSERT INTO label_cases_legacy
+            SELECT case_id,subject_hash,subject_key,status,assignee_hash,assignee_key,payload FROM label_cases;
             DROP TABLE label_cases;
             ALTER TABLE label_cases_legacy RENAME TO label_cases;
             UPDATE label_schema SET version=15 WHERE id=1;
@@ -582,6 +583,9 @@ public class LabelModerationStoreTests
         await fixture.Store.AppendAsync("before-upgrade", [original], cancellationToken: token);
         LabelStoreState before = await fixture.Store.GetStateAsync(token);
         await fixture.ExecuteAsync("""
+            DROP TABLE label_report_queries;
+            DROP TABLE label_case_queries;
+            DROP TABLE label_activity_queries;
             DROP TABLE label_post_review_checks;
             DROP TABLE label_search_handles;
             DROP TABLE label_search_text;

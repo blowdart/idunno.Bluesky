@@ -668,12 +668,21 @@ internal abstract partial class RelationalLabelStore
             localIdentity: notApplicable ? "system:report-reason" : null,
             reason: notApplicable ? "Not Applicable" : "Report accepted.",
             intent: payload, operationNamespace: "report", token: token, createdAt: timestamp).ConfigureAwait(false);
+        byte[] muteKey = s_strictUtf8.GetBytes(report.Subject);
         await ExecuteAsync(
             connection: connection, transaction: transaction,
-            sql: "INSERT INTO label_reports(report_id,case_id,reason_hash,reason_type,payload) VALUES(@id,@case,@hash,@reason,@payload)",
+            sql: "INSERT INTO label_reports(report_id,case_id,reason_hash,reason_type,payload,mute_subject_hash,mute_subject_key) " +
+                "VALUES(@id,@case,@hash,@reason,@payload,@muteHash,@muteKey)",
             token: token,
             ("@id", id), ("@case", caseId), ("@hash", OperationHash(submission.ReasonType)),
-            ("@reason", submission.ReasonType), ("@payload", payload)).ConfigureAwait(false);
+            ("@reason", submission.ReasonType), ("@payload", payload),
+            ("@muteHash", SHA256.HashData(muteKey)), ("@muteKey", muteKey)).ConfigureAwait(false);
+        await SaveReportQueryAsync(
+            connection: connection,
+            transaction: transaction,
+            item: report,
+            payload: payload,
+            token: token).ConfigureAwait(false);
         await IndexSearchTextAsync(
             connection: connection, transaction: transaction, kind: 0, id: id,
             content: report.Subject + "\n" + report.Reason, token: token).ConfigureAwait(false);

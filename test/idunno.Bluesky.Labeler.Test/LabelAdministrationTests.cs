@@ -319,6 +319,8 @@ public class LabelAdministrationTests
             """{"Sequence":1,"OperationId":"legacy","Actor":null,"LocalIdentity":null,"Action":"legacy","Reason":"Historical event without timestamp.","Succeeded":true}"""));
         string payload = engine == "postgresql" ? $"decode('{legacy}','hex')" : $"X'{legacy}'";
         await fixture.ExecuteAsync($"UPDATE label_admin_audit SET payload={payload} WHERE seq=1");
+        await fixture.ExecuteAsync("DELETE FROM label_audit_queries WHERE seq=1");
+        await fixture.Store.InitializeAsync(StoreFixture.s_issuer, token);
         audit = (await restarted.GetAdministrationAuditAsync(caller, cancellationToken: token)).Result!;
         Assert.Null(Assert.Single(audit, item => item.Sequence == 1).CreatedAt);
         LabelTableQuery dated = new(
@@ -1005,6 +1007,7 @@ public class LabelAdministrationTests
         await fixture.Store.PublishAsync(cancellationToken: TestContext.Current.CancellationToken);
         LabelStoreState before = await fixture.Store.GetStateAsync(TestContext.Current.CancellationToken);
         await fixture.ExecuteAsync("""
+            DROP TABLE label_audit_queries;
             DROP TABLE label_admin_tokens;
             DROP TABLE label_admin_receipts;
             DROP TABLE label_admin_audit;

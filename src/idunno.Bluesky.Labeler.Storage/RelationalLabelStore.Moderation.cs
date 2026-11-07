@@ -429,7 +429,7 @@ internal abstract partial class RelationalLabelStore
         OperationHash(operationNamespace + "\0" + operationId);
 
     /// <summary>Writes case state for manual workflow edits and automatic report linkage under the same issuer lock.</summary>
-    private static Task SaveCaseAsync(
+    private async Task SaveCaseAsync(
         DbConnection connection,
         DbTransaction transaction,
         ModerationCaseData next,
@@ -439,20 +439,28 @@ internal abstract partial class RelationalLabelStore
     {
         byte[] payload = JsonSerializer.SerializeToUtf8Bytes(next, ModerationJsonContext.Default.ModerationCaseData);
         byte[] key = CaseSubjectKey(subject);
+        byte[] muteKey = s_strictUtf8.GetBytes(subject.Subject);
         byte[]? assignee = next.Assignee is null ? null : s_strictUtf8.GetBytes(next.Assignee);
         byte[]? assigneeHash = assignee is null ? null : SHA256.HashData(assignee);
-        return insert
+        await (insert
             ? ExecuteAsync(
                 connection: connection, transaction: transaction,
-                sql: "INSERT INTO label_cases(case_id,subject_hash,subject_key,status,assignee_hash,assignee_key,payload) " +
-                    "VALUES(@id,@hash,@key,@status,@assigneeHash,@assignee,@payload)",
+                sql: "INSERT INTO label_cases(case_id,subject_hash,subject_key,status,assignee_hash,assignee_key,payload,mute_subject_hash,mute_subject_key) " +
+                    "VALUES(@id,@hash,@key,@status,@assigneeHash,@assignee,@payload,@muteHash,@muteKey)",
                 token: token, ("@id", next.Id), ("@hash", SHA256.HashData(key)), ("@key", key),
-                ("@status", (int)next.Status), ("@assigneeHash", assigneeHash), ("@assignee", assignee), ("@payload", payload))
+                ("@status", (int)next.Status), ("@assigneeHash", assigneeHash), ("@assignee", assignee), ("@payload", payload),
+                ("@muteHash", SHA256.HashData(muteKey)), ("@muteKey", muteKey))
             : ExecuteAsync(
                 connection: connection, transaction: transaction,
                 sql: "UPDATE label_cases SET status=@status,assignee_hash=@assigneeHash,assignee_key=@assignee,payload=@payload WHERE case_id=@id",
                 token: token, ("@id", next.Id), ("@status", (int)next.Status),
-                ("@assigneeHash", assigneeHash), ("@assignee", assignee), ("@payload", payload));
+                ("@assigneeHash", assigneeHash), ("@assignee", assignee), ("@payload", payload))).ConfigureAwait(false);
+        await SaveCaseQueryAsync(
+            connection: connection,
+            transaction: transaction,
+            item: next,
+            payload: payload,
+            token: token).ConfigureAwait(false);
     }
 
     /// <summary>Appends exact historical case state for both moderator edits and report linkage.</summary>
@@ -482,15 +490,22 @@ internal abstract partial class RelationalLabelStore
             Reason: reason,
             CreatedAt: createdAt ?? next.UpdatedAt,
             Case: next);
+        byte[] payload = JsonSerializer.SerializeToUtf8Bytes(result, ModerationJsonContext.Default.ModerationCaseEvent);
         await ExecuteAsync(
             connection: connection, transaction: transaction,
             sql: "INSERT INTO label_case_events(seq,case_id,operation_hash,operation_id,intent,payload) VALUES(@seq,@id,@hash,@operation,@intent,@payload)",
             token: token,
             ("@seq", sequence), ("@id", next.Id), ("@hash", CaseOperationHash(operationId, operationNamespace)),
             ("@operation", operationId), ("@intent", intent),
-            ("@payload", JsonSerializer.SerializeToUtf8Bytes(result, ModerationJsonContext.Default.ModerationCaseEvent))).ConfigureAwait(false);
+            ("@payload", payload)).ConfigureAwait(false);
         await IndexSearchTextAsync(
             connection: connection, transaction: transaction, kind: 1, id: sequence, content: reason, token: token).ConfigureAwait(false);
+        await SaveActivityQueryAsync(
+            connection: connection,
+            transaction: transaction,
+            item: result,
+            payload: payload,
+            token: token).ConfigureAwait(false);
         return result;
     }
 

@@ -1040,9 +1040,29 @@ public class ProviderConformanceTests
     [InlineData("label_policy_history")]
     [InlineData("label_subject_index")]
     [InlineData("label_pending_reports")]
+    [InlineData("label_case_queries")]
+    [InlineData("label_report_queries")]
+    [InlineData("label_activity_queries")]
+    [InlineData("label_audit_queries")]
     public async Task RejectsMySqlTablesChangedToNontransactionalStorage(string table)
     {
         await using StoreFixture fixture = await StoreFixture.CreateAsync("mysql");
+        if (table == "label_admin_audit")
+        {
+            await fixture.ExecuteAsync("DROP TABLE label_audit_queries");
+        }
+        else if (table.EndsWith("_queries", StringComparison.Ordinal))
+        {
+            await fixture.ExecuteAsync($"ALTER TABLE {table} DROP FOREIGN KEY {table}_ibfk_1");
+            if (table == "label_report_queries")
+            {
+                await fixture.ExecuteAsync("DROP INDEX label_report_queries_subject ON label_report_queries");
+            }
+            else if (table == "label_audit_queries")
+            {
+                await fixture.ExecuteAsync("DROP INDEX label_audit_queries_actor ON label_audit_queries");
+            }
+        }
         await fixture.ExecuteAsync($"ALTER TABLE {table} ENGINE=MyISAM");
         await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.NewStore().GetStateAsync(TestContext.Current.CancellationToken));
         await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Store.InitializeAsync(StoreFixture.s_issuer, TestContext.Current.CancellationToken));

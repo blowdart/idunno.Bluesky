@@ -192,6 +192,7 @@ public partial class ModerationTests
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()));
         await using TestServerBuilder fixture = await CreateAsync(key: key, identity: identity, remoteEnabled: true, ozone: true);
+        await fixture.Clock.PolicyVerificationRegistrations.Reader.ReadAsync(token);
         await VerifyPolicyAsync(fixture);
         List<long> reportIds = [];
         foreach (string did in new[] { "did:plc:subject", "did:plc:subject", "did:plc:another" })

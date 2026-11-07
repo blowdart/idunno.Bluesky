@@ -99,6 +99,8 @@
 
 * SQLite, PostgreSQL and MySQL providers with transactional sequence allocation, durable decisions and audit receipts, signed-label history, publication/replay metadata and bounded reconciliation.
 * Shared persistence for teams, replay protection, policies, reports, cases, appeals, mutes, search projections, Ozone events, notification leases and resumable maintenance/retirement checkpoints.
+* Indexed subject-wide mute exclusion for moderation counts and queues, avoiding repeated scans of retained expired mutes. Schema seventeen backfills CID-independent subject keys without changing evidence, mute deadlines or concurrency fences.
+* Indexed report handling, author summaries, received-time ordering, assignment queues and audit filters. Schema eighteen backfills query projections without rewriting evidence; author summaries and navigation counts use fewer database round trips, and activity pages bound each history branch before merging.
 * Durable Bluesky AppView publication limits: 5 labels per rolling second, 10,000 per rolling hour and 100,000 per rolling 24 hours, including negations. Accounting survives restarts and multiple hosts; excess remains pending.
 * Restartable schema initialization, packaged `schema.sql`, real-engine conformance coverage and setup/backup guidance. MySQL requires InnoDB; older writers reject incompatible schemas, and rollback requires a compatible database backup.
 * Named-volume MySQL/PostgreSQL development helpers and SQLite database creation tooling.
@@ -151,6 +153,8 @@
 
 #### Packaging
 
+* Updated the build-only CommentSense documentation analyzer to 1.1.0.
+* Bounded the local validation script's build workers, compiler concurrency and disposable database CPU, memory and temporary storage, with retained resource diagnostics.
 * Software Bill of Materials (SBOM) files are now generated with the CycloneDX .NET tool and Syft, giving both CycloneDX and SPDX formats. Each NuGet package contains a CycloneDX and an SPDX JSON file per target framework under `sbom/<target framework>/`, and build-only dependencies are excluded. The files are also published as release assets and attested.
 * Release builds suppress deprecated-code analyzer warnings through additive project settings instead of workflow overrides, preserving project-specific warning suppressions. Debug builds retain the deprecated-code warnings.
 

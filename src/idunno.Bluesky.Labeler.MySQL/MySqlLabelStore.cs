@@ -74,6 +74,7 @@ internal sealed class MySqlLabelStore(string connectionString, ILogger<MySqlLabe
                     "'label_team','label_admin_audit','label_admin_receipts','label_admin_tokens','label_maintenance','label_hosts'," +
                     "'label_host_roles','label_maintenance_hosts','label_signing_selection','label_cases','label_case_events','label_case_decisions','label_ozone_events','label_mutes'," +
                     "'label_reports','label_report_tokens','label_policy_gate','label_policy_versions','label_policy_events','label_policy_history'," +
+                    "'label_case_queries','label_report_queries','label_activity_queries','label_audit_queries'," +
                     "'label_appeals','label_appeal_reports','label_subject_index','label_search_handles','label_search_text','label_post_review_checks'," +
                     "'label_pending_reports','label_retirement','label_retirement_receipts','label_retirement_confirmations'," +
                     "'label_retirement_slots','label_publication_clock','label_publication_batches') AND engine<>'InnoDB'",
@@ -118,6 +119,19 @@ internal sealed class MySqlLabelStore(string connectionString, ILogger<MySqlLabe
                     connection: connection,
                     transaction: null,
                     sql: "CREATE INDEX label_admin_token_expiry ON label_admin_tokens(expires_ms)",
+                    token: token).ConfigureAwait(false);
+            }
+            object? appealIndex = await ScalarAsync(
+                connection: connection,
+                transaction: null,
+                sql: "SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='label_appeals' AND index_name='label_appeals_status'",
+                token: token).ConfigureAwait(false);
+            if (Convert.ToInt64(appealIndex, CultureInfo.InvariantCulture) == 0)
+            {
+                await ExecuteAsync(
+                    connection: connection,
+                    transaction: null,
+                    sql: "CREATE INDEX label_appeals_status ON label_appeals(status,appeal_id)",
                     token: token).ConfigureAwait(false);
             }
         }

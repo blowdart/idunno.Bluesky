@@ -108,7 +108,9 @@ CREATE TABLE IF NOT EXISTS label_cases (
     status INTEGER NOT NULL CHECK(status BETWEEN 0 AND 3),
     assignee_hash BYTEA NULL CHECK(assignee_hash IS NULL OR octet_length(assignee_hash)=32),
     assignee_key BYTEA NULL,
-    payload BYTEA NOT NULL
+    payload BYTEA NOT NULL,
+    mute_subject_hash BYTEA NOT NULL CHECK(octet_length(mute_subject_hash)=32),
+    mute_subject_key BYTEA NOT NULL
 );
 CREATE INDEX IF NOT EXISTS label_cases_subject ON label_cases(subject_hash, status);
 CREATE INDEX IF NOT EXISTS label_cases_status ON label_cases(status, case_id);
@@ -127,7 +129,9 @@ CREATE TABLE IF NOT EXISTS label_reports (
     case_id BIGINT NOT NULL REFERENCES label_cases(case_id),
     reason_hash BYTEA NOT NULL CHECK(octet_length(reason_hash)=32),
     reason_type TEXT COLLATE "C" NOT NULL,
-    payload BYTEA NOT NULL
+    payload BYTEA NOT NULL,
+    mute_subject_hash BYTEA NOT NULL CHECK(octet_length(mute_subject_hash)=32),
+    mute_subject_key BYTEA NOT NULL
 );
 CREATE INDEX IF NOT EXISTS label_reports_case ON label_reports(case_id, report_id);
 CREATE INDEX IF NOT EXISTS label_reports_reason ON label_reports(reason_hash, case_id);
@@ -171,6 +175,7 @@ CREATE TABLE IF NOT EXISTS label_appeals (
 );
 CREATE INDEX IF NOT EXISTS label_appeals_case ON label_appeals(case_id, status, appeal_id);
 CREATE INDEX IF NOT EXISTS label_appeals_pending ON label_appeals(pending_hash, status);
+CREATE INDEX IF NOT EXISTS label_appeals_status ON label_appeals(status, appeal_id);
 CREATE TABLE IF NOT EXISTS label_appeal_reports (
     report_id BIGINT PRIMARY KEY REFERENCES label_reports(report_id),
     appeal_id BIGINT NOT NULL REFERENCES label_appeals(appeal_id)
@@ -219,4 +224,40 @@ CREATE TABLE IF NOT EXISTS label_mutes (
     until_ms BIGINT NOT NULL,
     PRIMARY KEY(kind,subject_hash)
 );
-INSERT INTO label_schema(id, version) VALUES(1, 16) ON CONFLICT DO NOTHING;
+CREATE TABLE IF NOT EXISTS label_case_queries (
+    case_id BIGINT PRIMARY KEY REFERENCES label_cases(case_id) ON DELETE CASCADE,
+    created_at TEXT COLLATE "C",
+    assignee_hash BYTEA CHECK(assignee_hash IS NULL OR octet_length(assignee_hash)=32),
+    assignee_key BYTEA
+);
+CREATE INDEX IF NOT EXISTS label_case_queries_assignee ON label_case_queries(assignee_hash,created_at,case_id);
+CREATE INDEX IF NOT EXISTS label_case_queries_created ON label_case_queries(created_at,case_id);
+CREATE TABLE IF NOT EXISTS label_report_queries (
+    report_id BIGINT PRIMARY KEY REFERENCES label_reports(report_id) ON DELETE CASCADE,
+    case_id BIGINT NOT NULL,
+    subject TEXT COLLATE "C" NOT NULL,
+    repository_hash BYTEA NOT NULL CHECK(octet_length(repository_hash)=32),
+    repository_key BYTEA NOT NULL,
+    handled INTEGER NOT NULL CHECK(handled IN (0,1)),
+    created_at TEXT COLLATE "C"
+);
+CREATE INDEX IF NOT EXISTS label_report_queries_repository ON label_report_queries(repository_hash,report_id);
+CREATE INDEX IF NOT EXISTS label_report_queries_handled ON label_report_queries(handled,created_at,report_id);
+CREATE INDEX IF NOT EXISTS label_report_queries_created ON label_report_queries(created_at,report_id);
+CREATE INDEX IF NOT EXISTS label_report_queries_subject ON label_report_queries((left(subject,512)),report_id);
+CREATE INDEX IF NOT EXISTS label_report_queries_activity ON label_report_queries(case_id,created_at,report_id);
+CREATE TABLE IF NOT EXISTS label_activity_queries (
+    seq BIGINT PRIMARY KEY REFERENCES label_case_events(seq) ON DELETE CASCADE,
+    case_id BIGINT NOT NULL,
+    created_at TEXT COLLATE "C"
+);
+CREATE INDEX IF NOT EXISTS label_activity_queries_case ON label_activity_queries(case_id,created_at,seq);
+CREATE TABLE IF NOT EXISTS label_audit_queries (
+    seq BIGINT PRIMARY KEY REFERENCES label_admin_audit(seq) ON DELETE CASCADE,
+    actor TEXT COLLATE "C",
+    succeeded INTEGER CHECK(succeeded IN (0,1)),
+    created_ms NUMERIC(24,4)
+);
+CREATE INDEX IF NOT EXISTS label_audit_queries_actor ON label_audit_queries(actor,succeeded,seq);
+CREATE INDEX IF NOT EXISTS label_audit_queries_time ON label_audit_queries(created_ms,seq);
+INSERT INTO label_schema(id, version) VALUES(1, 18) ON CONFLICT DO NOTHING;

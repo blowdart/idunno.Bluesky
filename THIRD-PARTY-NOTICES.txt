@@ -11,15 +11,20 @@ Build tooling
 -------------
 
 The following third-party tools are used in the release workflows to generate
-and validate Software Bill of Materials (SBOM) files and in the documentation
-workflow to generate the documentation site. They are not distributed with
-the libraries.
+and validate Software Bill of Materials (SBOM) files, in the documentation
+workflow to generate the documentation site, and during compilation to analyze
+XML documentation. They are not distributed with the libraries.
+
+CommentSense is licensed under MIT.
+Copyright (c) 2026 Thomas Shephard.
+Source: https://github.com/Thomas-Shephard/comment-sense
 
 The Python validator and its transitive dependencies are pinned with SHA-256
 hashes in .build/requirements-sbom.txt.
 
 Component                                       License
 ----------------------------------------------  ----------
+CommentSense                                    MIT
 CycloneDX .NET tool (CycloneDX)                 Apache-2.0
 CycloneDX CLI                                   Apache-2.0
 DocFX                                          MIT

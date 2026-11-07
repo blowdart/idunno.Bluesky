@@ -55,6 +55,14 @@ from the test runner; and removes only its own containers in `finally`. Logs, a 
 and separate build, test and total timings are retained under `.artifacts/test-runs/`. Existing database connection
 environment variables are restored afterward.
 
+The build explicitly uses at most four MSBuild workers, disables shared compilation and concurrent compiler
+work, and limits .NET processes to two reported processors. Each disposable database is capped at two CPUs,
+4 GiB of memory with no additional swap, and a 2 GiB tmpfs data directory. Container limits and OOM status
+are retained with the diagnostics. These limits do not apply to existing or production containers.
+For separate local builds, use `-m:4 -nr:false --disable-build-servers -p:UseSharedCompilation=false
+-p:ConcurrentBuild=false` and set `DOTNET_PROCESSOR_COUNT=2` in that build process; the environment setting
+alone does not limit MSBuild workers.
+
 Before every commit, also run both informational checks from the repository root after `test.ps1`:
 
 ```powershell

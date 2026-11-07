@@ -3,7 +3,6 @@
 
 using System.Data.Common;
 using System.Globalization;
-using System.Text.Json;
 
 using idunno.Bluesky.Labeler.Moderation;
 
@@ -124,11 +123,11 @@ internal abstract partial class RelationalLabelStore
                 foreach (ModerationReportData report in reports.Where(report => report.DecisionOperationId is null))
                 {
                     ModerationReportData handled = report with { DecisionOperationId = operation, HandledAt = completedAt, ResolutionReason = reason };
-                    await ExecuteAsync(
-                        connection: connection, transaction: transaction,
-                        sql: "UPDATE label_reports SET payload=@payload WHERE report_id=@id", token: cancellationToken,
-                        ("@payload", JsonSerializer.SerializeToUtf8Bytes(handled, ModerationJsonContext.Default.ModerationReportData)),
-                        ("@id", report.Id)).ConfigureAwait(false);
+                    await SaveReportPayloadAsync(
+                        connection: connection,
+                        transaction: transaction,
+                        report: handled,
+                        token: cancellationToken).ConfigureAwait(false);
                     await UpdateReportSearchTextAsync(connection, transaction, handled, cancellationToken).ConfigureAwait(false);
                 }
 

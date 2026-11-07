@@ -259,13 +259,38 @@ to read the server settings validated above. Run `InitializeAsync` separately wi
 Registration and ordinary operations do not run DDL.
 
 Version two adds `label_decisions` for immutable service receipts and audit, including no-ops.
-`InitializeAsync` upgrades supported earlier schemas to version thirteen additively without changing signed history, legacy receipts,
-stream identity or progress. `label_schema` records completion only after all creation steps.
+`InitializeAsync` upgrades supported earlier schemas to version eighteen without changing signed history, legacy receipts,
+stream identity or progress. Setup fences older writers through `label_schema` before resuming the upgrade.
 PostgreSQL setup takes an advisory lock and commits DDL transactionally; SQLite takes an immediate
 transaction. MySQL takes a connection-scoped schema lock and resumes repeatable creation steps after
 interruption, because its DDL commits independently. Run upgrades with services stopped/exclusive access,
 especially on MySQL; do not promise rollback of a partially applied MySQL migration.
 Repeated initialization preserves data. Unknown/newer versions fail rather than being downgraded.
+
+Version seventeen adds subject-only mute lookup hashes and exact UTF-8 keys to cases and reports.
+Counts and workflow pages use the existing mute primary key instead of repeatedly scanning retained mutes
+or extracting subjects from JSON. These keys deliberately exclude the CID: a subject mute still covers
+every CID version of the same URI, while unrelated records and reporter mutes remain independent.
+The upgrade backfills missing keys in bounded batches without network access or changes to original payloads.
+MySQL resumes partial columns/backfills after interruption; SQLite rebuilds the case/report tables
+transactionally and verifies foreign keys before commit. Expired mute records, event IDs, deadlines
+and stream locking are unchanged. Stop all hosts and take a backup before setup; restart only after
+initialization succeeds. Older binaries cannot use the upgraded database.
+
+Version eighteen adds separate indexed query projections for cases, reports, case activity and administrative
+audit events. Author lookups use a repository hash with an exact UTF-8 key guard; report handling and
+received-time ordering no longer repeatedly decode retained JSON. Audit timestamps preserve each provider's
+original conversion and unknown legacy times. Initialization resumes missing rows in bounded batches,
+and subsequent source writes maintain projections in the same transaction. Foreign keys remove projections
+when their source rows are deleted. The original payloads, numbered-page navigation, stream lock,
+live authorization, assignment reconciliation and denial auditing remain unchanged. Substring search is
+unchanged. These indexes add storage and write-maintenance costs; they do not make exact counts constant-time.
+On MySQL, text indexes use prefixes and queries still compare/sort complete values, preserving long subjects
+and actors rather than truncating them. Its subject and actor projections cover the validated AT URI and
+DID length limits; binary sort expressions avoid MySQL's collation-key truncation. PostgreSQL indexes a
+bounded subject prefix to accommodate maximum-length AT URIs, then orders by the complete subject within
+each prefix. Page queries fetch retained payloads only after selecting their bounded page.
+A separate appeal status/order index supports pending-appeal counts and status-filtered pages.
 
 Version thirteen adds durable rolling publication accounting and a database-clock high-water mark.
 Older writers reject the new schema, preventing them from bypassing the shared budget.

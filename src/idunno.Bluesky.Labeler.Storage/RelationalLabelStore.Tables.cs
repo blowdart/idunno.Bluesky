@@ -4,6 +4,7 @@
 using System.Data.Common;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
 using System.Text.Json;
 
 using idunno.Bluesky.Labeler.Administration;
@@ -13,6 +14,7 @@ namespace idunno.Bluesky.Labeler.Storage;
 
 internal abstract partial class RelationalLabelStore
 {
+    private const string AuditQueryTime = "q.created_ms";
     /// <summary>Reads caller-scoped settings under the issuer lock and current membership checks.</summary>
     Task<LabelServiceResult<LabelMediaPreferences>> ILabelTableStore.ReadMediaPreferencesAsync(
         LabelAdministrationCaller caller,
@@ -100,16 +102,23 @@ internal abstract partial class RelationalLabelStore
                     ("@case", caseId)).ConfigureAwait(false));
                 long current = Math.Min(page, Math.Max(1, (total + 15) / 16));
                 List<LabelCaseActivity> entries = [];
+                long offset = (current - 1) * 16;
+                long branchLimit = checked(offset + 16);
                 DbCommand command = Command(
                     connection: connection,
                     transaction: transaction,
-                    sql: $"SELECT kind,payload FROM (" +
-                        $"SELECT 0 AS kind,t.report_id AS number,t.payload,{TableJsonField("CreatedAt")} AS event_time FROM label_reports t WHERE t.case_id=@case " +
-                        "UNION ALL " +
-                        $"SELECT 1 AS kind,t.seq AS number,t.payload,{TableJsonField("CreatedAt")} AS event_time FROM label_case_events t WHERE t.case_id=@case" +
+                    sql: "SELECT kind,payload FROM (" +
+                        "SELECT * FROM (SELECT 0 AS kind,t.report_id AS number,t.payload,q.created_at AS event_time " +
+                        "FROM label_report_queries q JOIN label_reports t ON t.report_id=q.report_id WHERE q.case_id=@case " +
+                        "ORDER BY q.created_at DESC,q.report_id DESC LIMIT @branchLimit) reports " +
+                        "UNION ALL SELECT * FROM (" +
+                        "SELECT 1 AS kind,t.seq AS number,t.payload,q.created_at AS event_time " +
+                        "FROM label_activity_queries q JOIN label_case_events t ON t.seq=q.seq WHERE q.case_id=@case " +
+                        "ORDER BY q.created_at DESC,q.seq DESC LIMIT @branchLimit) events" +
                         ") activity ORDER BY event_time DESC,kind DESC,number DESC LIMIT 16 OFFSET @offset",
                     ("@case", caseId),
-                    ("@offset", (current - 1) * 16));
+                    ("@branchLimit", branchLimit),
+                    ("@offset", offset));
                 await using (command.ConfigureAwait(false))
                 {
                     DbDataReader reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
@@ -143,21 +152,18 @@ internal abstract partial class RelationalLabelStore
     }
 
     /// <summary>Handles omitted fields and MySQL's text representation of an explicit JSON null identically.</summary>
-    private string UnhandledReportFilter(string alias = "t") =>
-        $"({TableJsonField("DecisionOperationId")} IS NULL OR {TableJsonField("DecisionOperationId")}='null')"
-            .Replace("t.payload", alias + ".payload", StringComparison.Ordinal);
+    private static string UnhandledReportFilter(string alias = "t") =>
+        alias == "t" ? "q.handled=0" :
+            $"EXISTS(SELECT 1 FROM label_report_queries rq WHERE rq.report_id={alias}.report_id AND rq.handled=0)";
 
     /// <summary>Keeps subject-wide temporary mutes consistent across counted workflows and exact-CID cases.</summary>
+    /// <remarks><para>MySQL counts at most one primary-key match to preserve an indexed correlated probe.
+    /// Its EXISTS transformation can otherwise sort the entire case queue before applying the page limit.</para></remarks>
     private string UnmutedSubjectFilter(string alias = "t")
     {
-        string subject = TableJsonField("Subject").Replace("t.payload", alias + ".payload", StringComparison.Ordinal);
-        string key = Provider switch
-        {
-            "postgresql" => $"convert_to({subject},'UTF8')",
-            "mysql" => $"CONVERT({subject} USING BINARY)",
-            _ => $"CAST({subject} AS BLOB)"
-        };
-        return $"NOT EXISTS(SELECT 1 FROM label_mutes m WHERE m.kind=0 AND m.until_ms>@muteNow AND m.subject_key={key})";
+        string match = $"FROM label_mutes m WHERE m.kind=0 AND m.subject_hash={alias}.mute_subject_hash " +
+            $"AND m.subject_key={alias}.mute_subject_key AND m.until_ms>@muteNow";
+        return Provider == "mysql" ? $"(SELECT COUNT(*) {match})=0" : $"NOT EXISTS(SELECT 1 {match})";
     }
 
     /// <summary>Reuses bounded indexed label capture under live authorization without creating an appeal.</summary>
@@ -193,18 +199,24 @@ internal abstract partial class RelationalLabelStore
             action: async (connection, transaction, _) =>
             {
                 long now = await DatabaseTimeAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
-                long cases = Integer(await ScalarAsync(
-                    connection: connection, transaction: transaction,
-                    sql: $"SELECT COUNT(*) FROM label_cases t WHERE status<>2 AND {UnmutedSubjectFilter()}",
-                    token: cancellationToken, ("@muteNow", now)).ConfigureAwait(false));
-                long reports = Integer(await ScalarAsync(
-                    connection: connection, transaction: transaction,
-                    sql: $"SELECT (SELECT COUNT(*) FROM label_reports t WHERE {UnhandledReportFilter()} AND {UnmutedSubjectFilter()}) + " +
-                        "(SELECT COUNT(*) FROM label_pending_reports WHERE pending=TRUE)",
-                    token: cancellationToken, ("@muteNow", now)).ConfigureAwait(false));
-                long appeals = Integer(await ScalarAsync(
-                    connection: connection, transaction: transaction,
-                    sql: "SELECT COUNT(*) FROM label_appeals WHERE status=0", token: cancellationToken).ConfigureAwait(false));
+                DbCommand command = Command(
+                    connection: connection,
+                    transaction: transaction,
+                    sql: $"SELECT (SELECT COUNT(*) FROM label_cases t WHERE status<>2 AND {UnmutedSubjectFilter()})," +
+                        $"(SELECT COUNT(*) FROM label_report_queries q JOIN label_reports t ON t.report_id=q.report_id WHERE {UnhandledReportFilter()} AND {UnmutedSubjectFilter()})+" +
+                        "(SELECT COUNT(*) FROM label_pending_reports WHERE pending=TRUE)," +
+                        "(SELECT COUNT(*) FROM label_appeals WHERE status=0)",
+                    ("@muteNow", now));
+                await using ConfiguredAsyncDisposable commandDisposal = command.ConfigureAwait(false);
+                DbDataReader reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+                await using ConfiguredAsyncDisposable readerDisposal = reader.ConfigureAwait(false);
+                if (!await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    throw new InvalidDataException("The navigation aggregate did not return its counts.");
+                }
+                long cases = Integer(reader.GetValue(0));
+                long reports = Integer(reader.GetValue(1));
+                long appeals = Integer(reader.GetValue(2));
                 return LabelServiceResult<LabelNavigationCounts>.Success(new(cases, reports, appeals));
             },
             token: cancellationToken,
@@ -270,7 +282,7 @@ internal abstract partial class RelationalLabelStore
                 DbCommand command = Command(
                     connection: connection,
                     transaction: transaction,
-                    sql: $"SELECT t.payload FROM label_admin_audit t WHERE {TableFilter(query)} ORDER BY t.seq LIMIT @limit",
+                    sql: $"SELECT t.payload FROM label_audit_queries q JOIN label_admin_audit t ON t.seq=q.seq WHERE {TableFilter(query)} ORDER BY t.seq LIMIT @limit",
                     ("@auditActor", query.AuditActor),
                     ("@auditSucceeded", query.AuditSucceeded switch { true => "true", false => "false", null => null }),
                     ("@auditFrom", AuditLowerBound(query.AuditFrom)),
@@ -354,14 +366,31 @@ internal abstract partial class RelationalLabelStore
                     _ => "seq"
                 };
                 string filter = TableFilter(query);
+                string source = query.Kind switch
+                {
+                    LabelTableKind.Cases => "label_case_queries q JOIN label_cases t ON t.case_id=q.case_id",
+                    LabelTableKind.Reports => "label_report_queries q JOIN label_reports t ON t.report_id=q.report_id",
+                    LabelTableKind.Audit => "label_audit_queries q JOIN label_admin_audit t ON t.seq=q.seq",
+                    _ => table + " t"
+                };
+                string? projection = query.Kind switch
+                {
+                    LabelTableKind.Cases => "label_case_queries q",
+                    LabelTableKind.Reports => "label_report_queries q",
+                    LabelTableKind.Audit => "label_audit_queries q",
+                    _ => null
+                };
+                string countSource = projection is not null && !filter.Contains("t.", StringComparison.Ordinal)
+                    ? projection : source;
                 long muteNow = await DatabaseTimeAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
                 object? count = await ScalarAsync(
                     connection: connection,
                     transaction: transaction,
-                    sql: $"SELECT COUNT(*) FROM {table} t WHERE {filter}",
+                    sql: $"SELECT COUNT(*) FROM {countSource} WHERE {filter}",
                     token: cancellationToken,
                     ("@muteNow", muteNow),
                     ("@actor", s_strictUtf8.GetBytes(caller.Actor.Value)),
+                    ("@actorHash", SHA256.HashData(s_strictUtf8.GetBytes(caller.Actor.Value))),
                     ("@auditActor", query.AuditActor),
                     ("@auditAfter", query.AuditAfterSequence),
                     ("@auditThrough", query.AuditThroughSequence),
@@ -371,16 +400,19 @@ internal abstract partial class RelationalLabelStore
                     ("@status", query.AppealStatus is { } status ? (int)status : null)).ConfigureAwait(false);
                 long total = Convert.ToInt64(count, CultureInfo.InvariantCulture);
                 long current = ClampTablePage(query.Page, total);
+                string orderedNumber = query.Kind is LabelTableKind.Cases or LabelTableKind.Reports or LabelTableKind.Audit
+                    ? "q." + number : "t." + number;
                 string column = query.Sort switch
                 {
-                    LabelTableSort.Number => "t." + number,
-                    LabelTableSort.Received when query.Kind == LabelTableKind.Audit => AuditTimeMilliseconds(),
+                    LabelTableSort.Number => orderedNumber,
+                    LabelTableSort.Received when query.Kind == LabelTableKind.Audit => AuditQueryTime,
                     LabelTableSort.Case => "t.case_id",
-                    LabelTableSort.Subject => TableJsonField("Subject"),
+                    LabelTableSort.Subject => query.Kind == LabelTableKind.Reports ? QueryTextSort("q.subject") : TableJsonField("Subject"),
                     LabelTableSort.Assignee => $"COALESCE(NULLIF({TableJsonField("Assignee")},'null'),'')",
+                    LabelTableSort.Actor when query.Kind == LabelTableKind.Audit => QueryTextSort("q.actor"),
                     LabelTableSort.Actor => TableJsonField(query.Kind == LabelTableKind.Appeals ? "Initiator" : "Actor"),
                     LabelTableSort.Action => TableJsonField("Action"),
-                    LabelTableSort.Outcome => TableJsonField("Succeeded"),
+                    LabelTableSort.Outcome => query.Kind == LabelTableKind.Audit ? "q.succeeded" : TableJsonField("Succeeded"),
                     LabelTableSort.Status => query.Kind switch
                     {
                         LabelTableKind.Cases => "CASE WHEN EXISTS(SELECT 1 FROM label_appeals a WHERE a.case_id=t.case_id AND a.status=0) THEN 3 ELSE t.status END",
@@ -388,9 +420,12 @@ internal abstract partial class RelationalLabelStore
                         LabelTableKind.PendingReports => "t.pending",
                         _ => "t.status"
                     },
-                    _ => TableJsonField("CreatedAt")
+                    _ => query.Kind is LabelTableKind.Cases or LabelTableKind.Reports ? "q.created_at" : TableJsonField("CreatedAt")
                 };
                 string direction = query.Ascending ? "ASC" : "DESC";
+                string subjectPrefixOrder = Provider == "postgresql" && query.Kind == LabelTableKind.Reports && query.Sort == LabelTableSort.Subject
+                    ? $"left(q.subject,512) {direction},"
+                    : string.Empty;
                 string unknownTimesLast = query.Kind == LabelTableKind.Audit && query.Sort == LabelTableSort.Received
                     ? $"CASE WHEN {column} IS NULL THEN 1 ELSE 0 END ASC,"
                     : string.Empty;
@@ -399,12 +434,21 @@ internal abstract partial class RelationalLabelStore
                     : "0";
                 string escalated = query.Kind is LabelTableKind.Cases or LabelTableKind.Reports or LabelTableKind.Appeals
                     ? "(SELECT COUNT(*) FROM label_cases c WHERE c.case_id=t.case_id AND c.status=3)" : "0";
+                string pageSource = projection is not null &&
+                    !filter.Contains("t.", StringComparison.Ordinal) && !column.Contains("t.", StringComparison.Ordinal)
+                    ? projection : source;
                 DbCommand command = Command(
                     connection: connection,
                     transaction: transaction,
-                    sql: $"SELECT t.payload,{appealCount},{escalated} FROM {table} t WHERE {filter} ORDER BY {unknownTimesLast}{column} {direction},t.{number} {direction} LIMIT @limit OFFSET @offset",
+                    sql: $"SELECT t.payload,{appealCount},{escalated} FROM (" +
+                        $"SELECT {orderedNumber} AS source_id,{column} AS sort_value FROM {pageSource} WHERE {filter} " +
+                        $"ORDER BY {unknownTimesLast}{subjectPrefixOrder}{column} {direction},{orderedNumber} {direction} LIMIT @limit OFFSET @offset" +
+                        $") page JOIN {table} t ON t.{number}=page.source_id ORDER BY " +
+                        (unknownTimesLast.Length == 0 ? string.Empty : "CASE WHEN page.sort_value IS NULL THEN 1 ELSE 0 END ASC,") +
+                        $"page.sort_value {direction},page.source_id {direction}",
                     ("@muteNow", muteNow),
                     ("@actor", s_strictUtf8.GetBytes(caller.Actor.Value)),
+                    ("@actorHash", SHA256.HashData(s_strictUtf8.GetBytes(caller.Actor.Value))),
                     ("@auditActor", query.AuditActor),
                     ("@auditAfter", query.AuditAfterSequence),
                     ("@auditThrough", query.AuditThroughSequence),
@@ -491,57 +535,76 @@ internal abstract partial class RelationalLabelStore
     }
 
     /// <summary>Aggregates all retained reports in SQL for only the current page's distinct authors, never fetching report histories into the UI.</summary>
-    private async Task<IReadOnlyList<LabelAuthorReportSummary>> ReadAuthorSummariesAsync(
+    private static async Task<IReadOnlyList<LabelAuthorReportSummary>> ReadAuthorSummariesAsync(
         DbConnection connection,
         DbTransaction transaction,
         IReadOnlyList<LabelModerationCase> cases,
         CancellationToken token)
     {
         List<LabelAuthorReportSummary> summaries = [];
-        string subject = TableJsonField("Subject");
-        foreach (string author in cases.Select(item => item.Subject.Repository.Value).Distinct(StringComparer.Ordinal))
+        string[] authors = [.. cases.Select(item => item.Subject.Repository.Value).Distinct(StringComparer.Ordinal)];
+        if (authors.Length == 0)
         {
+            return summaries;
+        }
+        List<string> branches = [];
+        List<(string, object?)> parameters = [];
+        for (int index = 0; index < authors.Length; index++)
+        {
+            string author = authors[index];
             string prefix = "at://" + author + "/";
             string pattern = prefix.Replace("!", "!!", StringComparison.Ordinal)
                 .Replace("%", "!%", StringComparison.Ordinal).Replace("_", "!_", StringComparison.Ordinal) + "%";
-            string open = UnhandledReportFilter();
-            DbCommand command = Command(
-                connection: connection,
-                transaction: transaction,
-                sql: $"SELECT COUNT(*),COUNT(DISTINCT CASE WHEN {subject} LIKE @records ESCAPE '!' THEN {subject} END)," +
-                    $"COALESCE(SUM(CASE WHEN {open} AND {subject}=@author THEN 1 ELSE 0 END),0)," +
-                    $"COALESCE(SUM(CASE WHEN {open} AND {subject} LIKE @post ESCAPE '!' THEN 1 ELSE 0 END),0)," +
-                    $"COALESCE(SUM(CASE WHEN {open} AND {subject} LIKE @profile ESCAPE '!' THEN 1 ELSE 0 END),0)," +
-                    $"COALESCE(SUM(CASE WHEN {open} AND {subject} LIKE @list ESCAPE '!' THEN 1 ELSE 0 END),0)," +
-                    $"COALESCE(SUM(CASE WHEN {open} AND {subject} LIKE @feed ESCAPE '!' THEN 1 ELSE 0 END),0)," +
-                    $"COALESCE(SUM(CASE WHEN {open} AND {subject} LIKE @starterpack ESCAPE '!' THEN 1 ELSE 0 END),0)," +
-                    $"COALESCE(SUM(CASE WHEN {open} THEN 1 ELSE 0 END),0) " +
-                    $"FROM label_reports t WHERE {subject}=@author OR {subject} LIKE @records ESCAPE '!'",
-                ("@author", author),
-                ("@records", pattern),
-                ("@post", pattern[..^1] + "app.bsky.feed.post/%"),
-                ("@profile", pattern[..^1] + "app.bsky.actor.profile/%"),
-                ("@list", pattern[..^1] + "app.bsky.graph.list/%"),
-                ("@feed", pattern[..^1] + "app.bsky.feed.generator/%"),
-                ("@starterpack", pattern[..^1] + "app.bsky.graph.starterpack/%"));
-            await using ConfiguredAsyncDisposable commandDisposal = command.ConfigureAwait(false);
-            DbDataReader reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false);
-            await using ConfiguredAsyncDisposable readerDisposal = reader.ConfigureAwait(false);
-            if (!await reader.ReadAsync(token).ConfigureAwait(false))
-            {
-                throw new InvalidDataException("The report aggregate did not return its count.");
-            }
-
+            branches.Add(
+                $"SELECT {index} AS ordinal,COUNT(*) AS total,COUNT(DISTINCT CASE WHEN q.subject LIKE @records{index} ESCAPE '!' THEN q.subject END) AS records," +
+                $"COALESCE(SUM(CASE WHEN q.handled=0 AND q.subject=@author{index} THEN 1 ELSE 0 END),0) AS accounts," +
+                $"COALESCE(SUM(CASE WHEN q.handled=0 AND q.subject LIKE @post{index} ESCAPE '!' THEN 1 ELSE 0 END),0) AS posts," +
+                $"COALESCE(SUM(CASE WHEN q.handled=0 AND q.subject LIKE @profile{index} ESCAPE '!' THEN 1 ELSE 0 END),0) AS profiles," +
+                $"COALESCE(SUM(CASE WHEN q.handled=0 AND q.subject LIKE @list{index} ESCAPE '!' THEN 1 ELSE 0 END),0) AS lists," +
+                $"COALESCE(SUM(CASE WHEN q.handled=0 AND q.subject LIKE @feed{index} ESCAPE '!' THEN 1 ELSE 0 END),0) AS feeds," +
+                $"COALESCE(SUM(CASE WHEN q.handled=0 AND q.subject LIKE @starterpack{index} ESCAPE '!' THEN 1 ELSE 0 END),0) AS starterpacks," +
+                "COALESCE(SUM(CASE WHEN q.handled=0 THEN 1 ELSE 0 END),0) AS open_reports " +
+                $"FROM label_report_queries q WHERE q.repository_hash=@hash{index} AND q.repository_key=@key{index}");
+            byte[] key = s_strictUtf8.GetBytes(author);
+            parameters.AddRange(
+            [
+                ($"@hash{index}", SHA256.HashData(key)), ($"@key{index}", key), ($"@author{index}", author),
+                ($"@records{index}", pattern), ($"@post{index}", pattern[..^1] + "app.bsky.feed.post/%"),
+                ($"@profile{index}", pattern[..^1] + "app.bsky.actor.profile/%"),
+                ($"@list{index}", pattern[..^1] + "app.bsky.graph.list/%"),
+                ($"@feed{index}", pattern[..^1] + "app.bsky.feed.generator/%"),
+                ($"@starterpack{index}", pattern[..^1] + "app.bsky.graph.starterpack/%")
+            ]);
+        }
+        DbCommand command = Command(
+            connection: connection,
+            transaction: transaction,
+            sql: "SELECT ordinal,total,records,accounts,posts,profiles,lists,feeds,starterpacks,open_reports FROM (" +
+                string.Join(" UNION ALL ", branches) + ") authors ORDER BY ordinal",
+            [.. parameters]);
+        await using ConfiguredAsyncDisposable commandDisposal = command.ConfigureAwait(false);
+        DbDataReader reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false);
+        await using ConfiguredAsyncDisposable readerDisposal = reader.ConfigureAwait(false);
+        while (await reader.ReadAsync(token).ConfigureAwait(false))
+        {
             Dictionary<string, long> kinds = new(StringComparer.Ordinal)
             {
-                ["profile"] = reader.GetInt64(2) + reader.GetInt64(4),
-                ["post"] = reader.GetInt64(3),
-                ["list"] = reader.GetInt64(5),
-                ["feed"] = reader.GetInt64(6),
-                ["starter pack"] = reader.GetInt64(7)
+                ["profile"] = Integer(reader.GetValue(3)) + Integer(reader.GetValue(5)),
+                ["post"] = Integer(reader.GetValue(4)),
+                ["list"] = Integer(reader.GetValue(6)),
+                ["feed"] = Integer(reader.GetValue(7)),
+                ["starter pack"] = Integer(reader.GetValue(8))
             };
-            kinds["other record"] = reader.GetInt64(8) - kinds.Values.Sum();
-            summaries.Add(new(author, reader.GetInt64(0), reader.GetInt64(1), kinds));
+            kinds["other record"] = Integer(reader.GetValue(9)) - kinds.Values.Sum();
+            summaries.Add(new(
+                authors[checked((int)Integer(reader.GetValue(0)))],
+                Integer(reader.GetValue(1)),
+                Integer(reader.GetValue(2)),
+                kinds));
+        }
+        if (summaries.Count != authors.Length)
+        {
+            throw new InvalidDataException("The report aggregate did not return every author.");
         }
 
         return summaries;
@@ -559,15 +622,16 @@ internal abstract partial class RelationalLabelStore
         _ => $"json_extract(CAST(t.payload AS TEXT),'$.{property}') COLLATE BINARY"
     };
 
+    /// <summary>Prevents MySQL filesorts from truncating collation keys for bounded projection strings.</summary>
+    private string QueryTextSort(string column) => Provider == "mysql" ? $"CAST({column} AS BINARY)" : column;
+
     /// <summary>Builds only fixed workflow predicates shared by the count and selected page.</summary>
     private string TableFilter(LabelTableQuery query)
     {
         if (query.Kind == LabelTableKind.Audit)
         {
-            string milliseconds = AuditTimeMilliseconds();
-            string succeeded = Provider == "sqlite"
-                ? $"CASE WHEN {TableJsonField("Succeeded")}=1 THEN 'true' ELSE 'false' END"
-                : TableJsonField("Succeeded");
+            string milliseconds = AuditQueryTime;
+            string succeeded = "q.succeeded";
             List<string> filters = [];
             if (query.AuditAfterSequence > 0)
             {
@@ -579,11 +643,11 @@ internal abstract partial class RelationalLabelStore
             }
             if (query.AuditActor is not null)
             {
-                filters.Add($"{TableJsonField("Actor")}=@auditActor");
+                filters.Add("q.actor=@auditActor");
             }
             if (query.AuditSucceeded is not null)
             {
-                filters.Add($"{succeeded}=@auditSucceeded");
+                filters.Add($"{succeeded}=CASE WHEN @auditSucceeded='true' THEN 1 ELSE 0 END");
             }
             if (query.AuditFrom is not null)
             {
@@ -649,7 +713,7 @@ internal abstract partial class RelationalLabelStore
             LabelCaseWorkflow.Escalated => "t.status=3",
             LabelCaseWorkflow.Resolved => "t.status=2",
             LabelCaseWorkflow.Unassigned => "t.status<>2 AND t.assignee_hash IS NULL",
-            LabelCaseWorkflow.AssignedToMe => "t.status<>2 AND t.assignee_key=@actor",
+            LabelCaseWorkflow.AssignedToMe => "t.status<>2 AND q.assignee_hash=@actorHash AND q.assignee_key=@actor",
             LabelCaseWorkflow.PendingAppeals => "t.status<>2 AND EXISTS(SELECT 1 FROM label_appeals a WHERE a.case_id=t.case_id AND a.status=0)",
             _ => "t.status<>2"
         };
@@ -657,8 +721,8 @@ internal abstract partial class RelationalLabelStore
             ? caseStatus : $"({caseStatus}) AND {UnmutedSubjectFilter()}";
     }
 
-    /// <summary>Compares persisted UTC timestamps numerically across provider JSON and date representations, keeping legacy times null.</summary>
-    private string AuditTimeMilliseconds()
+    /// <summary>Preserves the original provider conversion when projecting immutable audit timestamps.</summary>
+    private string AuditSourceTimeMilliseconds()
     {
         string timestamp = $"NULLIF({TableJsonField("CreatedAt")},'null')";
         return Provider switch

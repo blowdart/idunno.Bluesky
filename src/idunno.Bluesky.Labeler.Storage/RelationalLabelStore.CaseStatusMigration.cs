@@ -40,8 +40,8 @@ internal abstract partial class RelationalLabelStore
                 transaction: transaction,
                 sql: create + """
 
-                INSERT INTO label_cases_upgraded
-                SELECT * FROM label_cases;
+                INSERT INTO label_cases_upgraded(case_id,subject_hash,subject_key,status,assignee_hash,assignee_key,payload,mute_subject_hash,mute_subject_key)
+                SELECT case_id,subject_hash,subject_key,status,assignee_hash,assignee_key,payload,mute_subject_hash,mute_subject_key FROM label_cases;
                 DROP TABLE label_cases;
                 ALTER TABLE label_cases_upgraded RENAME TO label_cases;
                 """,

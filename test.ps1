@@ -7,6 +7,8 @@ Requires PowerShell 7 and Docker with Linux containers. Creates unique, loopback
 MySQL 8.4 servers with temporary storage, verifies authenticated access from the test runner, runs every
 test project and framework with bounded parallelism, and removes only this run's containers in finally.
 Logs, the clean-build binary log, and elapsed times are retained under the ignored .artifacts/test-runs directory.
+Builds use four MSBuild workers with compiler parallelism disabled. Each database is limited to two CPUs,
+4 GiB of memory without additional swap, and a 2 GiB temporary data filesystem.
 #>
 #Requires -Version 7.0
 [CmdletBinding()]
@@ -22,7 +24,8 @@ $environmentNames = @(
     'POSTGRES_PASSWORD',
     'MYSQL_ROOT_PASSWORD',
     'LABELER_TEST_POSTGRESQL_CONNECTION',
-    'LABELER_TEST_MYSQL_CONNECTION'
+    'LABELER_TEST_MYSQL_CONNECTION',
+    'DOTNET_PROCESSOR_COUNT'
 )
 $previousEnvironment = @{}
 $total = [Diagnostics.Stopwatch]::StartNew()
@@ -54,10 +57,12 @@ try
     {
         $previousEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
     }
+    $env:DOTNET_PROCESSOR_COUNT = '2'
     & docker info --format '{{.ServerVersion}}' | Out-Host
     if ($LASTEXITCODE -ne 0) { throw 'Docker with Linux containers must be running.' }
     Invoke-DotNet -Name 'build' -Arguments @(
         'build', 'idunno.Bluesky.slnx', '-c', 'Debug', '--no-incremental', '--verbosity', 'quiet',
+        '--disable-build-servers', '-m:4', '-nr:false', '-p:UseSharedCompilation=false', '-p:ConcurrentBuild=false',
         "-bl:$logDirectory\build-{}.binlog")
 
     $password = [Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
@@ -66,11 +71,13 @@ try
     $postgres = "idunno-tests-$suffix-pg"
     $mysql = "idunno-tests-$suffix-mysql"
     & docker run --detach --name $postgres --env POSTGRES_PASSWORD --publish '127.0.0.1::5432' `
-        --tmpfs /var/lib/postgresql/data postgres:17 | Out-Null
+        --cpus=2 --memory=4g --memory-swap=4g `
+        --tmpfs '/var/lib/postgresql/data:rw,size=2147483648' postgres:17 | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'Disposable PostgreSQL startup failed.' }
     $containers.Add($postgres)
     & docker run --detach --name $mysql --env MYSQL_ROOT_PASSWORD --env 'MYSQL_ROOT_HOST=%' `
-        --publish '127.0.0.1::3306' --tmpfs /var/lib/mysql mysql:8.4 `
+        --publish '127.0.0.1::3306' --cpus=2 --memory=4g --memory-swap=4g `
+        --tmpfs '/var/lib/mysql:rw,size=2147483648' mysql:8.4 `
         --max-connections=200 --innodb-redo-log-capacity=536870912 | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'Disposable MySQL startup failed.' }
     $containers.Add($mysql)
@@ -107,6 +114,9 @@ finally
     $cleanupFailed = $false
     foreach ($container in $containers)
     {
+        & docker inspect --format '{{.Name}} memory={{.HostConfig.Memory}} memorySwap={{.HostConfig.MemorySwap}} nanoCpus={{.HostConfig.NanoCpus}} tmpfs={{json .HostConfig.Tmpfs}} oomKilled={{.State.OOMKilled}} exitCode={{.State.ExitCode}}' `
+            $container *> (Join-Path $logDirectory "$container-resources.log")
+        if ($LASTEXITCODE -ne 0) { Write-Warning "Could not capture resource diagnostics for $container." }
         & docker logs $container *> (Join-Path $logDirectory "$container.log")
         if ($LASTEXITCODE -ne 0) { Write-Warning "Could not capture logs for $container." }
         & docker rm --force --volumes $container | Out-Null

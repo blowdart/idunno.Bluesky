@@ -218,13 +218,11 @@ internal abstract partial class RelationalLabelStore
                         HandledAt = now,
                         ResolutionReason = request.ReportNote ?? request.Reason
                     };
-                    await ExecuteAsync(
+                    await SaveReportPayloadAsync(
                         connection: connection,
                         transaction: transaction,
-                        sql: "UPDATE label_reports SET payload=@payload WHERE report_id=@id",
-                        token: cancellationToken,
-                        ("@payload", JsonSerializer.SerializeToUtf8Bytes(handled, ModerationJsonContext.Default.ModerationReportData)),
-                        ("@id", report.Id)).ConfigureAwait(false);
+                        report: handled,
+                        token: cancellationToken).ConfigureAwait(false);
                     await UpdateReportSearchTextAsync(
                         connection,
                         transaction,

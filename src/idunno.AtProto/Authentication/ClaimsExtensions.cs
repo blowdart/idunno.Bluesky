@@ -13,6 +13,7 @@ namespace idunno.AtProto.Authentication;
 public static class ClaimsExtensions
 {
     /// <summary>Extension methods for <see cref="ClaimsPrincipal"/>.</summary>
+    /// <param name="principal">The claims principal whose AT Protocol identity is inspected.</param>
     extension(ClaimsPrincipal principal)
     {
         /// <summary>

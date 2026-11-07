@@ -126,6 +126,11 @@ internal abstract partial class RelationalLabelStore
             token: token,
             ("@seq", audit.Sequence),
             ("@payload", JsonSerializer.SerializeToUtf8Bytes(audit, AdministrationJsonContext.Default.AdministrationAudit))).ConfigureAwait(false);
+        await SaveAuditQueryAsync(
+            connection: connection,
+            transaction: transaction,
+            sequence: audit.Sequence,
+            token: token).ConfigureAwait(false);
         await SaveAdministrationAsync(connection, transaction, administration, token).ConfigureAwait(false);
         return audit.ToReceipt();
     }
