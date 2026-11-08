@@ -188,7 +188,7 @@ jobs:
     name: Publish signed prerelease labeler images
     needs: build
     if: ${{ inputs.perform_publish_containers }}
-    uses: ./.github/workflows/publish-labeler-images.yml
+    uses: $/.github/workflows/publish-labeler-images.yml
     with:
       prerelease: true
     permissions:

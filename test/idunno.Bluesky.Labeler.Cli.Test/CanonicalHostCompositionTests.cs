@@ -95,6 +95,8 @@ public class CanonicalHostCompositionTests
     {
         CancellationToken token = TestContext.Current.CancellationToken;
         string database = Path.Combine(Path.GetTempPath(), "canonical_" + Guid.NewGuid().ToString("N") + ".db");
+        string endpointName = "canonical-" + Guid.NewGuid().ToString("N");
+        string? socketDirectory = OperatingSystem.IsLinux() ? Path.Combine("/tmp", endpointName) : null;
         try
         {
             using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
@@ -106,7 +108,9 @@ public class CanonicalHostCompositionTests
             builder.Configuration["Labeler:PublicEndpoint"] = "https://labeler.example";
             builder.Configuration["Labeler:AdministrationAudience"] = "did:plc:canonical#labeler_admin";
             builder.Configuration["Labeler:DeclaredLabels"] = "review";
-            builder.Configuration["Labeler:LocalAdministrationEndpoint"] = "canonical-" + Guid.NewGuid().ToString("N");
+            builder.Configuration["Labeler:LocalAdministrationEndpoint"] = socketDirectory is null
+                ? endpointName
+                : Path.Combine(socketDirectory, "admin.sock");
             builder.Configuration["Labeler:SigningKeys:0:Id"] = "fixture";
             builder.Configuration["Labeler:SigningKeys:0:PrivateKeyBase64"] = Convert.ToBase64String(Encoding.UTF8.GetBytes(key.ExportPkcs8PrivateKeyPem()));
             builder.Configuration["Labeler:InitialSigningKeyId"] = "fixture";
@@ -136,12 +140,20 @@ public class CanonicalHostCompositionTests
             Assert.Equal("did:plc:canonical", state.Issuer);
             Assert.Equal("fixture", ring.ActiveKeyId);
             await app.StopAsync(token);
+            if (socketDirectory is not null)
+            {
+                Assert.False(File.Exists(Path.Combine(socketDirectory, "admin.sock")));
+            }
         }
         finally
         {
             foreach (string suffix in new[] { string.Empty, "-wal", "-shm" })
             {
                 File.Delete(database + suffix);
+            }
+            if (socketDirectory is not null && Directory.Exists(socketDirectory))
+            {
+                Directory.Delete(socketDirectory);
             }
         }
     }

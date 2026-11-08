@@ -222,7 +222,7 @@ jobs:
     name: Publish signed labeler images
     needs: build
     if: ${{ startsWith(github.ref, 'refs/tags/') }}
-    uses: ./.github/workflows/publish-labeler-images.yml
+    uses: $/.github/workflows/publish-labeler-images.yml
     with:
       prerelease: false
     permissions:
