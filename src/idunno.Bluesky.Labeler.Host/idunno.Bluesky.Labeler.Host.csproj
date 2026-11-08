@@ -5,6 +5,8 @@
     <ProjectReference Include="..\idunno.Bluesky.AspNet.Authentication\idunno.Bluesky.AspNet.Authentication.csproj" />
     <ProjectReference Include="..\idunno.Bluesky.AspNet.Authentication.UI\idunno.Bluesky.AspNet.Authentication.UI.csproj" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+    <PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" />
   </ItemGroup>
   <PropertyGroup>
     <Description>Provider-neutral canonical AT Protocol labeler hosting extensions with public distribution and protected administration.</Description>

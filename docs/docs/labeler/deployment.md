@@ -42,6 +42,60 @@ The host serves `/robots.txt` anonymously as plain text with `User-agent: *` and
 `Disallow: /`, asking crawlers not to crawl any path. This is advisory and does not
 replace authentication or access controls.
 
+## Metrics collection
+
+Both canonical variants support independently opt-in Prometheus scraping and OTLP
+metrics export. Neither exporter is enabled by default. They collect the persistence,
+HTTP distribution, moderation, authentication, AT Protocol HTTP client, directory
+and DID/handle-cache meters, plus built-in ASP.NET Core, Kestrel and HTTP client
+measurements. Selecting a meter does not enable its optional feature. See the
+[metrics reference](../metrics.md) for instrument names and units.
+
+Prometheus uses a separate Kestrel listener that serves only `/metrics`; the public
+labeler listener does not map a metrics route. Enable it with:
+
+```text
+LabelerTelemetry__Prometheus__Enabled=true
+LabelerTelemetry__Prometheus__Address=127.0.0.1
+LabelerTelemetry__Prometheus__Port=9464
+```
+
+Scrape `http://127.0.0.1:9464/metrics` from the same network namespace. The address
+must be a literal IPv4 or IPv6 address, and the port must be between 1 and 65535.
+For a collector in another container on a private Docker network, explicitly bind
+to `0.0.0.0` and let that collector scrape `<labeler-container>:9464`. Do not
+publish this port publicly or route it through the public reverse proxy. If a
+host-local collector needs a published port, bind the Docker publication to
+loopback, for example `-p 127.0.0.1:9464:9464`, with the container listener bound
+to `0.0.0.0`. The scrape endpoint has no authentication or TLS; restrict access
+with private networking and firewall rules. A listener bind failure fails host
+startup rather than silently dropping telemetry. It stops with the main host.
+
+OTLP pushes metrics rather than exposing an OTLP ingestion endpoint. Enable it
+and configure an external collector, for example:
+
+```text
+LabelerTelemetry__Otlp__Enabled=true
+LabelerTelemetry__Otlp__Endpoint=http://collector:4318/v1/metrics
+LabelerTelemetry__Otlp__Protocol=http/protobuf
+OTEL_SERVICE_NAME=my-labeler
+```
+
+`LabelerTelemetry:Otlp:Endpoint` and `Protocol` override the exporter's standard
+`OTEL_EXPORTER_OTLP_*` environment settings. If omitted, the exporter uses those
+settings and its defaults (gRPC at `http://localhost:4317`). The explicit protocol
+accepts `grpc` or `http/protobuf`; for HTTP/protobuf use the full `/v1/metrics`
+URL. Use HTTPS when telemetry crosses a trusted-network boundary. Exporter headers
+and timeouts can use the standard OpenTelemetry environment settings; keep headers
+in protected configuration, not source control. `OTEL_METRIC_EXPORT_INTERVAL`
+controls periodic export. The default service name is
+`idunno.Bluesky.Labeler.Host`, overridable with `OTEL_SERVICE_NAME`.
+
+These exporters belong to the non-packable canonical host, not to the persistence
+or hosting NuGet packages. The official OpenTelemetry Prometheus ASP.NET Core
+exporter is currently prerelease; the host pins the exporter release matching its
+OpenTelemetry SDK. No database server or telemetry collector is bundled.
+
 ## Required configuration
 
 When Xenon is enabled in either canonical variant, the host also uses

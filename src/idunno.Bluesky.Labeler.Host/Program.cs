@@ -107,6 +107,7 @@ internal static partial class Program
         {
             throw new InvalidOperationException("Register canonical hosting only once.");
         }
+        CanonicalLabelerTelemetry.AddServices(builder);
         if (IsKeylessConfiguration(builder.Configuration) != (keyRing is null))
         {
             throw new InvalidOperationException("The signing-key ring must match the explicitly configured signing role.");
