@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Buffers.Binary;
+using System.Data.Common;
 using System.IO.Pipes;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
@@ -202,7 +203,7 @@ public static class LabelerLocalAdministration
 }
 
 /// <summary>Serves one deadline-bounded command per connection and reauthenticates every invocation.</summary>
-internal sealed class LocalAdministrationHost(
+internal sealed partial class LocalAdministrationHost(
     string endpoint,
     AdministrationDispatcher dispatcher,
     ILabelAdministrationStore store,
@@ -312,20 +313,17 @@ internal sealed class LocalAdministrationHost(
 
         string directory = Path.GetDirectoryName(endpoint)!;
         Directory.CreateDirectory(directory, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
-        LocalPeer.VerifyDirectory(directory);
-        if (Path.Exists(endpoint))
-        {
-            throw new IOException("The local socket path already exists; verify ownership and remove a stale socket explicitly.");
-        }
+        LocalPeer.RemoveStaleSocket(endpoint);
 
         using Socket listener = new(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
         listener.Bind(new UnixDomainSocketEndPoint(endpoint));
-        File.SetUnixFileMode(endpoint, UnixFileMode.UserRead | UnixFileMode.UserWrite);
-        listener.Listen(16);
-        (ulong Device, ulong Inode) ownedSocket = LocalPeer.SocketIdentity(endpoint);
-        _ready.TrySetResult();
+        (ulong Device, ulong Inode)? ownedSocket = null;
         try
         {
+            File.SetUnixFileMode(endpoint, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+            ownedSocket = LocalPeer.SocketIdentity(endpoint);
+            listener.Listen(16);
+            _ready.TrySetResult();
             while (!stoppingToken.IsCancellationRequested)
             {
                 using Socket socket = await listener.AcceptAsync(stoppingToken).ConfigureAwait(false);
@@ -349,7 +347,7 @@ internal sealed class LocalAdministrationHost(
         }
         finally
         {
-            if (Path.Exists(endpoint) && LocalPeer.SocketIdentity(endpoint) == ownedSocket)
+            if (ownedSocket is { } identity && Path.Exists(endpoint) && LocalPeer.SocketIdentity(endpoint) == identity)
             {
                 File.Delete(endpoint);
             }
@@ -374,6 +372,10 @@ internal sealed class LocalAdministrationHost(
         catch (OperationCanceledException) when (!stoppingToken.IsCancellationRequested)
         {
             AdministrationLog.Rejected(logger, "denial-audit-timeout");
+        }
+        catch (DbException exception)
+        {
+            DenialAuditUnavailable(logger, exception);
         }
     }
 
@@ -436,7 +438,22 @@ internal sealed class LocalAdministrationHost(
         {
             AdministrationLog.Rejected(logger, "deadline-exceeded");
         }
+        catch (DbException exception)
+        {
+            DatabaseUnavailable(logger, exception);
+            byte[] responsePayload = AdministrationWire.SerializeResponse(
+                new(false, "ServiceUnavailable", "Label storage is temporarily unavailable."),
+                out _);
+            await LabelerLocalAdministration.WriteFrameAsync(stream, responsePayload, deadline.Token).ConfigureAwait(false);
+        }
+
     }
+
+    [LoggerMessage(EventId = 7314, Level = LogLevel.Warning, Message = "Local administration storage is unavailable; the command was not completed.")]
+    private static partial void DatabaseUnavailable(ILogger logger, Exception exception);
+
+    [LoggerMessage(EventId = 7315, Level = LogLevel.Warning, Message = "A malformed local administration frame could not be audited because storage is unavailable.")]
+    private static partial void DenialAuditUnavailable(ILogger logger, Exception exception);
 }
 
 /// <summary>Uses kernel peer credentials and Linux stat layouts without accepting caller-supplied identities.</summary>
@@ -507,6 +524,40 @@ internal static partial class LocalPeer
         }
 
         return (BitConverter.ToUInt64(stat, 0), BitConverter.ToUInt64(stat, 8));
+    }
+
+    /// <summary>Removes only a verified socket whose listener refuses connections and whose identity is unchanged.</summary>
+    internal static void RemoveStaleSocket(string path)
+    {
+        VerifyDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
+        if (!Path.Exists(path))
+        {
+            return;
+        }
+
+        (ulong Device, ulong Inode) expectedSocket = SocketIdentity(path);
+        using Socket probe = new(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+        try
+        {
+            probe.Connect(new UnixDomainSocketEndPoint(path));
+        }
+        catch (SocketException exception) when (exception.SocketErrorCode == SocketError.ConnectionRefused)
+        {
+            if (!Path.Exists(path))
+            {
+                return;
+            }
+
+            if (SocketIdentity(path) != expectedSocket)
+            {
+                throw new IOException("The local socket path changed while stale-socket recovery was in progress.");
+            }
+
+            File.Delete(path);
+            return;
+        }
+
+        throw new IOException("The local socket already has an active listener.");
     }
 
     /// <summary>Reads one Linux stat structure without following its final component.</summary>

@@ -44,6 +44,18 @@ public sealed class DetailModel : PageModel
     /// <summary>Gets active labels on a reported record's author without making them part of the record decision.</summary>
     internal string[] AccountLabels { get; private set; } = [];
 
+    /// <summary>Gets account label expiry metadata without making account labels part of a record decision.</summary>
+    internal ModerationLabelChoiceView[] AccountLabelChoices { get; private set; } = [];
+
+    /// <summary>Gets the validated duration for new labels, preserving immutable retry intent.</summary>
+    internal LabelDurationDisplay Duration { get; private set; } = new();
+
+    /// <summary>Gets protected case-management intent independently of label policy availability.</summary>
+    internal string? EscalationState { get; private set; }
+
+    /// <summary>Gets protected intent for handling the case's reports without changing labels or deciding appeals.</summary>
+    internal string? AcknowledgeState { get; private set; }
+
     /// <summary>Gets a bounded page of reports linked to this case.</summary>
     internal ModerationReportView[] Reports { get; private set; } = [];
 
@@ -132,6 +144,12 @@ public sealed class DetailModel : PageModel
         {
             return Page();
         }
+        if (response.Moderation?.Case is { } inspected)
+        {
+            EscalationState = EscalationProtector().Protect(JsonSerializer.Serialize(
+                new CaseEscalationForm(Id, inspected.Revision, Guid.NewGuid().ToString("N")),
+                CaseDecisionFormContext.Default.CaseEscalationForm));
+        }
 
         Preview = await HttpContext.RequestServices.GetRequiredService<SubjectPreviewService>()
             .LoadAsync(Data.GetProperty("moderation").GetProperty("case").GetProperty("subject"), HttpContext.RequestAborted).ConfigureAwait(false);
@@ -154,6 +172,7 @@ public sealed class DetailModel : PageModel
             HasReplacementLabels(definition.Declaration);
         LabelChoices = labels.Moderation?.LabelChoices ?? [];
         AccountLabels = labels.Moderation?.AccountLabels ?? [];
+        AccountLabelChoices = labels.Moderation?.AccountLabelChoices ?? [];
         LabelsAvailable = labels.Succeeded;
         AdministrationResponse reports = await UiPageHelpers.DispatchAsync(
             this,
@@ -224,8 +243,56 @@ public sealed class DetailModel : PageModel
             CaseDecisionForm snapshot = new(
                 Id, current.Revision, PolicyVersion, Guid.NewGuid().ToString("N"), ReportId, LabelChoices);
             DecisionState = Protector().Protect(JsonSerializer.Serialize(snapshot, CaseDecisionFormContext.Default.CaseDecisionForm));
+            AcknowledgeState = Protector().Protect(JsonSerializer.Serialize(
+                snapshot with { OperationId = Guid.NewGuid().ToString("N"), ReportId = null, Choices = [], Acknowledge = true },
+                CaseDecisionFormContext.Default.CaseDecisionForm));
         }
         return Page();
+    }
+
+    /// <summary>Flags the observed case for further review without changing labels, report handling or assignment.</summary>
+    /// <returns>An action result displaying the escalation outcome.</returns>
+    public async Task<IActionResult> OnPostEscalateAsync()
+    {
+        CaseEscalationForm? snapshot;
+        try
+        {
+            string state = await UiPageHelpers.FormValueAsync(this, "escalationState", 262144).ConfigureAwait(false);
+            snapshot = JsonSerializer.Deserialize(EscalationProtector().Unprotect(state), CaseDecisionFormContext.Default.CaseEscalationForm);
+        }
+        catch (Exception exception) when (exception is CryptographicException or JsonException)
+        {
+            ViewData["Error"] = "This escalation form is invalid or has expired. Refresh the case before submitting.";
+            return await OnGetAsync().ConfigureAwait(false);
+        }
+        if (snapshot is null || snapshot.CaseId != Id)
+        {
+            ViewData["Error"] = "Refresh this case before escalating it.";
+            return await OnGetAsync().ConfigureAwait(false);
+        }
+        JsonElement? subject = await ReadSubjectAsync().ConfigureAwait(false);
+        if (subject is null)
+        {
+            ViewData["Error"] = "The case subject could not be loaded. Reload the case.";
+            return await OnGetAsync().ConfigureAwait(false);
+        }
+        AdministrationResponse response = await UiPageHelpers.DispatchAsync(
+            this,
+            new AdministrationCommand(
+                Method: "changeCase",
+                OperationId: snapshot.OperationId,
+                Reason: await ReadOptionalReasonAsync().ConfigureAwait(false),
+                Moderation: new(
+                    CaseId: Id,
+                    ExpectedRevision: snapshot.Revision,
+                    Action: LabelCaseAction.Escalate,
+                    Subject: subject))).ConfigureAwait(false);
+        if (response.Succeeded)
+        {
+            TempData["Status"] = "Case escalated for further moderator review. Reports and labels are unchanged.";
+            return RedirectToPage(new { id = Id });
+        }
+        return await OnGetAsync().ConfigureAwait(false);
     }
 
     /// <summary>Changes an assignment after explicit confirmation.</summary>
@@ -314,6 +381,25 @@ public sealed class DetailModel : PageModel
 
         ReportId = snapshot.ReportId;
         Microsoft.AspNetCore.Http.IFormCollection form = await Request.ReadFormAsync(HttpContext.RequestAborted).ConfigureAwait(false);
+        int hours = snapshot.DurationHours;
+        if (!snapshot.DurationFrozen && !LabelDuration.TryRead(form, out hours))
+        {
+            ViewData["Error"] = "Choose an available new label duration.";
+            return await ReloadDecisionAsync(snapshot, form).ConfigureAwait(false);
+        }
+        Duration = new(hours, snapshot.DurationFrozen);
+        if (snapshot.Acknowledge && (hours != 0 || form["reportHandling"] != "same-target" ||
+            form["selectedLabels"].Count != 0 || form["appealId"].ToString().Length != 0 ||
+            form["appealOutcome"].ToString().Length != 0))
+        {
+            ViewData["Error"] = "Acknowledgment only reviews this case's reports. It cannot change labels, content versions or appeal outcomes.";
+            return await OnGetAsync().ConfigureAwait(false);
+        }
+        DateTimeOffset? expiresAt = snapshot.ExpiresAt;
+        if (!snapshot.DurationFrozen && hours != 0)
+        {
+            expiresAt = HttpContext.RequestServices.GetRequiredService<TimeProvider>().GetUtcNow().AddHours(hours);
+        }
         string reportHandling = form["reportHandling"].ToString();
         if (reportHandling is not ("selected" or "same-target" or "all-records"))
         {
@@ -333,6 +419,7 @@ public sealed class DetailModel : PageModel
             .Select(choice => new ModerationLabelActionInput(
                 Kind: selectedLabels.Contains(choice.Value) ? LabelOperationKind.Issue : LabelOperationKind.Negate,
                 Value: choice.Value,
+                ExpiresAt: selectedLabels.Contains(choice.Value) ? expiresAt : null,
                 ExpectedLabelSequence: choice.Sequence))];
         if (actions.Length > 16)
         {
@@ -378,15 +465,22 @@ public sealed class DetailModel : PageModel
                     HandleReportsAcrossRecordVersions: reportHandling == "all-records"))).ConfigureAwait(false);
         if (response.Succeeded)
         {
-            TempData["Status"] = "Moderation decision saved.";
+            TempData["Status"] = (snapshot.Acknowledge, response.Moderation?.Decision?.Event.Case.Status) switch
+            {
+                (true, nameof(LabelCaseStatus.Resolved)) => "Case acknowledged and closed. Labels were not changed.",
+                (true, _) => "Reports acknowledged without changing labels. The case remains in review for outstanding work.",
+                _ => "Moderation decision saved."
+            };
             return RedirectToPage(new { id = Id });
         }
 
         IActionResult page = await ReloadDecisionAsync(snapshot, form).ConfigureAwait(false);
         if (response.Error == "OutcomeUnknown")
         {
-            DecisionState = protectedState;
+            CaseDecisionForm frozen = snapshot with { DurationFrozen = true, DurationHours = hours, ExpiresAt = expiresAt };
+            DecisionState = Protector().Protect(JsonSerializer.Serialize(frozen, CaseDecisionFormContext.Default.CaseDecisionForm));
             RetryFields = [.. form.Where(field => field.Key is "reason" or "selectedLabels" or "reportHandling" or "appealId" or "appealOutcome").SelectMany(field => field.Value.Select(value => new KeyValuePair<string, string>(field.Key, value ?? string.Empty)))];
+            Duration = new(hours, true);
             ViewData["Error"] = "We could not confirm whether the decision completed. Retry without changing your choices so the service can recover the original result. Do not submit a new decision.";
         }
 
@@ -416,6 +510,10 @@ public sealed class DetailModel : PageModel
             LabelChoices.SequenceEqual(snapshot.Choices) && PolicyVersion == snapshot.PolicyVersion)
         {
             SubmittedDecision = form;
+            if (LabelDuration.TryRead(form, out int hours))
+            {
+                Duration = new(hours, snapshot.DurationFrozen);
+            }
         }
 
         return page;
@@ -424,6 +522,10 @@ public sealed class DetailModel : PageModel
     /// <summary>Protects the observed form baseline against forged labels, revisions and report substitutions.</summary>
     private IDataProtector Protector() =>
         HttpContext.RequestServices.GetRequiredService<IDataProtectionProvider>().CreateProtector("Xenon.CaseDecision.v1");
+
+    /// <summary>Separates escalation intent from label decisions and other protected forms.</summary>
+    private IDataProtector EscalationProtector() =>
+        HttpContext.RequestServices.GetRequiredService<IDataProtectionProvider>().CreateProtector("Xenon.CaseEscalation.v1");
 
     private async Task<JsonElement?> ReadSubjectAsync()
     {
@@ -442,8 +544,22 @@ public sealed class DetailModel : PageModel
 }
 
 /// <summary>Retains the exact label selections observed when the moderator opened the form.</summary>
-internal sealed record CaseDecisionForm(long CaseId, long Revision, string PolicyVersion, string OperationId, long? ReportId, ModerationLabelChoiceView[] Choices);
+internal sealed record CaseDecisionForm(
+    long CaseId,
+    long Revision,
+    string PolicyVersion,
+    string OperationId,
+    long? ReportId,
+    ModerationLabelChoiceView[] Choices,
+    int DurationHours = 0,
+    bool DurationFrozen = false,
+    DateTimeOffset? ExpiresAt = null,
+    bool Acknowledge = false);
 
 /// <summary>Provides reflection-free metadata for the integrity-protected form baseline.</summary>
 [JsonSerializable(typeof(CaseDecisionForm))]
+[JsonSerializable(typeof(CaseEscalationForm))]
 internal sealed partial class CaseDecisionFormContext : JsonSerializerContext;
+
+/// <summary>Retains the case revision and stable retry identity for a non-label escalation.</summary>
+internal sealed record CaseEscalationForm(long CaseId, long Revision, string OperationId);

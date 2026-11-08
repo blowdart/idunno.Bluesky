@@ -87,6 +87,9 @@ public sealed class CallbackServer : IAsyncDisposable
 
     private WebApplication? _listener;
 
+    /// <summary>Retains the started host independently of disposal detaching the public callback state.</summary>
+    private readonly Task<WebApplication> _listenerStartup;
+
     /// <summary>
     /// Creates a new instance of <see cref="CallbackServer"/>.
     /// </summary>
@@ -159,9 +162,11 @@ public sealed class CallbackServer : IAsyncDisposable
 
         Uri = uri;
 
-        Startup = InitializeListenerAsync(port, path, loggerFactory, ownedSockets, configure, cancellationToken);
+        _listenerStartup = InitializeListenerAsync(port, path, loggerFactory, ownedSockets, configure, cancellationToken);
+        Startup = _listenerStartup;
 
-        _ = RunListenerAsync().ContinueWith(
+        ListenerShutdown = RunListenerAsync();
+        _ = ListenerShutdown.ContinueWith(
             static (listenerTask, state) =>
             {
                 CallbackServer server = (CallbackServer)state!;
@@ -196,7 +201,7 @@ public sealed class CallbackServer : IAsyncDisposable
             TaskScheduler.Default);
     }
 
-    private async Task InitializeListenerAsync(
+    private async Task<WebApplication> InitializeListenerAsync(
         int port,
         string path,
         ILoggerFactory? loggerFactory,
@@ -207,20 +212,22 @@ public sealed class CallbackServer : IAsyncDisposable
         try
         {
             configure?.Invoke(this);
-            await BuildAndStartListenerAsync(port, path, loggerFactory, ownedSockets, cancellationToken).ConfigureAwait(false);
+            return await BuildAndStartListenerAsync(port, path, loggerFactory, ownedSockets, cancellationToken).ConfigureAwait(false);
         }
         catch
         {
-            if (_listener is not null)
+            WebApplication? listener = _listener;
+            _listener = null;
+            if (listener is not null)
             {
-                await _listener.DisposeAsync().ConfigureAwait(false);
+                await listener.DisposeAsync().ConfigureAwait(false);
             }
 
             throw;
         }
     }
 
-    private async Task BuildAndStartListenerAsync(
+    private async Task<WebApplication> BuildAndStartListenerAsync(
         int port,
         string path,
         ILoggerFactory? loggerFactory,
@@ -305,7 +312,13 @@ public sealed class CallbackServer : IAsyncDisposable
 
         Logger.ListeningOn(_logger, Uri);
 
+        if (StartupBarrier is { } barrier)
+        {
+            await barrier.ConfigureAwait(false);
+        }
         await _listener.StartAsync(cancellationToken).ConfigureAwait(false);
+
+        return _listener;
     }
 
     /// <summary>
@@ -447,28 +460,23 @@ public sealed class CallbackServer : IAsyncDisposable
     /// </summary>
     internal Task Startup { get; }
 
+    /// <summary>Gets or sets an internal synchronization barrier before host startup for lifetime regression tests.</summary>
+    internal Task? StartupBarrier { get; set; }
+
     /// <summary>
-    /// Runs the listener until shutdown, preserving the disposal performed by the host's RunAsync method.
+    /// Gets the listener shutdown task; disposal owns and awaits this task before releasing host services.
+    /// </summary>
+    internal Task ListenerShutdown { get; }
+
+    /// <summary>
+    /// Observes listener shutdown without competing with the callback server for ownership of host disposal.
     /// </summary>
     /// <returns>A task representing the listener lifetime.</returns>
     private async Task RunListenerAsync()
     {
-        WebApplication? listener = _listener;
-        await Startup.ConfigureAwait(false);
+        WebApplication listener = await _listenerStartup.ConfigureAwait(false);
 
-        if (listener is null)
-        {
-            throw new InvalidOperationException("Callback server startup completed without a listener.");
-        }
-
-        try
-        {
-            await listener.WaitForShutdownAsync(CancellationToken.None).ConfigureAwait(false);
-        }
-        finally
-        {
-            await listener.DisposeAsync().ConfigureAwait(false);
-        }
+        await listener.WaitForShutdownAsync(CancellationToken.None).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -701,7 +709,7 @@ public sealed class CallbackServer : IAsyncDisposable
     /// <returns>The task object representing the asynchronous operation.</returns>
     private async ValueTask DisposeAsyncCore()
     {
-        WebApplication? listener;
+        WebApplication? listener = null;
 
         lock (_syncLock)
         {
@@ -711,11 +719,6 @@ public sealed class CallbackServer : IAsyncDisposable
             }
 
             _disposed = true;
-
-            // Take the listener under the lock so a concurrent WaitForCallbackAsync either arms its
-            // timeout against a live server or observes the null listener, never a half torn down one.
-            listener = _listener;
-            _listener = null;
         }
 
         // Unblock anyone still waiting on a callback rather than leaving them pending forever.
@@ -724,9 +727,19 @@ public sealed class CallbackServer : IAsyncDisposable
 
         try
         {
+            // Startup faults are already observed by the constructor and delivered to callback waiters.
+            // Wait for startup ownership to settle before detaching or disposing its host.
+            await Startup.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+            lock (_syncLock)
+            {
+                listener = _listener;
+                _listener = null;
+            }
+
             if (listener is not null)
             {
-                await listener.StopAsync(CancellationToken.None).ConfigureAwait(false);
+                listener.Lifetime.StopApplication();
+                await ListenerShutdown.ConfigureAwait(false);
             }
         }
         finally
@@ -741,13 +754,12 @@ public sealed class CallbackServer : IAsyncDisposable
             finally
             {
                 DisposeSockets(_ownedSockets);
+                await _timeoutRegistration.DisposeAsync().ConfigureAwait(false);
+                _timeoutCancellationSource?.Dispose();
+                _timeoutTimerSource?.Dispose();
+                _disposalCancellationSource.Dispose();
             }
         }
-
-        await _timeoutRegistration.DisposeAsync().ConfigureAwait(false);
-        _timeoutCancellationSource?.Dispose();
-        _timeoutTimerSource?.Dispose();
-        _disposalCancellationSource.Dispose();
     }
 
     /// <summary>

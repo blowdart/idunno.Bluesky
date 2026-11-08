@@ -11,13 +11,285 @@ using idunno.Bluesky.Labeler;
 using idunno.Bluesky.Labeler.Administration;
 using idunno.Bluesky.Labeler.Issuance;
 
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 
 namespace idunno.Bluesky.AspNet.Labeler.Integration.Test;
 
 public partial class AdministrationTests
 {
+    [Theory]
+    [InlineData("", HttpStatusCode.OK)]
+    [InlineData("?limit=100", HttpStatusCode.OK)]
+    [InlineData("?limit=0", HttpStatusCode.BadRequest)]
+    [InlineData("?limit=101", HttpStatusCode.BadRequest)]
+    [InlineData("?limit=wrong", HttpStatusCode.BadRequest)]
+    [InlineData("?limit=1&limit=2", HttpStatusCode.BadRequest)]
+    [InlineData("?cursor=unknown", HttpStatusCode.BadRequest)]
+    public async Task OzoneOnlineMembersValidatesQueriesAndReportsObservedCaller(string query, HttpStatusCode expected)
+    {
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateOzoneAsync(
+            key: key,
+            identity: identity,
+            allowedOrigins: ["http://127.0.0.1:3000"]);
+        using HttpResponseMessage response = await OzoneRequestAsync(
+            fixture: fixture,
+            key: key,
+            method: "tools.ozone.team.listOnlineMembers",
+            query: query);
+        Assert.Equal(expected, response.StatusCode);
+        if (expected == HttpStatusCode.OK)
+        {
+            using JsonDocument body = JsonDocument.Parse(await response.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken));
+            JsonElement member = Assert.Single(body.RootElement.GetProperty("members").EnumerateArray());
+            Assert.Equal(s_actor.Value, member.GetProperty("did").GetString());
+            Assert.Equal(fixture.Clock.GetUtcNow(), member.GetProperty("lastActive").GetDateTimeOffset());
+            Assert.Equal("no-store", response.Headers.CacheControl!.ToString());
+        }
+    }
+
+    [Fact]
+    public void OzonePresenceExpiresAndRechecksMembershipWithoutInventingActivity()
+    {
+        FakeTimeProvider clock = new(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        OzoneTeamPresence presence = new(clock);
+        Did first = new("did:plc:first");
+        Did second = new("did:plc:second");
+        LabelTeamMember[] team =
+        [
+            new(first, LabelTeamRole.Administrator, true, false),
+            new(second, LabelTeamRole.Viewer, true, false)
+        ];
+        Assert.Empty(presence.List(team, 100));
+        presence.Observe(first, team);
+        clock.Advance(TimeSpan.FromMinutes(1));
+        presence.Observe(second, team);
+        Assert.Equal(second.Value, Assert.Single(presence.List(team, 1)).Did);
+        Assert.Equal([second.Value, first.Value], presence.List(team, 100).Select(member => member.Did));
+        clock.Advance(TimeSpan.FromMinutes(4));
+        Assert.Equal(second.Value, Assert.Single(presence.List(team, 100)).Did);
+        team[1] = team[1] with { Active = false };
+        Assert.Empty(presence.List(team, 100));
+        presence.Observe(second, team);
+        Assert.Empty(presence.List(team, 100));
+        team[1] = team[1] with { Active = true };
+        Assert.Empty(presence.List(team, 100));
+        presence.Observe(first, team);
+        team[0] = team[0] with { Removed = true };
+        Assert.Empty(presence.List(team, 100));
+        Assert.Empty(new OzoneTeamPresence(clock).List(team, 100));
+    }
+
+    [Theory]
+    [InlineData("/.well-known/ozone-metadata.json", "GET")]
+    [InlineData("/xrpc/tools.ozone.server.getConfig", "GET")]
+    [InlineData("/xrpc/tools.ozone.team.listOnlineMembers", "GET")]
+    [InlineData("/xrpc/app.bsky.feed.getPostThread", "GET")]
+    [InlineData("/xrpc/tools.ozone.setting.listOptions", "GET")]
+    [InlineData("/xrpc/tools.ozone.setting.upsertOption", "POST")]
+    [InlineData("/xrpc/tools.ozone.moderation.emitEvent", "POST")]
+    public async Task OzoneCorsPreflightAllowsConfiguredOriginsWithoutAuthentication(string path, string method)
+    {
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateOzoneAsync(
+            key: key,
+            identity: identity,
+            allowedOrigins: ["http://127.0.0.1:3000", "https://ozone.example"],
+            fallbackAuthorizationRequired: true);
+        using HttpRequestMessage request = new(HttpMethod.Options, path);
+        request.Headers.Add("Origin", "http://127.0.0.1:3000");
+        request.Headers.Add("Access-Control-Request-Method", method);
+        request.Headers.Add("Access-Control-Request-Headers", "authorization,content-type");
+        using HttpResponseMessage response = await fixture.Client.SendAsync(request, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal("http://127.0.0.1:3000", Assert.Single(response.Headers.GetValues("Access-Control-Allow-Origin")));
+        Assert.Equal(method, Assert.Single(response.Headers.GetValues("Access-Control-Allow-Methods")));
+        string headers = string.Join(",", response.Headers.GetValues("Access-Control-Allow-Headers"));
+        Assert.Contains("Authorization", headers, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Content-Type", headers, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Origin", response.Headers.Vary);
+        Assert.False(response.Headers.Contains("Access-Control-Allow-Credentials"));
+        Assert.Equal(0, (await fixture.Store.GetStateAsync(TestContext.Current.CancellationToken)).IssuedThrough);
+    }
+
+    [Theory]
+    [InlineData("http://localhost:3000", true, true, "/xrpc/tools.ozone.server.getConfig")]
+    [InlineData("http://127.0.0.1:3001", true, true, "/xrpc/tools.ozone.server.getConfig")]
+    [InlineData("https://untrusted.example", true, true, "/xrpc/tools.ozone.server.getConfig")]
+    [InlineData("null", true, true, "/xrpc/tools.ozone.server.getConfig")]
+    [InlineData("http://127.0.0.1:3000", false, true, "/xrpc/tools.ozone.server.getConfig")]
+    [InlineData("http://127.0.0.1:3000", true, false, "/xrpc/tools.ozone.server.getConfig")]
+    [InlineData("http://127.0.0.1:3000", true, true, "/xrpc/tools.ozone.unknown")]
+    [InlineData("http://127.0.0.1:3000", true, true, "/xrpc/dev.idunno.labeler.admin.getTeam")]
+    [InlineData("http://127.0.0.1:3000", true, true, "/xrpc/com.atproto.label.queryLabels")]
+    [InlineData("http://127.0.0.1:3000", true, true, "/health/labeler/ready")]
+    public async Task OzoneCorsDoesNotGrantUnconfiguredOriginsOrOtherRoutes(
+        string origin,
+        bool configureOrigins,
+        bool enabled,
+        string path)
+    {
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateOzoneAsync(
+            key: key,
+            identity: identity,
+            enabled: enabled,
+            allowedOrigins: configureOrigins ? ["http://127.0.0.1:3000"] : null);
+        foreach (HttpMethod method in new[] { HttpMethod.Options, HttpMethod.Get })
+        {
+            using HttpRequestMessage request = new(method, path);
+            request.Headers.Add("Origin", origin);
+            if (method == HttpMethod.Options)
+            {
+                request.Headers.Add("Access-Control-Request-Method", "GET");
+                request.Headers.Add("Access-Control-Request-Headers", "authorization");
+            }
+            using HttpResponseMessage response = await fixture.Client.SendAsync(request, TestContext.Current.CancellationToken);
+            Assert.False(response.Headers.Contains("Access-Control-Allow-Origin"));
+            Assert.False(response.Headers.Contains("Access-Control-Allow-Credentials"));
+        }
+    }
+
+    [Theory]
+    [InlineData("success", HttpStatusCode.OK)]
+    [InlineData("missing-token", HttpStatusCode.Unauthorized)]
+    [InlineData("outsider", HttpStatusCode.Forbidden)]
+    [InlineData("insecure", HttpStatusCode.Forbidden)]
+    [InlineData("disabled-remote", HttpStatusCode.NotFound)]
+    [InlineData("owner-switch-off", HttpStatusCode.NotFound)]
+    [InlineData("bad-query", HttpStatusCode.BadRequest)]
+    [InlineData("unsupported", HttpStatusCode.NotImplemented)]
+    public async Task OzoneCorsHeadersPreserveActualResponseAuthenticationAndErrors(string scenario, HttpStatusCode expected)
+    {
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateOzoneAsync(
+            key: key,
+            identity: identity,
+            mode: scenario switch
+            {
+                "disabled-remote" => RemoteAdministrationMode.Disabled,
+                "owner-switch-off" => RemoteAdministrationMode.WebUiControlled,
+                _ => RemoteAdministrationMode.Enabled
+            },
+            allowedOrigins: ["http://127.0.0.1:3000", "https://ozone.example"],
+            fallbackAuthorizationRequired: true);
+        string method = scenario == "unsupported" ? "tools.ozone.team.addMember" : "tools.ozone.server.getConfig";
+        using HttpRequestMessage request = new(
+            scenario == "unsupported" ? HttpMethod.Post : HttpMethod.Get,
+            "/xrpc/" + method + (scenario == "bad-query" ? "?unknown=true" : ""));
+        request.Headers.Add("Origin", "https://ozone.example");
+        if (scenario != "insecure")
+        {
+            AddTrustedProxyHeaders(request);
+        }
+        if (scenario != "missing-token")
+        {
+            request.Headers.Authorization = new AuthenticationHeaderValue(
+                "Bearer",
+                Token(
+                    key: key,
+                    now: fixture.Clock.GetUtcNow(),
+                    audience: TestServerBuilder.s_issuer.Value,
+                    method: method,
+                    actor: scenario == "outsider" ? "did:plc:outsider" : null));
+        }
+        using HttpResponseMessage response = await fixture.Client.SendAsync(request, TestContext.Current.CancellationToken);
+        Assert.Equal(expected, response.StatusCode);
+        Assert.Equal("https://ozone.example", Assert.Single(response.Headers.GetValues("Access-Control-Allow-Origin")));
+        Assert.Contains("Origin", response.Headers.Vary);
+        Assert.False(response.Headers.Contains("Access-Control-Allow-Credentials"));
+    }
+
+    [Theory]
+    [InlineData("*")]
+    [InlineData("https://*.example")]
+    [InlineData("null")]
+    [InlineData("file:///example")]
+    [InlineData("https://ozone.example/")]
+    [InlineData("https://ozone.example/path")]
+    [InlineData("https://ozone.example?query=true")]
+    [InlineData("https://ozone.example#fragment")]
+    [InlineData("https://user:password@ozone.example")]
+    public async Task OzoneCorsRejectsInvalidOriginsBeforeMapping(string origin)
+    {
+        await using WebApplication app = WebApplication.CreateBuilder().Build();
+        ArgumentException exception = Assert.Throws<ArgumentException>(() => app.MapOzoneCompatibility([origin]));
+        Assert.Equal("allowedOrigins", exception.ParamName);
+    }
+
+    [Fact]
+    public async Task OzoneCorsDiscoveryIsReadableOnlyFromAnAllowedOriginWithoutWeakeningHostAuthorization()
+    {
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateOzoneAsync(
+            key: key,
+            identity: identity,
+            allowedOrigins: ["http://127.0.0.1:3000"],
+            fallbackAuthorizationRequired: true);
+        using HttpRequestMessage request = new(HttpMethod.Get, "/.well-known/ozone-metadata.json");
+        request.Headers.Add("Origin", "http://127.0.0.1:3000");
+        using HttpResponseMessage response = await fixture.Client.SendAsync(request, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("http://127.0.0.1:3000", Assert.Single(response.Headers.GetValues("Access-Control-Allow-Origin")));
+        Assert.False(response.Headers.Contains("Access-Control-Allow-Credentials"));
+        Assert.True(response.Headers.CacheControl!.NoStore);
+
+        using HttpRequestMessage protectedRequest = new(HttpMethod.Get, "/test/fallback");
+        protectedRequest.Headers.Add("Origin", "http://127.0.0.1:3000");
+        using HttpResponseMessage protectedResponse = await fixture.Client.SendAsync(protectedRequest, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Unauthorized, protectedResponse.StatusCode);
+        Assert.False(protectedResponse.Headers.Contains("Access-Control-Allow-Origin"));
+    }
+
+    [Fact]
+    public async Task OzoneCorsPreflightDoesNotConsumeAnAssertionOrBypassReplayProtection()
+    {
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateOzoneAsync(
+            key: key,
+            identity: identity,
+            allowedOrigins: ["http://127.0.0.1:3000"]);
+        string assertion = Token(
+            key: key,
+            now: fixture.Clock.GetUtcNow(),
+            audience: TestServerBuilder.s_issuer.Value,
+            method: "tools.ozone.server.getConfig");
+        foreach (HttpMethod method in new[] { HttpMethod.Options, HttpMethod.Get })
+        {
+            using HttpRequestMessage request = new(method, "/xrpc/tools.ozone.server.getConfig");
+            AddTrustedProxyHeaders(request);
+            request.Headers.Add("Origin", "http://127.0.0.1:3000");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", assertion);
+            if (method == HttpMethod.Options)
+            {
+                request.Headers.Add("Access-Control-Request-Method", "GET");
+                request.Headers.Add("Access-Control-Request-Headers", "authorization");
+            }
+            using HttpResponseMessage response = await fixture.Client.SendAsync(request, TestContext.Current.CancellationToken);
+            Assert.Equal(
+                method == HttpMethod.Options ? HttpStatusCode.NoContent : HttpStatusCode.OK,
+                response.StatusCode);
+            Assert.Equal("http://127.0.0.1:3000", Assert.Single(response.Headers.GetValues("Access-Control-Allow-Origin")));
+        }
+
+        using HttpRequestMessage replay = new(HttpMethod.Get, "/xrpc/tools.ozone.server.getConfig");
+        AddTrustedProxyHeaders(replay);
+        replay.Headers.Add("Origin", "http://127.0.0.1:3000");
+        replay.Headers.Authorization = new AuthenticationHeaderValue("Bearer", assertion);
+        using HttpResponseMessage rejected = await fixture.Client.SendAsync(replay, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Forbidden, rejected.StatusCode);
+        Assert.Equal("http://127.0.0.1:3000", Assert.Single(rejected.Headers.GetValues("Access-Control-Allow-Origin")));
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -40,7 +312,7 @@ public partial class AdministrationTests
             Assert.Equal(TestServerBuilder.s_issuer.Value, body.RootElement.GetProperty("did").GetString());
             Assert.Equal("https://labeler.example/", body.RootElement.GetProperty("url").GetString());
             Assert.Equal("did:key:" + key.ExportPublicKeyMultibase(), body.RootElement.GetProperty("publicKey").GetString());
-            Assert.Equal("*", Assert.Single(response.Headers.GetValues("Access-Control-Allow-Origin")));
+            Assert.False(response.Headers.Contains("Access-Control-Allow-Origin"));
         }
         else
         {
@@ -240,7 +512,9 @@ public partial class AdministrationTests
         LabelSigningKey key,
         HttpClient identity,
         bool enabled = true,
-        RemoteAdministrationMode mode = RemoteAdministrationMode.Enabled)
+        RemoteAdministrationMode mode = RemoteAdministrationMode.Enabled,
+        string[]? allowedOrigins = null,
+        bool fallbackAuthorizationRequired = false)
     {
         TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
             options: new() { PublicEndpoint = new Uri("https://labeler.example") },
@@ -254,8 +528,10 @@ public partial class AdministrationTests
                 });
             },
             remoteAdministrationEnabled: null,
+            fallbackAuthorizationRequired: fallbackAuthorizationRequired,
             controlDatabaseTime: true,
-            ozoneAdministration: enabled);
+            ozoneAdministration: enabled,
+            ozoneAllowedOrigins: allowedOrigins);
         Assert.True((await fixture.Services.GetRequiredService<ILabelAdministrationStore>()
             .BootstrapAsync(
                 s_actor,

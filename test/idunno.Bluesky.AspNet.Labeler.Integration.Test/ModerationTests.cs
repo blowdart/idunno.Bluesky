@@ -841,6 +841,32 @@ public partial class ModerationTests
             (await store.ReadPolicyStateAsync(token))!.Phase);
     }
 
+    [Theory]
+    [InlineData(5000, HttpStatusCode.OK)]
+    [InlineData(5001, HttpStatusCode.ServiceUnavailable)]
+    public async Task HealthRespectsDatabaseClockRollbackTolerance(int rollbackMilliseconds, HttpStatusCode expected)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(key, identity, controlDatabaseTime: true);
+        await fixture.Clock.PolicyVerificationRegistrations.Reader.ReadAsync(token);
+        await VerifyPolicyAsync(fixture);
+        LabelPolicyState state = (await fixture.Services.GetRequiredService<ILabelPolicyStore>().ReadPolicyStateAsync(token))!;
+        await using Microsoft.Data.Sqlite.SqliteConnection connection = new($"Data Source={fixture.DatabasePath};Pooling=False");
+        await connection.OpenAsync(token);
+        await using Microsoft.Data.Sqlite.SqliteCommand update = connection.CreateCommand();
+        update.CommandText = """
+            UPDATE label_policy_gate
+            SET payload=CAST(json_set(CAST(payload AS TEXT),'$.VerifiedUntil', @deadline) AS BLOB)
+            WHERE id=1
+            """;
+        update.Parameters.AddWithValue("@deadline", state.VerifiedUntil!.Value.AddMilliseconds(rollbackMilliseconds).ToUnixTimeMilliseconds());
+        Assert.Equal(1, await update.ExecuteNonQueryAsync(token));
+        using HttpResponseMessage response = await fixture.Client.GetAsync("/health/labeler/moderation", token);
+        Assert.Equal(expected, response.StatusCode);
+    }
+
     [Fact]
     public async Task HealthReadsStoredFreshnessWithoutStartingRemoteVerification()
     {
@@ -1436,7 +1462,7 @@ public partial class ModerationTests
         using JsonDocument output = JsonDocument.Parse(await response.Content.ReadAsByteArrayAsync(token));
         JsonElement appealSubject = output.RootElement.GetProperty("subject");
         Assert.Equal(TestServerBuilder.s_issuer.Value, output.RootElement.GetProperty("src").GetString());
-        Assert.Equal(recordReads, declarationHandler.SubjectRecordReads);
+        Assert.Equal(recordReads + (strongReference ? 0 : 1), declarationHandler.SubjectRecordReads);
         if (strongReference)
         {
             Assert.Equal("com.atproto.repo.strongRef", appealSubject.GetProperty("$type").GetString());
@@ -1624,7 +1650,8 @@ public partial class ModerationTests
         bool xenonUi = false,
         bool ozone = false,
         IDidHandleResolver? handles = null,
-        DeclarationHandler? publicationLookup = null)
+        DeclarationHandler? publicationLookup = null,
+        bool controlDatabaseTime = false)
     {
         TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
             configureAdministration: services =>
@@ -1670,7 +1697,7 @@ public partial class ModerationTests
             moderation: true,
             xenonUi: xenonUi,
             ozoneAdministration: ozone,
-            controlDatabaseTime: ozone);
+            controlDatabaseTime: ozone || controlDatabaseTime);
         return fixture;
     }
 
@@ -1728,6 +1755,14 @@ public partial class ModerationTests
         internal int SubjectRecordReads { get; private set; }
         /// <summary>Gets or sets whether the reported record is authoritatively absent.</summary>
         internal bool MissingSubjectRecord { get; set; }
+        /// <summary>Gets or sets the independently controlled reported-record response.</summary>
+        internal HttpStatusCode SubjectRecordStatus { get; set; } = HttpStatusCode.OK;
+        /// <summary>Gets or sets the current record version returned by the PDS.</summary>
+        internal string SubjectRecordCid { get; set; } = Cid;
+        /// <summary>Gets or sets whether the PDS returns an inconsistent record identity.</summary>
+        internal bool InconsistentSubjectRecord { get; set; }
+        /// <summary>Gets or sets whether independent repository resolution has no PDS service.</summary>
+        internal bool MissingSubjectPds { get; set; }
         internal bool BlockDeclarationReads { get; set; }
         internal TaskCompletionSource DeclarationRequested { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         /// <summary>Gets or sets whether account resolution pauses after the case policy revision has been captured.</summary>
@@ -1753,6 +1788,13 @@ public partial class ModerationTests
                     {"id":"{{did}}#atproto","type":"Multikey","controller":"{{did}}","publicKeyMultibase":"{{publicKey}}"}],
                     "service":[{"id":"#atproto_pds","type":"AtprotoPersonalDataServer","serviceEndpoint":"https://pds.example"}]}
                     """;
+                if (did == s_reporter.Value && MissingSubjectPds)
+                {
+                    json = json.Replace(
+                        "\"serviceEndpoint\":\"https://pds.example\"",
+                        "\"serviceEndpoint\":\"ftp://pds.example\"",
+                        StringComparison.Ordinal);
+                }
             }
             else if (uri.Host == "pds.example" &&
                 uri.AbsolutePath == "/xrpc/com.atproto.repo.getRecord" &&
@@ -1767,7 +1809,17 @@ public partial class ModerationTests
                         Content = new StringContent("""{"error":"RecordNotFound","message":"The record is deleted."}""", Encoding.UTF8, "application/json")
                     };
                 }
-                json = $$$"""{"uri":"at://did:plc:reporter/app.bsky.feed.post/3loqo3h6jbb2g","cid":"{{{Cid}}}","value":{"$type":"app.bsky.feed.post","text":"Test"}}""";
+                if (SubjectRecordStatus != HttpStatusCode.OK)
+                {
+                    return new HttpResponseMessage(SubjectRecordStatus)
+                    {
+                        Content = new StringContent("""{"error":"InternalServerError"}""", Encoding.UTF8, "application/json")
+                    };
+                }
+                string recordUri = InconsistentSubjectRecord
+                    ? "at://did:plc:other/app.bsky.feed.post/3loqo3h6jbb2g"
+                    : "at://did:plc:reporter/app.bsky.feed.post/3loqo3h6jbb2g";
+                json = $$$"""{"uri":"{{{recordUri}}}","cid":"{{{SubjectRecordCid}}}","value":{"$type":"app.bsky.feed.post","text":"Test"}}""";
             }
             else if (uri.Host == "pds.example" && uri.AbsolutePath == "/xrpc/com.atproto.repo.getRecord")
             {

@@ -11,6 +11,7 @@ const script = readFileSync(resolve(__dirname, "../../src/idunno.Bluesky.AspNet.
 function page(saved = null, failStorage = false, dates = true, relative = false, offset = 0) {
     let clicked;
     let tick;
+    let updated;
     let now = Date.parse("2026-01-01T00:00:00Z") + offset;
     class Clock extends Date {
         static now() { return now; }
@@ -28,15 +29,17 @@ function page(saved = null, failStorage = false, dates = true, relative = false,
     const stored = new Map(saved === null ? [] : [["xenon.timeZone", saved]]);
     const warnings = [];
     const time = {
+        dataset: {},
         textContent: "2026-01-01 00:00:00Z", dateTime: "2026-01-01T00:00:00.0000000+00:00",
         hasAttribute() { return relative; },
         classList: { add(value) { assert.equal(value, "identity"); } },
         setAttribute(name, value) { this[name] = value; },
         replaceChildren(...children) { this.children = children; }
     };
-    const invalid = { textContent: "Unavailable", dateTime: "invalid", hasAttribute() { return false; } };
+    const invalid = { dataset: {}, textContent: "Unavailable", dateTime: "invalid", hasAttribute() { return false; } };
     runInNewContext(script, {
         document: {
+            addEventListener(name, callback) { assert.equal(name, "xenon:queue-updated"); updated = callback; },
             createElement() {
                 return { setAttribute(name, value) { this[name] = value; } };
             },
@@ -68,9 +71,24 @@ function page(saved = null, failStorage = false, dates = true, relative = false,
     return {
         button, controls, status, stored, warnings, attributes, zone, time, invalid,
         click() { clicked(); },
+        update() { updated(); },
         advance(milliseconds) { now += milliseconds; tick(); }
     };
 }
+
+test("Queue replacement preserves local exact dates and relative tooltips without adding timers", () => {
+    const view = page("local", false, true, true);
+    const expected = view.time.children[1].textContent;
+    view.update();
+    view.update();
+    assert.equal(view.time.children[1].textContent, expected);
+    view.click();
+    assert.equal(view.time.children[1].textContent, "2026-01-01 00:00:00Z");
+    view.update();
+    assert.equal(view.time.children[1].textContent, "2026-01-01 00:00:00Z");
+    view.advance(60000);
+    assert.match(view.time.children[0].textContent, /minute/);
+});
 
 test("Page clock toggles all dates and accessible state without altering canonical timestamps", () => {
     const { button, controls, attributes, time, zone, invalid, stored, click } = page();

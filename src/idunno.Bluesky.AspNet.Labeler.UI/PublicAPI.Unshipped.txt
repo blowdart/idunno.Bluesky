@@ -1,9 +1,23 @@
 #nullable enable
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Subjects.DetailModel
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Subjects.DetailModel.DetailModel() -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Subjects.DetailModel.OnGetAsync(string? target) -> System.Threading.Tasks.Task!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Cases.DetailModel.OnPostEscalateAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.PreferencesModel
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.PreferencesModel.PreferencesModel() -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.PreferencesModel.OnGetAsync() -> System.Threading.Tasks.Task!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.PreferencesModel.OnPostAsync(string![]? blur, string![]? grayscale, string![]? translucent) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Mutes.IndexModel
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Mutes.IndexModel.IndexModel() -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Mutes.IndexModel.OnGetAsync(long afterMuteEventId = 0, string? subject = null, string! kind = "Subject") -> System.Threading.Tasks.Task!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Mutes.IndexModel.OnPostMuteAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Mutes.IndexModel.OnPostUnmuteAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Reports.IndexModel.Queue.get -> idunno.Bluesky.Labeler.Moderation.LabelCaseWorkflow
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Reports.IndexModel.Queue.set -> void
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Appeals.IndexModel.Queue.get -> idunno.Bluesky.Labeler.Moderation.LabelCaseWorkflow
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Appeals.IndexModel.Queue.set -> void
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.IndexModel.OnGetCountsAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.IndexModel.OnGetOnlineAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.ClientMetadataModel
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.ClientMetadataModel.ClientMetadataModel() -> void
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.ClientMetadataModel.OnGet() -> Microsoft.AspNetCore.Mvc.IActionResult!
@@ -13,6 +27,7 @@ idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.PublishCallbackModel.O
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.IndexModel.OnPostSignInAndPublishAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Audit.IndexModel.OnPostDownloadAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Team.IndexModel.OnPostNotificationEmailAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Team.IndexModel.OnPostTestEmailAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Team.IndexModel.OnPostRemoteAdministrationAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.MediaModel
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.MediaModel.MediaModel() -> void

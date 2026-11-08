@@ -24,6 +24,19 @@ internal abstract partial class RelationalLabelStore
         CancellationToken cancellationToken)
     {
         ArgumentOutOfRangeException.ThrowIfGreaterThan(request.Actions.Length, 16);
+        request.Mute?.Validate();
+        if (request.EscalateSubject &&
+            (request.Mute is not null || labels.Count != 0 || request.ResolveSubject ||
+                request.AllReports || request.ReportIds.Length != 0 || request.ReportTypes.Length != 0))
+        {
+            throw new ArgumentException("Escalation cannot change labels, report handling or mutes.", nameof(request));
+        }
+        if (request.Mute is not null &&
+            (labels.Count != 0 || request.ResolveSubject || request.AllReports ||
+                request.ReportIds.Length != 0 || request.ReportTypes.Length != 0))
+        {
+            throw new ArgumentException("A mute cannot change labels, report handling or review state.", nameof(request));
+        }
         if (request.Actions.Length != labels.Count ||
             request.Actions.Select(action => action.Value).Distinct(StringComparer.Ordinal).Count() != labels.Count)
         {
@@ -107,6 +120,12 @@ internal abstract partial class RelationalLabelStore
                         }
                     }
                 }
+                if (request.EscalateSubject && !subjectCases.Any(current =>
+                    current.Status != LabelCaseStatus.Resolved &&
+                    (current.Cid ?? current.RecordResolution?.Cid) == request.Subject.Cid?.ToString()))
+                {
+                    return CaseFailure<LabelOzoneEvent>(LabelServiceErrorCode.CaseConflict, "Escalation requires an unresolved case on the exact subject.");
+                }
                 foreach (ModerationCaseData subjectCase in subjectCases)
                 {
                     long after = 0;
@@ -131,9 +150,12 @@ internal abstract partial class RelationalLabelStore
                             }
                         }
                         selected.AddRange(page.Where(report => report.DecisionOperationId is null &&
+                            !(request.PreserveEscalatedReview && subjectCase.Status == LabelCaseStatus.Escalated) &&
                             (request.ReportIds.Contains(report.Id) ||
+                                (request.Subject.Cid is null ||
+                                    (report.Cid ?? report.RecordResolution?.Cid ?? subjectCase.RecordResolution?.Cid) == request.Subject.Cid.ToString()) &&
                                 (request.AllReports || request.ReportTypes.Contains(report.ReasonType, StringComparer.Ordinal)) &&
-                                subjectCase.Assignee is null)));
+                                (subjectCase.Assignee is null || request.IncludeAssignedReports))));
                         if (selected.Count > 1000)
                         {
                             return CaseFailure<LabelOzoneEvent>(LabelServiceErrorCode.StorageUnavailable, "An Ozone transaction may close at most 1000 reports.");
@@ -173,6 +195,21 @@ internal abstract partial class RelationalLabelStore
                 }
                 DateTimeOffset now = DateTimeOffset.FromUnixTimeMilliseconds(
                     await DatabaseTimeAsync(connection, transaction, cancellationToken).ConfigureAwait(false));
+                if (request.Mute is { } mute)
+                {
+                    LabelServiceResult<LabelMuteChange> changed = await ApplyMuteAsync(
+                        connection: connection,
+                        transaction: transaction,
+                        subject: request.Subject,
+                        change: mute,
+                        eventId: id,
+                        now: now.ToUnixTimeMilliseconds(),
+                        token: cancellationToken).ConfigureAwait(false);
+                    if (!changed.Succeeded)
+                    {
+                        return LabelServiceResult<LabelOzoneEvent>.Failure(changed.Error);
+                    }
+                }
                 foreach (ModerationReportData report in selected)
                 {
                     ModerationReportData handled = report with
@@ -181,13 +218,11 @@ internal abstract partial class RelationalLabelStore
                         HandledAt = now,
                         ResolutionReason = request.ReportNote ?? request.Reason
                     };
-                    await ExecuteAsync(
+                    await SaveReportPayloadAsync(
                         connection: connection,
                         transaction: transaction,
-                        sql: "UPDATE label_reports SET payload=@payload WHERE report_id=@id",
-                        token: cancellationToken,
-                        ("@payload", JsonSerializer.SerializeToUtf8Bytes(handled, ModerationJsonContext.Default.ModerationReportData)),
-                        ("@id", report.Id)).ConfigureAwait(false);
+                        report: handled,
+                        token: cancellationToken).ConfigureAwait(false);
                     await UpdateReportSearchTextAsync(
                         connection,
                         transaction,
@@ -207,9 +242,32 @@ internal abstract partial class RelationalLabelStore
                     Automated: request.Automated,
                     ReportNote: request.ReportNote);
                 byte[] payload = JsonSerializer.SerializeToUtf8Bytes(result, OzoneStoreJsonContext.Default.LabelOzoneEvent);
+                if (request.Mute is not null)
+                {
+                    foreach (ModerationCaseData current in subjectCases)
+                    {
+                        await AppendCaseEventAsync(
+                            connection: connection,
+                            transaction: transaction,
+                            next: current,
+                            operationId: request.OperationId,
+                            action: LabelCaseAction.Note,
+                            actor: caller.Actor,
+                            localIdentity: caller.LocalIdentity,
+                            reason: request.Reason,
+                            intent: payload,
+                            operationNamespace: "ozone/" + current.Id.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                            token: cancellationToken,
+                            createdAt: now).ConfigureAwait(false);
+                    }
+                }
                 foreach (ModerationCaseData current in subjectCases.Where(current =>
                     selected.Any(report => report.CaseId == current.Id) ||
-                    request.ResolveSubject || labels.Count > 0 && current.Cid == request.Subject.Cid?.ToString()))
+                    request.ResolveSubject && (request.Subject.Cid is null ||
+                        (current.Cid ?? current.RecordResolution?.Cid) == request.Subject.Cid.ToString()) ||
+                    labels.Count > 0 && (current.Cid ?? current.RecordResolution?.Cid) == request.Subject.Cid?.ToString() ||
+                    request.EscalateSubject && current.Status != LabelCaseStatus.Resolved &&
+                        (current.Cid ?? current.RecordResolution?.Cid) == request.Subject.Cid?.ToString()))
                 {
                     bool pending = Integer(await ScalarAsync(
                         connection: connection,
@@ -223,14 +281,22 @@ internal abstract partial class RelationalLabelStore
                         transaction: transaction,
                         caseId: current.Id,
                         token: cancellationToken).ConfigureAwait(false);
+                    LabelCaseStatus status = current.Status;
+                    if (request.EscalateSubject)
+                    {
+                        status = LabelCaseStatus.Escalated;
+                    }
+                    else if (request.ResolveSubject && !pending && !remaining &&
+                        !(request.PreserveEscalatedReview && current.Status == LabelCaseStatus.Escalated))
+                    {
+                        status = LabelCaseStatus.Resolved;
+                    }
                     ModerationCaseData next = current with
                     {
-                        Assignee = current.Assignee ?? caller.Actor.Value,
+                        Assignee = request.EscalateSubject ? current.Assignee : current.Assignee ?? caller.Actor.Value,
                         Revision = checked(current.Revision + 1),
                         UpdatedAt = now,
-                        Status = request.ResolveSubject && !pending && !remaining
-                            ? LabelCaseStatus.Resolved
-                            : current.Status
+                        Status = status
                     };
                     await SaveCaseAsync(
                         connection: connection,
@@ -244,7 +310,7 @@ internal abstract partial class RelationalLabelStore
                         transaction: transaction,
                         next: next,
                         operationId: request.OperationId,
-                        action: LabelCaseAction.Note,
+                        action: request.EscalateSubject ? LabelCaseAction.Escalate : LabelCaseAction.Note,
                         actor: caller.Actor,
                         localIdentity: caller.LocalIdentity,
                         reason: request.Reason,

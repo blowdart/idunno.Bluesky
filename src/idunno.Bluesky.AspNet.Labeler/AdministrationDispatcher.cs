@@ -36,6 +36,7 @@ internal sealed partial class AdministrationDispatcher(
     // Bounded POST bodies keep confidential moderation filters out of URLs on both adapters.
     internal static readonly string[] s_moderationMethods =
     [
+        "getMutes", "changeMute",
         "getCase", "getCaseLabels", "getManualLabelChoices", "getModerationOverview", "getCaseActivity", "searchModeration", "getCases", "getCaseHistory", "getCaseOperation", "changeCase", "decideCase", "getCaseDecision",
         "getAppeal", "getAppeals", "getAppealReports", "getCaseQueue",
         "getPolicyVersion", "getPolicyVersions", "getPolicyHistory", "getPolicyOperation",
@@ -114,6 +115,16 @@ internal sealed partial class AdministrationDispatcher(
         AdministrationCommand command,
         CancellationToken token)
     {
+        if (command.Method == "getOperationReceipt")
+        {
+            command = command with { Method = "getOperation" };
+        }
+
+        if (command.Method == "getAvailableLabels")
+        {
+            return await ReadAvailableLabelsAsync(caller, command, token).ConfigureAwait(false);
+        }
+
         if (!s_methods.Contains(command.Method, StringComparer.Ordinal))
         {
             return new(false, "InvalidRequest", "The administrative method is unknown.");
@@ -629,6 +640,8 @@ internal sealed partial class AdministrationDispatcher(
             string? verifiedKey = null;
             bool needsSigning = action == "beginRetirement" ||
                 action == "resumeRetirement" && (await store.GetStateAsync(token).ConfigureAwait(false)).Phase == LabelerLifecyclePhase.Retiring;
+            // This action-specific signing check does not bypass authorization: retirement inspection,
+            // execution and receipt recovery independently enforce current permissions in the store.
             if (needsSigning)
             {
                 if (signingKeyRing is null || publicEndpoint is null)
@@ -785,6 +798,22 @@ internal sealed record AdministrationResponse(
     string? Target = null,
     LabelRetirementView? Retirement = null);
 
+/// <summary>Contains the protocol receipt fields exposed by issuance operations.</summary>
+/// <param name="OperationId">The durable operation identifier.</param>
+/// <param name="Sequence">The resulting label stream sequence, when an event was appended.</param>
+/// <param name="Changed">Whether a new label event was appended.</param>
+internal sealed record IssuanceOperationReceiptResponse(
+    string OperationId,
+    long? Sequence,
+    bool Changed);
+
+/// <summary>Contains the protocol result fields exposed by available-label queries.</summary>
+/// <param name="Moderation">The declared label choices and optional target-state projection.</param>
+/// <param name="Target">The optional target whose current label state was inspected.</param>
+internal sealed record IssuanceAvailableLabelsResponse(
+    ModerationResponse Moderation,
+    string? Target = null);
+
 /// <summary>Contains all-time issuer-local report counts for the authors on one authorized case page.</summary>
 internal sealed record AdministrationAuthorSummaryView(string Did, long Reports, long Records, IReadOnlyDictionary<string, long> ReportKinds);
 
@@ -836,6 +865,9 @@ internal sealed record AdministrationMaintenanceHostView(
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
 [JsonSerializable(typeof(AdministrationCommand))]
 [JsonSerializable(typeof(AdministrationResponse))]
+[JsonSerializable(typeof(AtErrorDetail))]
+[JsonSerializable(typeof(IssuanceOperationReceiptResponse))]
+[JsonSerializable(typeof(IssuanceAvailableLabelsResponse))]
 [JsonSerializable(typeof(AdministrationAuditView))]
 internal sealed partial class AdministrationJsonContext : JsonSerializerContext;
 

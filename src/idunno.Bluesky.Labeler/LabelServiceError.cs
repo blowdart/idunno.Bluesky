@@ -26,6 +26,9 @@ public sealed class LabelServiceError(
     AtErrorDetail? atErrorDetail = null,
     Exception? exception = null)
 {
+    /// <summary>Gets the locally authored category for an independent policy-verification alert.</summary>
+    internal string? VerificationFailureCategory { get; init; }
+
     /// <summary>Gets the classified error code.</summary>
     /// <value>The code callers should use for programmatic handling.</value>
     /// <exception cref="ArgumentOutOfRangeException">The error code supplied during construction is not a defined value.</exception>

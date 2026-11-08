@@ -32,7 +32,7 @@ Supply these deployment-specific environment variables separately:
 | `Labeler__IssuerDid` | The labeler's issuer DID |
 | `Labeler__PublicEndpoint` | The public HTTPS origin |
 | `Labeler__ConnectionString` | The protected PostgreSQL connection string |
-| `Labeler__AdministrationAudience` | The exact DID and service-fragment audience |
+| `Labeler__AdministrationAudience` | The labeler's exact `did:...#labeler_admin` service audience; the host derives `did:...#labeler_issuance` for agent issuance routes |
 | `Labeler__DeclaredLabels` | Comma-separated permitted label values |
 | `Labeler__InitialSigningKeyId` | The key ID used only to initialize database selection |
 | `Labeler__SigningKeys__<index>__Id` | A stable key ID |
@@ -41,7 +41,7 @@ Supply these deployment-specific environment variables separately:
 Explicitly set `Labeler__AllowAccountLabels=true` and/or `Labeler__AllowRecordLabels=true`
 for the target types your policy permits. Remote administration defaults to disabled. Set
 `LabelerAdministration__RemoteMode=Enabled` to make authenticated remote CLI administration
-available, or `WebUiControlled` to let only the bootstrap owner enable or disable it from Xenon.
+available, or `WebUiControlled` to let only the current labeler owner enable or disable it from Xenon.
 When `RemoteMode` is configured it takes precedence over legacy
 `LabelerAdministration__RemoteEnabled`; when omitted, the old Boolean remains supported.
 Neither setting bypasses authentication or team authorization. Protected local administration
@@ -53,7 +53,7 @@ or fallback SQLite connection string are built into the image. SQLite and MySQL 
 alternatives through `Labeler__DatabaseProvider=sqlite` or `mysql`.
 
 The host requires an issuer DID, explicit HTTPS public origin, database connection,
-separately configured environment keys with database-backed selection by default, a DID service audience,
+separately configured environment keys with database-backed selection by default, an administration DID service audience,
 and declared label policy. Missing values fail at startup rather than enabling a permissive
 default.
 

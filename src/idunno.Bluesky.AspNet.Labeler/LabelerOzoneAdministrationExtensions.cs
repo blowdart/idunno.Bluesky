@@ -13,6 +13,7 @@ using idunno.Bluesky.Labeler.Signing;
 using idunno.Bluesky.Labeler.Storage;
 
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -38,22 +39,58 @@ public static class LabelerOzoneAdministrationExtensions
     /// <para>Moderation operations require the shared moderation services. Known unsupported operations
     /// return explicit errors; roles do not grant PDS, AppView, queue, template or team-management capabilities.
     /// Ozone itself is not modified.</para>
+    /// <para>No cross-origin browser access is enabled. Use the overload accepting allowed origins
+    /// to permit a separately hosted Ozone UI without separate CORS registration or middleware.</para>
     /// </remarks>
-    public static WebApplication MapOzoneCompatibility(this WebApplication app)
+    public static WebApplication MapOzoneCompatibility(this WebApplication app) =>
+        MapOzoneCompatibility(app, []);
+
+    /// <summary>Maps Ozone compatibility with cross-origin browser access limited to explicit UI origins.</summary>
+    /// <param name="app">The application being configured.</param>
+    /// <param name="allowedOrigins">The exact HTTP(S) UI origins, including non-default ports, without trailing slashes.</param>
+    /// <returns>The application.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="app"/> or <paramref name="allowedOrigins"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">An origin is not an absolute HTTP(S) origin or contains credentials, a path, query, fragment or wildcard.</exception>
+    /// <exception cref="InvalidOperationException">Labeler administration has not been registered.</exception>
+    /// <remarks>
+    /// <para>An empty list enables no cross-origin browser access. CORS applies only to mapped Ozone
+    /// discovery and administration routes, permits their GET or POST method and Authorization and
+    /// Content-Type headers, and does not permit browser credentials. No separate CORS setup is required.</para>
+    /// <para>Preflight requests do not require authentication. Actual administrative requests retain
+    /// the HTTPS, remote-mode, owner-switch, method-bound service-token, live-team and replay checks.
+    /// CORS is not an authentication or authorization boundary.</para>
+    /// </remarks>
+    public static WebApplication MapOzoneCompatibility(this WebApplication app, IEnumerable<string> allowedOrigins)
     {
         ArgumentNullException.ThrowIfNull(app);
+        ArgumentNullException.ThrowIfNull(allowedOrigins);
+        string[] origins = [.. allowedOrigins];
+        foreach (string origin in origins)
+        {
+            if (!Uri.TryCreate(origin, UriKind.Absolute, out Uri? uri) ||
+                uri.Scheme is not ("http" or "https") ||
+                uri.UserInfo.Length != 0 ||
+                origin.Contains('*', StringComparison.Ordinal) ||
+                !string.Equals(origin, uri.GetLeftPart(UriPartial.Authority), StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException("Allowed origins must be absolute HTTP(S) origins without credentials, paths, queries, fragments or wildcards.", nameof(allowedOrigins));
+            }
+        }
+
         AdministrationConfiguration configuration = app.Services.GetRequiredService<AdministrationConfiguration>();
         ILabelAdministrationStore store = app.Services.GetRequiredService<ILabelAdministrationStore>();
         IOptionsMonitor<LabelerAdministrationOptions> options =
             app.Services.GetRequiredService<IOptionsMonitor<LabelerAdministrationOptions>>();
         TimeProvider clock = app.Services.GetRequiredService<TimeProvider>();
+        OzoneTeamPresence presence = app.Services.GetRequiredService<OzoneTeamPresence>();
         ILogger logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("LabelerOzoneAdministration");
+        CorsService cors = new(Options.Create(new CorsOptions()), app.Services.GetRequiredService<ILoggerFactory>());
 
-        app.MapGet(
-            "/.well-known/ozone-metadata.json",
-            (RequestDelegate)(async (HttpContext context) =>
+        MapRoute(
+            path: "/.well-known/ozone-metadata.json",
+            httpMethod: HttpMethods.Get,
+            handler: async context =>
         {
-            context.Response.Headers.AccessControlAllowOrigin = "*";
             Uri? origin = app.Services.GetService<LabelerHostingOptions>()?.PublicEndpoint;
             ILabelSigningKeyRing? keys = app.Services.GetService<ILabelSigningKeyRing>();
             if (origin is null || keys is null)
@@ -71,19 +108,22 @@ public static class LabelerOzoneAdministrationExtensions
                 context: context,
                 payload: JsonSerializer.SerializeToUtf8Bytes(
                     new OzoneMetadata(
-                        Did: configuration.Audience.Did.Value,
+                        Did: configuration.AdministrationAudience.Did.Value,
                         Url: origin.AbsoluteUri,
                         PublicKey: "did:key:" + keys.GetPublicKeyMultibase(keys.ActiveKeyId)),
                     OzoneAdministrationJsonContext.Default.OzoneMetadata),
                 status: StatusCodes.Status200OK).ConfigureAwait(false);
-        })).AllowAnonymous();
+        });
 
         MapMethod("tools.ozone.server.getConfig", false);
         MapMethod("tools.ozone.team.listMembers", false);
+        MapMethod("tools.ozone.team.listOnlineMembers", false);
         foreach (string method in new[]
         {
             "tools.ozone.moderation.queryStatuses", "tools.ozone.moderation.queryEvents",
             "tools.ozone.moderation.getEvent", "tools.ozone.moderation.getRepo", "tools.ozone.moderation.getRecord",
+            "tools.ozone.moderation.getRepos", "tools.ozone.moderation.getRecords",
+            "app.bsky.actor.getProfile", "app.bsky.feed.getPostThread", "tools.ozone.setting.listOptions",
             "tools.ozone.report.queryReports", "tools.ozone.report.getReport", "tools.ozone.report.listActivities"
         })
         {
@@ -93,7 +133,7 @@ public static class LabelerOzoneAdministrationExtensions
         {
             "tools.ozone.moderation.emitEvent", "tools.ozone.team.addMember",
             "tools.ozone.team.updateMember", "tools.ozone.team.deleteMember",
-            "tools.ozone.report.closeReports", "tools.ozone.report.createActivity"
+            "tools.ozone.report.closeReports", "tools.ozone.report.createActivity", "tools.ozone.setting.upsertOption"
         })
         {
             MapMethod(method, true);
@@ -110,6 +150,7 @@ public static class LabelerOzoneAdministrationExtensions
                     context: context,
                     method: new(method),
                     ozone: true,
+                    audience: null,
                     configuration: configuration,
                     remoteOptions: options,
                     fixedRemoteEnabled: null,
@@ -125,6 +166,7 @@ public static class LabelerOzoneAdministrationExtensions
                             return new(false, team.Error.Code.ToString(), team.Error.Message);
                         }
 
+                        presence.Observe(caller.Actor, team.Result);
                         if (method == "tools.ozone.server.getConfig")
                         {
                             ValidateQuery(context, []);
@@ -138,6 +180,18 @@ public static class LabelerOzoneAdministrationExtensions
                             payload = JsonSerializer.SerializeToUtf8Bytes(
                                 TeamPage(context, team.Result),
                                 OzoneAdministrationJsonContext.Default.OzoneTeamPage);
+                        }
+                        else if (method == "tools.ozone.team.listOnlineMembers")
+                        {
+                            ValidateQuery(context, ["limit"]);
+                            int limit = context.Request.Query.ContainsKey("limit")
+                                ? int.Parse(context.Request.Query["limit"].ToString(), CultureInfo.InvariantCulture)
+                                : 50;
+                            ArgumentOutOfRangeException.ThrowIfLessThan(limit, 1);
+                            ArgumentOutOfRangeException.ThrowIfGreaterThan(limit, 100);
+                            payload = JsonSerializer.SerializeToUtf8Bytes(
+                                new OzoneOnlineTeamPage(presence.List(team.Result, limit)),
+                                OzoneAdministrationJsonContext.Default.OzoneOnlineTeamPage);
                         }
                         else
                         {
@@ -176,14 +230,35 @@ public static class LabelerOzoneAdministrationExtensions
                         status: response.Error == "NotImplemented" ? StatusCodes.Status501NotImplemented : status)).ConfigureAwait(false);
             }
 
-            if (post)
+            MapRoute("/xrpc/" + method, post ? HttpMethods.Post : HttpMethods.Get, HandleAsync);
+        }
+
+        void MapRoute(string path, string httpMethod, RequestDelegate handler)
+        {
+            CorsPolicy policy = new CorsPolicyBuilder()
+                .WithOrigins(origins)
+                .WithMethods(httpMethod)
+                .WithHeaders("Authorization", "Content-Type")
+                .Build();
+
+            // Evaluate CORS inside these routes so callers need no global middleware or service setup.
+            app.MapMethods(path, [httpMethod, HttpMethods.Options], (RequestDelegate)(async context =>
             {
-                app.MapPost("/xrpc/" + method, HandleAsync).AllowAnonymous();
-            }
-            else
-            {
-                app.MapGet("/xrpc/" + method, HandleAsync).AllowAnonymous();
-            }
+                CorsResult result = cors.EvaluatePolicy(context, policy);
+                if (HttpMethods.IsOptions(context.Request.Method))
+                {
+                    cors.ApplyResult(result, context.Response);
+                    context.Response.StatusCode = StatusCodes.Status204NoContent;
+                    return;
+                }
+
+                context.Response.OnStarting(() =>
+                {
+                    cors.ApplyResult(result, context.Response);
+                    return Task.CompletedTask;
+                });
+                await handler(context).ConfigureAwait(false);
+            })).AllowAnonymous();
         }
     }
 
@@ -272,6 +347,12 @@ internal sealed record OzoneMember(string Did, string Role, bool Disabled);
 /// <summary>Describes a bounded team page and its exclusive DID continuation.</summary>
 internal sealed record OzoneTeamPage(OzoneMember[] Members, string? Cursor);
 
+/// <summary>Describes observed activity without claiming a persistent browser connection.</summary>
+internal sealed record OzoneOnlineMember(string Did, DateTimeOffset LastActive);
+
+/// <summary>Describes recent authenticated activity on this host instance.</summary>
+internal sealed record OzoneOnlineTeamPage(OzoneOnlineMember[] Members);
+
 /// <summary>Describes a standard XRPC error rather than a native administration envelope.</summary>
 internal sealed record OzoneError(string Error, string Message);
 
@@ -282,5 +363,6 @@ internal sealed record OzoneError(string Error, string Message);
 [JsonSerializable(typeof(OzoneMetadata))]
 [JsonSerializable(typeof(OzoneConfigView))]
 [JsonSerializable(typeof(OzoneTeamPage))]
+[JsonSerializable(typeof(OzoneOnlineTeamPage))]
 [JsonSerializable(typeof(OzoneError))]
 internal sealed partial class OzoneAdministrationJsonContext : JsonSerializerContext;

@@ -22,6 +22,7 @@
         <div data-manual-label-controls aria-live="polite" aria-busy="false">
             @await Html.PartialAsync("_ManualLabelChoices", Model.Labels)
         </div>
+        @await Html.PartialAsync("_LabelDuration", Model.Duration)
         <label class="field">Reason for labelling
             <textarea name="reason" required maxlength="4096" readonly="@Model.Labels.Retrying">@Model.Reason</textarea>
         </label>

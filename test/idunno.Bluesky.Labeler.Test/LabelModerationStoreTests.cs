@@ -19,6 +19,127 @@ public class LabelModerationStoreTests
     private static readonly LabelReportSubject s_subject = LabelReportSubject.Account(new("did:plc:subject"));
 
     [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task LegacyCaseConstraintUpgradePreservesCaseAndReferencedHistory(string engine)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
+        ILabelAdministrationStore team = (ILabelAdministrationStore)fixture.Store;
+        await EnrollAsync(team, administrator, LabelTeamRole.Moderator, token);
+        ILabelModerationStore cases = (ILabelModerationStore)fixture.Store;
+        LabelModerationCase opened = Success(await cases.ChangeCaseAsync(administrator, Open("legacy-case"), token)).Case;
+        opened = Success(await cases.ChangeCaseAsync(
+            caller: administrator,
+            change: new(
+                operationId: "legacy-appeal",
+                subject: opened.Subject,
+                action: LabelCaseAction.OpenAppeal,
+                reason: "Preserve dependent appeal state during migration."),
+            cancellationToken: token)).Case;
+        LabelAppeal appeal = Assert.Single(Success(await ((ILabelAppealStore)fixture.Store).GetAppealsAsync(
+            caller: administrator, caseId: opened.Id, cancellationToken: token)));
+        await fixture.ExecuteAsync(engine switch
+        {
+            "postgresql" => """
+                ALTER TABLE label_cases DROP CONSTRAINT label_cases_status_check;
+                ALTER TABLE label_cases ADD CONSTRAINT label_cases_status_check CHECK(status BETWEEN 0 AND 2);
+                UPDATE label_schema SET version=15 WHERE id=1;
+                """,
+            "mysql" => """
+                ALTER TABLE label_cases DROP CHECK label_cases_chk_2;
+                ALTER TABLE label_cases ADD CONSTRAINT label_cases_status_check CHECK(status BETWEEN 0 AND 2);
+                UPDATE label_schema SET version=15 WHERE id=1;
+                """,
+            _ => """
+            PRAGMA foreign_keys=OFF;
+            BEGIN;
+            CREATE TABLE label_cases_legacy (
+                case_id INTEGER PRIMARY KEY CHECK(case_id>0),
+                subject_hash BLOB NOT NULL CHECK(length(subject_hash)=32),
+                subject_key BLOB NOT NULL,
+                status INTEGER NOT NULL CHECK(status BETWEEN 0 AND 2),
+                assignee_hash BLOB NULL CHECK(assignee_hash IS NULL OR length(assignee_hash)=32),
+                assignee_key BLOB NULL,
+                payload BLOB NOT NULL);
+            INSERT INTO label_cases_legacy
+            SELECT case_id,subject_hash,subject_key,status,assignee_hash,assignee_key,payload FROM label_cases;
+            DROP TABLE label_cases;
+            ALTER TABLE label_cases_legacy RENAME TO label_cases;
+            UPDATE label_schema SET version=15 WHERE id=1;
+            COMMIT;
+            PRAGMA foreign_keys=ON;
+            """
+        });
+        ILabelStore restarted = fixture.NewStore();
+        await restarted.InitializeAsync(StoreFixture.s_issuer, token);
+        ILabelModerationStore upgraded = (ILabelModerationStore)restarted;
+        Assert.Equal(opened.Revision, Success(await upgraded.GetCaseAsync(administrator, opened.Id, token)).Revision);
+        LabelCaseReceipt escalated = Success(await upgraded.ChangeCaseAsync(
+            administrator, Change(opened, "upgraded-escalation", LabelCaseAction.Escalate), token));
+        Assert.Equal(LabelCaseStatus.Escalated, escalated.Case.Status);
+        Assert.Equal(3, Success(await upgraded.GetCaseHistoryAsync(administrator, opened.Id, cancellationToken: token)).Count);
+        LabelAppeal retained = Assert.Single(Success(await ((ILabelAppealStore)restarted).GetAppealsAsync(
+            caller: administrator, caseId: opened.Id, cancellationToken: token)));
+        Assert.Equal(appeal.Id, retained.Id);
+        Assert.Equal(appeal.Status, retained.Status);
+        Assert.Equal(appeal.CaseId, retained.CaseId);
+        await restarted.InitializeAsync(StoreFixture.s_issuer, token);
+        Assert.Equal(LabelCaseStatus.Escalated, Success(await upgraded.GetCaseAsync(administrator, opened.Id, token)).Status);
+    }
+
+    [Theory]
+    [InlineData("sqlite", false)]
+    [InlineData("sqlite", true)]
+    [InlineData("postgresql", false)]
+    [InlineData("postgresql", true)]
+    [InlineData("mysql", false)]
+    [InlineData("mysql", true)]
+    public async Task EscalationPreservesAssignmentAndSurvivesRestartWithoutResolvingWork(string engine, bool assigned)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
+        ILabelAdministrationStore team = (ILabelAdministrationStore)fixture.Store;
+        LabelAdministrationCaller moderator = await EnrollAsync(team, administrator, LabelTeamRole.Moderator, token);
+        ILabelModerationStore cases = (ILabelModerationStore)fixture.Store;
+        LabelModerationCase opened = Success(await cases.ChangeCaseAsync(administrator, Open("escalate-open"), token)).Case;
+        if (assigned)
+        {
+            opened = Success(await cases.ChangeCaseAsync(
+                administrator, Change(opened, "escalate-assign", LabelCaseAction.Assign, s_administrator), token)).Case;
+        }
+        LabelCaseChange change = Change(opened, "escalate", LabelCaseAction.Escalate);
+        fixture.SetCommitHooks(beforeCommit: (_, _, _) => throw new SqliteException("Injected escalation rollback.", 10));
+        Assert.Equal(LabelServiceErrorCode.StorageUnavailable, (await cases.ChangeCaseAsync(moderator, change, token)).Error!.Code);
+        fixture.SetCommitHooks();
+        LabelModerationCase unchanged = Success(await cases.GetCaseAsync(administrator, opened.Id, token));
+        Assert.Equal(opened.Status, unchanged.Status);
+        Assert.Equal(opened.Assignee, unchanged.Assignee);
+        Assert.Equal(opened.Revision, unchanged.Revision);
+        LabelCaseReceipt escalated = Success(await cases.ChangeCaseAsync(moderator, change, token));
+        Assert.Equal(LabelCaseStatus.Escalated, escalated.Case.Status);
+        Assert.Equal(opened.Assignee, escalated.Case.Assignee);
+        Assert.Equal(LabelCaseAction.Escalate, escalated.Action);
+        ILabelModerationStore restarted = (ILabelModerationStore)fixture.NewStore();
+        Assert.Equal(LabelCaseStatus.Escalated, Success(await restarted.GetCaseAsync(administrator, opened.Id, token)).Status);
+        Assert.Equal(escalated.Sequence, Success(await restarted.ChangeCaseAsync(moderator, change, token)).Sequence);
+        Assert.Single(Success(await restarted.GetCaseQueueAsync(administrator, new(LabelCaseWorkflow.Escalated), cancellationToken: token)).Cases);
+        Assert.Single(Success(await restarted.GetCaseQueueAsync(administrator, new(LabelCaseWorkflow.Unresolved), cancellationToken: token)).Cases);
+        Assert.Empty(Success(await restarted.GetCaseQueueAsync(administrator, new(LabelCaseWorkflow.Resolved), cancellationToken: token)).Cases);
+        Assert.Equal(LabelServiceErrorCode.CaseConflict, (await restarted.ChangeCaseAsync(
+            moderator, Change(opened, "stale-escalation", LabelCaseAction.Escalate), token)).Error!.Code);
+        LabelModerationCase resolved = Success(await restarted.ChangeCaseAsync(
+            moderator, Change(escalated.Case, "resolve-escalation", LabelCaseAction.Resolve), token)).Case;
+        Assert.Equal(LabelCaseStatus.Resolved, resolved.Status);
+        Assert.Equal(LabelServiceErrorCode.CaseConflict, (await restarted.ChangeCaseAsync(
+            moderator, Change(resolved, "escalate-resolved", LabelCaseAction.Escalate), token)).Error!.Code);
+        Assert.Equal(0, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
+    }
+
+    [Theory]
     [InlineData("sqlite", LabelCaseAction.StartReview)]
     [InlineData("sqlite", LabelCaseAction.Note)]
     [InlineData("sqlite", LabelCaseAction.Resolve)]
@@ -462,6 +583,9 @@ public class LabelModerationStoreTests
         await fixture.Store.AppendAsync("before-upgrade", [original], cancellationToken: token);
         LabelStoreState before = await fixture.Store.GetStateAsync(token);
         await fixture.ExecuteAsync("""
+            DROP TABLE label_report_queries;
+            DROP TABLE label_case_queries;
+            DROP TABLE label_activity_queries;
             DROP TABLE label_post_review_checks;
             DROP TABLE label_search_handles;
             DROP TABLE label_search_text;

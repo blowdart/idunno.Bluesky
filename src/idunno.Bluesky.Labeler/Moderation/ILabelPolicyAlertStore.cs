@@ -9,6 +9,14 @@ namespace idunno.Bluesky.Labeler.Moderation;
 /// database transaction.</para></remarks>
 public interface ILabelPolicyAlertStore
 {
+    /// <summary>Starts administration notifications at the current audit position on first email enablement.</summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task that completes after the notification starting position is durable.</returns>
+    /// <remarks><para>The host calls this only when email is enabled, before claiming messages.
+    /// Repeated calls preserve the original position, including across restarts. Existing delivery progress
+    /// and pending claims are preserved. Earlier audit entries are retained without being emailed.</para></remarks>
+    Task InitializeNotificationsAsync(CancellationToken cancellationToken = default);
+
     /// <summary>Records the beginning of a verification-failure incident once until verification succeeds.</summary>
     /// <param name="category">A bounded server-selected failure category.</param>
     /// <param name="cancellationToken">The cancellation token.</param>

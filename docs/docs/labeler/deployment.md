@@ -18,6 +18,19 @@ The image also includes the matching Linux CLI in `/opt/labeler-cli`, which is o
 CLI runs as the container's configured user; existing local identity authorization
 and remote-administration restrictions still apply.
 
+### Trimming and Native AOT support
+
+The canonical host ships untrimmed and does not support trimmed or Native AOT
+deployment. It includes the Xenon and authentication Razor Pages UI packages;
+Razor Pages does not support trimming or Native AOT. Disabling the UI through
+runtime configuration does not remove those build-time dependencies.
+
+This is an architectural support boundary, not a pending trimming experiment.
+The host remains excluded from the supported-library trimming/AOT matrix in
+`trimTest.ps1`. That exclusion does not extend to independently supported SDK
+libraries or the trimmed CLI. A separately built headless host would require its
+own evaluation and is not part of the canonical host's supported configurations.
+
 The host serves `/robots.txt` anonymously as plain text with `User-agent: *` and
 `Disallow: /`, asking crawlers not to crawl any path. This is advisory and does not
 replace authentication or access controls.
@@ -55,13 +68,14 @@ provider, or a host-owned configuration file:
 | `Labeler:SigningKeys:<index>:Id` | Environment provider: stable, case-sensitive key ID using ASCII letters, digits, dots, underscores or hyphens |
 | `Labeler:SigningKeys:<index>:PrivateKeyBase64` | Environment provider: separate protected variable per base64-encoded private PEM |
 | `Labeler:InitialSigningKeyId` | Environment provider: explicit initial key ID, used only when the database has no selection |
-| `Labeler:AdministrationAudience` | Exact `did:...#service-fragment` audience for service tokens |
+| `Labeler:AdministrationAudience` | Exact `did:...#labeler_admin` audience for administration service tokens; the host derives the matching `#labeler_issuance` audience from the same DID |
 | `Labeler:DeclaredLabels` | Comma-separated declared label values |
 | `Labeler:AllowAccountLabels` | Whether the issuance policy permits account labels |
 | `Labeler:AllowRecordLabels` | Whether the issuance policy permits record labels |
 | `LabelerAdministration:RemoteMode` | `Disabled` (default), `Enabled`, or `WebUiControlled`; overrides the legacy Boolean |
 | `LabelerAdministration:RemoteEnabled` | Legacy fallback only when `RemoteMode` is absent; defaults to `false` |
 | `LabelerOzone:Enabled` | Startup opt-in to `MapOzoneCompatibility()` discovery and labeler-focused administration; defaults to `false` and does not enable remote administration |
+| `LabelerOzone:AllowedOrigins` | Exact Ozone UI HTTP(S) origin array, including non-default ports and without trailing slashes; defaults to empty (no cross-origin access). For a local UI, set `LabelerOzone__AllowedOrigins__0=http://127.0.0.1:3000`. CORS is automatic and limited to mapped Ozone routes; changes require a restart |
 | `LabelerModeration:Enabled` | Optional Xenon report/case/policy backend; defaults to `false` |
 | `LabelerModeration:VerificationFreshness` | Persisted declaration-observation lifetime; defaults to `00:30:00`; active policies are checked in the background every five minutes |
 | `Labeler:TrustedProxies` | Optional array of exact proxy IP addresses trusted to forward client IP and HTTPS scheme |
@@ -74,9 +88,16 @@ requires exact-audience method-bound service authentication and live team author
 administration requires the service process's OS identity to have an explicit active team binding.
 Neither localhost nor container placement is an authorization boundary.
 
+Enabling Ozone opts into [limited compatibility](administration.md#optional-ozone-compatibility),
+not a complete Ozone implementation. Use Xenon/native views as the primary moderation
+interface. Unresolved URI-only records can be absent from Ozone event/status views
+without a visible warning in stock Ozone; those views must not be the sole inventory
+of outstanding moderation work. This is an accepted limitation of the supported subset.
+
 `RemoteMode=Disabled` keeps remote CLI routes unavailable; `Enabled` allows them subject to those
 existing checks. `WebUiControlled` additionally requires the durable switch to be enabled by the
-bootstrap owner in Xenon. The owner is the DID that completed the initial OS-authorized bootstrap,
+current owner in Xenon. The owner is initially the DID that completed the initial OS-authorized bootstrap,
+or an active Administrator to whom the current owner explicitly transferred ownership,
 not any Administrator. The durable switch defaults off, is transactionally audited, and does not
 affect protected local administration. An explicitly configured `RemoteMode` always takes
 precedence over `RemoteEnabled`. If `RemoteMode` is omitted, the old Boolean continues to apply,
@@ -176,8 +197,9 @@ public distribution, UID 1654, the inherited probe, persistent-volume restart
 and byte-for-byte signature recovery. Its identity/declaration responses and
 setup authority were deterministic fixtures, not live OAuth/PDS validation.
 Production deployments must use real discovery and independent policy
-verification. Integrated application samples, direct image signing/attestation
-and canonical-host trimming evaluation remain separate follow-ups.
+verification. Integrated application samples and direct image signing/attestation
+remain separate follow-ups. Canonical-host trimming evaluation is resolved by the
+Razor Pages support boundary described above; no trimmed-host support is claimed.
 
 ## Key installation and rotation
 
@@ -231,58 +253,6 @@ draining must be independently verified as stopped and explicitly confirmed by a
 Never treat a timeout as proof that a process stopped. If a host restarts during maintenance,
 it reads the durable operation, remains unavailable, and participates in the remaining
 acknowledgements. Do not manually delete maintenance rows or reopen a partial rotation.
-
-### Volume-free hosting on DigitalOcean App Platform
-
-Choose `Labeler__SigningKeyProvider=environment`, use an external PostgreSQL or MySQL database,
-and store its connection string and each private key in App Platform's **encrypted environment
-variables**. Do not use ephemeral SQLite storage. For example, configure these variable names:
-
-```text
-Labeler__SigningKeyProvider=environment
-Labeler__DatabaseProvider=postgresql
-Labeler__ConnectionString=<encrypted external database connection string>
-Labeler__SigningKeys__0__Id=original
-Labeler__SigningKeys__0__PrivateKeyBase64=<encrypted base64-encoded private PEM>
-Labeler__InitialSigningKeyId=original
-```
-
-Base64 only transports the PEM safely as one value; it is not encryption. Protect the original
-key, deployment configuration and access to the running process. Do not put secret values in
-source, image layers, command-line arguments or diagnostic output. The provider imports keys
-into memory without creating private-key files.
-
-On first setup the configured initial identity and its public key are transactionally bound
-to the database's issuer and stream. Later starts use the database selection, ignoring a stale
-initial ID. A missing selected key or a different private key under the same ID prevents startup;
-there is no fallback. The database stores only the key ID and public binding, never the private
-key. Schema version eight adds this selection without guessing one for existing deployments.
-When switching an existing PEM deployment, explicitly seed its current key ID and matching
-private key; a persisted rotation must agree with that ID and, after completion, its public key.
-
-For rotation, add a second encrypted variable (for example,
-`Labeler__SigningKeys__1__PrivateKeyBase64`) and its `Id`, then redeploy through App Platform so
-every signing host has both keys **before beginning rotation**. Keep the original variable during
-that rollout. Use the existing authorized rotation workflow; selection changes are permitted
-only after verified publication, completed re-signing and universal draining. Shared persistence
-does not substitute for each signing host's activation acknowledgement. A restart resumes from
-the database's selection and maintenance checkpoint. After rotation completes and every signing
-host has activated the replacement, the old private key can be removed in a further deployment.
-Do not recycle a key ID with different key material.
-
-Back up the database and protected secret configuration together, and restore a matching set.
-Do not reset selection rows to recover from a missing secret. App Platform redeployments replace
-images/configuration rather than mutating a running container. Configure the platform's HTTP
-readiness check to use `/health/labeler/ready` on the internal port; do not assume it consumes the
-image's Docker health status.
-
-This provider removes the signing-key volume requirement, not other setup requirements.
-The local socket may remain on the ephemeral filesystem without a shared mount. Perform the
-explicit initial administrator bootstrap under the correct OS identity through a supported
-setup execution path; retain the existing authenticated remote-administration requirements.
-Configure explicitly trusted proxy forwarding for the actual deployment topology rather than
-trusting arbitrary forwarded headers. The public origin, issuer, audience and policy settings
-are still required.
 
 ## Run the GHCR image
 
@@ -344,13 +314,23 @@ Published host ports do not change the internal probe URL. Maintenance and drain
 make readiness fail; do not configure automatic restarts solely on failed readiness. Docker's
 health status does not itself restart a container or remove it from traffic. Configure your
 platform to use readiness for routing and `/health/labeler/live` for separate liveness checks.
-Configure WebSocket
-forwarding, TLS termination, idle timeouts, graceful shutdown and readiness-based traffic
+The public ingress must accept incoming secure WebSocket connections at
+`wss://<labeler-host>/xrpc/com.atproto.label.subscribeLabels` and forward them to the
+application; outbound WebSocket connectivity alone is insufficient. Verify subscription
+delivery, idle-connection behavior and cursor-based reconnect/replay through the public
+endpoint, including after redeployment.
+Configure WebSocket forwarding, TLS termination, idle timeouts, graceful shutdown and readiness-based traffic
 draining at the platform boundary. A filesystem Unix socket can be shared with a host-side
 CLI only when the deployment platform supports a protected bind-mounted socket directory and
 matching service UID; otherwise use the authenticated HTTPS remote transport.
 
 ## Safe updates and rollback
+
+Schema sixteen adds the escalated case state and upgrades the case-status check
+in each relational provider. Stop all older writers before initialization and
+take a verified whole-database backup. A schema-fifteen host rejects the upgraded
+database: retaining the old image alone is not a rollback plan. Use a compatible
+host or restore the pre-upgrade backup, accounting for any writes after deployment.
 
 For Docker Compose, use an image variable and keep every stateful path outside the container:
 

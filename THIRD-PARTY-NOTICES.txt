@@ -11,15 +11,20 @@ Build tooling
 -------------
 
 The following third-party tools are used in the release workflows to generate
-and validate Software Bill of Materials (SBOM) files and in the documentation
-workflow to generate the documentation site. They are not distributed with
-the libraries.
+and validate Software Bill of Materials (SBOM) files, in the documentation
+workflow to generate the documentation site, and during compilation to analyze
+XML documentation. They are not distributed with the libraries.
+
+CommentSense is licensed under MIT.
+Copyright (c) 2026 Thomas Shephard.
+Source: https://github.com/Thomas-Shephard/comment-sense
 
 The Python validator and its transitive dependencies are pinned with SHA-256
 hashes in .build/requirements-sbom.txt.
 
 Component                                       License
 ----------------------------------------------  ----------
+CommentSense                                    MIT
 CycloneDX .NET tool (CycloneDX)                 Apache-2.0
 CycloneDX CLI                                   Apache-2.0
 DocFX                                          MIT
@@ -51,7 +56,8 @@ Creative Commons Attribution 4.0 International (CC BY 4.0):
 https://creativecommons.org/licenses/by/4.0/
 The icons, including the eye, gavel and user-gear team roles and the
 circle-check, circle-pause and circle-xmark membership states and the
-eye-slash, circle-play, filter and download controls, are served locally,
+eye-slash, circle-play, filter, download, trash-can, right-from-bracket and
+arrow-up-right-from-square controls, are served locally,
 not from a CDN. Their original attribution
 comments are preserved, and the upstream license notice is distributed at
 wwwroot/vendor/fontawesome/LICENSE.txt within the UI package.

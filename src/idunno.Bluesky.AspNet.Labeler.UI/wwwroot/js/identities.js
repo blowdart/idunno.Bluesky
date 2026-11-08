@@ -4,7 +4,7 @@
 document.addEventListener("keydown", event => {
     if (event.key === "Escape") {
         document.querySelectorAll(".identity").forEach(identity => identity.classList.add("tooltip-dismissed"));
-        for (const menu of document.querySelectorAll(".account-menu[open]")) {
+        for (const menu of document.querySelectorAll(".account-menu[open], .online-menu[open]")) {
             menu.removeAttribute("open");
             menu.querySelector("summary").focus();
         }
@@ -13,7 +13,7 @@ document.addEventListener("keydown", event => {
 });
 
 document.addEventListener("click", event => {
-    for (const menu of document.querySelectorAll(".account-menu[open]")) {
+    for (const menu of document.querySelectorAll(".account-menu[open], .online-menu[open]")) {
         if (!menu.contains(event.target)) {
             menu.removeAttribute("open");
         }

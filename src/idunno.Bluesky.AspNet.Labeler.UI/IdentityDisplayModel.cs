@@ -11,6 +11,11 @@ namespace idunno.Bluesky.AspNet.Labeler.UI;
 /// <param name="Subject">Whether to describe the target kind instead of appending its record path.</param>
 internal sealed record IdentityDisplayModel(string? Value, bool Detailed = false, bool Subject = false)
 {
+    /// <summary>Gets whether the canonical subject supports a read-only account or record detail page.</summary>
+    internal bool HasDetails =>
+        Value is not null && (AtProto.Did.TryParse(Value, out _) ||
+            AtUri.TryParse(Value, out AtUri? uri) && uri.Repo is Did && uri.Collection is not null && uri.RecordKey is not null);
+
     /// <summary>Gets a locally bundled Font Awesome icon and readable description without abbreviating the canonical identifier.</summary>
     internal (string Icon, string Prefix, string Kind) SubjectDescription =>
         Value is not null && AtUri.TryParse(Value, out AtUri? uri)

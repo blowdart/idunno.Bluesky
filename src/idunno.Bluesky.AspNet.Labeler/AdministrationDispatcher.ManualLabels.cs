@@ -15,6 +15,46 @@ namespace idunno.Bluesky.AspNet.Labeler;
 
 internal sealed partial class AdministrationDispatcher
 {
+    /// <summary>Lists issuance-policy labels without requiring Xenon moderation services.</summary>
+    private async Task<AdministrationResponse> ReadAvailableLabelsAsync(
+        LabelAdministrationCaller caller,
+        AdministrationCommand command,
+        CancellationToken token)
+    {
+        if (command.Target.Length == 0 && command.Cid is not null)
+        {
+            return new(false, "InvalidRequest", "A content version requires a target.");
+        }
+
+        LabelServiceResult<LabelAuthorizationGrant> grant = await administration.AuthorizeAsync(
+            caller: caller,
+            permission: LabelAdministrationPermission.Inspect,
+            reason: command.Reason,
+            cancellationToken: token).ConfigureAwait(false);
+        if (!grant.Succeeded)
+        {
+            return Failure(grant.Error);
+        }
+
+        LabelServiceResult<LabelIssuancePolicy> result = await policy.GetPolicyAsync(token).ConfigureAwait(false);
+        if (!result.Succeeded)
+        {
+            return Failure(result.Error);
+        }
+
+        grant = await administration.AuthorizeAsync(
+            caller: caller,
+            permission: LabelAdministrationPermission.Inspect,
+            reason: command.Reason,
+            cancellationToken: token).ConfigureAwait(false);
+        if (!grant.Succeeded)
+        {
+            return Failure(grant.Error);
+        }
+
+        return await ReadTargetLabelChoicesAsync(caller, command, result.Result, token).ConfigureAwait(false);
+    }
+
     /// <summary>Loads policy choices and issuer-local label state without requiring a report or a remotely available record.</summary>
     private async Task<AdministrationResponse> ReadManualLabelChoicesAsync(
         LabelAdministrationCaller caller,
@@ -28,19 +68,34 @@ internal sealed partial class AdministrationDispatcher
             return Failure(gate.Error);
         }
 
-        if (gate.Result.Policy is not { } definition || store is not ILabelTableStore labels)
+        if (gate.Result.Policy is not { } definition)
         {
             return new(false, "PolicyUnavailable", "Available labels could not be loaded.");
         }
 
+        return await ReadTargetLabelChoicesAsync(caller, command, definition.Issuance, token).ConfigureAwait(false);
+    }
+
+    /// <summary>Projects configured label values and database-clock-filtered target state without requiring a moderation gate.</summary>
+    private async Task<AdministrationResponse> ReadTargetLabelChoicesAsync(
+        LabelAdministrationCaller caller,
+        AdministrationCommand command,
+        LabelIssuancePolicy issuance,
+        CancellationToken token)
+    {
         if (command.Target.Length == 0)
         {
-            return new(true, Moderation: new(LabelChoices: [.. definition.Issuance.DeclaredValues
+            return new(true, Moderation: new(LabelChoices: [.. issuance.DeclaredValues
                 .Order(StringComparer.Ordinal).Select(value => new ModerationLabelChoiceView(
                     Value: value,
                     Applied: false,
                     Sequence: 0,
                     OtherVersion: false))]));
+        }
+
+        if (store is not ILabelTableStore labels)
+        {
+            return new(false, "PolicyUnavailable", "Available labels could not be loaded.");
         }
 
         if (command.Target.Length > 2048 || command.Cid is { Length: > 128 } ||
@@ -87,8 +142,9 @@ internal sealed partial class AdministrationDispatcher
             return Failure(applied.Error);
         }
 
+        HashSet<long> activeSequences = [.. applied.Result.Select(label => label.Sequence)];
         List<ModerationLabelChoiceView> choices = [];
-        foreach (string[] values in definition.Issuance.DeclaredValues
+        foreach (string[] values in issuance.DeclaredValues
             .Concat(applied.Result.Select(label => label.SignedLabel.Label.Value))
             .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).Chunk(400))
         {
@@ -104,17 +160,24 @@ internal sealed partial class AdministrationDispatcher
 
                 StoredLabel? current = snapshot.Result.CurrentLabel;
                 Label? label = current?.SignedLabel.Label;
-                bool active = label is { IsNegationLabel: false } &&
-                    (label.ExpiresAt is null || label.ExpiresAt > gate.Result.DatabaseTime);
+                bool active = current is not null && activeSequences.Contains(current.Sequence);
                 choices.Add(new(
                     Value: values[index],
                     Applied: active && (target.Cid is null || label!.Cid is null || label.Cid == target.Cid),
                     Sequence: current?.Sequence ?? 0,
                     OtherVersion: active && target.Cid is not null && label!.Cid is not null && label.Cid != target.Cid,
-                    UriWide: active && target.RecordUri is not null && label!.Cid is null));
+                    UriWide: active && target.RecordUri is not null && label!.Cid is null,
+                    ExpiresAt: active ? label!.ExpiresAt : null));
             }
         }
 
-        return new(true, Moderation: new(LabelChoices: [.. choices]), Target: target.Subject);
+        LabelServiceResult<LabelAuthorizationGrant> grant = await administration.AuthorizeAsync(
+            caller: caller,
+            permission: LabelAdministrationPermission.Inspect,
+            reason: "Inspect manual target labels.",
+            cancellationToken: token).ConfigureAwait(false);
+        return grant.Succeeded
+            ? new(true, Moderation: new(LabelChoices: [.. choices]), Target: target.Subject)
+            : Failure(grant.Error);
     }
 }

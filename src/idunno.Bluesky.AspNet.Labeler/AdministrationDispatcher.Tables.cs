@@ -91,7 +91,8 @@ internal sealed partial class AdministrationDispatcher
                 Reports: page.Reports?.Select(ReportView).ToArray(),
                 PendingReports: page.PendingReports?.Select(PendingReportView).ToArray(),
                 Appeals: page.Appeals?.Select(AppealView).ToArray(),
-                PendingAppealCaseIds: page.PendingAppealCaseIds?.ToArray()),
+                PendingAppealCaseIds: page.PendingAppealCaseIds?.ToArray(),
+                EscalatedCaseIds: page.EscalatedCaseIds?.ToArray()),
             TotalCount: page.Total,
             PageNumber: page.Page,
             AuthorSummaries: page.AuthorSummaries?.Select(summary => new AdministrationAuthorSummaryView(

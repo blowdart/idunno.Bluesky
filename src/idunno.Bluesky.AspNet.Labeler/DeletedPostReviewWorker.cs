@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Data.Common;
+
 using idunno.Bluesky.Labeler;
 using idunno.Bluesky.Labeler.Moderation;
 
@@ -20,10 +22,17 @@ internal sealed partial class DeletedPostReviewWorker(
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-            LabelServiceResult<LabelDeletedPostBatch> result = await reviews.RunBatchAsync(stoppingToken).ConfigureAwait(false);
-            if (!result.Succeeded)
+            try
             {
-                ReviewUnavailable(logger, result.Error.Message);
+                LabelServiceResult<LabelDeletedPostBatch> result = await reviews.RunBatchAsync(stoppingToken).ConfigureAwait(false);
+                if (!result.Succeeded)
+                {
+                    ReviewUnavailable(logger, result.Error.Message);
+                }
+            }
+            catch (DbException exception) when (!stoppingToken.IsCancellationRequested)
+            {
+                DatabaseUnavailable(logger, exception);
             }
 
             await Task.Delay(TimeSpan.FromMinutes(1), clock, stoppingToken).ConfigureAwait(false);
@@ -33,4 +42,7 @@ internal sealed partial class DeletedPostReviewWorker(
     /// <summary>Reports batch failures without changing pending report or appeal state.</summary>
     [LoggerMessage(EventId = 7303, Level = LogLevel.Warning, Message = "Deleted-post review could not read its next batch: {Reason}")]
     private static partial void ReviewUnavailable(ILogger logger, string reason);
+
+    [LoggerMessage(EventId = 7312, Level = LogLevel.Warning, Message = "Deleted-post review storage is unavailable; retrying on the next interval.")]
+    private static partial void DatabaseUnavailable(ILogger logger, Exception exception);
 }

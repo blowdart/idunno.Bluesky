@@ -4,6 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 using idunno.AtProto;
 using idunno.AtProto.Labels;
@@ -20,11 +21,434 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace idunno.Bluesky.AspNet.Labeler.Integration.Test;
 
-public class XenonUiTests
+public partial class XenonUiTests
 {
     private static readonly Did s_administrator = new("did:plc:xenon-admin");
     private static readonly Did s_member = new("did:plc:xenon-member");
     private static readonly AtProtoServiceReference s_audience = new(TestServerBuilder.s_issuer, "labeler_admin");
+
+    [Theory]
+    [InlineData(true, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(false, true, false)]
+    public async Task OwnershipTransferRequiresCurrentOwnerAndExplicitConfirmation(bool ownerSubmits, bool confirms, bool accepted)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new();
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
+            configureAdministration: services =>
+            {
+                services.AddSingleton<ILabelIssuancePolicyProvider, UiPolicy>();
+                services.AddSingleton<IDidHandleResolver, TeamHandles>();
+                services.AddLabelerAdministration(s_audience, key, identity);
+            },
+            xenonUi: true);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        Assert.True((await team.BootstrapAsync(s_administrator, "uid:0", "ownership-bootstrap", token)).Succeeded);
+        LabelAdministrationCaller owner = (await team.AuthenticateLocalAsync("uid:0", token)).Result!;
+        Assert.True((await team.ChangeTeamAsync(
+            caller: owner,
+            change: new(
+                operationId: "ownership-enroll",
+                action: LabelTeamAction.Enroll,
+                target: s_member,
+                reason: "Enroll a potential owner.",
+                role: LabelTeamRole.Administrator),
+            cancellationToken: token)).Succeeded);
+        Did actor = ownerSubmits ? s_administrator : s_member;
+        using HttpResponseMessage page = await GetAsAsync(fixture, actor, "/Xenon/Team");
+        string html = await page.Content.ReadAsStringAsync(token);
+        Assert.Equal(ownerSubmits, html.Contains("name=\"action\" value=\"TransferOwnership\"", StringComparison.Ordinal));
+        if (ownerSubmits)
+        {
+            const string ownershipPanel = "<details class=\"panel\" id=\"labeler-ownership\">";
+            int ownershipStart = html.IndexOf(ownershipPanel, StringComparison.Ordinal);
+            Assert.True(ownershipStart > html.IndexOf("id=\"change-member\"", StringComparison.Ordinal));
+            Assert.Contains("<summary><strong>Labeler ownership</strong></summary>", html[ownershipStart..], StringComparison.Ordinal);
+            Assert.DoesNotContain("<section class=\"panel\"", html[ownershipStart..], StringComparison.Ordinal);
+        }
+        (string csrf, string cookie) = await CsrfAsync(page);
+        using HttpRequestMessage request = new(HttpMethod.Post, "/Xenon/Team?handler=Change")
+        {
+            Content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = csrf,
+                ["target"] = "xenon-member.example",
+                ["action"] = "TransferOwnership",
+                ["role"] = "Administrator",
+                ["reason"] = "Hand over ownership.",
+                ["operationId"] = "ownership-transfer",
+                ["confirmTransfer"] = confirms ? "true" : ""
+            })
+        };
+        request.Headers.Add("X-Test-Did", actor.Value);
+        request.Headers.Add("Cookie", cookie);
+        using HttpResponseMessage response = await fixture.Client.SendAsync(request, token);
+        Assert.Equal(accepted ? HttpStatusCode.Redirect : HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(!accepted, (await team.GetRemoteAdministrationStatusAsync(owner, token)).Result!.IsOwner);
+        LabelAdministrationCaller member = (await team.AuthenticateBrowserAsync(s_member, token)).Result!;
+        Assert.Equal(accepted, (await team.GetRemoteAdministrationStatusAsync(member, token)).Result!.IsOwner);
+        using HttpResponseMessage formerOwnerPage = await GetAsAsync(fixture, s_administrator, "/Xenon/Team");
+        using HttpResponseMessage newOwnerPage = await GetAsAsync(fixture, s_member, "/Xenon/Team");
+        Assert.Equal(!accepted, (await formerOwnerPage.Content.ReadAsStringAsync(token))
+            .Contains("name=\"action\" value=\"TransferOwnership\"", StringComparison.Ordinal));
+        Assert.Equal(accepted, (await newOwnerPage.Content.ReadAsStringAsync(token))
+            .Contains("name=\"action\" value=\"TransferOwnership\"", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task TeamMemberSuggestionsUseAllRegisteredHandlesRegardlessOfTableSearchOrPage()
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new();
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
+            configureAdministration: services =>
+            {
+                services.AddSingleton<ILabelIssuancePolicyProvider, UiPolicy>();
+                services.AddSingleton<IDidHandleResolver, TeamHandles>();
+                services.AddLabelerAdministration(s_audience, key, identity);
+            },
+            xenonUi: true);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        Assert.True((await team.BootstrapAsync(s_administrator, "uid:0", "dropdown-bootstrap", token)).Succeeded);
+        LabelAdministrationCaller caller = (await team.AuthenticateLocalAsync("uid:0", token)).Result!;
+        for (int index = 0; index < 19; index++)
+        {
+            Did member = new(index == 18 ? "did:plc:unavailable" : $"did:plc:team-member-{index:D2}");
+            Assert.True((await team.ChangeTeamAsync(
+                caller: caller,
+                change: new(
+                    operationId: $"dropdown-enroll-{index}",
+                    action: LabelTeamAction.Enroll,
+                    target: member,
+                    reason: "Enroll a dropdown test member.",
+                    role: LabelTeamRole.Moderator),
+                cancellationToken: token)).Succeeded);
+            if (index < 2)
+            {
+                Assert.True((await team.ChangeTeamAsync(
+                    caller: caller,
+                    change: new(
+                        operationId: $"dropdown-status-{index}",
+                        action: index == 0 ? LabelTeamAction.Suspend : LabelTeamAction.Remove,
+                        target: member,
+                        reason: "Retain an inactive dropdown test member."),
+                    cancellationToken: token)).Succeeded);
+            }
+        }
+
+        foreach (string query in new[] { "", "&Search=did:plc:xenon-admin", "&PageNumber=2" })
+        {
+            using HttpResponseMessage response = await GetAsAsync(
+                fixture, s_administrator, "/Xenon/Team?member=did:plc:team-member-17" + query);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            string html = await response.Content.ReadAsStringAsync(token);
+            string memberInput = TeamMemberInputRegex().Match(html).Value;
+            Assert.NotEmpty(memberInput);
+            Assert.Contains("value=\"team-member-17.example\"", memberInput, StringComparison.Ordinal);
+            Assert.Contains("list=\"team-search-handles\"", memberInput, StringComparison.Ordinal);
+            Assert.DoesNotContain("did:", memberInput, StringComparison.Ordinal);
+            Assert.Contains("list=\"team-search-handles\"", html, StringComparison.Ordinal);
+            string searchSuggestions = TeamSearchSuggestionsRegex().Match(html).Value;
+            Assert.NotEmpty(searchSuggestions);
+            Assert.Equal(19, TeamSearchOptionRegex().Count(searchSuggestions));
+            Assert.Contains("value=\"team-member-00.example\" label=\"@team-member-00.example - Suspended\"", searchSuggestions, StringComparison.Ordinal);
+            Assert.Contains("value=\"team-member-01.example\" label=\"@team-member-01.example - Removed\"", searchSuggestions, StringComparison.Ordinal);
+            Assert.Contains("value=\"team-member-17.example\"", searchSuggestions, StringComparison.Ordinal);
+            Assert.Contains("data-role=\"Moderator\"", searchSuggestions, StringComparison.Ordinal);
+            Assert.DoesNotContain("did:", searchSuggestions, StringComparison.Ordinal);
+            Assert.DoesNotContain("handle.invalid", searchSuggestions, StringComparison.Ordinal);
+            Assert.Contains("data-handle-typeahead", html, StringComparison.Ordinal);
+            Assert.Contains("id=\"enroll-target-suggestions\"", html, StringComparison.Ordinal);
+            Assert.Contains("id=\"enroll-target-status\" role=\"status\"", html, StringComparison.Ordinal);
+            Assert.Contains("/Xenon/js/team.js", html, StringComparison.Ordinal);
+        }
+    }
+
+    [Theory]
+    [InlineData("xenon-member.example", true)]
+    [InlineData("@XENON-MEMBER.EXAMPLE", true)]
+    [InlineData("outsider.example", false)]
+    [InlineData("did:plc:xenon-member", false)]
+    public async Task TeamMemberChangesMapVerifiedRegisteredHandlesToInternalIdentities(string target, bool accepted)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new();
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
+            configureAdministration: services =>
+            {
+                services.AddSingleton<ILabelIssuancePolicyProvider, UiPolicy>();
+                services.AddSingleton<IDidHandleResolver, TeamHandles>();
+                services.AddLabelerAdministration(s_audience, key, identity);
+            },
+            xenonUi: true);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        Assert.True((await team.BootstrapAsync(s_administrator, "uid:0", "handle-change-bootstrap", token)).Succeeded);
+        LabelAdministrationCaller caller = (await team.AuthenticateLocalAsync("uid:0", token)).Result!;
+        Assert.True((await team.ChangeTeamAsync(
+            caller: caller,
+            change: new(
+                operationId: "handle-change-enroll",
+                action: LabelTeamAction.Enroll,
+                target: s_member,
+                reason: "Enroll a handle change test member.",
+                role: LabelTeamRole.Viewer),
+            cancellationToken: token)).Succeeded);
+        using HttpResponseMessage page = await GetAsAsync(fixture, s_administrator, "/Xenon/Team");
+        (string csrf, string cookie) = await CsrfAsync(page);
+        using HttpRequestMessage request = new(HttpMethod.Post, "/Xenon/Team?handler=Change")
+        {
+            Content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = csrf,
+                ["target"] = target,
+                ["action"] = "SetRole",
+                ["role"] = "Moderator",
+                ["reason"] = "Change a registered member's role.",
+                ["operationId"] = "handle-change-submit"
+            })
+        };
+        request.Headers.Add("X-Test-Did", s_administrator.Value);
+        request.Headers.Add("Cookie", cookie);
+        using HttpResponseMessage response = await fixture.Client.SendAsync(request, token);
+        Assert.Equal(accepted ? HttpStatusCode.Redirect : HttpStatusCode.OK, response.StatusCode);
+        IReadOnlyList<LabelTeamMember> members = (await team.GetTeamAsync(caller, token)).Result!;
+        Assert.Equal(accepted ? LabelTeamRole.Moderator : LabelTeamRole.Viewer,
+            Assert.Single(members, member => member.Did == s_member).Role);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task EmailHostLinkRequiresRegisteredUiAndConfiguredPublicOrigin(bool uiEnabled, bool publicOrigin)
+    {
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new();
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
+            options: new() { PublicEndpoint = publicOrigin ? new Uri("https://labeler.example/") : null },
+            configureAdministration: services =>
+            {
+                services.AddSingleton<ILabelIssuancePolicyProvider, UiPolicy>();
+                services.AddLabelerAdministration(s_audience, key, identity);
+            },
+            xenonUi: uiEnabled);
+        LabelerEmailUiLink? link = fixture.Services.GetService<LabelerEmailUiLink>();
+        Assert.Equal(uiEnabled && publicOrigin ? new Uri("https://labeler.example/Xenon/") : null, link?.Endpoint);
+        Assert.Equal(uiEnabled, link is not null);
+    }
+
+    [Theory]
+    [InlineData("/Xenon/Cases?Queue=All&Sort=Number&Ascending=true")]
+    [InlineData("/Xenon/Reports?Queue=All&Sort=Number&Ascending=true")]
+    [InlineData("/Xenon/Appeals?Queue=All&Status=Pending&Sort=Number&Ascending=true")]
+    public async Task QueueListsExposeRefreshableResultsWithoutIncludingFilterControls(string path)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new();
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
+            configureAdministration: services =>
+            {
+                services.AddSingleton<ILabelIssuancePolicyProvider, UiPolicy>();
+                services.AddLabelerAdministration(s_audience, key, identity);
+            },
+            xenonUi: true);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        Assert.True((await team.BootstrapAsync(s_administrator, "uid:0", "queue-updates-bootstrap", token)).Succeeded);
+        using HttpResponseMessage response = await GetAsAsync(fixture, s_administrator, path);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(response.Headers.CacheControl?.NoStore);
+        string html = await response.Content.ReadAsStringAsync(token);
+        Assert.Contains("/Xenon/js/queue-updates.js", html, StringComparison.Ordinal);
+        Assert.Contains("data-queue-update-status", html, StringComparison.Ordinal);
+        Assert.Single(LiveQueueRegex().Matches(html));
+        int results = html.IndexOf("data-live-queue", StringComparison.Ordinal);
+        Assert.True(html.LastIndexOf("</form>", results, StringComparison.Ordinal) >= 0);
+        Assert.Contains("value=\"All\" selected=\"selected\"", html, StringComparison.Ordinal);
+        Assert.Contains("name=\"Sort\" value=\"Number\"", html, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(LabelTeamRole.Viewer)]
+    [InlineData(LabelTeamRole.Moderator)]
+    [InlineData(LabelTeamRole.Administrator)]
+    public async Task MediaPreferencesArePrivateDurableAndProtectedByLiveMembershipAndAntiforgery(LabelTeamRole role)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new();
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
+            configureAdministration: services =>
+            {
+                services.AddSingleton<ILabelIssuancePolicyProvider, UiPolicy>();
+                services.AddSingleton<IDidHandleResolver, TestHandles>();
+                services.AddLabelerAdministration(s_audience, key, identity);
+            },
+            xenonUi: true);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        Assert.True((await team.BootstrapAsync(s_administrator, "uid:0", "preferences-bootstrap", token)).Succeeded);
+        LabelAdministrationCaller administrator = (await team.AuthenticateLocalAsync("uid:0", token)).Result!;
+        Assert.True((await team.ChangeTeamAsync(
+            caller: administrator,
+            change: new(
+                operationId: "preferences-enroll",
+                action: LabelTeamAction.Enroll,
+                target: s_member,
+                reason: "Enroll a preferences test member.",
+                role: role),
+            cancellationToken: token)).Succeeded);
+        using HttpResponseMessage initial = await GetAsAsync(fixture, s_member, "/Xenon/Preferences");
+        Assert.Equal(HttpStatusCode.OK, initial.StatusCode);
+        Assert.True(initial.Headers.CacheControl?.NoStore);
+        string html = await initial.Content.ReadAsStringAsync(token);
+        Assert.Contains("href=\"/Xenon/Preferences\"", html, StringComparison.Ordinal);
+        Assert.Contains("name=\"blur\" value=\"porn\" checked=\"checked\"", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("name=\"grayscale\" value=\"porn\" checked", html, StringComparison.Ordinal);
+        (string csrf, string cookie) = await CsrfAsync(initial);
+        Dictionary<string, string> fields = new()
+        {
+            ["__RequestVerificationToken"] = csrf,
+            ["grayscale"] = "porn",
+            ["translucent"] = "graphic-media",
+            ["target"] = s_administrator.Value
+        };
+        using HttpRequestMessage save = new(HttpMethod.Post, "/Xenon/Preferences")
+        {
+            Content = new FormUrlEncodedContent(fields)
+        };
+        save.Headers.Add("X-Test-Did", s_member.Value);
+        save.Headers.Add("Cookie", cookie);
+        using HttpResponseMessage saved = await fixture.Client.SendAsync(save, token);
+        Assert.Equal(HttpStatusCode.Redirect, saved.StatusCode);
+        using HttpResponseMessage administratorPage = await GetAsAsync(fixture, s_administrator, "/Xenon/Preferences");
+        Assert.Contains("name=\"blur\" value=\"porn\" checked=\"checked\"", await administratorPage.Content.ReadAsStringAsync(token), StringComparison.Ordinal);
+        using HttpResponseMessage anotherBrowser = await GetAsAsync(fixture, s_member, "/Xenon/Preferences");
+        string reloaded = await anotherBrowser.Content.ReadAsStringAsync(token);
+        Assert.Contains("name=\"grayscale\" value=\"porn\" checked=\"checked\"", reloaded, StringComparison.Ordinal);
+        Assert.DoesNotContain("name=\"blur\" value=\"porn\" checked", reloaded, StringComparison.Ordinal);
+
+        fields["grayscale"] = "unknown";
+        using HttpRequestMessage invalid = new(HttpMethod.Post, "/Xenon/Preferences")
+        {
+            Content = new FormUrlEncodedContent(fields)
+        };
+        invalid.Headers.Add("X-Test-Did", s_member.Value);
+        invalid.Headers.Add("Cookie", cookie);
+        using HttpResponseMessage rejected = await fixture.Client.SendAsync(invalid, token);
+        Assert.Contains("Choose only the available media labels", await rejected.Content.ReadAsStringAsync(token), StringComparison.Ordinal);
+        using HttpResponseMessage unchanged = await GetAsAsync(fixture, s_member, "/Xenon/Preferences");
+        Assert.Contains("name=\"grayscale\" value=\"porn\" checked=\"checked\"", await unchanged.Content.ReadAsStringAsync(token), StringComparison.Ordinal);
+        using HttpRequestMessage noCsrf = new(HttpMethod.Post, "/Xenon/Preferences")
+        {
+            Content = new FormUrlEncodedContent([])
+        };
+        noCsrf.Headers.Add("X-Test-Did", s_member.Value);
+        using HttpResponseMessage denied = await fixture.Client.SendAsync(noCsrf, token);
+        Assert.Equal(HttpStatusCode.BadRequest, denied.StatusCode);
+        using HttpResponseMessage anonymous = await fixture.Client.GetAsync("/Xenon/Preferences", token);
+        Assert.Equal(HttpStatusCode.Unauthorized, anonymous.StatusCode);
+        using HttpResponseMessage outsider = await GetAsAsync(fixture, new("did:plc:outsider"), "/Xenon/Preferences");
+        Assert.Equal(HttpStatusCode.Forbidden, outsider.StatusCode);
+        Assert.True((await team.ChangeTeamAsync(
+            caller: administrator,
+            change: new(
+                operationId: "preferences-suspend",
+                action: LabelTeamAction.Suspend,
+                target: s_member,
+                reason: "Suspend the preferences test member."),
+            cancellationToken: token)).Succeeded);
+        using HttpResponseMessage suspended = await GetAsAsync(fixture, s_member, "/Xenon/Preferences");
+        Assert.Equal(HttpStatusCode.Forbidden, suspended.StatusCode);
+        fields["grayscale"] = "porn";
+        using HttpRequestMessage suspendedSave = new(HttpMethod.Post, "/Xenon/Preferences")
+        {
+            Content = new FormUrlEncodedContent(fields)
+        };
+        suspendedSave.Headers.Add("X-Test-Did", s_member.Value);
+        suspendedSave.Headers.Add("Cookie", cookie);
+        using HttpResponseMessage suspendedResult = await fixture.Client.SendAsync(suspendedSave, token);
+        Assert.Equal(HttpStatusCode.Forbidden, suspendedResult.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(LabelTeamRole.Viewer)]
+    [InlineData(LabelTeamRole.Moderator)]
+    [InlineData(LabelTeamRole.Administrator)]
+    public async Task OnlineTeamIndicatorSharesPresenceAndHidesForSingleActiveMember(LabelTeamRole role)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new();
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
+            configureAdministration: services =>
+            {
+                services.AddSingleton<ILabelIssuancePolicyProvider, UiPolicy>();
+                services.AddSingleton<IDidHandleResolver, TestHandles>();
+                services.AddLabelerAdministration(s_audience, key, identity);
+            },
+            xenonUi: true);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        Assert.True((await team.BootstrapAsync(s_administrator, "uid:0", "online-bootstrap", token)).Succeeded);
+        LabelAdministrationCaller administrator = (await team.AuthenticateLocalAsync("uid:0", token)).Result!;
+        using HttpResponseMessage singlePage = await GetAsAsync(fixture, s_administrator);
+        Assert.DoesNotContain("data-online-presence", await singlePage.Content.ReadAsStringAsync(token), StringComparison.Ordinal);
+        using HttpResponseMessage singleStatus = await GetAsAsync(fixture, s_administrator, "/Xenon?handler=Online");
+        Assert.Equal(HttpStatusCode.NoContent, singleStatus.StatusCode);
+        Assert.True(singleStatus.Headers.CacheControl?.NoStore);
+        Assert.True((await team.ChangeTeamAsync(
+            caller: administrator,
+            change: new(
+                operationId: "online-enroll",
+                action: LabelTeamAction.Enroll,
+                target: s_member,
+                reason: "Enroll a presence test member.",
+                role: role),
+            cancellationToken: token)).Succeeded);
+        fixture.Clock.Advance(TimeSpan.FromMinutes(1));
+        using HttpResponseMessage memberPage = await GetAsAsync(fixture, s_member);
+        string html = await memberPage.Content.ReadAsStringAsync(token);
+        Assert.Contains("data-online-presence", html, StringComparison.Ordinal);
+        Assert.Contains("2 online</span>", html, StringComparison.Ordinal);
+        Assert.Contains("fa-users", html, StringComparison.Ordinal);
+        Assert.Contains("data-online-url=\"/Xenon?handler=Online\"", html, StringComparison.Ordinal);
+        Assert.Contains($"<li title=\"{s_administrator}\"><span class=\"fa-icon fa-user\" aria-hidden=\"true\"></span> <span>@admin.example</span></li>", html, StringComparison.Ordinal);
+        Assert.Contains($"<li title=\"{s_member}\"><span class=\"fa-icon fa-user\" aria-hidden=\"true\"></span> <span>Handle unavailable</span></li>", html, StringComparison.Ordinal);
+        using HttpResponseMessage initialOnline = await GetAsAsync(fixture, s_member, "/Xenon?handler=Online");
+        using JsonDocument initialBody = JsonDocument.Parse(await initialOnline.Content.ReadAsByteArrayAsync(token));
+        Assert.Contains(initialBody.RootElement.GetProperty("members").EnumerateArray(),
+            member => member.GetProperty("displayName").GetString() == "@admin.example");
+        OzoneTeamPresence shared = fixture.Services.GetRequiredService<OzoneTeamPresence>();
+        IReadOnlyList<LabelTeamMember> members = (await team.GetTeamAsync(administrator, token)).Result!;
+        Assert.Equal(2, shared.List(members, 100).Length);
+        fixture.Clock.Advance(TimeSpan.FromMinutes(4));
+        using HttpResponseMessage online = await GetAsAsync(fixture, s_member, "/Xenon?handler=Online");
+        Assert.Equal(HttpStatusCode.OK, online.StatusCode);
+        Assert.True(online.Headers.CacheControl?.NoStore);
+        using JsonDocument body = JsonDocument.Parse(await online.Content.ReadAsByteArrayAsync(token));
+        Assert.Equal(s_member.Value, Assert.Single(body.RootElement.GetProperty("members").EnumerateArray()).GetProperty("did").GetString());
+        Assert.Equal("Handle unavailable", Assert.Single(body.RootElement.GetProperty("members").EnumerateArray()).GetProperty("displayName").GetString());
+        using HttpResponseMessage anonymous = await fixture.Client.GetAsync("/Xenon?handler=Online", token);
+        Assert.Equal(HttpStatusCode.Unauthorized, anonymous.StatusCode);
+        using HttpResponseMessage outsider = await GetAsAsync(fixture, new("did:plc:outsider"), "/Xenon?handler=Online");
+        Assert.Equal(HttpStatusCode.Forbidden, outsider.StatusCode);
+        Assert.True((await team.ChangeTeamAsync(
+            caller: administrator,
+            change: new(
+                operationId: "online-suspend",
+                action: LabelTeamAction.Suspend,
+                target: s_member,
+                reason: "Suspend the presence test member."),
+            cancellationToken: token)).Succeeded);
+        using HttpResponseMessage hidden = await GetAsAsync(fixture, s_administrator, "/Xenon?handler=Online");
+        Assert.Equal(HttpStatusCode.NoContent, hidden.StatusCode);
+        using HttpResponseMessage revoked = await GetAsAsync(fixture, s_member, "/Xenon?handler=Online");
+        Assert.Equal(HttpStatusCode.Forbidden, revoked.StatusCode);
+    }
 
     [Theory]
     [InlineData(false, false, false)]
@@ -362,6 +786,14 @@ public class XenonUiTests
             Assert.True((await team.ChangeTeamAsync(
                 caller,
                 new(
+                    operationId: "lifecycle-transfer-owner",
+                    action: LabelTeamAction.TransferOwnership,
+                    target: s_member,
+                    reason: "Allow the former owner's authority to be revoked after preview."),
+                TestContext.Current.CancellationToken)).Succeeded);
+            Assert.True((await team.ChangeTeamAsync(
+                caller,
+                new(
                     operationId: "lifecycle-revoke",
                     action: LabelTeamAction.Suspend,
                     target: s_administrator,
@@ -490,7 +922,7 @@ public class XenonUiTests
         Assert.Contains("<code>did:plc:xenon-member</code>", teamHtml, StringComparison.Ordinal);
         Assert.Contains("Handle unavailable", teamHtml, StringComparison.Ordinal);
         Assert.DoesNotContain("@handle.invalid", teamHtml, StringComparison.Ordinal);
-        Assert.Matches("""<td>\s*<span class="fa-icon fa-eye" aria-hidden="true"></span>\s*Viewer</td>""", teamHtml);
+        Assert.Matches("""<td><span class="team-member-role">\s*<span class="fa-icon fa-eye" aria-hidden="true"></span>\s*Viewer\s*</span></td>""", teamHtml);
 
         string[] invalidFilters =
         [
@@ -539,6 +971,8 @@ public class XenonUiTests
     [Fact]
     public async Task AdministratorsCanRegisterPolicyAlertEmailButModeratorsCannotViewOrChangeIt()
     {
+        int testEmails = 0;
+        string? testRecipient = null;
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         using HttpClient identity = new();
         LifecycleTests.TestKeyRing keyRing = new(key, key);
@@ -554,6 +988,26 @@ public class XenonUiTests
                         Enabled = true,
                         Server = "smtp.example.invalid",
                         FromAddress = "labeler@example.invalid"
+                    }
+                });
+                services.AddSingleton(new LabelerPolicyEmailService(
+                    issuer: TestServerBuilder.s_issuer,
+                    alerts: null,
+                    settings: new()
+                    {
+                        Enabled = true,
+                        Server = "smtp.example.invalid",
+                        FromAddress = "labeler@example.invalid"
+                    },
+                    clock: new Microsoft.Extensions.Time.Testing.FakeTimeProvider(
+                        new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero)),
+                    logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<LabelerPolicyEmailService>.Instance)
+                {
+                    TestMessageSender = (_, message, _) =>
+                    {
+                        testEmails++;
+                        testRecipient = Assert.Single(message.To).Address;
+                        return Task.CompletedTask;
                     }
                 });
                 services.AddLabelerAdministration(s_audience, keyRing, identity);
@@ -583,7 +1037,9 @@ public class XenonUiTests
         Assert.Equal(HttpStatusCode.OK, administratorPage.StatusCode);
         string initialHtml = await administratorPage.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.Contains("Add an email address for administrator notifications.", initialHtml, StringComparison.Ordinal);
+        Assert.Contains("<div class=\"notification-email-entry\">", initialHtml, StringComparison.Ordinal);
         Assert.Contains(">Save alert email</button>", initialHtml, StringComparison.Ordinal);
+        Assert.Contains("<details class=\"panel\" open", initialHtml, StringComparison.Ordinal);
         (string token, string cookie) = await CsrfAsync(administratorPage);
         const string address = "admin@example.invalid";
         using HttpRequestMessage save = new(HttpMethod.Post, "/Xenon/Team?handler=NotificationEmail")
@@ -603,13 +1059,96 @@ public class XenonUiTests
         using HttpResponseMessage updatedPage = await GetAsAsync(fixture, s_administrator, "/Xenon/Team");
         string updatedHtml = await updatedPage.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.Contains(address, updatedHtml, StringComparison.Ordinal);
+        Assert.Contains("You have configured your email address. Expand to edit or remove it.", updatedHtml, StringComparison.Ordinal);
+        Assert.DoesNotContain("<details class=\"panel\" open", updatedHtml, StringComparison.Ordinal);
         Assert.Contains("Update your email address for administrator notifications.", updatedHtml, StringComparison.Ordinal);
+        Assert.Contains("<div class=\"notification-email-entry\">", updatedHtml, StringComparison.Ordinal);
         Assert.Contains(">Update email</button>", updatedHtml, StringComparison.Ordinal);
+        Assert.Contains("class=\"notification-email-test\"", updatedHtml, StringComparison.Ordinal);
+        Assert.Contains("<p class=\"muted\">Tests use your saved address, not unsaved changes above. Allow 30 seconds between tests.</p>", updatedHtml, StringComparison.Ordinal);
+        using HttpResponseMessage preferencesPage = await GetAsAsync(fixture, s_administrator, "/Xenon/Preferences");
+        string preferencesHtml = await preferencesPage.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        Assert.Contains("Administrator email notifications", preferencesHtml, StringComparison.Ordinal);
+        Assert.Contains(">Test my email</button>", preferencesHtml, StringComparison.Ordinal);
+        Assert.Contains($"value=\"{address}\"", preferencesHtml, StringComparison.Ordinal);
+        Assert.Contains("name=\"returnToPreferences\" value=\"true\"", preferencesHtml, StringComparison.Ordinal);
+        Assert.Contains("<div class=\"notification-email-entry\">", preferencesHtml, StringComparison.Ordinal);
+        Assert.Contains("class=\"notification-email-test\"", preferencesHtml, StringComparison.Ordinal);
+        Assert.Contains("<p class=\"muted\">Tests use your saved address, not unsaved changes above. Allow 30 seconds between tests.</p>", preferencesHtml, StringComparison.Ordinal);
+        (string preferencesToken, string preferencesCookie) = await CsrfAsync(preferencesPage);
+        using HttpRequestMessage testSaved = new(HttpMethod.Post, "/Xenon/Team?handler=TestEmail")
+        {
+            Content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = preferencesToken,
+                ["returnToPreferences"] = "true",
+                ["notificationEmail"] = "ignored@example.invalid"
+            })
+        };
+        testSaved.Headers.Add("X-Test-Did", s_administrator.Value);
+        testSaved.Headers.Add("Cookie", preferencesCookie);
+        using HttpResponseMessage tested = await fixture.Client.SendAsync(testSaved, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Redirect, tested.StatusCode);
+        Assert.Equal("/Xenon/Preferences", tested.Headers.Location!.OriginalString);
+        Assert.Equal(1, testEmails);
+        Assert.Equal(address, testRecipient);
+        using HttpRequestMessage invalidEmail = new(HttpMethod.Post, "/Xenon/Team?handler=NotificationEmail")
+        {
+            Content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = preferencesToken,
+                ["returnToPreferences"] = "true",
+                ["operationId"] = "email-preferences-invalid",
+                ["notificationEmail"] = "not-an-email"
+            })
+        };
+        invalidEmail.Headers.Add("X-Test-Did", s_administrator.Value);
+        invalidEmail.Headers.Add("Cookie", preferencesCookie);
+        using HttpResponseMessage invalid = await fixture.Client.SendAsync(invalidEmail, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Redirect, invalid.StatusCode);
+        Assert.Equal("/Xenon/Preferences", invalid.Headers.Location!.OriginalString);
+        Assert.Equal(address, Assert.Single((await team.GetTeamAsync(administrator, TestContext.Current.CancellationToken)).Result!,
+            member => member.Did == s_administrator).NotificationEmail);
+        using HttpRequestMessage clear = new(HttpMethod.Post, "/Xenon/Team?handler=NotificationEmail")
+        {
+            Content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = preferencesToken,
+                ["operationId"] = "email-preferences-clear",
+                ["notificationEmail"] = "",
+                ["returnToPreferences"] = "true"
+            })
+        };
+        clear.Headers.Add("X-Test-Did", s_administrator.Value);
+        clear.Headers.Add("Cookie", preferencesCookie);
+        using HttpResponseMessage cleared = await fixture.Client.SendAsync(clear, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Redirect, cleared.StatusCode);
+        Assert.Equal("/Xenon/Preferences", cleared.Headers.Location!.OriginalString);
+        Assert.Null(Assert.Single((await team.GetTeamAsync(administrator, TestContext.Current.CancellationToken)).Result!,
+            member => member.Did == s_administrator).NotificationEmail);
+        using HttpRequestMessage testMissing = new(HttpMethod.Post, "/Xenon/Team?handler=TestEmail")
+        {
+            Content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = preferencesToken,
+                ["returnToPreferences"] = "true",
+                ["notificationEmail"] = "ignored@example.invalid"
+            })
+        };
+        testMissing.Headers.Add("X-Test-Did", s_administrator.Value);
+        testMissing.Headers.Add("Cookie", preferencesCookie);
+        using HttpResponseMessage missingResponse = await fixture.Client.SendAsync(testMissing, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Redirect, missingResponse.StatusCode);
+        Assert.Equal("/Xenon/Preferences", missingResponse.Headers.Location!.OriginalString);
+        Assert.Equal(1, testEmails);
         Assert.Contains("Notifications go only to active administrators with a registered address. Leave the field blank to clear your address.", updatedHtml, StringComparison.Ordinal);
         using HttpResponseMessage moderatorPage = await GetAsAsync(fixture, s_member, "/Xenon/Team");
         string moderatorHtml = await moderatorPage.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.DoesNotContain("Administrator email notifications", moderatorHtml, StringComparison.Ordinal);
         Assert.DoesNotContain(address, moderatorHtml, StringComparison.Ordinal);
+        using HttpResponseMessage moderatorPreferences = await GetAsAsync(fixture, s_member, "/Xenon/Preferences");
+        Assert.DoesNotContain("Administrator email notifications",
+            await moderatorPreferences.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
 
         using HttpResponseMessage moderatorCsrfPage = await GetAsAsync(fixture, s_member, "/Xenon/Team");
         (string moderatorToken, string moderatorCookie) = await CsrfAsync(moderatorCsrfPage);
@@ -626,6 +1165,23 @@ public class XenonUiTests
         forbidden.Headers.Add("Cookie", moderatorCookie);
         using HttpResponseMessage rejected = await fixture.Client.SendAsync(forbidden, TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Forbidden, rejected.StatusCode);
+        using HttpRequestMessage forbiddenTest = new(HttpMethod.Post, "/Xenon/Team?handler=TestEmail")
+        {
+            Content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = moderatorToken,
+                ["notificationEmail"] = "ignored@example.invalid"
+            })
+        };
+        forbiddenTest.Headers.Add("X-Test-Did", s_member.Value);
+        forbiddenTest.Headers.Add("Cookie", moderatorCookie);
+        using HttpResponseMessage testRejected = await fixture.Client.SendAsync(forbiddenTest, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Forbidden, testRejected.StatusCode);
+        using HttpRequestMessage noCsrf = new(HttpMethod.Post, "/Xenon/Team?handler=TestEmail");
+        noCsrf.Headers.Add("X-Test-Did", s_administrator.Value);
+        using HttpResponseMessage csrfRejected = await fixture.Client.SendAsync(noCsrf, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.BadRequest, csrfRejected.StatusCode);
+        Assert.Equal(1, testEmails);
     }
 
     private static async Task<HttpResponseMessage> GetAsAsync(TestServerBuilder fixture, Did actor, string path = "/Xenon")
@@ -715,5 +1271,46 @@ public class XenonUiTests
         public void Invalidate(Did did)
         {
         }
+
     }
+
+    /// <summary>Provides deterministic registered-member handles, including one unavailable identity, without network access.</summary>
+    private sealed class TeamHandles : IDidHandleResolver
+    {
+        /// <inheritdoc/>
+        public ValueTask<Handle> ResolveHandleAsync(Did did, CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(MemberHandle(did));
+
+        /// <inheritdoc/>
+        public bool TryGetCachedHandle(Did did, [NotNullWhen(true)] out Handle? handle)
+        {
+            handle = MemberHandle(did);
+            return true;
+        }
+
+        /// <inheritdoc/>
+        public void Invalidate(Did did)
+        {
+        }
+
+        /// <summary>Maps a fictional member identity to a deterministic public handle or an explicit lookup failure.</summary>
+        private static Handle MemberHandle(Did did) =>
+            did.Value == "did:plc:unavailable" ? Handle.Invalid : new Handle(did.Value.Split(':')[^1] + ".example");
+    }
+
+    /// <summary>Finds the team member input without changing its matching rules.</summary>
+    [GeneratedRegex("""<input name="target"[^>]*data-team-member[^>]*>""")]
+    private static partial Regex TeamMemberInputRegex();
+
+    /// <summary>Extracts the team search suggestions rendered by the page.</summary>
+    [GeneratedRegex("""<datalist id="team-search-handles">[\s\S]*?</datalist>""")]
+    private static partial Regex TeamSearchSuggestionsRegex();
+
+    /// <summary>Counts the suggestion options using the existing literal pattern.</summary>
+    [GeneratedRegex("<option ")]
+    private static partial Regex TeamSearchOptionRegex();
+
+    /// <summary>Finds live queue markers using the existing literal pattern.</summary>
+    [GeneratedRegex("data-live-queue")]
+    private static partial Regex LiveQueueRegex();
 }

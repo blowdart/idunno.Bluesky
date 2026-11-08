@@ -113,7 +113,7 @@ jobs:
     - name: 'Test'
       id: test
       shell: bash
-      run: dotnet test --no-build --no-restore --results-directory "${TEST_RESULTS}" --coverlet --report-xunit-junit --filter-not-class '*AllocationBudgetTests'
+      run: dotnet test --no-build --no-restore --max-parallel-test-modules 4 --max-threads 4 --results-directory "${TEST_RESULTS}" --coverlet --report-xunit-junit --filter-not-class '*AllocationBudgetTests'
 
     - name: 'Allocation budgets'
       id: allocations

@@ -154,7 +154,7 @@ else if (ViewData["Error"] is null)
                     <td><div class="policy-draft-actions">
                         <a class="policy-action-button" asp-page="./Index" asp-route-editor="draft" asp-route-draft="@version" asp-fragment="policy-labels" data-policy-load="draft" data-policy-version="@version"><span class="fa-icon fa-download" aria-hidden="true"></span> Load draft</a>
                         <a class="policy-action-button" asp-page="./Index" asp-route-publish="@version" asp-fragment="policy-publication" data-policy-publish="@version"><span class="fa-icon fa-globe" aria-hidden="true"></span> Publish</a>
-                        <form method="post" asp-page-handler="DeleteRequest">
+                        <form method="post" asp-page-handler="DeleteRequest" asp-fragment="policy-delete-confirmation">
                             <input type="hidden" name="version" value="@version" />
                             <button type="submit"><span class="fa-icon fa-circle-xmark" aria-hidden="true"></span> Delete draft</button>
                         </form>
@@ -168,14 +168,14 @@ else if (ViewData["Error"] is null)
 }
 @if (Model.PendingDeletion is { } deletion)
 {
-    <section class="panel" role="region" aria-labelledby="policy-delete-heading">
+    <section class="panel" id="policy-delete-confirmation" role="region" aria-labelledby="policy-delete-heading" data-policy-delete-confirmation>
         <h2 id="policy-delete-heading">Are you sure?</h2>
         <p>Delete draft <strong>@deletion</strong>? You will no longer be able to load or publish it. Its history is kept, and your current policy will not change.</p>
-        <form method="post" asp-page-handler="Delete">
+        <form method="post" asp-page-handler="Delete" asp-fragment="policy-delete-confirmation">
             <input type="hidden" name="version" value="@deletion" />
             <input type="hidden" name="operationId" value="@(ViewData["OperationId"] ?? Guid.NewGuid().ToString("N"))" />
             <input type="hidden" name="confirmed" value="true" />
-            <label class="field">Reason<input name="reason" required maxlength="4096" /></label>
+            <label class="field">Reason<input name="reason" required maxlength="4096" autofocus /></label>
             <div class="policy-draft-actions"><button type="submit"><span class="fa-icon fa-circle-xmark" aria-hidden="true"></span> Delete draft</button><a class="policy-action-button" asp-page="./Index"><span class="fa-icon fa-circle-pause" aria-hidden="true"></span> Cancel</a></div>
         </form>
     </section>
@@ -185,17 +185,23 @@ else if (ViewData["Error"] is null)
 {
     <div class="panel policy-editor-toolbar">
         <p data-policy-source>@Model.EditorSource</p>
-        <a class="policy-action-button" asp-page="./Index" asp-route-editor="current" asp-fragment="policy-labels" data-policy-load="current"><span class="fa-icon fa-download" aria-hidden="true"></span> Load current policy</a>
-        @if (Model.DraftDefinition.ValueKind == JsonValueKind.Object)
-        {
-            <span>@(Model.DraftDefinitions.Count == 1 ? "A saved draft is available in Current State." : $"{Model.DraftDefinitions.Count} saved drafts are available in Current State.")</span>
-        }
+        <p class="muted">Labels, Moderation Policy, and Advanced show this working copy. Save edits before publishing; publication uses the saved draft.</p>
+        <div class="policy-editor-actions">
         <a class="policy-action-button" asp-page="./Index" asp-route-editor="clear" asp-fragment="policy-labels" data-policy-clear><span class="fa-icon fa-circle-xmark" aria-hidden="true"></span> Clear all</a>
-        <p class="muted">Loading or clearing replaces your unsaved edits, not your saved policies. Save changes with a new Policy ID.</p>
+        <form method="post" asp-page-handler="DeleteRequest" asp-fragment="policy-delete-confirmation" data-policy-editor-delete hidden="@(Model.EditingDraft.Length == 0)">
+            <input type="hidden" name="version" value="@Model.EditingDraft" />
+            <button type="submit"><span class="fa-icon fa-trash-can" aria-hidden="true"></span> Delete draft</button>
+        </form>
+        <a class="policy-action-button" asp-page="./Index" asp-route-editor="current" asp-fragment="policy-labels" data-policy-load="current"><span class="fa-icon fa-download" aria-hidden="true"></span> Reset to current policy</a>
+        <a class="policy-action-button" asp-page="./Index" asp-route-publish="@Model.EditingDraft" asp-fragment="policy-publication" data-policy-editor-publish data-policy-publish="@Model.EditingDraft" hidden="@(Model.EditingDraft.Length == 0)"><span class="fa-icon fa-globe" aria-hidden="true"></span> Publish policy</a>
+        </div>
+        <p class="muted">Clearing or resetting replaces unsaved edits. Resetting copies the current policy into a new draft; it does not change or delete a saved draft.</p>
     </div>
     <textarea hidden data-policy-current>@(Model.CurrentDefinition.ValueKind == JsonValueKind.Object ? Model.CurrentDefinition.GetRawText() : "")</textarea>
     <textarea hidden data-policy-drafts>@("[" + string.Join(",", Model.DraftDefinitions.Select(draft => draft.GetRawText())) + "]")</textarea>
-    <form method="post" asp-page-handler="Save" data-policy-editor data-policy-submitted="@Model.HasSubmittedDraft.ToString().ToLowerInvariant()">
+    <form method="post" asp-page-handler="Save" asp-fragment="main" data-policy-editor data-policy-submitted="@Model.HasSubmittedDraft.ToString().ToLowerInvariant()">
+        <input type="hidden" name="editingDraft" value="@Model.EditingDraft" />
+        <input type="hidden" name="editorTab" value="@Model.EditorTab" />
         <input type="hidden" name="operationId" value="@(ViewData["OperationId"] ?? Guid.NewGuid().ToString("N"))" />
         <section class="panel" id="policy-labels" data-policy-panel>
             <h2>Available labels</h2>
@@ -210,6 +216,7 @@ else if (ViewData["Error"] is null)
             <legend>What people can report</legend>
             <input type="hidden" name="structuredScope" value="true" />
             <label class="field-check"><input type="checkbox" name="reportSubjects" value="account" checked="@subjects.Contains("account")" /> Accounts</label>
+            <p class="muted">Loading shows the stored policy unchanged. When you edit report controls or save a draft with Accounts selected and restricted content types, Xenon automatically includes app.bsky.actor.profile so Bluesky offers this service for account reports. If content reports are also selected, this permits profile-record reports too. This compatibility change applies to the draft, not the current public policy, until published. Unchecking Accounts does not remove an explicitly listed profile collection. Label permissions below are unchanged.</p>
             <label class="field-check"><input type="checkbox" name="reportSubjects" value="record" checked="@subjects.Contains("record")" /> Content, such as posts and lists</label>
             <label class="field-check"><input type="checkbox" name="reportAllCollections" value="true" checked="@reportAllCollections" /> Accept reports about all content types</label>
             <label class="field">Allowed content types for reports (comma-separated identifiers)
@@ -240,10 +247,13 @@ else if (ViewData["Error"] is null)
                 <textarea name="customReasons" maxlength="32768" spellcheck="false">@string.Join("\n", (Model.ReasonTypes ?? []).Where(reason => !ReportReasonOptions.s_all.Any(option => option.Id == reason)))</textarea>
             </label>
             <p>If you choose selected reasons but select none, no reasons are accepted. AT Protocol and Ozone use separate names for reasons; select both versions if your service supports both.</p>
+            <p class="muted">General Other is the current tools.ozone.report.defs#reasonOther. Other (legacy) is com.atproto.moderation.defs#reasonOther. They have the same meaning but different identifiers; select both to accept either from clients.</p>
         </fieldset>
         <fieldset>
             <legend>Where moderators can apply labels</legend>
             <p>Choose what moderators can label, separately from what people can report.</p>
+            <button type="button" data-policy-sync-issuance hidden><span class="fa-icon fa-clipboard-check" aria-hidden="true"></span> Match policy reporting scope</button>
+            <p class="muted">Copies account, content and content-type permissions from the policy currently being edited. Save or update the draft afterward; this does not publish it.</p>
             <label class="field-check"><input type="checkbox" name="allowAccounts" value="true" checked="@editor.GetProperty("allowAccounts").GetBoolean()" /> Accounts</label>
             <label class="field-check"><input type="checkbox" name="allowRecords" value="true" checked="@editor.GetProperty("allowRecords").GetBoolean()" /> Content, such as posts and lists</label>
             <input type="hidden" name="structuredIssuance" value="true" />
@@ -264,11 +274,11 @@ else if (ViewData["Error"] is null)
             <noscript><p>Without JavaScript, the Moderation Policy report controls replace their corresponding JSON fields when saving. Other declaration fields remain editable here.</p></noscript>
         </section>
         <section class="panel" data-policy-save>
-        <h2>Save a policy draft</h2>
-        <label class="field">Policy ID<input name="version" required maxlength="256" value="@Model.Version" aria-describedby="policy-id-help" /></label>
-        <p id="policy-id-help" class="muted">Give this draft a unique name, such as my-policy-v3. Use a new name each time you save changes. This ID is for your team and is not published.</p>
+        <h2 data-policy-save-heading>@(Model.EditingDraft.Length > 0 ? "Update a draft policy" : "Save a policy draft")</h2>
+        <label class="field">Policy ID<input name="version" required maxlength="256" value="@Model.Version" readonly="@(Model.EditingDraft.Length > 0)" aria-describedby="policy-id-help" /></label>
+        <p id="policy-id-help" class="muted">An unpublished draft can be updated under the same ID. Choose a new ID when copying a published policy. This ID is for your team and is not published.</p>
         <label class="field">Reason<input name="reason" required maxlength="4096" value="@Model.SaveReason" /></label>
-        <p class="form-actions"><button type="submit"><span class="fa-icon fa-clipboard-check" aria-hidden="true"></span> Save draft</button></p>
+        <p class="form-actions"><button type="submit"><span class="fa-icon fa-clipboard-check" aria-hidden="true"></span> <span data-policy-save-text>@(Model.EditingDraft.Length > 0 ? "Update draft" : "Save draft")</span></button></p>
         </section>
     </form>
 }

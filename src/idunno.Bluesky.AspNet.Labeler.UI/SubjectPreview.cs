@@ -29,7 +29,12 @@ internal sealed record SubjectPreview(
     bool ModerationUnavailable = false,
     int? VideoWidth = null,
     int? VideoHeight = null,
-    bool MatchesReportedVersion = false);
+    bool MatchesReportedVersion = false,
+    string[]? MediaLabels = null,
+    string? RecordJson = null,
+    bool Standalone = false,
+    string[]? CurrentLabels = null,
+    string[]? AccountLabels = null);
 
 /// <summary>Contains a bounded raster image fetched by the server, or an explicit unavailable-image explanation.</summary>
 internal sealed record PreviewImage(string? DataUrl, string Alt, string? Error = null);

@@ -58,13 +58,24 @@ internal sealed class StoreFixture : IAsyncDisposable
             string variable = engine == "mysql" ? "LABELER_TEST_MYSQL_CONNECTION" : "LABELER_TEST_POSTGRESQL_CONNECTION";
             fixture._admin = Environment.GetEnvironmentVariable(variable)
                 ?? throw new InvalidOperationException($"Set {variable} to an administrative connection on a disposable Docker database server. Real-engine conformance never skips.");
-            if (engine == "postgresql")
-            {
-                fixture._admin = new NpgsqlConnectionStringBuilder(fixture._admin)
+            fixture._admin = engine == "mysql"
+                ? new MySqlConnectionStringBuilder(fixture._admin)
                 {
-                    GssEncryptionMode = GssEncryptionMode.Disable
+                    Pooling = true,
+                    MinimumPoolSize = 0,
+                    MaximumPoolSize = 16,
+                    ConnectionTimeout = 15,
+                    DefaultCommandTimeout = 15
+                }.ConnectionString
+                : new NpgsqlConnectionStringBuilder(fixture._admin)
+                {
+                    Pooling = true,
+                    MinPoolSize = 0,
+                    MaxPoolSize = 16,
+                    GssEncryptionMode = GssEncryptionMode.Disable,
+                    Timeout = 15,
+                    CommandTimeout = 15
                 }.ConnectionString;
-            }
             await using DbConnection connection = fixture.AdminConnection();
             await connection.OpenAsync();
             await using DbCommand command = connection.CreateCommand();
@@ -73,13 +84,13 @@ internal sealed class StoreFixture : IAsyncDisposable
 #pragma warning restore CA2100
             await command.ExecuteNonQueryAsync();
             fixture.ConnectionString = engine == "mysql"
-                ? new MySqlConnectionStringBuilder(fixture._admin) { Database = fixture._database, Pooling = false }.ConnectionString
-                : new NpgsqlConnectionStringBuilder(fixture._admin) { Database = fixture._database, Pooling = false }.ConnectionString;
+                ? new MySqlConnectionStringBuilder(fixture._admin) { Database = fixture._database }.ConnectionString
+                : new NpgsqlConnectionStringBuilder(fixture._admin) { Database = fixture._database }.ConnectionString;
         }
 
-        fixture.Store = fixture.NewStore();
         try
         {
+            fixture.Store = fixture.NewStore();
             if (initialize)
             {
                 await fixture.Store.InitializeAsync(s_issuer);
@@ -212,6 +223,19 @@ internal sealed class StoreFixture : IAsyncDisposable
         }
         else
         {
+            // Pools are keyed by this fixture's unique database; close only its sessions before dropping it.
+            await using (DbConnection pooled = Connection())
+            {
+                if (pooled is MySqlConnection mysql)
+                {
+                    await MySqlConnection.ClearPoolAsync(mysql);
+                }
+                else
+                {
+                    NpgsqlConnection.ClearPool((NpgsqlConnection)pooled);
+                }
+            }
+
             await using DbConnection connection = AdminConnection();
             await connection.OpenAsync();
             await using DbCommand command = connection.CreateCommand();

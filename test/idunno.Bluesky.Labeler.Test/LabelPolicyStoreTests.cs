@@ -12,6 +12,7 @@ using idunno.Bluesky.Labeler.Storage;
 
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Testing;
 
 namespace idunno.Bluesky.Labeler.Test;
 
@@ -29,6 +30,111 @@ public class LabelPolicyStoreTests
         }
         """;
     private static readonly string[] s_expectedVersions = ["v1", "v2"];
+
+    [Theory]
+    [InlineData("Timeout", LabelPolicyPhase.VerifiedActive)]
+    [InlineData("NetworkFailure", LabelPolicyPhase.VerifiedActive)]
+    [InlineData("PolicyMismatch", LabelPolicyPhase.Conflict)]
+    public async Task IndependentVerificationClassifiesFailuresWithoutChangingAdmissionRules(
+        string category,
+        LabelPolicyPhase expectedPhase)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync("sqlite");
+        LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
+        ILabelPolicyStore store = (ILabelPolicyStore)fixture.Store;
+        LabelPolicyState active = await ActivateAsync(store, administrator, token);
+        using HttpClient client = new(new VerificationFailureHandler(category));
+        LabelPolicyService verifier = new(issuer: StoreFixture.s_issuer, store: store, httpClient: client);
+        LabelServiceResult<LabelPolicyState> result = await verifier.VerifyActivePolicyAsync(token);
+        Assert.False(result.Succeeded);
+        Assert.Equal(LabelServiceErrorCode.PolicyUnavailable, result.Error.Code);
+        Assert.Equal(category, result.Error.VerificationFailureCategory);
+        LabelPolicyState after = (await store.ReadPolicyStateAsync(token))!;
+        Assert.Equal(expectedPhase, after.Phase);
+        Assert.Equal(category == "PolicyMismatch" ? null : active.VerifiedUntil, after.VerifiedUntil);
+        Assert.DoesNotContain("private diagnostic", result.Error.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>Produces remote timeout, transport failure or changed declaration responses without real network requests.</summary>
+    private sealed class VerificationFailureHandler(string category) : HttpMessageHandler
+    {
+        /// <summary>Returns the issuer's directory entry before simulating the selected repository outcome.</summary>
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (request.RequestUri?.Host == "plc.directory")
+            {
+                return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+                {
+                    Content = new StringContent($$"""
+                        {"id":"{{StoreFixture.s_issuer}}","alsoKnownAs":[],"verificationMethod":[],"service":[
+                        {"id":"#atproto_pds","type":"AtprotoPersonalDataServer","serviceEndpoint":"https://pds.example"}]}
+                        """, System.Text.Encoding.UTF8, "application/json")
+                });
+            }
+            if (category == "Timeout")
+            {
+                throw new TaskCanceledException("private diagnostic");
+            }
+            if (category == "NetworkFailure")
+            {
+                throw new HttpRequestException("private diagnostic");
+            }
+            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent($$$"""
+                    {"uri":"at://{{{StoreFixture.s_issuer}}}/app.bsky.labeler.service/self","cid":"{{{s_cid}}}","value":{}}
+                    """, System.Text.Encoding.UTF8, "application/json")
+            });
+        }
+    }
+
+    [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task DraftEditsInvalidatePublicationReviewsWithoutChangingActiveVerification(string engine)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
+        ILabelPolicyStore store = (ILabelPolicyStore)fixture.Store;
+        await ActivateAsync(store, administrator, token);
+        LabelPolicyDefinition original = Policy(version: "v2");
+        Success(await store.SavePolicyAsync(administrator, "original", original, "Save draft.", token));
+        LabelPolicyState reviewed = (await store.ReadPolicyStateAsync(token))!;
+        ILabelPolicyStore otherStore = (ILabelPolicyStore)fixture.NewStore();
+        LabelPolicyDefinition edited = Policy(rules: "Changed after review.", version: "v2");
+        Success(await otherStore.SavePolicyAsync(administrator, "edit", edited, "Edit draft.", token));
+        LabelPolicyState changed = (await store.ReadPolicyStateAsync(token))!;
+        Assert.Equal(reviewed.Revision + 1, changed.Revision);
+        Assert.Equal(LabelPolicyPhase.VerifiedActive, changed.Phase);
+        Assert.Equal(reviewed.Phase, changed.Phase);
+        Assert.Equal(reviewed.VerifiedUntil, changed.VerifiedUntil);
+        Assert.Equal(reviewed.Policy!.Rules, changed.Policy!.Rules);
+        Assert.Equal(LabelServiceErrorCode.StaleDecision, (await store.BeginPolicyPublicationAsync(
+            caller: administrator,
+            operationId: "stale",
+            version: "v2",
+            expectedRevision: reviewed.Revision,
+            previousCid: null,
+            reason: "Publish previously reviewed content.",
+            cancellationToken: token)).Error!.Code);
+        Success(await otherStore.SavePolicyAsync(administrator, "edit", edited, "Edit draft.", token));
+        Success(await otherStore.SavePolicyAsync(administrator, "unchanged", edited, "Save identical draft.", token));
+        Success(await otherStore.SavePolicyAsync(administrator, "original", original, "Save draft.", token));
+        Assert.Equal(changed.Revision, (await store.ReadPolicyStateAsync(token))!.Revision);
+        LabelPolicyState publication = Success(await store.BeginPolicyPublicationAsync(
+            caller: administrator,
+            operationId: "reviewed-edit",
+            version: "v2",
+            expectedRevision: changed.Revision,
+            previousCid: null,
+            reason: "Publish reviewed changes.",
+            cancellationToken: token));
+        Assert.Equal(edited.Rules, publication.Policy!.Rules);
+    }
 
     [Theory]
     [InlineData("sqlite")]
@@ -78,7 +184,7 @@ public class LabelPolicyStoreTests
     [InlineData("sqlite")]
     [InlineData("postgresql")]
     [InlineData("mysql")]
-    public async Task DraftDeletionRetainsHistoryAndPreventsLoadingPublicationAndVersionReuse(string engine)
+    public async Task DraftDeletionRetainsHistoryAndAllowsReusingUnpublishedNames(string engine)
     {
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
@@ -106,13 +212,6 @@ public class LabelPolicyStoreTests
             cancellationToken: token));
         Assert.False((await policies.GetPolicyVersionAsync(administrator, "v1", token)).Succeeded);
         Assert.Empty(Success(await policies.GetPolicyVersionsAsync(administrator, cancellationToken: token)));
-        Assert.Equal(LabelServiceErrorCode.IdempotencyConflict,
-            (await policies.SavePolicyAsync(
-                caller: administrator,
-                operationId: "recreate",
-                policy: Policy(),
-                reason: "Do not recreate.",
-                cancellationToken: token)).Error!.Code);
         Assert.False((await policies.BeginPolicyPublicationAsync(
             caller: administrator,
             operationId: "publish-deleted",
@@ -126,6 +225,27 @@ public class LabelPolicyStoreTests
         LabelPolicyHistoryEntry deletion = Assert.Single(history, entry => entry.Action == LabelPolicyHistoryAction.DraftDeletion);
         Assert.Equal("v1", deletion.Policy!.Issuance.Version);
         Assert.Equal("v1", Success(await policies.GetPolicyOperationAsync(administrator, "draft", token)).Policy!.Issuance.Version);
+        LabelPolicyDefinition recreated = Policy(rules: "Recreated draft.");
+        Success(await policies.SavePolicyAsync(administrator, "recreate", recreated, "Reuse unpublished name.", token));
+        // Retrying an old deletion recovers its receipt without deleting the newly saved draft.
+        Success(await drafts.DeletePolicyDraftAsync(administrator, "delete", "v1", "Delete unused draft.", token));
+        Assert.Equal(recreated.Rules, Success(await policies.GetPolicyVersionAsync(administrator, "v1", token)).Rules);
+        Assert.Single(Success(await policies.GetPolicyVersionsAsync(administrator, cancellationToken: token)));
+        LabelPolicyState recreatedPublication = Success(await policies.BeginPolicyPublicationAsync(
+            caller: administrator,
+            operationId: "publish-recreated",
+            version: "v1",
+            expectedRevision: (await policies.ReadPolicyStateAsync(token))!.Revision,
+            previousCid: null,
+            reason: "Publish recreated draft.",
+            cancellationToken: token));
+        Assert.Equal(recreated.Rules, recreatedPublication.Policy!.Rules);
+        LabelPolicyState abandoned = Success(await policies.AbandonPolicyPublicationAsync(
+            caller: administrator,
+            operationId: "abandon-recreated",
+            expectedRevision: recreatedPublication.Revision,
+            reason: "Continue test with next policy.",
+            cancellationToken: token));
 
         using JsonDocument declaration = JsonDocument.Parse(Declaration);
         LabelPolicyDefinition next = new(
@@ -144,7 +264,7 @@ public class LabelPolicyStoreTests
             caller: administrator,
             operationId: "publish-next",
             version: "v2",
-            expectedRevision: initial.Revision,
+            expectedRevision: abandoned.Revision,
             previousCid: null,
             reason: "Publish next.",
             cancellationToken: token));
@@ -264,7 +384,7 @@ public class LabelPolicyStoreTests
     [InlineData("sqlite")]
     [InlineData("postgresql")]
     [InlineData("mysql")]
-    public async Task DraftsAreImmutableAndPublicationRequiresIndependentMatchingObservation(string engine)
+    public async Task DraftsAreEditableUntilPublicationRequiresIndependentMatchingObservation(string engine)
     {
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
@@ -298,14 +418,28 @@ public class LabelPolicyStoreTests
         LabelPolicyDefinition draft = Policy();
         Assert.Equal(draft.DeclarationJson, Success(await store.SavePolicyAsync(administrator, "draft", draft, "Reviewed rules.", token)).DeclarationJson);
         Assert.Equal(initial.Revision, (await store.ReadPolicyStateAsync(token))!.Revision);
-        Assert.Equal(LabelServiceErrorCode.IdempotencyConflict,
-            (await store.SavePolicyAsync(administrator, "changed", Policy(rules: "Different rules."), "Reviewed rules.", token)).Error!.Code);
+        Assert.Equal("Different rules.", Success(await store.SavePolicyAsync(
+            administrator, "changed", Policy(rules: "Different rules."), "Reviewed rules.", token)).Rules);
+        Assert.Equal(draft.Rules, Success(await store.SavePolicyAsync(administrator, "draft", draft, "Reviewed rules.", token)).Rules);
+        Assert.Equal("Different rules.", Success(await store.GetPolicyVersionAsync(administrator, "v1", token)).Rules);
+        Success(await store.SavePolicyAsync(administrator, "restore-draft", draft, "Restore reviewed rules.", token));
+        Assert.Equal(LabelServiceErrorCode.StaleDecision, (await store.BeginPolicyPublicationAsync(
+            caller: administrator,
+            operationId: "stale-publish",
+            version: "v1",
+            expectedRevision: initial.Revision,
+            previousCid: null,
+            reason: "Reject an outdated review.",
+            cancellationToken: token)).Error!.Code);
+        long reviewedRevision = (await store.ReadPolicyStateAsync(token))!.Revision;
         LabelPolicyState publishing = Success(await store.BeginPolicyPublicationAsync(
-            caller: administrator, operationId: "publish", version: "v1", expectedRevision: initial.Revision,
+            caller: administrator, operationId: "publish", version: "v1", expectedRevision: reviewedRevision,
             previousCid: null, reason: "Publish reviewed policy.", cancellationToken: token));
         Assert.Equal(LabelPolicyPhase.Publishing, publishing.Phase);
         Assert.Equal("publish", publishing.PublicationOperationId);
         Assert.Null(publishing.VerifiedUntil);
+        Assert.Equal(LabelServiceErrorCode.IdempotencyConflict,
+            (await store.SavePolicyAsync(administrator, "change-selected", Policy(rules: "Different rules."), "Cannot edit publication.", token)).Error!.Code);
         using JsonDocument old = JsonDocument.Parse(Declaration.Replace("\"spam\"", "\"other\"", StringComparison.Ordinal));
         LabelPolicyState pending = Success(await store.ObservePolicyAsync(
             expectedRevision: publishing.Revision, verificationStartedAt: publishing.DatabaseTime,
@@ -347,7 +481,7 @@ public class LabelPolicyStoreTests
             leaseDuration: TimeSpan.FromMinutes(2),
             cancellationToken: token));
         LabelPolicyState recovered = Success(await store.BeginPolicyPublicationAsync(
-            caller: administrator, operationId: "publish", version: "v1", expectedRevision: initial.Revision,
+            caller: administrator, operationId: "publish", version: "v1", expectedRevision: reviewedRevision,
             previousCid: null, reason: "Publish reviewed policy.", cancellationToken: token));
         Assert.Equal(publishing.Revision, recovered.Revision);
         Assert.Equal("publish", recovered.PublicationOperationId);
@@ -397,11 +531,15 @@ public class LabelPolicyStoreTests
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
         LabelPolicyState active = await ActivateAsync((ILabelPolicyStore)fixture.Store, administrator, token);
-        Microsoft.Extensions.Time.Testing.FakeTimeProvider clock = new(active.DatabaseTime.AddMilliseconds(-430));
+        Microsoft.Extensions.Time.Testing.FakeTimeProvider clock = new(active.DatabaseTime.AddMilliseconds(-5001));
         ILabelPolicyStore restarted = (ILabelPolicyStore)fixture.NewStore(clock);
         TargetResolutionHandler handler = new() { Offline = true };
         using HttpClient client = new(handler);
-        LabelPolicyService verifier = new(issuer: StoreFixture.s_issuer, store: restarted, httpClient: client);
+        LabelPolicyService verifier = new(
+            issuer: StoreFixture.s_issuer,
+            store: restarted,
+            httpClient: client,
+            loggerFactory: fixture.Services.GetRequiredService<Microsoft.Extensions.Logging.ILoggerFactory>());
         foreach (bool force in new[] { false, true })
         {
             Assert.Equal(LabelServiceErrorCode.PolicyUnavailable,
@@ -409,10 +547,47 @@ public class LabelPolicyStoreTests
         }
 
         Assert.Equal(0, handler.Requests);
+        Assert.Contains(fixture.Services.GetFakeLogCollector().GetSnapshot(), log =>
+            log.Message.Contains("5001 milliseconds earlier than the saved policy check", StringComparison.Ordinal));
         Assert.Equal(active.Revision, (await restarted.ReadPolicyStateAsync(token))!.Revision);
-        clock.Advance(TimeSpan.FromMilliseconds(430));
+        clock.Advance(TimeSpan.FromMilliseconds(5001));
         Assert.True((await verifier.GetVerifiedStateAsync(cancellationToken: token)).Succeeded);
         Assert.Equal(0, handler.Requests);
+    }
+
+    [Theory]
+    [InlineData("sqlite", 5000, true)]
+    [InlineData("sqlite", 5001, false)]
+    [InlineData("postgresql", 5000, true)]
+    [InlineData("postgresql", 5001, false)]
+    [InlineData("mysql", 5000, true)]
+    [InlineData("mysql", 5001, false)]
+    public async Task IssuanceCommitRespectsDatabaseClockRollbackTolerance(string engine, int rollbackMilliseconds, bool expected)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
+        LabelPolicyState active = await ActivateAsync((ILabelPolicyStore)fixture.Store, administrator, token);
+        ILabelStore rolledBack = fixture.NewStore(new(active.DatabaseTime.AddMilliseconds(-rollbackMilliseconds)));
+        LabelStoreState state = await rolledBack.GetStateAsync(token);
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        LabelTarget target = LabelTarget.Account(new Did("did:plc:subject"));
+        LabelOperationContext context = new(actor: s_administrator, reason: "Review.");
+        LabelDecisionCommit decision = new(
+            request: LabelOperationRequest.Issue(operationId: "rollback-issue", target: target, value: "spam", context: context),
+            resolvedTarget: target,
+            expectedRevision: state.Revision,
+            signedLabel: new(key.CreateLabel(source: StoreFixture.s_issuer, uri: target.Subject, value: "spam", creationTimestamp: active.DatabaseTime)),
+            audit: new(evaluatedAt: active.DatabaseTime, authorizationVersion: "test", policyVersion: "v1", signingKeyMultibase: key.ExportPublicKeyMultibase()))
+        {
+            AdministrationCaller = administrator
+        };
+        LabelServiceResult<LabelOperationReceipt> result = await rolledBack.CommitDecisionAsync(decision, token);
+        Assert.Equal(expected, result.Succeeded);
+        if (!expected)
+        {
+            Assert.Equal(LabelServiceErrorCode.PolicyUnavailable, result.Error!.Code);
+        }
     }
 
     [Theory]
@@ -476,7 +651,7 @@ public class LabelPolicyStoreTests
         {
             (active.Revision - 1, active.DatabaseTime, "policy changed"),
             (active.Revision, active.DatabaseTime.Subtract(active.VerificationFreshness), "check expired"),
-            (active.Revision, active.DatabaseTime.AddMilliseconds(430), "ahead of the database clock"),
+            (active.Revision, active.DatabaseTime.AddMilliseconds(5001), "ahead of the database clock"),
             (active.Revision, active.DatabaseTime.AddDays(1), "ahead of the database clock")
         })
         {
@@ -493,6 +668,65 @@ public class LabelPolicyStoreTests
         LabelPolicyState unchanged = (await store.ReadPolicyStateAsync(token))!;
         Assert.Equal(active.Revision, unchanged.Revision);
         Assert.Equal(active.VerifiedUntil, unchanged.VerifiedUntil);
+
+        string[] diagnostics = [.. fixture.Services.GetFakeLogCollector().GetSnapshot()
+            .Where(log => log.Id == 6)
+            .Select(log => log.Message)];
+        Assert.Contains(diagnostics, message => message.Contains("revision-changed", StringComparison.Ordinal));
+        Assert.Contains(diagnostics, message => message.Contains("lookup-expired", StringComparison.Ordinal));
+        Assert.Contains(diagnostics, message => message.Contains("database-clock-rollback", StringComparison.Ordinal) &&
+            message.Contains("5001 ms", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("sqlite", 0)]
+    [InlineData("sqlite", 4999)]
+    [InlineData("sqlite", 5000)]
+    [InlineData("postgresql", 5000)]
+    [InlineData("mysql", 5000)]
+    public async Task ObservationToleratesClockRollbackWithoutExtendingDeadline(string engine, int rollbackMilliseconds)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
+        ILabelPolicyStore store = (ILabelPolicyStore)fixture.Store;
+        LabelPolicyState active = await ActivateAsync(store, administrator, token);
+        using JsonDocument declaration = JsonDocument.Parse(Declaration);
+        LabelPolicyState observed = Success(await store.ObservePolicyAsync(
+            expectedRevision: active.Revision,
+            verificationStartedAt: active.DatabaseTime.AddMilliseconds(rollbackMilliseconds),
+            observedCid: s_cid,
+            declaration: declaration.RootElement,
+            cancellationToken: token));
+        Assert.Equal(active.DatabaseTime + active.VerificationFreshness, observed.VerifiedUntil);
+        if (rollbackMilliseconds > 0)
+        {
+            Assert.Contains(fixture.Services.GetFakeLogCollector().GetSnapshot(), log =>
+                log.Id == 7 && log.Message.Contains($"{rollbackMilliseconds} ms", StringComparison.Ordinal));
+        }
+    }
+
+    [Theory]
+    [InlineData("sqlite", 4999, true)]
+    [InlineData("sqlite", 5000, true)]
+    [InlineData("sqlite", 5001, false)]
+    [InlineData("postgresql", 5000, true)]
+    [InlineData("postgresql", 5001, false)]
+    [InlineData("mysql", 5000, true)]
+    [InlineData("mysql", 5001, false)]
+    public async Task CachedVerificationAllowsOnlyBoundedDatabaseRollback(string engine, int rollbackMilliseconds, bool expected)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
+        LabelPolicyState active = await ActivateAsync((ILabelPolicyStore)fixture.Store, administrator, token);
+        Microsoft.Extensions.Time.Testing.FakeTimeProvider clock = new(active.DatabaseTime.AddMilliseconds(-rollbackMilliseconds));
+        ILabelPolicyStore restarted = (ILabelPolicyStore)fixture.NewStore(clock);
+        TargetResolutionHandler handler = new() { Offline = true };
+        using HttpClient client = new(handler);
+        LabelPolicyService verifier = new(issuer: StoreFixture.s_issuer, store: restarted, httpClient: client);
+        Assert.Equal(expected, (await verifier.GetVerifiedStateAsync(cancellationToken: token)).Succeeded);
+        Assert.Equal(0, handler.Requests);
     }
 
     [Theory]
@@ -731,7 +965,7 @@ public class LabelPolicyStoreTests
         ILabelStore commitStore;
         if (rollback)
         {
-            commitStore = fixture.NewStore(new(active.DatabaseTime.AddMilliseconds(-430)));
+            commitStore = fixture.NewStore(new(active.DatabaseTime.AddMilliseconds(-5001)));
         }
         else
         {
@@ -958,10 +1192,13 @@ public class LabelPolicyStoreTests
     }
 
     /// <summary>Creates a complete immutable policy retaining declaration extension data.</summary>
-    private static LabelPolicyDefinition Policy(string rules = "Review evidence before labeling.", string json = Declaration)
+    private static LabelPolicyDefinition Policy(
+        string rules = "Review evidence before labeling.",
+        string json = Declaration,
+        string version = "v1")
     {
         using JsonDocument document = JsonDocument.Parse(json);
-        return new(version: "v1", declaration: document.RootElement, allowAccounts: true, allowRecords: true, rules: rules);
+        return new(version: version, declaration: document.RootElement, allowAccounts: true, allowRecords: true, rules: rules);
     }
 
     /// <summary>Requires a successful classified result without losing failure diagnostics.</summary>

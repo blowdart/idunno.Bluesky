@@ -30,6 +30,9 @@ internal sealed partial class AdministrationDispatcher
         ModerationCommand input = command.Moderation ?? new();
         switch (command.Method)
         {
+            case "getMutes":
+            case "changeMute":
+                return await DispatchMutesAsync(caller, command, input, policies, token).ConfigureAwait(false);
             case "deletePolicyDraft":
                 {
                     if (store is not ILabelTableStore tables)
@@ -135,6 +138,7 @@ internal sealed partial class AdministrationDispatcher
                     }
 
                     string[] accountLabels = [];
+                    ModerationLabelChoiceView[] accountLabelChoices = [];
                     if (subject.RecordUri is not null)
                     {
                         LabelServiceResult<StoredLabel[]> account = await labelReader.ReadSubjectLabelsAsync(
@@ -145,6 +149,12 @@ internal sealed partial class AdministrationDispatcher
                         }
 
                         accountLabels = [.. account.Result.Select(label => label.SignedLabel.Label.Value).Order(StringComparer.Ordinal)];
+                        accountLabelChoices = [.. account.Result.Select(label => new ModerationLabelChoiceView(
+                            Value: label.SignedLabel.Label.Value,
+                            Applied: true,
+                            Sequence: label.Sequence,
+                            OtherVersion: false,
+                            ExpiresAt: label.SignedLabel.Label.ExpiresAt))];
                     }
 
                     LabelTarget target = subject.RecordUri is { } subjectUri
@@ -174,7 +184,8 @@ internal sealed partial class AdministrationDispatcher
                                 Applied: active && (subject.Cid is null || label!.Cid is null || label.Cid == subject.Cid),
                                 Sequence: current?.Sequence ?? 0,
                                 OtherVersion: active && subject.Cid is not null && label!.Cid is not null && label.Cid != subject.Cid,
-                                UriWide: active && subject.RecordUri is not null && label!.Cid is null));
+                                UriWide: active && subject.RecordUri is not null && label!.Cid is null,
+                                ExpiresAt: active ? label!.ExpiresAt : null));
                         }
                     }
 
@@ -182,7 +193,8 @@ internal sealed partial class AdministrationDispatcher
                         Case: CaseView(result.Result),
                         Policy: PolicyView(gate.Result),
                         LabelChoices: [.. choices],
-                        AccountLabels: accountLabels));
+                        AccountLabels: accountLabels,
+                        AccountLabelChoices: accountLabelChoices));
                 }
             case "getPolicyVersion":
                 {
@@ -476,7 +488,7 @@ internal sealed partial class AdministrationDispatcher
     /// <summary>Projects exact case identity and immutable workflow provenance.</summary>
     private static ModerationCaseView CaseView(LabelModerationCase value) => new(
         value.Id, value.Revision, ModerationWire.SubjectView(value.Subject), value.Status.ToString(),
-        value.Assignee?.Value, value.CreatedAt, value.UpdatedAt);
+        value.Assignee?.Value, value.CreatedAt, value.UpdatedAt, value.RecordResolution);
 
     /// <summary>Projects immutable case operation outcomes independently of current mutable workflow state.</summary>
     private static ModerationCaseEventView CaseEventView(LabelCaseReceipt value) => new(
@@ -531,15 +543,21 @@ internal sealed partial class AdministrationDispatcher
     private static ModerationReportView ReportView(LabelModerationReport value) => new(
         value.CaseId, ModerationWire.ReportOutput(value), value.PolicyVersion, value.Audience,
         value.Submission.ModToolName, value.Submission.ModToolMetadata,
-        value.DecisionOperationId, value.HandledAt, value.ResolutionReason);
+        value.DecisionOperationId, value.HandledAt, value.ResolutionReason, value.Submission.RecordResolution);
 
     /// <summary>Projects pending intake without creating a case link or exposing replay evidence.</summary>
     private static PendingModerationReportView PendingReportView(LabelPendingModerationReport value) => new(
         ModerationWire.ReportOutput(value.Id, value.Submission, value.ReportedBy, value.CreatedAt),
-        value.PendingVerification ? "PendingVerification" : "NotApplicable",
+        value switch
+        {
+            { ReporterMuted: true } => "ReporterMuted",
+            { PendingVerification: true } => "PendingVerification",
+            _ => "NotApplicable"
+        },
         value.PolicyVersion,
         value.ProcessedAt,
-        value.ResolutionReason);
+        value.ResolutionReason,
+        value.Submission.RecordResolution);
 
     /// <summary>Projects complete versioned policy intent without repository credentials.</summary>
     private static ModerationPolicyDefinitionView DefinitionView(LabelPolicyDefinition value)
@@ -610,7 +628,12 @@ internal sealed record ModerationCommand(
     bool HandleOtherReports = false,
     long HistoryPage = 1,
     string? SearchQuery = null,
-    bool HandleReportsAcrossRecordVersions = false);
+    bool HandleReportsAcrossRecordVersions = false,
+    string? MuteSubject = null,
+    LabelMuteKind? MuteKind = null,
+    int? MuteDurationHours = null,
+    long? ExpectedMuteEventId = null,
+    long AfterMuteEventId = 0);
 
 /// <summary>Defines one bounded label-slot action without accepting target or actor overrides.</summary>
 internal sealed record ModerationLabelActionInput(LabelOperationKind Kind, string Value, DateTimeOffset? ExpiresAt = null, long? ExpectedLabelSequence = null);
@@ -636,7 +659,10 @@ internal sealed record ModerationResponse(
     string[]? AccountLabels = null,
     ModerationActivityPageView? Activity = null,
     ModerationSearchPageView? Search = null,
-    PendingModerationReportView[]? PendingReports = null);
+    PendingModerationReportView[]? PendingReports = null,
+    LabelMuteEntry[]? Mutes = null,
+    ModerationLabelChoiceView[]? AccountLabelChoices = null,
+    long[]? EscalatedCaseIds = null);
 
 /// <summary>Contains one authorized mixed report/appeal search page and explicit index-coverage information.</summary>
 internal sealed record ModerationSearchPageView(long Page, long Total, ModerationSearchHitView[] Hits, long PendingHandleCases, long UnavailableHandleCases);
@@ -654,7 +680,13 @@ internal sealed record ModerationActivityView(ModerationReportView? Report, Mode
 internal sealed record ModerationOpenCountsView(long Cases, long Reports, long Appeals);
 
 /// <summary>Contains a declared label's exact-target state and sequence fence without exposing issuance internals.</summary>
-internal sealed record ModerationLabelChoiceView(string Value, bool Applied, long Sequence, bool OtherVersion, bool UriWide = false);
+internal sealed record ModerationLabelChoiceView(
+    string Value,
+    bool Applied,
+    long Sequence,
+    bool OtherVersion,
+    bool UriWide = false,
+    DateTimeOffset? ExpiresAt = null);
 
 /// <summary>Contains immutable policy publication and observation history for protected recovery.</summary>
 internal sealed record ModerationPolicyHistoryView(
@@ -701,18 +733,19 @@ internal sealed record ModerationChallengeView(long Sequence, JsonElement Label)
 internal sealed record ModerationLabelOutcomeView(string OperationId, string Kind, string Value, bool Changed, long? Sequence, JsonElement? Label);
 
 /// <summary>Contains a protected exact-subject workflow snapshot.</summary>
-internal sealed record ModerationCaseView(long Id, long Revision, ReportSubjectView Subject, string Status, string? Assignee, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
+internal sealed record ModerationCaseView(long Id, long Revision, ReportSubjectView Subject, string Status, string? Assignee, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, LabelRecordResolution? RecordResolution = null);
 /// <summary>Contains a protected immutable case event and its historical outcome.</summary>
 internal sealed record ModerationCaseEventView(long Sequence, string OperationId, string Action, string Actor, string? LocalIdentity, string Reason, DateTimeOffset CreatedAt, ModerationCaseView Case);
 /// <summary>Contains confidential report linkage and acceptance provenance.</summary>
-internal sealed record ModerationReportView(long CaseId, ReportOutput Report, string PolicyVersion, string Audience, string? ModToolName, JsonElement? ModToolMetadata, string? DecisionOperationId, DateTimeOffset? HandledAt, string? ResolutionReason = null);
+internal sealed record ModerationReportView(long CaseId, ReportOutput Report, string PolicyVersion, string Audience, string? ModToolName, JsonElement? ModToolMetadata, string? DecisionOperationId, DateTimeOffset? HandledAt, string? ResolutionReason = null, LabelRecordResolution? RecordResolution = null);
 /// <summary>Contains an authenticated report retained outside case review until policy scope is known.</summary>
 internal sealed record PendingModerationReportView(
     ReportOutput Report,
     string Status,
     string? PolicyVersion,
     DateTimeOffset? ProcessedAt,
-    string? ResolutionReason);
+    string? ResolutionReason,
+    LabelRecordResolution? RecordResolution = null);
 /// <summary>Contains a complete selected policy definition for explicit publication or inspection.</summary>
 internal sealed record ModerationPolicyDefinitionView(string Version, JsonElement Declaration, bool AllowAccounts, bool AllowRecords, string[]? AllowedRecordCollections, string Rules);
 /// <summary>Contains the shared durable gate, observation deadline and conditional-update CID.</summary>

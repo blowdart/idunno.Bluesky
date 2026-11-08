@@ -6,7 +6,7 @@ namespace idunno.Bluesky.Labeler.Moderation;
 /// <summary>Identifies a fixed workflow view rather than configurable routing or a named work queue.</summary>
 public enum LabelCaseWorkflow
 {
-    /// <summary>Includes open and in-review cases.</summary>
+    /// <summary>Includes open, in-review and escalated cases.</summary>
     Unresolved,
     /// <summary>Includes cases awaiting initial review.</summary>
     Open,
@@ -21,5 +21,7 @@ public enum LabelCaseWorkflow
     /// <summary>Includes resolved cases.</summary>
     Resolved,
     /// <summary>Includes cases in every workflow state.</summary>
-    All
+    All,
+    /// <summary>Includes unresolved cases flagged for further moderator review.</summary>
+    Escalated
 }

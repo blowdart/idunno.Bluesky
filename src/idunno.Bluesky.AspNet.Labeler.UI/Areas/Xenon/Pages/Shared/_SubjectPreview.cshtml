@@ -1,14 +1,36 @@
 @model SubjectPreview
+@inject LabelerUiAdministration Administration
 @{
-    bool blurImages = Model.MediaWarnings is { Length: > 0 };
+    Context.Response.Headers.CacheControl = "private, no-store";
+    idunno.Bluesky.Labeler.LabelServiceResult<LabelMediaPreferences> preferences =
+        await Administration.MediaPreferencesAsync(User, null, Context.RequestAborted);
+    LabelMediaPreferences choices = preferences.Succeeded ? preferences.Result : new();
+    LabelMediaFilter filters = LabelMediaFilter.None;
+    foreach (string label in Model.MediaLabels ?? [])
+    {
+        filters |= choices.ForLabel(label);
+    }
+    if (Model.MediaWarnings is { Length: > 0 } && Model.MediaLabels is not { Length: > 0 })
+    {
+        filters = LabelMediaFilter.Blur;
+    }
+    bool blurImages = filters != LabelMediaFilter.None;
+    string mediaClasses = "media-warning" + (blurImages ? " media-blurred" : "") +
+        (filters.HasFlag(LabelMediaFilter.Blur) ? " media-filter-blur" : "") +
+        (filters.HasFlag(LabelMediaFilter.Grayscale) ? " media-filter-grayscale" : "") +
+        (filters.HasFlag(LabelMediaFilter.Translucent) ? " media-filter-translucent" : "");
 }
-<section class="subject-preview" aria-label="@Model.Kind preview">
+<section class="@(Model.Standalone ? "subject-preview standalone-preview" : "subject-preview")" aria-label="@Model.Kind preview">
     <h3>@Model.Kind preview</h3>
+    @if (!preferences.Succeeded)
+    {
+        <p role="alert">Your media preferences could not be loaded. Default blur protection is in use.</p>
+    }
     @if (Model.Url is { } url)
     {
         <p><a class="bluesky-link" href="@url" target="_blank" rel="noopener noreferrer" aria-label="Open reported @Model.Kind.ToLowerInvariant() on Bluesky (opens in a new tab)"><span class="fa-icon fa-bluesky" aria-hidden="true"></span>Open @Model.Kind.ToLowerInvariant() on Bluesky</a></p>
     }
-    @if (!Model.MatchesReportedVersion)
+    @if (!Model.Standalone && !Model.MatchesReportedVersion)
     {
         <p class="muted">Current public content, not a snapshot of the content when it was reported.</p>
     }
@@ -20,9 +42,9 @@
     {
         @if (Model.ModerationUnavailable)
         {
-            <p class="notice notice-status" role="status">Some Bluesky content warnings could not be checked. Images may be shown without a warning.</p>
+            <p class="notice notice-status" role="status">Some Bluesky content warnings could not be checked. Media may be shown without a warning.</p>
         }
-        <div class="@(blurImages ? "media-warning media-blurred" : null)" data-media-warning="@blurImages.ToString().ToLowerInvariant()">
+        <div class="@mediaClasses" data-media-warning="@blurImages.ToString().ToLowerInvariant()">
         <article class="@(Model.Kind == "Profile" ? "profile-preview" : null)" aria-label="Current @Model.Kind.ToLowerInvariant() content">
             @if (Model.Kind == "Profile")
             {
@@ -79,7 +101,7 @@
             {
                 <p class="notice notice-error" role="note">The current @Model.Kind.ToLowerInvariant() CID differs from the reported CID. This preview is not the reported version.</p>
             }
-            @if (!Model.MatchesReportedVersion && Model.Cid is { } cid)
+            @if (!Model.Standalone && !Model.MatchesReportedVersion && Model.Cid is { } cid)
             {
                 <p>Current CID: <code>@cid</code></p>
             }
@@ -118,28 +140,31 @@
             @if (Model.VideoToken is { } videoToken)
             {
                 <div class="video-preview">
-                    <button type="button" class="video-placeholder" data-video-open data-video-width="@Model.VideoWidth" data-video-height="@Model.VideoHeight" data-video-url="@Url.Page("/Media", new { area = "Xenon", token = videoToken })" aria-haspopup="dialog" aria-label="Open video player" title="Open video player">
-                        <span class="fa-icon fa-circle-play" aria-hidden="true"></span>
-                    </button>
-                    <p class="muted video-player-note">Videos require opening the player.</p>
+                    @if (blurImages)
+                    {
+                        <partial name="_MediaRevealButton" />
+                    }
+                    <video controls="@(!blurImages)" preload="none" playsinline
+                           src="@Url.Page("/Media", new { area = "Xenon", token = videoToken })"
+                           width="@Model.VideoWidth" height="@Model.VideoHeight"
+                           data-sensitive-image="@(blurImages ? "" : null)" aria-hidden="@(blurImages ? "true" : null)"
+                           aria-label="@(Model.VideoAlt ?? "Post video")"></video>
+                    <p role="status" data-video-error hidden>The video could not be loaded. Reload the details to try again.</p>
                     @if (!string.IsNullOrWhiteSpace(Model.VideoAlt))
                     {
                         <p>@Model.VideoAlt</p>
                     }
-                    <dialog class="video-dialog" aria-label="Post video player">
-                        <button type="button" data-video-close>Close video</button>
-                        <video controls preload="none" playsinline aria-label="@(Model.VideoAlt ?? "Post video")"></video>
-                        <p role="status" data-video-error hidden>The video could not be loaded. Close the player and reload the details to try again.</p>
-                    </dialog>
-                    <noscript><p>Opening the video player requires JavaScript.</p></noscript>
                 </div>
             }
         </article>
-        @if (blurImages)
+        @if (Model.MediaWarnings is { Length: > 0 })
         {
             <div class="media-warning-caption">
                 <p role="note"><span class="fa-icon fa-circle-exclamation" aria-hidden="true"></span> Sensitive media: @string.Join(", ", Model.MediaWarnings!).</p>
-                <noscript><p>Showing blurred images requires JavaScript.</p></noscript>
+                @if (blurImages)
+                {
+                    <noscript><p>Showing filtered media requires JavaScript.</p></noscript>
+                }
             </div>
         }
         </div>

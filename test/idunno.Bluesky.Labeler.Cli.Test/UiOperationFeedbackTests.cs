@@ -42,8 +42,14 @@ public class UiOperationFeedbackTests
     [InlineData("policy-observation", "Public policy checked")]
     [InlineData("authenticate-browser", "Browser sign-in")]
     [InlineData("deleteDraft", "Draft deletion")]
-    [InlineData("maintenance-AwaitingHostAcknowledgement", "maintenance Awaiting Host Acknowledgement")]
-    [InlineData("custom-action", "custom action")]
+    [InlineData("team-read", "Team viewed")]
+    [InlineData("policy-draft", "Policy draft")]
+    [InlineData("remote-administration-enabled", "Remote administration enabled")]
+    [InlineData("maintenance-AwaitingHostAcknowledgement", "Maintenance Awaiting Host Acknowledgement")]
+    [InlineData("custom-action", "Custom action")]
+    [InlineData("beginRetirement", "Begin Retirement")]
+    [InlineData("HTTPStatus", "HTTP Status")]
+    [InlineData("", "")]
     [InlineData(null, "")]
     public void AuditActionNamesRetainReadableUnknownActions(string? value, string expected) =>
         Assert.Equal(expected, UiPageHelpers.FormatAuditAction(value));

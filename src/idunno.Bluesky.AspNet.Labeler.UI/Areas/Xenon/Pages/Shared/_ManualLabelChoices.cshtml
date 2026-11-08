@@ -25,7 +25,9 @@ else
         };
         <label class="label-chip" data-applied="@(label.Applied ? "true" : "false")">
             <input type="checkbox" name="selectedLabels" value="@label.Value" checked="@(Model.Selected is { } selected ? selected.Contains(label.Value, StringComparer.Ordinal) : label.Applied)" disabled="@label.OtherVersion" />
-            <span>@label.Value <small class="label-baseline">@status</small><small class="label-add">Will be added</small><small class="label-remove">Will be removed</small></span>
+            <span>@label.Value <small class="label-baseline">@status</small>
+                @await Html.PartialAsync("_LabelExpiry", label.ExpiresAt)
+                <small class="label-add">Will be added</small><small class="label-remove">Will be removed</small></span>
         </label>
     }
 </fieldset>

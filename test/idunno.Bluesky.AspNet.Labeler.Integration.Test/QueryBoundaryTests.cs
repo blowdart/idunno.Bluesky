@@ -99,6 +99,12 @@ public class QueryBoundaryTests
             TestServerBuilder.s_issuer, new LabelerHostingOptions { QueryTimeout = Timeout.InfiniteTimeSpan }));
         Assert.Throws<ArgumentOutOfRangeException>(() => services.AddBlueskyLabeler(
             TestServerBuilder.s_issuer, new LabelerHostingOptions { MaximumSubscriptions = 0 }));
+        Assert.Throws<ArgumentException>(() => services.AddBlueskyLabeler(
+            TestServerBuilder.s_issuer,
+            new LabelerHostingOptions { Links = new() { PrivacyPolicy = new Uri("http://labels.example/privacy") } }));
+        Assert.Throws<ArgumentException>(() => services.AddBlueskyLabeler(
+            TestServerBuilder.s_issuer,
+            new LabelerHostingOptions { Contact = new(" ") }));
         services.AddBlueskyLabeler(TestServerBuilder.s_issuer);
         Assert.Throws<InvalidOperationException>(() => services.AddBlueskyLabeler(TestServerBuilder.s_issuer));
     }

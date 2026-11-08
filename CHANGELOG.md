@@ -2,282 +2,110 @@
 
 ## 9.0.0 - *unreleased*
 
+🎉 **New** labeler SDK for issuing, signing and distributing Bluesky labels, with durable SQLite, PostgreSQL and MySQL storage.
+
+🎉 **New** Xenon moderation backend for reports, cases, appeals, policy publication and team administration.
+
+🎉 **New** Xenon web UI for reviewing content, applying labels and managing a labeler through Bluesky sign-in.
+
+🎉 **New** standalone labeler host and administration CLI, with container deployment, signing-key rotation and labeler retirement workflows.
+
+🎉 **New** opt-in Ozone compatibility for supported moderation workflows, using the same authorization, policy and storage as Xenon.
+
+🎉 **New** recursive validation and JSON `Parse`/`TryParse` helpers for posts, profiles and other Bluesky records, including opt-in tolerant parsing for inspection.
+
 ### ➕ Added
 
 #### idunno.Bluesky.AspNet.Labeler
 
-* Shows “No maintenance in progress” on Lifecycle when no maintenance is active, hiding irrelevant maintenance warnings and technical details.
-
-* Uses plain-language shared administration errors while retaining error codes, permissions and recovery behavior.
-* Adds explicitly optional `MapOzoneCompatibility()` discovery, server configuration, live team/report/history inspection, label events and report resolution through the existing remote-mode, owner-switch and replay-protected administration boundary. Label/report updates commit atomically with durable event identities; unsupported capabilities fail explicitly. The canonical host opts in only with `LabelerOzone:Enabled`; Ozone itself is unchanged and end-to-end UI interoperability remains unverified.
-* Explicitly binds Ozone discovery to a request delegate so trimmed and Native AOT builds avoid an incompatible generated route interceptor.
-* Adds Disabled, Enabled and WebUiControlled remote-administration host modes, defaulting to disabled and preserving the legacy RemoteEnabled fallback; explicit modes take precedence without affecting protected local administration.
-* Runs durable retirement and optional local-purge batches independently of administration-client lifetime, retaining public distribution during grace and after retirement; supports explicitly keyless administration only on terminal retired storage.
-* Recovers retirement command receipts before phase-dependent signing checks, dispatches stopped-host confirmations consistently, and durably pauses failed worker epochs across uncertain batch commits without overriding later administrator recovery.
-* Shares retirement failure recovery between manual commands and the background worker, retains pending pauses after request cancellation, returns classified storage failures during publication inspection, and rejects label-producing case decisions on keyless hosts without blocking non-label completion.
-* Reauthorizes retained receipt reads before returning them, rejects signing-key registrations that conflict with explicit keyless administration, and avoids recording empty retirement batches as progress while publication is throttled.
-
-* Checks the active public policy in the background every five minutes with a default 30-minute verification lifetime; moderation health reads stored freshness without remote requests. Failed lookups do not extend validity, and confirmed differences require administrator recovery.
-
-* Resumes bounded policy-label withdrawal batches in the background independently of browser lifetime and remote administration enablement, signing with the host's active key and waiting for durable stream publication.
-* Added durable, bounded pending report intake during policy-verification outages, with authenticated replay protection, moderator visibility, automatic verified-scope promotion, and retained out-of-scope outcomes without cases.
-* Supports Ozone `tools.ozone.inbox.appealActionedSubject` label appeals through the authenticated moderation intake path, including the record-URI `repoRef` shape used by Bluesky clients and bare-DID service-token audiences issued by PDS proxies.
-* Preserves CID-less record report and appeal subjects without inferring a CID from the PDS or signed label, through storage, pending promotion, review and retries.
-* Emits specific .NET moderation authentication, label-state and dependency diagnostics without credentials or report content; durably audits authenticated pre-intake appeal rejections with token replay protection.
-* Exempts authenticated owner appeals from ordinary report-reason filtering, including pending promotion, so a declaration accepting only Other does not silently close appeals as Not Applicable.
-* Added explicitly optional Xenon report intake, bounded service authentication/admission and independent declaration verification, plus shared local/HTTPS case, appeal, workflow-queue and policy-recovery administration. Public label distribution and remote CLI enablement remain independent.
-* Separates optional moderation policy health at `/health/labeler/moderation` from distribution readiness so policy failures do not remove recovery routes from traffic; malformed Unicode reports and policy inputs return classified input errors.
-* Rejects fractional-millisecond moderation verification freshness during registration so configured and persisted health-check intervals cannot disagree.
-* Adds a shared, restart-resumed background checker that resolves deleted-post reports and appeals only after an authoritative PDS `RecordNotFound`, with reason `Post deleted`, explicit system audit, revision fencing and no label changes.
-* Optionally sends deduplicated policy-verification failure alerts to active administrators who register an address, using authenticated SMTP with mandatory STARTTLS and durable retry state.
-* Emails registered active administrators after verified policy publication, team membership and role changes, and remote or local CLI access changes. These durable change notifications are suppressed when only one administrator remains active; existing policy-verification failure alerts remain enabled.
-
-* Added opt-in exact-audience, method-bound service-token administrative endpoints and protected Windows named-pipe/Linux Unix-socket administration, including explicit browserless root/SID setup and shared team authorization.
-* Remote administration is disabled by default and can be enabled or disabled through reloadable host options independently of protected local administration.
-* Rejects insecure remote administration requests with an audited `403 Forbidden` before service-token authentication.
-* Keeps service-token routes available under host authorization fallback policies while safely rejecting malformed local pipe frames without stopping the listener.
-* Persists malformed local-frame denials, consumes rejected peers' bounded frames before replying, and supplies inspection reasons consistently across administrative transports.
-* Rejects noncanonical Linux administration socket paths before directory validation or socket access.
-* Added public ASP.NET label queries and WebSocket subscriptions over shared durable signed-label storage, without Ozone. Includes retained-slot results, stable query pagination, exclusive subscription cursors, bounded replay/live polling, admission/deadline limits, liveness/readiness health checks, hosting metrics and discovery/deployment guidance.
-* Added `AddBlueskyLabelerMetrics()` for separate OpenTelemetry collection setup.
-* Supports HTTP/1.1 and HTTP/2 WebSocket handshakes for label subscriptions.
-* Preserves signed fields from raw mixed-case JSON snapshots in subscription frames and CID-scoped distribution indexes.
-* Applies subscription size limits to encoded CBOR frames rather than stored JSON whitespace.
-* Coordinates durable multi-host signing-key rotation, explicit maintenance responses, host drain/activation acknowledgements and restart-safe signature checkpoints.
-* Fences maintenance and retirement mutations against revoked callers, drains in-flight administrative issuance, and verifies each host's replacement key before reopening.
-* Includes maintenance admission in query deadlines and sends a reconnectable maintenance close before cancelling WebSocket receives.
-* Bounds subscription admission with a retryable deadline without limiting established sockets; keeps keyless distribution replicas healthy through rotation and restart while still requiring every host to drain.
+* Public `com.atproto.server.describeServer` identity discovery, configurable contact and policy links for method-bound service authentication, plus label queries and HTTP/1.1 or HTTP/2 WebSocket subscriptions, with stable pagination, bounded replay, live delivery, admission limits and liveness/readiness health checks.
+* Optional Xenon moderation backend with authenticated report and appeal intake, shared case workflows and independent verification of the labeler's published declaration. Public label distribution remains independent of moderation and remote administration.
+* Replay-protected, method-bound service-token administration over HTTPS and protected local administration through Windows named pipes or Linux Unix sockets, with browserless owner setup and live team authorization.
+* Disabled, Enabled and WebUiControlled remote-administration modes, including an audited owner-only switch, without affecting protected local access.
+* Background declaration verification, bounded pending intake during verification outages, restart-resumed policy-label withdrawal and authoritative deleted-post checks. Moderation health is available separately at `/health/labeler/moderation`.
+* Optional administrator email for verification failures, confirmed policy publication, team changes and CLI access changes, using mandatory STARTTLS, durable retries and a link to the sending Xenon UI when enabled. First enablement excludes historical administration changes; notifications also support a single active administrator. Verification-failure emails explain automatic retries, possible recovery before delivery and when administrator action may be needed.
+* Opt-in `MapOzoneCompatibility()` routes for discovery, configuration, team presence, filtered queues, subject/event history, previews, report acknowledgment, escalation, label actions and appeals. Supported workflows share Xenon's policies, authorization and atomic storage; unsupported capabilities fail explicitly.
+* Documented limited Ozone compatibility as an accepted scope: use Xenon/native views as the complete moderation interface, because stock Ozone does not visibly warn when unresolved URI-only records are omitted from event/status projections.
+* Explicit Ozone browser-origin allowlists with automatic route-scoped CORS preflight and response handling; no cross-origin access is enabled by default.
+* Ozone partial projections retain an omission count for extension-aware clients without sending the deprecated HTTP `Warning` header. Stock Ozone does not display this count; Xenon/native views retain complete report evidence.
+* Durable background retirement and local-purge workflows, coordinated multi-host signing-key rotation and maintenance, with live authorization, resumable checkpoints and explicit recovery.
+* Database-outage recovery for labeler startup and hosted workers, with bounded startup retries, unhealthy readiness during runtime retries and safe recovery of stale Linux administration sockets.
+* Structured operational diagnostics and `AddBlueskyLabelerMetrics()` OpenTelemetry registration, without credentials or report contents in diagnostic messages.
+* Policy verification diagnostics distinguish changed revisions, expired lookups and database-clock rollback. Database-clock rollbacks of up to five seconds are tolerated without extending a new verification deadline.
+* Unsupported DID methods in URI-only reports are retained as unavailable record-resolution observations rather than failing report intake.
+* Target-specific available-label queries use the configured issuance policy without requiring moderation, preserving authenticated access and database-clock expiry checks.
 
 #### idunno.Bluesky.AspNet.Labeler.UI
 
-* Adds matching Unresolved, In review, Resolved and All workflow tabs and filters to Reports and Appeals, with database-filtered totals and paging.
-* Adds left-arrow glyphs to detail-page back links and returns appeal reviews to the appeals list.
-* Hides the assignment form on resolved cases and when reviewing handled reports or resolved appeals, while retaining the recorded assignee.
-* Hides the Replace labels appeal outcome when the active policy does not declare multiple distinct labels.
-* Detects and explains changed appeal labels, uses the shorter Challenged labels changed outcome, constrains appeal dropdowns to their columns, and selects matching outcomes when label selections change.
-* Adds an explicit current-record CID lookup beside the optional manual-label CID input, refreshing label selections for that version without issuing labels.
-* Explains the separate manual removal of the labeler endpoint from the DID document after retirement and a permanent distribution shutdown, while preserving historical verification keys.
-* Keeps all Policy tab fragments in sync with the displayed tab so refresh restores the selection, including keyboard navigation and draft Publish shortcuts.
-* Gives report-summary tooltips equal top and bottom padding when no open reports precede the total.
-* Clarifies UI errors and confirmation text while preserving exact-action confirmations, retry identities, permission checks and warnings about completed writes and withdrawals.
-* Simplifies home, search, reports, appeals, audit and public legal notices; names standard report reasons and audit actions, and corrects singular list counts while preserving permissions, data disclosures and legal qualifications.
-* Simplifies team permissions, account/content labeling, report-version selection, moderation history and retirement progress feedback without changing errors or confirmation requirements.
-* Explains retirement, waiting periods, label-history deletion and signing-key removal in plain language, retaining permanent-change warnings and moving detailed progress counters under Technical details.
-* Explains policy editing, publication, withdrawal progress and recovery in plain language while retaining irreversible-change warnings and explicit confirmation.
-* Uses locally bundled Inter variable fonts by default, including italics, with footer attribution and the original SIL Open Font License.
-* Uses locally bundled Google Sans Code for JSON and fixed-width text, including italic support, footer attribution, and the original license and trademark notices.
-* Uses consistent icon-labelled policy action buttons and adds a saved-draft Publish shortcut that selects the draft in Publication without starting a write or bypassing confirmation.
-* Displays invalid remote-administration audit reasons as validation errors instead of unhandled server errors.
-* Redirects failed policy publication, cleanup-resume and authorization submissions back to the publication tab with retained errors, so refreshing does not resubmit a POST.
-* Prefills the publication authorization handle by resolving the labeler DID, with an explicit message and manual entry when resolution is unavailable.
-* Adds confirmed, revision-fenced abandonment of pending policy publication in Xenon, retaining permanent negations and allowing a new publication of the interrupted policy version.
-* Automatically captures the existing PDS declaration CID before web policy publication, failing closed on lookup errors and preserving conditional-write conflict protection.
-* Requests both declaration create and update permissions for conditional PDS updates in Xenon and the CLI, as required by `putRecord`, without granting delete or unrelated repository access.
-* Restores selected signing-key and registered-host context in retirement confirmation previews before the durable workflow has started.
-* Prefixes authorized page titles with open case, report and appeal totals, refreshing titles and navigation in the background on a best-effort basis with explicit stale/access feedback.
-* Displays the source commit ID in the Xenon footer when supplied by the container build.
-* Shows the effective remote CLI access state on Team and lets only the original bootstrap owner change the durable, audited switch when the host selects WebUiControlled mode; other Administrators cannot toggle it.
-* Correctly reviews and withdraws URI-wide record labels from CID-pinned cases and manual lookups, retaining signed scope and sequence fencing.
-* Provides a single report-handling choice for the selected report, the same submitted target, or all reports for a record URI, preserving pending appeals and recording affected case history.
-* Uses singular grammar when one manual label change completes.
-* Adds separately challenged per-host stopped-process attestation after retirement, without treating stale contact as proof or requiring a rotation after key removal is requested.
-* Adds phase-specific retirement progress/recovery and read-only immutable-intent previews with separate action-specific confirmation, explicit grace selection, availability attestation, and separate label-history cleanup and operator-attested key removal.
-
-* Avoids a circular authentication-options dependency that blocked Xenon requests when the separate policy-publication scheme was registered.
-* Shows durable database-clock worker-activity and progress timestamps during policy-label withdrawal, distinguishing recorded pauses and waiting for label publication without claiming that a recent attempt proves a worker is still running.
-
-* Moves declaration verification to its own final policy tab, explains its effect and uses button submission alone with an automatic audit reason.
-* Selects publication Policy IDs from all available unpublished drafts instead of free text, excluding deleted and previously selected policies.
-* Adds explicit irreversible-cleanup confirmation to policy publication, displays removed label values and durable scan progress, and lets authorized administrators resume paused cleanup.
-* Splits policy administration into Current State, Labels, Moderation Policy, Advanced and a final Publication tab, with editable label definitions/translations, report subject and collection controls, and synchronized declaration JSON that preserves extension fields.
-* Loads the current policy into the editor and supports clearing only unsaved editor values. Current-state metadata uses a two-column table, declarations are pretty-printed and failed saves retain entered values.
-* Lists all unpublished policy drafts in Current State with per-draft loading and server-confirmed deletion, describes editable internal identifiers as Policy IDs and uses submission alone to confirm draft saving. Policy phase names are displayed as separate words.
-* Searches the full team by DID or verified handle with counted, filtered paging; spaces team glyphs and hides the role selector for membership actions other than Change role when scripting is enabled.
-* Lets active administrators register or clear their policy-verification alert email from Team settings.
-* Uses a compact team search with aligned actions and adds placeholder hints to team and audit identity filters.
-* Selects team members by their displayed identity to prefill the update form with their DID and current role, and uses form submission alone to confirm enrollment and membership updates.
-* Shows eye, gavel and user-gear glyphs beside team roles and visually subdues removed members while retaining their identity links. A single Status column distinguishes Active, Suspended and Removed members with circle-check, circle-pause and circle-xmark glyphs alongside the state names.
-* Displays database UTC timestamps on administrative audit events with the shared UTC/local-time controls; legacy events show "Time unavailable", and retries preserve original event times.
-* Filters administrative audit events by actor DID or verified handle, outcome and inclusive UTC or local date/time range, retaining filters during sorting and paging. The audit table uses sortable timestamps in place of its sequence column.
-* Downloads matching audit events as streamed JSON with negotiated Brotli/gzip compression, fixed sequence cutoffs and repeated live authorization. Each download start is audited.
-* Replaces manual label text/action fields with policy-backed selectable label buttons, background issuer-local state lookup, explicit additions/removals, stale-state fencing and recoverable per-label retries. Uses "Reason for labelling" and submission alone instead of a confirmation checkbox.
-* Stores browser caller token hashes as hexadecimal text, fixing MySQL-backed Xenon sign-in and administrative operations.
-* Infers manual label target types from DID/handle or AT URI input, shows the optional CID only for records, and hides the explicit lookup button unless automatic lookup fails or scripting is unavailable.
-* Converts pasted Bluesky post, list, feed and starter-pack URLs to canonical record AT URIs in manual labelling; profile URLs resolve to account DIDs.
-* Accepts copied repository-only AT URIs as manual account targets, converting them to bare DIDs while retaining complete AT URIs for record targets.
-* Added an opt-in, Xenon-branded Razor Pages administration UI for reports, cases, appeals, manual account and record labels, audit, policy, team, and labeler lifecycle operations, using live provider-backed authorization and the shared administration dispatcher.
-* Displays cached, bidirectionally verified handles for moderation identities, with canonical DIDs on hover or keyboard focus and directly beneath handles in details; unresolved identities retain their DIDs.
-* Keeps pagination links visible on light panels instead of applying the header navigation's white link color.
-* Adds a shared Xenon footer with copyright, UI version, source repository link and assembly build identifier.
-* Links publicly accessible, operator-neutral terms and privacy notices from the Xenon footer, documenting moderation and authentication data handling and the need for deployment-specific operator disclosures.
-* Titles the case queue "Cases awaiting moderation" and right-aligns numeric headers and values in list tables.
-* Adds accessible System, Light and Dark theme selection, remembering explicit browser-local choices while following OS appearance by default.
-* Uses an original Xe element-tile logo in the Xenon header and as its scalable favicon in light and dark themes.
-* Adds counted bidirectional table pagination, global column sorting, workflow tabs and all-time per-author report/unique-record summaries.
-* Adds report details and read-only server-rendered current post/profile previews, direct Bluesky links, explicit unavailable-content feedback and post CID mismatch warnings.
-* Presents newest-first, paged case/report history beside moderation review, including original submissions, actors, reasons and decision label changes, with a responsive single-column layout.
-* Replaces technical case-decision fields with observed-state-protected label chips, distinguishes pending additions/removals and shows account labels separately from exact-record labels.
-* Adds a checked-by-default option to handle other exact-subject/CID reports, retaining the selected report independently of age, and preserves unchanged retries for uncertain commit outcomes.
-* Shows a prominent verified-account caution from actual AppView verification state, sortable workflow status symbols, and live open counts only on Cases, Reports and Appeals.
-* Uses handle-based active-moderator assignment dropdowns, right-aligned mutation actions and improved audit actor layout.
-* Adds a transformed handle/rounded-avatar account dropdown containing Sign out, with keyboard, Escape and outside-click support.
-* Shows the signed-in member's live team role above Sign out in the account dropdown.
-* Adds grouped, named report-reason choices to Policy, including custom identifiers and explicit all/none selections, without editing declaration JSON.
-* Humanizes dates in case, report, appeal and search lists, retaining exact UTC/local timestamps in bordered keyboard-accessible hover cards and refreshing relative ages every minute.
-* Removes explanatory paragraphs beneath the Cases, Reports and Appeals list headings.
-* Preserves rejected appeal label selections and reasons while their observed baseline remains current, and returns audited validation failures for incompatible appeal outcomes instead of exception pages.
-* Preselects the appeal opened from the Appeals list or search results, and makes case/appeal decision and assignment reasons optional, recording an explicit absence of explanation in the audit history.
-* Uses the Submit button alone to confirm case/appeal decisions, without a redundant confirmation checkbox.
-* Expands list pages to the available window width while retaining narrow side padding and the existing detail/form widths.
-* Applies Xenon's theme and shared shell to sign-in pages, and provides a remembered, browser-local UTC/local-time toggle for displayed dates, including list tables, previews and deadlines.
-* Uses a logo-only header home link and places the time zone toggle in the right-aligned header actions before Sign out.
-* Makes the UTC/Local text and clock a single consistently styled toggle.
-* Keeps the time zone preference toggle available on every page, including pages without dates.
-* Explains label-based moderation on the home page instead of describing internal services.
-* Restores responsive sign-in form alignment, joined handle-prefix styling and checkbox/button spacing within the themed authentication shell.
-* Fixes Cases and Appeals filter submissions retaining a valid sort direction, including recovery from invalid navigation, and avoids duplicate filter-error messages.
-* Compacts case-list wrapping and replaces author-summary counts with a hover/focus card icon; subject lists describe posts, profiles, lists, feeds and starter packs with target glyphs while retaining canonical identifiers in tooltips.
-* Uses locally bundled Font Awesome Free subject icons instead of Unicode glyphs, with footer attribution and the upstream license notice; no CDN requests are required.
-* Applies the selected Font Awesome icons consistently to subject kinds, author summaries, search, workflow statuses, timezone switching, account controls and verified-account cautions.
-* Hides the visible author-summary column heading, aligns status headings with their text after the icons, and keeps case filters expanded with readable queue names.
-* Adds globally paged assignee sorting, hides the case-table summary visually, and aligns history status rows without the case-event separator dot.
-* Hides pagination navigation for single-page and empty tables, moderation histories and search results.
-* Renders anonymous post/profile records and referenced images directly from the author's PDS, independently of moderator blocks or AppView visibility; AppView verification metadata is supplementary.
-* Displays list and starter pack names and descriptions in subject details, read anonymously from the author's PDS with direct Bluesky links and record-version warnings.
-* Presents profile previews as read-only Bluesky-style cards with a banner, overlapping circular avatar, name, handle and bio; follower, following and post counts appear when anonymous AppView metadata is available.
-* Defaults Reports to unresolved submissions and Appeals to pending challenges, with status filters retained during sorting and paging and accessible filter-icon buttons.
-* Opens video previews using a play-circle icon and fits the player to the declared aspect ratio, actual video metadata and available viewport.
-* Blurs moderation-preview images with adult, sexual, nudity or graphic-media self-labels, or sensitive media labels from Bluesky moderation, with a smaller explanation below the preview, accessible eye-icon overlay controls and an explicit notice when moderation labels cannot be checked. Displays supplied image descriptions beneath images.
-* Opens record-referenced MP4 videos only in a click-open modal, using expiring same-origin references, live team authorization and bounded transfers without autoplay.
-* Displays gallery images in a keyboard-scrollable single row, aligns detail status icons, and fixes Bluesky DID links with new-tab navigation and a locally hosted Bluesky brand icon.
-* Shows case/review subjects and assignees as handles with canonical-identifier tooltips, shortens the reported CID caption, and automatically selects Remove labels or Replace labels when appeal label selections change.
-* Names the label-selection subject as a post, profile, list, feed, starter pack or other record with its matching local icon, without the redundant selection explanation.
-* Borders all hover cards, including handles and author summaries, and lists open-report counts by subject type on separate lines, with an all-time account total including handled reports instead of technical URI counts and caveats.
-* Adds global top-bar report/appeal search with a magnifying glass, partial verified-handle matches, literal case-insensitive text matching, counted pagination and explicit background-index coverage.
-* Displays retained report and appeal resolution reasons, including automatic `Post deleted` closure, alongside original evidence and moderation history.
+* Opt-in Xenon-branded Razor Pages UI with Bluesky OAuth sign-in, live Administrator/Moderator/Viewer authorization, and shared web/CLI administration.
+* Filtered, sortable and paged case, report and appeal queues, with assignment, escalation, acknowledgment, subject/reporter mutes, global search and background refresh of visible queues and open counts.
+* Online-team presence with verified-handle member listings and shared five-minute activity observations across Xenon and Ozone.
+* Account and record inspection with verified handles, canonical identifiers, original report evidence, current labels, paged moderation history and direct Bluesky links.
+* Read-only previews of posts, profiles, lists and starter packs, with images, galleries, inline video, record-version warnings and verified-account cautions. Media transfers are bounded and authorized; private per-member filtering preferences control sensitive previews.
+* Policy-backed manual and case label decisions for accounts or records, optional CID scope and expiry, current-state lookup, selectable report-handling scope and retry-safe additions/removals. Appeal review supports retaining, withdrawing or replacing challenged labels.
+* Tabbed policy editor for label definitions and translations, report subjects, collections and reasons, plus synchronized advanced JSON and an explicit action to match label-issuance permissions to reporting scope. Unpublished drafts can be saved, updated, loaded and deleted, with shared working-copy context and retained editor state.
+* Explicit policy publication and independent verification, with separate labeler-account authorization, conditional PDS writes, irreversible removed-label cleanup confirmation, progress, pause/resume and abandonment.
+* Team enrollment and membership/role management, verified-handle search, owner-controlled remote CLI access, and administrator email registration and test delivery from Team or Preferences when SMTP is configured. Email controls keep the save and test buttons aligned on both pages, and the Team page collapses configured settings by default.
+* Ownership transfer controls appear at the bottom of Team in a panel collapsed by default.
+* Filterable administrative audit history and streamed JSON export, with consistently capitalized action labels, timestamp, actor and outcome filters, retained original event times and repeated live authorization during downloads.
+* Guided maintenance and retirement with phase-specific progress, recovery and action-bound confirmations for grace periods, stopped-host attestations, local label-history cleanup and external signing-key removal.
+* Responsive light, dark and system themes; keyboard-accessible controls; UTC/local and relative timestamps; locally bundled fonts and icons; build identification; and public terms/privacy notices for operator customization.
 
 #### idunno.Bluesky.Labeler.Host
 
-* Serves a public plain-text `/robots.txt` asking all crawlers not to crawl any path.
-* Includes the matching Linux administration CLI in the canonical image, with `labeler-admin` on `PATH`.
-* Advertises the method-bound `resumePolicyPublication` native OAuth permission required by CLI publication recovery.
-* Supports explicit `Labeler:SigningKeyProvider=none` for an initialized retired labeler with no pending signatures, publication or rotation, preserving keyless read-only distribution and authorized recovery administration.
-
-* Adds repeatable test-host policy drafts and fictional team/identity examples across roles, suspension, removal and a local CLI viewer binding; fresh databases also include an earlier verified policy publication, while existing operator edits and selected policies are retained.
-* Added independently opt-in Xenon UI and Bluesky sign-in pages to the canonical host; the UI requires the optional moderation backend and remains disabled by default.
-* Serves website OAuth metadata from the same configured options as Xenon sign-in, with a web callback and identity plus read-only profile scopes, alongside the separate native CLI metadata; the shared claims transformer supplies handle and avatar claims.
-* Routes Xenon authentication challenges and access denials to the installed Bluesky sign-in and error pages instead of nonexistent default account pages.
-* Added a separate, runnable `Xenon.TestHost` for browser and CLI testing with a configurable HTTPS tunnel origin, explicit fixture seeding, persistent isolated SQLite state, trusted proxy forwarding and hostname filtering, without public label distribution.
-* Explicit Xenon test seeding also adds resumable, local-only test reports for four approved `bot.idunno.blue` posts covering text, videos and an image gallery, without issuing labels or sending reports to another service.
-* Includes local-only test reports for `bot.idunno.blue`'s Test moderation list and profile in repeatable explicit seeding.
-* Seeds an idempotent automatically handled Not Applicable report and system audit example; explicit seeding upgrades the original unrestricted fixture policy to accept Spam, Other and Appeal reasons.
-* Rejects the test host's `--seed` option outside Debug builds before initialization or data changes.
-* Seeds 40 fictional moderation cases in the test host so the default queue exercises three pages, including continuation links on successive pages.
-* Seeds 46 reports across those 40 cases, including account and post cases with two, three and four reports.
-* Includes verified/invalid/unknown/unverified preview fixtures and separately labeled author-account/post examples.
-* Persists the test host's Data Protection key ring and encrypted OAuth identities/login state in SQLite, importing previous file-backed keys once so valid browser sessions survive restarts.
+* Documented that the canonical host ships untrimmed and does not support trimming or Native AOT because it includes Razor Pages; disabling the UI at runtime does not remove that dependency.
+* Standalone labeler application and container with public label distribution, all three storage providers, protected administration and independently optional Xenon moderation, web UI and Ozone compatibility.
+* PostgreSQL defaults with an externally supplied connection string; SQLite and MySQL alternatives; non-secret configuration defaults; and optional external JSON configuration for separately mounted secrets.
+* Environment-backed signing keys by default, optional mounted PEM keys, database-backed active-key selection and coordinated rotation. Terminal retired labelers can use explicit keyless read-only distribution.
+* Website and native CLI OAuth metadata, trusted TLS-forwarding proxy configuration, SSRF-protected identity resolution and owner-only local administration sockets.
+* Database-persisted OAuth sessions and Data Protection keys, a built-in readiness probe, crawler-exclusion `robots.txt`, and the matching Linux CLI available as `labeler-admin` in the container.
+* Separate `Xenon.TestHost` for isolated browser and CLI testing, with persistent SQLite state, configurable HTTPS origins and explicit Debug-only fixture seeding for policies, teams, queues, appeals and media previews.
 
 #### idunno.Bluesky.Labeler.Cli
 
-* Renames credential commands to `--remember-me` and `forget-me`; the previous spellings are no longer accepted.
-* Keeps sign-in and temporary-credential notices concise, reserving account-purpose warnings for labeler-account operations.
-* Adds Unicode icons with display-width-aware padding to human-readable progress, authentication, confirmations, errors and result fields, using BOM-free UTF-8 console output without altering verbose JSON output.
-* Capitalizes human-readable CLI result labels, shows Issuer followed by Phase, calls the totals “Labels issued” and “Labels published”, hides internal revisions, and hides retirement checkpoints while Active; verbose JSON remains unchanged.
-* Describes available label history in plain language instead of displaying the internal replay floor.
-* Adds `counts` to display unresolved case, report and appeal totals over local or remote administration, without an unnecessary `openCounts` heading in readable output.
-* Fixes remote policy publication sign-in by requesting one method-bound RPC scope per administrator session.
-* Adds clear success/failure confirmations on stderr and readable result details by default, with raw JSON stdout behind `--verbose`; explains each sign-in's account and purpose, and stops workflows explicitly on authentication failure, cancellation or callback timeout without logging OAuth callback secrets.
-* Adds a dedicated administration CLI reference covering installation, forced or owner-controlled remote access, command options, credential storage, and examples for every command.
-* Persists canonical PostgreSQL-hosted Xenon login sessions, OAuth callback state and Data Protection keys in the existing labeler database, retaining sessions across container replacement.
-* Shows report-admission explanations only for relevant policy, retained-report or retirement states instead of displaying an empty policy-verification warning.
-* Shows the current verification state on the policy verification tab and disables redundant manual verification while the selected policy remains current.
-* Brands the quiet loopback callback as Xenon and clarifies remote option names; native client metadata defaults to the labeler origin and can be overridden separately for labeler-account publication.
-* Adds opt-in `--remember-me` credential storage in `~/.xenon`, using current-user DPAPI on Windows and explicitly confirmed, owner-only unencrypted files on macOS/Linux, with account/client/scope/service binding and durable rotating-credential updates.
-* Adds `retire confirm-host-stopped` with exact registration GUID, independent operator evidence and its own preflight challenge; it records an attestation, not process detection or key deletion.
-
-* Adds retirement status/preflight, pause/resume, grace extension and separately confirmed external key-removal request/attestation. Irreversible actions require a server-issued challenge even with `--yes`; completion requires availability evidence and normal begin/resume uses the durable server worker.
-
-* Waits for removed-label cleanup before policy publication/recovery writes, renews paused authority through live administration, and adds confirmed `policy resume` for the selected operation.
-* Added explicit policy inspection, save/begin/verify/abandon and conditional publication/recovery commands. Publication separates administrator and labeler-account OAuth authority, preserves raw declaration fields/default omissions, and rejects abandoned, superseded or conflicting intent.
-
-* Requests `identity:*` for PLC publication and recovery; the standalone host's native metadata advertises that permission.
-* Added a self-contained Windows x64/Linux x64/Linux arm64 administration CLI with protected local IPC, OAuth/PDS service-authenticated remote access, team/audit/publication and lifecycle status and operation-receipt reads, and confirmed label issue/negation and team-management commands.
-* Added confirmed retirement begin, bounded checkpointed negation, grace, completion, and explicit bounded-purge CLI commands over the shared authorized administration dispatcher.
-* Bundles native runtime libraries for executable-only self-updates and validates Compose service names before applying image overrides, honoring extended drain deadlines.
-* Parses URI command-line options explicitly for remote administration, identity publication and service updates.
-* Added resumable maintenance and signing-key rotation commands, did:web publication snippets and authenticated PLC publication using public replacement-key material.
-* Added attestation-verified direct CLI updates and confirmed digest-pinned Docker Compose service redeployment with graceful stop, readiness verification and previous-image rollback.
-* Release tags publish an attested standalone labeler container image to the public GHCR package and include its immutable digest in the release assets.
+* Self-contained Windows x64, Linux x64 and Linux arm64 administration CLI, with protected local IPC or OAuth/PDS service-authenticated remote access and a dedicated command reference.
+* Label issuance and negation, team management, moderation counts, audit inspection, publication/lifecycle status and durable operation-receipt reads through the shared authorization boundary.
+* Policy draft inspection and saving, conditional publication, independent verification, cleanup resume, abandonment and recovery, with separate administrator and labeler-account authority.
+* Resumable maintenance and signing-key rotation, public did:web identity snippets, authenticated PLC publication and recovery, and explicit retirement, grace, stopped-host attestation, local purge and external key-removal commands.
+* Optional `--remember-me` credentials in `~/.xenon` and `forget-me`, using current-user DPAPI on Windows or explicitly confirmed owner-only unencrypted files on macOS/Linux, with rotating-credential persistence and account/client/scope/service binding.
+* Human-readable results and progress, explicit success/failure feedback, confirmed irreversible actions and raw JSON output through `--verbose`.
+* Attestation-verified executable self-updates and confirmed digest-pinned Docker Compose redeployment with graceful stop, readiness checks and previous-image rollback. Releases include an attested GHCR host image and its immutable digest.
 
 #### idunno.Bluesky.Labeler
 
-* Assigns previously unassigned cases to the moderator committing a case, report or appeal action, atomically with the action and without replacing existing assignments.
-* Refreshes an expired issuance policy before capturing the Ozone batch revision, avoiding rejection of valid label events after a successful declaration check while preserving transactional policy fencing.
-* Clarifies account verification, label decision, policy check and retirement errors, preserving original tracking IDs and detailed diagnostics for recovery.
-* Adds shared atomic Ozone event preparation and provider commits for multi-label actions and explicit cross-version report selection, retaining original CIDs, live authorization, policy fencing and pending appeals.
-* Adds irreversible, authorized retirement with action-bound confirmations, bounded timestamp-aware signed negations, resumable database checkpoints, live worker authority, explicit 1–365 day grace selection and distribution-availability attestation. Local history purge and operator-attested external key removal remain separate confirmations; moderation and audit history, backups and downstream copies are not erased.
-* Closes new label/report/appeal/policy workflows on retirement while retaining non-label case completion and explicitly coordinated recovery signing-key rotation without reopening issuance.
+* Host-neutral label issuance and signed negation for accounts or arbitrary records, with optional CID scope and expiry, authorization/policy providers, durable same-intent retries and audited no-ops.
+* Signed-label storage and distribution contracts with immutable signed snapshots, ordered publication and replay, retained-slot queries, stable cursors, operation receipts, structured logging and persistence metrics.
+* Xenon reports, exact-subject cases and appeals, with retained evidence, assignment, escalation, workflow filtering, temporary subject/reporter mutes and atomic label/report decisions. Intake never automatically labels content.
+* Verified DID/handle enrollment, Administrator/Moderator/Viewer roles, explicit local OS delegations, live revocation, last-administrator protection and append-only administrative audit of changes and denials, without successful team-read polling noise.
+* Protected labeler ownership: the current owner cannot be removed, suspended or demoted, and other administrators cannot replace their local access bindings. Owners can explicitly transfer protection and remote CLI control to another active administrator through Xenon or the CLI, with atomic audit and retry-safe receipts.
+* Editable unpublished policy drafts and retained publication history, independent declaration verification, scope enforcement, conditional publication/recovery and bounded withdrawal of removed labels.
+* Editing an unpublished draft invalidates outstanding publication reviews without changing the active policy's verification deadline.
+* Encrypted local signing-key files with owner-only permissions and create-only backups, public identity publication/verification helpers, durable active-key selection and verified resumable signature replacement.
+* Coordinated maintenance and irreversible retirement, with action-bound confirmations, bounded signed negations, durable checkpoints, explicit grace periods and availability evidence. Local history purge and operator-attested external key removal are separate actions; moderation/audit history, backups and downstream copies are not erased.
+* Feature namespaces for `Issuance`, `Administration`, `Moderation`, `Maintenance`, `Signing`, `Storage` and `Identity`, with common target and result/error types in the root namespace.
 
-* Withdraws existing applications of removed policy label values in durable batches of at most 250 history entries before replacement publication, retaining exact URI/CID scopes, commit-time authorization, audit and restart recovery. Abandonment stops pending batches without undoing completed negations.
-* Adds audited, retry-safe deletion of unpublished policy drafts while retaining their definitions and operation history. Deleted versions cannot be loaded, published or reused, and selected or previously published versions cannot be deleted.
-* Added exact-subject reports/cases, fixed filtered workflow views with caller/issuer/filter-bound cursors, immutable policy versions and publication history, and explicit appeal capture/internal review and outcomes. Case decisions atomically reuse shared manual label issuance, commit-time authorization and original-signature recovery; report intake never automatically labels content.
-* Automatically assigns new and existing unresolved cases when exactly one active moderator/administrator remains, preserving resolved cases and original receipts with revision-fenced, audited assignment history shared by web and CLI administration.
-* Atomically records report handling with case decisions, preserving original evidence, exact-CID isolation and durable same-intent recovery; unhandled reports keep the case in review.
-* Automatically supersedes other pending exact-subject/CID appeals when an appeal decision leaves none of their captured label outcomes current, retaining evidence and reasoned history atomically; partly current and empty captures remain pending.
-* Supports replacement appeal outcomes for partial label withdrawal without unnecessarily reissuing labels that remain applied.
-* Allows an expected label sequence of zero to fence decisions against previously absent label history.
-* Retains additive report/appeal resolution reasons and upgrades storage to schema ten with normalized local search projections, expiring verified-handle observations and durable post-review scheduling.
-* Rejects cached and transactional policy permission after database-clock rollback, persists bounded sticky conflicts for invalid authoritative declarations, and canonicalizes integer-only declaration extensions before publication.
+#### idunno.Bluesky.Labeler.Agent
 
-* Added verified DID/handle enrollment, Administrator/Moderator/Viewer roles, explicit OS delegations, live member and binding revocation, concurrent last-administrator protection, durable administrative audit and maintenance intent/result contracts. Typed grants fence label/no-op commits against authorization changes.
-* Added host-neutral signed-label storage contracts, fixed signed snapshots, durable operation receipts, ordered publication/replay, stable query cursors, retirement/purge checkpoints, structured source-generated logging and persistence metrics.
-* Added shared host-neutral label issuance and signed negation with account or arbitrary record targets, optional CID scope, mandatory authorization/policy providers, durable semantic retries, audited no-ops and explicit operational errors with cause/recovery guidance.
-* Added fixed-tip retained-slot distribution reads, preserving immutable signed history and selecting the latest published source/URI/CID/value slot for Ozone-compatible public delivery.
-* Added encrypted local label-signing key file creation, loading and create-only backups with current-user-only file permissions (protected Windows ACLs or Unix mode `0600`), public-only did:web labeler identity snippets and publication verification, and bounded resumable signature replacement that snapshots caller-owned batches and preserves label fields and sequence positions.
-* Retirement timestamp lookup tolerates equal-time CID variants without weakening ordinary decision ambiguity checks; rotation verifies every replacement signature against the persisted public key before advancing.
-* Added public-only durable signing-key selection contracts with seed-once initialization and verified, drained rotation activation.
-* Organized the unreleased labeler APIs into `Issuance`, `Administration`, `Maintenance`, `Signing`, `Storage` and `Identity` namespaces/directories, with one type per file. Consumers must update feature imports; common targets and result/error types remain in the root namespace.
-
-#### idunno.Bluesky.Labeler.Host
-
-* Added an optional, disabled-by-default Xenon backend using the canonical host's existing database, keys, administration, proxy configuration and maintenance coordination.
-
-* Made PEM signing keys honor database-backed selection and coordinated activation, supporting transitions from environment-backed keys and recovery from stale active-ID files.
-* Added a local development launch profile with loopback HTTP/HTTPS endpoints and automatic browser launch disabled pending a landing page.
-* Added a non-secret `appsettings.json` with safe provider, issuance, administration, proxy and logging defaults, plus documented deployment environment variables.
-* Defaults the canonical application and container to PostgreSQL, with a required externally supplied connection string. SQLite and MySQL remain explicit alternatives.
-* Promoted the standalone labeler application from `Samples.LabelerHost` to the canonical `src/idunno.Bluesky.Labeler.Host` project, assembly and namespace, with all three storage providers, mounted-PEM or environment keys, public distribution endpoints, and protected local and remote administration. Updated container publishing and health probes to the new application name; SDK libraries remain independently usable.
-* Publishes native CLI OAuth metadata, supports explicitly trusted TLS-forwarding proxies, protects identity resolution with `idunno.Security.Ssrf`, and creates the local administration socket directory with owner-only permissions.
-* Configures the standalone labeler image's Docker health check to probe ASP.NET readiness using a bounded built-in .NET probe, without curl or starting another host.
-* Supports separate protected environment variables for label-signing keys and database-backed active selection, allowing volume-free deployments such as DigitalOcean App Platform while retaining the PEM provider.
-* Defaults the canonical host to environment-backed current and optional previous keys using separate indexed variables. Filesystem-backed installations must explicitly select the `pem` provider; database-backed active selection and coordinated rotation remain authoritative.
+* Added a manual-only Lexicon publishing workflow for `main`, using the dedicated `lexicon` environment, pinned goat tooling, linting and published-schema compatibility checks.
+* Added a remote bot client with borrowed or owned AT Protocol agents, method-bound service authentication, label issue/negate operations, durable receipt recovery, available-label discovery and public applied-label queries.
+* Remote client responses accept unknown JSON fields, including lexicon type discriminators and additive nested fields.
+* Split labeler-agent issuance calls into the `labeler_issuance` service audience and XRPC namespace, separate from `labeler_admin` administration calls. Added public audience fragments and host/sample guidance.
+* Named the issuance lookups `getOperationReceipt` and `getAvailableLabels`, and added lexicons for all four issuance XRPC procedures.
+* Standardized issuance XRPC bodies: successful responses now match their lexicon result DTOs, and failures use AT Protocol error details and HTTP status codes.
+* Mapped labeler issuance error responses to typed error objects in the remote agent, using standard `AuthenticationRequired`, `Forbidden` and `InvalidRequest` errors where applicable.
+* Added issue and negate overloads that generate a GUID operation ID when callers do not supply one; callers needing reliable retry and receipt recovery should continue to persist their own IDs.
 
 #### idunno.Bluesky.Labeler.SQLite / PostgreSQL / MySQL
 
-* Clarifies shared team, case, appeal, policy and retirement errors without changing storage transactions, error codes or restart recovery.
-* Captures applicable URI-wide labels for CID-pinned all-label appeals and batches duplicate captured values per appeal page when checking superseded outcomes.
-* Resolves selected-label appeals on targets with large historical label sets by checking remaining captured outcomes directly, without reapplying the intake capture limit.
-* Filters selected appeal label values before bounded challenge capture, retains the selected value in accepted reports and pending promotion, and recovers legacy bootstrap owners even when earlier authentication denials occupy the first audit entries.
-* Adds schema-fourteen durable Ozone event identities and closure provenance, committed atomically with labels, reports, native case history and audit; upgrades remain additive and older writers reject the new schema.
-* Enforces Bluesky AppView label-service limits by default at the shared durable publication boundary: 5 labels per rolling second, 10,000 per rolling hour and 100,000 per rolling 24 hours, including negations. Schema thirteen persists accounting across hosts and restarts; excess remains pending rather than being discarded.
-* Preserves the longest-lived positive label when retirement encounters equal creation timestamps, regardless of insertion order.
-* Adds additive schema-twelve retirement state, exact-intent receipts, expiring confirmation challenges and bounded CID-slot selection across all three providers, preserving existing lifecycle checkpoints until explicitly adopted.
-
-* Automatically handles authenticated reports with disallowed reasons as Not Applicable, retaining original submissions and system audit provenance without changing labels or existing case workflow; subject scope, replay and appeal-ownership checks remain enforced.
-
-* Added schema-nine transactional moderation, policy publication/recovery history, report replay reservations, appeal provenance and atomic case decisions. Additive subject indexing preserves existing signed history; MySQL requires InnoDB for all new tables.
-
-* Validates InnoDB storage for all MySQL administration tables as well as label tables, rejecting nontransactional existing tables.
-* Added additive schema-version-four team, credential replay, audit and receipt persistence with shared transaction-valid administration across all three providers.
-* Indexes administrative token expiry for bounded cleanup scans; initialization adds the index to existing version-four databases.
-* Stops successful audit-feed reads from generating further feed entries while retaining durable denial auditing.
-* Added all three persistence providers with transactional sequence allocation, restartable schema setup, packaged `schema.sql`, common real-engine conformance coverage and setup/upgrade/backup guidance.
-* Added atomic service decision/audit receipts, unpublished-history reconciliation and additive version-one to version-two upgrades with common decision semantics across providers.
-* Added schema-version-three distribution metadata with additive upgrades from versions one and two, and safe-integer sequence allocation bounds for protocol delivery.
-* Added named-volume MySQL/PostgreSQL labeler development container helpers and SQLite `New-LabelDatabase.ps1`. Renamed authentication container helpers to identify their purpose.
-* Adds a restartable schema-version-six decision identity index and bounded batch decision reads so retirement does not scan all label history for each label.
-* Adds schema-version-seven host signing roles so only signing participants must activate replacement keys; legacy hosts conservatively retain their signing role.
-* Adds schema-version-eight issuer/stream-bound signing-key selection, storing only key identities and public keys and rejecting stale or premature activation.
+* SQLite, PostgreSQL and MySQL providers with transactional sequence allocation, durable decisions and audit receipts, signed-label history, publication/replay metadata and bounded reconciliation.
+* Shared persistence for teams, replay protection, policies, reports, cases, appeals, mutes, search projections, Ozone events, notification leases and resumable maintenance/retirement checkpoints.
+* Indexed subject-wide mute exclusion for moderation counts and queues, avoiding repeated scans of retained expired mutes. Schema seventeen backfills CID-independent subject keys without changing evidence, mute deadlines or concurrency fences.
+* Indexed report handling, author summaries, received-time ordering, assignment queues and audit filters. Schema eighteen backfills query projections without rewriting evidence; author summaries and navigation counts use fewer database round trips, and activity pages bound each history branch before merging.
+* Policy-verification emails distinguish timeouts, connectivity failures, policy/account mismatches, clock rollback and local database failures, with safe diagnostic explanations and administrator guidance.
+* Durable Bluesky AppView publication limits: 5 labels per rolling second, 10,000 per rolling hour and 100,000 per rolling 24 hours, including negations. Accounting survives restarts and multiple hosts; excess remains pending.
+* Restartable schema initialization, packaged `schema.sql`, real-engine conformance coverage and setup/backup guidance. MySQL requires InnoDB; older writers reject incompatible schemas, and rollback requires a compatible database backup.
+* Named-volume MySQL/PostgreSQL development helpers and SQLite database creation tooling.
+* Faster isolated real-engine tests through per-database connection pooling and bounded parallelism. Added `test.ps1` to run the clean Debug build and full suite with disposable databases, authenticated preflight, retained logs/timings and automatic cleanup.
 
 #### idunno.AtProto.Types
 
@@ -286,6 +114,7 @@
 #### idunno.AtProto
 
 * Adds separate Ozone administration service-token verification for exact labeler service and PDS bare-DID audiences, retaining method binding, replay identifiers and strict generic/native verification.
+* Allows the exact Ozone compatibility reads `app.bsky.actor.getProfile`, `app.bsky.feed.getPostThread` and `tools.ozone.setting.listOptions`, and the narrow `tools.ozone.setting.upsertOption` procedure, through that verifier without accepting other AppView or settings methods.
 * Added moderation-only service authentication for exact labeler service audiences and bare issuer DIDs used by PDS proxies, with exact-method verification for reports and Ozone label appeals without relaxing administration. Added shared explicit label-policy publication validation without restricting remote DTO deserialization.
 
 * Added exact `DID#service` token-acquisition overloads and strict AT Protocol service JWT verification. Production native loopback callbacks no longer implicitly permit insecure remote OAuth endpoints.
@@ -325,6 +154,8 @@
 
 #### Packaging
 
+* Updated the build-only CommentSense documentation analyzer to 1.1.0.
+* Bounded the local validation script's build workers, compiler concurrency and disposable database CPU, memory and temporary storage, with retained resource diagnostics.
 * Software Bill of Materials (SBOM) files are now generated with the CycloneDX .NET tool and Syft, giving both CycloneDX and SPDX formats. Each NuGet package contains a CycloneDX and an SPDX JSON file per target framework under `sbom/<target framework>/`, and build-only dependencies are excluded. The files are also published as release assets and attested.
 * Release builds suppress deprecated-code analyzer warnings through additive project settings instead of workflow overrides, preserving project-specific warning suppressions. Debug builds retain the deprecated-code warnings.
 
@@ -341,9 +172,10 @@
 
 ### ✅ Fixed
 
-#### idunno.Bluesky.AspNet.Labeler
+#### idunno.AtProto.OAuthCallback
 
-* Fixed malformed record targets bypassing denial auditing, bounded audit pages and responses to fit local IPC frames, and Windows named-pipe impersonation failures terminating the listener.
+* Callback server disposal awaits listener shutdown before disposing the host, preventing competing host disposal paths from racing file-system watcher cleanup. Failed startup also releases the host only once.
+* Callback disposal during pending startup waits for startup ownership to settle, retains a stable shutdown listener, and releases cancellation resources even when shutdown faults.
 
 #### idunno.AtProto
 
@@ -360,6 +192,10 @@
 * Recursive validation now checks required URI and CID members of embedded and associated strong references, and required mention DIDs and nonblank link values in known facet features. Failures preserve indexed member paths without changing unknown facet handling.
 * Profile validation now checks strong references in links, pinned posts and starter pack attribution. Message validation accepts supported group-chat join-link embeds. Gate validation requires a post record key, while tolerant parsing retains collection-only targets for inspection.
 * Message validation reports missing join-link codes as `Embed.Code`, including when a code is cleared through an initializer or `with` expression.
+
+#### idunno.Bluesky.AspNet.Labeler.UI
+
+* Unsupported DID methods show unavailable public previews and current-version lookups instead of server errors, while retaining canonical subject details and issuer-local account label checks.
 
 ## 8.0.0 - 2026-10-16
 
@@ -594,6 +430,10 @@
 #### Samples
 
 * Added `Samples.BotSdk`, a reply-only durable bot sample with developer-mode simulation, in-memory storage, and health and metrics endpoints.
+* Added `Samples.LabelerAgent` commands to issue and negate labels for accounts or records with readable change/no-op outcomes, list labels supported by a remote labeler, and publicly query published labels by account or AT URI with automatic pagination, verified handles, friendly local dates and explicit negation and expiry status.
+* Added optional `--expires-in` durations and `--expires-at` absolute dates to the sample's `label` command, with mutually exclusive options and future-expiry validation before issuance.
+* Added `remove` as an alias for the sample's `negate` command.
+* Resolved account and record handles before sample negation requests, avoiding `InvalidTarget` while retaining record version scope and DID-based withdrawals.
 * Added `--replay-live-buffer-capacity` to `Samples.JetstreamReplay` to configure the decoded-event buffer during live replay, defaulting to 1,024 events and rejecting non-positive values.
 * Added `Samples.BlazorAuthentication`, an Interactive Server Blazor Web App with Bluesky OAuth authentication, timeline, claims and conditional profile editing, using the ASP.NET authentication handler and UI. Circuit operations validate the session and refresh server-side credentials. Activity-based, antiforgery-protected HTTP heartbeats renew cookies and synchronize circuit expiry without reloading the page; idle sessions still expire.
 * Added a success indication after saving a profile in `Samples.AspNetAuthentication`.

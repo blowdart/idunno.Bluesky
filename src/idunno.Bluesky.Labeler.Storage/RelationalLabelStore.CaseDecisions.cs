@@ -262,7 +262,7 @@ internal abstract partial class RelationalLabelStore
     }
 
     /// <summary>Handles explicitly selected report scope in bounded batches under the atomic decision lock, preserving original evidence.</summary>
-    private static async Task<bool> HandleDecisionReportsAsync(
+    private async Task<bool> HandleDecisionReportsAsync(
         DbConnection connection,
         DbTransaction transaction,
         ModerationCaseData current,
@@ -328,13 +328,11 @@ internal abstract partial class RelationalLabelStore
                         HandledAt = completedAt,
                         ResolutionReason = request.Reason
                     };
-                    await ExecuteAsync(
+                    await SaveReportPayloadAsync(
                         connection: connection,
                         transaction: transaction,
-                        sql: "UPDATE label_reports SET payload=@payload WHERE report_id=@id",
-                        token: token,
-                        ("@payload", JsonSerializer.SerializeToUtf8Bytes(handled, ModerationJsonContext.Default.ModerationReportData)),
-                        ("@id", report.Id)).ConfigureAwait(false);
+                        report: handled,
+                        token: token).ConfigureAwait(false);
                     await UpdateReportSearchTextAsync(connection, transaction, handled, token).ConfigureAwait(false);
                     if (report.CaseId != current.Id)
                     {

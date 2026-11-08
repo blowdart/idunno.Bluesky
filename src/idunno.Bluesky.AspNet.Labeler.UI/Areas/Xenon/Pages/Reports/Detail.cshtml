@@ -21,6 +21,23 @@
         <h2>Reported subject</h2>
         <p>@await Html.PartialAsync("_Identity", new IdentityDisplayModel(target, Subject: true))</p>
         <partial name="_SubjectIdentifiers" model="subject" />
+        @if (target.StartsWith("at://", StringComparison.Ordinal) && !subject.TryGetProperty("cid", out _))
+        {
+            <p role="status">The submitted evidence has no CID. Its original URI and native label scope remain unchanged.</p>
+            @if (details.TryGetProperty("recordResolution", out JsonElement recordResolution))
+            {
+                <p>Separate intake observation: <strong>@recordResolution.GetProperty("status").GetString()</strong>.
+                @if (recordResolution.TryGetProperty("cid", out JsonElement resolvedCid))
+                {
+                    <span>Observed CID: <code>@resolvedCid.GetString()</code>.</span>
+                }
+                </p>
+            }
+            else
+            {
+                <p>Record resolution has not been recorded. Unresolved references remain available here even when Ozone cannot represent them.</p>
+            }
+        }
         @if (Model.Preview is { } preview)
         {
             @await Html.PartialAsync("_SubjectPreview", preview)
@@ -45,12 +62,19 @@
             <dd><a asp-area="Xenon" asp-page="/Cases/Detail" asp-route-id="@details.GetProperty("caseId").GetInt64()" asp-route-ReportId="@Model.Id">Review report #@Model.Id in case #@details.GetProperty("caseId").GetInt64()</a></dd>
             <dt>Status</dt>
             <dd>@(details.TryGetProperty("decisionOperationId", out JsonElement decision) ? $"Handled by operation {decision.GetString()}" : "Open")</dd>
+            @if (Model.CaseStatus is { } caseStatus)
+            {
+                <dt>Case review state</dt><dd>@await Html.PartialAsync("_WorkflowStatus", caseStatus)</dd>
+            }
             @if (details.TryGetProperty("resolutionReason", out JsonElement resolution))
             {
                 <dt>Resolution reason</dt><dd>@resolution.GetString()</dd>
             }
             <dt>Reporter</dt>
-            <dd>@await Html.PartialAsync("_Identity", new IdentityDisplayModel(report.GetProperty("reportedBy").GetString(), Detailed: true))</dd>
+            <dd>
+                @await Html.PartialAsync("_Identity", new IdentityDisplayModel(report.GetProperty("reportedBy").GetString(), Detailed: true))
+                @await Html.PartialAsync("_MuteControls", (report.GetProperty("reportedBy").GetString()!, LabelMuteKind.Reporter))
+            </dd>
             <dt>Received (UTC)</dt>
             <dd><time datetime="@report.GetProperty("createdAt").GetDateTimeOffset().ToString("O")">@report.GetProperty("createdAt").GetDateTimeOffset().ToUniversalTime().ToString("u")</time></dd>
             <dt>Report category</dt><dd>@ReportReasonOptions.Format(report.GetProperty("reasonType").GetString())</dd>

@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using idunno.AtProto.Server;
+
 namespace idunno.Bluesky.AspNet.Labeler;
 
 /// <summary>Configures bounded public label distribution and durable publication.</summary>
@@ -39,6 +41,14 @@ public sealed record LabelerHostingOptions
     /// <remarks><para>Key-rotation publication verification requires this value. It is never inferred from an incoming request host.</para></remarks>
     public Uri? PublicEndpoint { get; init; }
 
+    /// <summary>Gets the optional contact information included in the public server description.</summary>
+    /// <value>The contact information, or <see langword="null"/> when no contact is published.</value>
+    public Contact? Contact { get; init; }
+
+    /// <summary>Gets the optional public policy links included in the server description.</summary>
+    /// <value>The privacy-policy and terms-of-service links, or <see langword="null"/> when no links are published.</value>
+    public Links? Links { get; init; }
+
     /// <summary>Rejects configurations that would disable deadlines or permit unbounded batches.</summary>
     internal void Validate(string parameterName)
     {
@@ -63,6 +73,27 @@ public sealed record LabelerHostingOptions
             throw new ArgumentException(
                 "The public labeler endpoint must be an HTTPS origin without credentials, a path, a query, or a fragment.",
                 parameterName);
+        }
+
+        if (Contact is not null && string.IsNullOrWhiteSpace(Contact.Email))
+        {
+            throw new ArgumentException("The contact email must not be empty.", parameterName);
+        }
+
+        ValidatePublicLink(Links?.PrivacyPolicy, parameterName);
+        ValidatePublicLink(Links?.TermsOfService, parameterName);
+    }
+
+    /// <summary>Requires published policy links to use an absolute HTTPS URI without embedded credentials.</summary>
+    private static void ValidatePublicLink(Uri? link, string parameterName)
+    {
+        if (link is not null &&
+            (!link.IsAbsoluteUri ||
+                link.Scheme != Uri.UriSchemeHttps ||
+                string.IsNullOrEmpty(link.Host) ||
+                !string.IsNullOrEmpty(link.UserInfo)))
+        {
+            throw new ArgumentException("Server description links must be absolute HTTPS URIs without credentials.", parameterName);
         }
     }
 

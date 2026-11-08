@@ -14,6 +14,7 @@
     {
         (LabelCaseWorkflow.Unresolved, "Unresolved"),
         (LabelCaseWorkflow.InReview, "In review"),
+        (LabelCaseWorkflow.Escalated, "Escalated"),
         (LabelCaseWorkflow.Resolved, "Resolved"),
         (LabelCaseWorkflow.All, "All")
     })
@@ -40,6 +41,8 @@
     </select>
     <button type="submit" aria-label="Filter cases" title="Filter cases"><span class="fa-icon fa-filter" aria-hidden="true"></span></button>
 </form>
+<p data-queue-update-status role="status" hidden></p>
+<div data-live-queue>
 @if (cases is { ValueKind: JsonValueKind.Array } list && list.GetArrayLength() > 0)
 {
     <section class="panel">
@@ -65,7 +68,11 @@
                             bool appealed = Model.Data.GetProperty("moderation").TryGetProperty("pendingAppealCaseIds", out JsonElement pendingIds) &&
                                 pendingIds.EnumerateArray().Any(id => id.GetInt64() == item.GetProperty("id").GetInt64());
                         }
-                        @await Html.PartialAsync("_WorkflowStatus", appealed ? "Appealed" : item.GetProperty("status").GetString())</td>
+                        @await Html.PartialAsync("_WorkflowStatus", appealed ? "Appealed" : item.GetProperty("status").GetString())
+                        @if (appealed && item.GetProperty("status").GetString() == "Escalated")
+                        {
+                            @await Html.PartialAsync("_WorkflowStatus", "Escalated")
+                        }</td>
                         <td class="case-assignee">@if (item.TryGetProperty("assignee", out JsonElement assignee) && assignee.GetString() is string assigned)
                             {
                                 @await Html.PartialAsync("_Identity", new IdentityDisplayModel(assigned))
@@ -122,3 +129,4 @@ else if (ViewData["Error"] is null)
 {
     <p class="panel">No cases are available in this queue.</p>
 }
+</div>

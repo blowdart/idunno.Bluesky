@@ -9,7 +9,7 @@ document.querySelectorAll('[data-media-warning="true"]').forEach(preview => {
     const toggle = () => {
         const blurred = preview.classList.toggle("media-blurred");
         buttons.forEach(button => {
-            const label = blurred ? "Show images" : "Blur images";
+            const label = blurred ? "Show media" : "Restore media filters";
             button.setAttribute("aria-label", label);
             button.setAttribute("title", label);
             button.setAttribute("aria-pressed", String(!blurred));
@@ -20,6 +20,10 @@ document.querySelectorAll('[data-media-warning="true"]').forEach(preview => {
         images.forEach(image => {
             if (blurred) image.setAttribute("aria-hidden", "true");
             else image.removeAttribute("aria-hidden");
+            if (image.tagName === "VIDEO") {
+                if (blurred) image.pause();
+                image.controls = !blurred;
+            }
         });
     };
     buttons.forEach(button => {

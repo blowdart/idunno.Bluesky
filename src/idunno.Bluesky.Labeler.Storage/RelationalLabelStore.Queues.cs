@@ -48,16 +48,19 @@ internal abstract partial class RelationalLabelStore
                     LabelCaseWorkflow.All => string.Empty,
                     LabelCaseWorkflow.Open => " AND c.status=0",
                     LabelCaseWorkflow.InReview => " AND c.status=1",
+                    LabelCaseWorkflow.Escalated => " AND c.status=3",
                     LabelCaseWorkflow.Resolved => " AND c.status=2",
                     _ => " AND c.status<>2"
                 };
                 byte[]? subject = query.Subject is null ? null : CaseSubjectKey(query.Subject);
                 byte[]? assignee = query.Assignee is null ? null : s_strictUtf8.GetBytes(query.Assignee.Value);
                 byte[] actor = s_strictUtf8.GetBytes(caller.Actor.Value);
+                long now = await DatabaseTimeAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
                 DbCommand command = Command(
                     connection: connection,
                     transaction: transaction,
                     sql: "SELECT c.payload FROM label_cases c WHERE c.case_id>@after" + status +
+                        (query.Queue is LabelCaseWorkflow.All or LabelCaseWorkflow.PendingAppeals ? string.Empty : " AND " + UnmutedSubjectFilter("c")) +
                         (subject is null ? string.Empty : " AND c.subject_hash=@subjectHash AND c.subject_key=@subject") +
                         (assignee is null ? string.Empty : " AND c.assignee_hash=@assigneeHash AND c.assignee_key=@assignee") +
                         (query.Queue == LabelCaseWorkflow.Unassigned ? " AND c.assignee_hash IS NULL" : string.Empty) +
@@ -68,6 +71,7 @@ internal abstract partial class RelationalLabelStore
                             " AND EXISTS(SELECT 1 FROM label_appeals a WHERE a.case_id=c.case_id AND a.status=0)" : string.Empty) +
                         " ORDER BY c.case_id LIMIT @limit",
                     ("@after", after),
+                    ("@muteNow", now),
                     ("@subjectHash", subject is null ? null : SHA256.HashData(subject)),
                     ("@subject", subject),
                     ("@assigneeHash", assignee is null ? null : SHA256.HashData(assignee)),

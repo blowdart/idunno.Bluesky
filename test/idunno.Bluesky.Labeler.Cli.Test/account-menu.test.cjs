@@ -25,7 +25,7 @@ function harness() {
     };
     const document = {
         addEventListener: (name, callback) => { listeners[name] = callback; },
-        querySelectorAll: selector => selector === ".account-menu[open]" && open ? [menu] : []
+        querySelectorAll: selector => selector === ".account-menu[open], .online-menu[open]" && open ? [menu] : []
     };
     vm.runInNewContext(script, { document });
     return { listeners, inside, isOpen: () => open, isFocused: () => focused };

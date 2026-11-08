@@ -1,7 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Description>Host-neutral durable persistence contracts for standalone AT Protocol labelers.</Description>
+    <Description>Core issuance, signing, administration and storage contracts for standalone AT Protocol labelers.</Description>
     <PackageReadmeFile>readme.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageTags>atproto;bluesky;labeler;moderation;storage</PackageTags>
     <NeutralLanguage>en-US</NeutralLanguage>
   </PropertyGroup>
   <ItemGroup>
@@ -14,6 +16,7 @@
     <AdditionalFiles Include="PublicAPI.Shipped.txt" />
     <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
     <None Include="readme.md" Pack="true" PackagePath="\" />
+    <None Include="icon.png" Pack="true" PackagePath="\" />
     <None Include="..\..\exclusion.dic" Link="exclusion.dic" />
     <ProjectReference Include="..\idunno.AtProto\idunno.AtProto.csproj" />
   </ItemGroup>

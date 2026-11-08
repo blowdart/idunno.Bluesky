@@ -74,6 +74,12 @@ public static class LabelerModerationExtensions
             return new LabelPolicyService(
                 issuer: issuer, store: policies, httpClient: httpClient, loggerFactory: provider.GetRequiredService<ILoggerFactory>());
         });
+        services.TryAddSingleton<IDidHandleResolver>(provider => new DidHandleCache(new DidHandleCacheOptions
+        {
+            LoggerFactory = provider.GetRequiredService<ILoggerFactory>(),
+            Size = 10_000,
+            ResolutionTimeout = TimeSpan.FromSeconds(5)
+        }));
         services.AddSingleton(provider => new LabelerPolicyEmailService(
             issuer: issuer,
             alerts: settings.PolicyEmail.Enabled
@@ -82,7 +88,9 @@ public static class LabelerModerationExtensions
                 : null,
             settings: settings.PolicyEmail,
             clock: provider.GetRequiredService<TimeProvider>(),
-            logger: provider.GetRequiredService<ILogger<LabelerPolicyEmailService>>()));
+            logger: provider.GetRequiredService<ILogger<LabelerPolicyEmailService>>(),
+            xenonEndpoint: provider.GetService<LabelerEmailUiLink>()?.Endpoint,
+            handles: provider.GetRequiredService<IDidHandleResolver>()));
         services.AddSingleton<ILabelIssuancePolicyProvider>(provider => provider.GetRequiredService<LabelPolicyService>());
         services.AddHostedService<PolicyVerificationWorker>();
         services.AddSingleton(provider => new LabelerModerationHost(

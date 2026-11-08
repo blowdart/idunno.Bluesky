@@ -55,6 +55,16 @@ internal sealed partial class LabelerModerationHost(
     /// <summary>Releases this component's instruments with its owning service provider.</summary>
     public void Dispose() => _meter.Dispose();
 
+    /// <summary>Observes URI-only evidence after authentication without changing its original subject.</summary>
+    private async Task ResolveRecordAsync(LabelReportSubmission submission, CancellationToken token)
+    {
+        if (submission.Subject is { RecordUri: { } uri, Cid: null })
+        {
+            submission.RecordResolution = await ReportRecordResolver.ResolveAsync(uri, httpClient, clock, token).ConfigureAwait(false);
+            Count("record-" + submission.RecordResolution.Status);
+        }
+    }
+
     /// <summary>Admits and handles one bounded request without appending unauthenticated flood traffic to audit.</summary>
     internal async Task ReportAsync(HttpContext context)
     {
@@ -135,9 +145,10 @@ internal sealed partial class LabelerModerationHost(
                 storedPolicy.Issuer == issuer &&
                 storedPolicy.VerificationFreshness == settings.VerificationFreshness &&
                 storedPolicy.DatabaseTime < validUntil &&
-                storedPolicy.DatabaseTime >= validUntil - storedPolicy.VerificationFreshness
+                !PolicyVerificationClock.IsRollbackBeyondTolerance(validUntil - storedPolicy.VerificationFreshness, storedPolicy.DatabaseTime)
                     ? storedPolicy.Revision
                     : null;
+            await ResolveRecordAsync(submission, linked.Token).ConfigureAwait(false);
             LabelServiceResult<LabelReportIntakeReceipt> result = await reports.AcceptReportAsync(
                 authentication: authentication,
                 submission: submission,
@@ -355,9 +366,10 @@ internal sealed partial class LabelerModerationHost(
                 storedPolicy.Issuer == issuer &&
                 storedPolicy.VerificationFreshness == settings.VerificationFreshness &&
                 storedPolicy.DatabaseTime < validUntil &&
-                storedPolicy.DatabaseTime >= validUntil - storedPolicy.VerificationFreshness
+                !PolicyVerificationClock.IsRollbackBeyondTolerance(validUntil - storedPolicy.VerificationFreshness, storedPolicy.DatabaseTime)
                     ? storedPolicy.Revision
                     : null;
+            await ResolveRecordAsync(submission, linked.Token).ConfigureAwait(false);
             LabelServiceResult<LabelReportIntakeReceipt> result = await reports.AcceptReportAsync(
                 authentication: authentication,
                 submission: submission,
@@ -445,7 +457,7 @@ internal sealed partial class LabelerModerationHost(
             DateTimeOffset now = gate.DatabaseTime;
             return gate.Phase == LabelPolicyPhase.VerifiedActive &&
                 gate.VerifiedUntil is { } validUntil && now < validUntil &&
-                now >= validUntil - gate.VerificationFreshness
+                !PolicyVerificationClock.IsRollbackBeyondTolerance(validUntil - gate.VerificationFreshness, now)
                 ? HealthCheckResult.Healthy()
                 : HealthCheckResult.Unhealthy("Moderation has no fresh independently verified declaration.");
         }

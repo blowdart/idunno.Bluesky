@@ -19,6 +19,7 @@ internal sealed class AdministrationState
     public bool PolicyVerificationFailureActive { get; set; }
     public PolicyFailureAlert? PendingPolicyAlert { get; set; }
     public long ChangeNotificationThrough { get; set; }
+    public bool NotificationsInitialized { get; set; }
     public AdministrationChangeAlert? PendingChangeAlert { get; set; }
 }
 
@@ -28,7 +29,8 @@ internal sealed record AdministrationMember(
     bool Active,
     bool Removed,
     long Generation,
-    string? NotificationEmail = null);
+    string? NotificationEmail = null,
+    LabelMediaPreferences? MediaPreferences = null);
 
 /// <summary>Identifies an explicit OS delegation and its unique binding generation.</summary>
 internal sealed record AdministrationBinding(string Did, string Credential);

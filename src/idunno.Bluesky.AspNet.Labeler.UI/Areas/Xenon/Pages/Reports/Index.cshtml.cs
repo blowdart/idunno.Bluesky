@@ -32,10 +32,10 @@ public sealed class IndexModel : PageModel
     /// <summary>Gets the counted report navigation and global ordering.</summary>
     internal TableNavigation? Table { get; private set; }
 
-    /// <summary>Gets the independently paged pending-validation table navigation.</summary>
+    /// <summary>Gets the independently paged retained-report table navigation.</summary>
     internal TableNavigation? PendingTable { get; private set; }
 
-    /// <summary>Gets the confidential pending-validation report response.</summary>
+    /// <summary>Gets the confidential retained-report response.</summary>
     internal JsonElement PendingData { get; private set; }
 
     /// <summary>Gets the policy or lifecycle explanation relevant to report admission.</summary>
@@ -49,6 +49,9 @@ public sealed class IndexModel : PageModel
 
     /// <summary>Gets whether this retained-report page contains out-of-scope reports.</summary>
     internal bool HasOutOfScopeReports { get; private set; }
+
+    /// <summary>Gets whether this retained-report page contains submissions from muted reporters.</summary>
+    internal bool HasMutedReporterReports { get; private set; }
 
     /// <summary>Gets whether the admission message should link to policy verification.</summary>
     internal bool PolicyVerificationNeedsRefresh { get; private set; }
@@ -72,7 +75,7 @@ public sealed class IndexModel : PageModel
         }
 
         if (!ModelState.IsValid || AfterId < 0 || Status is not ("Unresolved" or "Handled" or "All") ||
-            Queue is not (LabelCaseWorkflow.Unresolved or LabelCaseWorkflow.InReview or LabelCaseWorkflow.Resolved or LabelCaseWorkflow.All))
+            Queue is not (LabelCaseWorkflow.Unresolved or LabelCaseWorkflow.InReview or LabelCaseWorkflow.Escalated or LabelCaseWorkflow.Resolved or LabelCaseWorkflow.All))
         {
             ViewData["Error"] = "Choose an available report status and refresh the page before trying again.";
             return;
@@ -98,9 +101,13 @@ public sealed class IndexModel : PageModel
                 {
                     HasWaitingReports = true;
                 }
-                else
+                else if (report.GetProperty("status").GetString() == "NotApplicable")
                 {
                     HasOutOfScopeReports = true;
+                }
+                else if (report.GetProperty("status").GetString() == "ReporterMuted")
+                {
+                    HasMutedReporterReports = true;
                 }
             }
         }
@@ -140,7 +147,7 @@ public sealed class IndexModel : PageModel
         phase == "VerifiedActive" &&
         verifiedUntil is { } deadline &&
         deadline > databaseTime &&
-        databaseTime >= deadline.AddMilliseconds(-freshnessMilliseconds);
+        !PolicyVerificationClock.IsRollbackBeyondTolerance(deadline.AddMilliseconds(-freshnessMilliseconds), databaseTime);
 
     /// <summary>Explains the current admission gate without treating an empty retained queue as a verification failure.</summary>
     internal static string? DescribeAdmission(

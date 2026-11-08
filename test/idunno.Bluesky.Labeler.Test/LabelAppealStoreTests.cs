@@ -211,8 +211,11 @@ public class LabelAppealStoreTests
                 reason: "Cannot skip appeal review.", caseId: moderationCase.Id, expectedRevision: moderationCase.Revision),
             token)).Error!.Code);
         LabelCaseDecision implicitClosure = Decision(moderationCase, [], "implicit", null, null);
-        Assert.Equal(LabelServiceErrorCode.CaseConflict,
-            (await service.ExecuteCaseDecisionAsync(caller, implicitClosure, token)).Error!.Code);
+        LabelCaseDecisionReceipt acknowledgment = Success(await service.ExecuteCaseDecisionAsync(caller, implicitClosure, token));
+        Assert.Equal(LabelCaseStatus.InReview, acknowledgment.CaseEvent.Case.Status);
+        Assert.Equal(LabelAppealStatus.Pending, Success(await appeals.GetAppealAsync(caller, appeal.Id, token)).Status);
+        Assert.Empty(acknowledgment.Labels);
+        moderationCase = acknowledgment.CaseEvent.Case;
         LabelCaseLabelAction[] actions = outcome switch
         {
             LabelAppealStatus.Withdrawn => [new(LabelOperationKind.Negate, "spam")],

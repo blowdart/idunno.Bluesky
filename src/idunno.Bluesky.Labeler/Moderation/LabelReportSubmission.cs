@@ -74,6 +74,8 @@ public sealed class LabelReportSubmission
     /// <summary>Gets the immutable submitted reference.</summary>
     /// <value>The account DID or record URI and CID, without network rewriting.</value>
     public LabelReportSubject Subject { get; }
+    /// <summary>Gets or sets the independent intake observation, never the submitted record evidence.</summary>
+    internal LabelRecordResolution? RecordResolution { get; set; }
     /// <summary>Gets the open reason identifier.</summary>
     /// <value>The exact reason, including future identifiers.</value>
     public string ReasonType { get; }

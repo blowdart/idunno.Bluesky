@@ -9,6 +9,17 @@ namespace idunno.Bluesky.Labeler.Administration;
 /// <summary>Reads counted, globally ordered administrative tables under the same live authority as other inspections.</summary>
 internal interface ILabelTableStore
 {
+    /// <summary>Reads only the authenticated caller's private media display preferences.</summary>
+    Task<LabelServiceResult<LabelMediaPreferences>> ReadMediaPreferencesAsync(
+        LabelAdministrationCaller caller,
+        CancellationToken cancellationToken);
+
+    /// <summary>Updates only the authenticated caller's private media display preferences.</summary>
+    Task<LabelServiceResult<LabelMediaPreferences>> SaveMediaPreferencesAsync(
+        LabelAdministrationCaller caller,
+        LabelMediaPreferences preferences,
+        CancellationToken cancellationToken);
+
     /// <summary>Deletes an unpublished draft under live policy authority while retaining immutable history and retry receipts.</summary>
     Task<LabelServiceResult<LabelPolicyDefinition>> DeletePolicyDraftAsync(
         LabelAdministrationCaller caller,
@@ -54,6 +65,45 @@ internal interface ILabelTableStore
         LabelAdministrationCaller caller,
         LabelTableQuery query,
         CancellationToken cancellationToken);
+}
+
+/// <summary>Defines composable personal display filters, without changing label or moderation state.</summary>
+[Flags]
+internal enum LabelMediaFilter
+{
+    None = 0,
+    Blur = 1,
+    Grayscale = 2,
+    Translucent = 4
+}
+
+/// <summary>Retains the five built-in media label preferences; existing members keep the previous blur-only behavior.</summary>
+internal sealed record LabelMediaPreferences(
+    LabelMediaFilter GraphicMedia = LabelMediaFilter.Blur,
+    LabelMediaFilter Porn = LabelMediaFilter.Blur,
+    LabelMediaFilter Nudity = LabelMediaFilter.Blur,
+    LabelMediaFilter Sexual = LabelMediaFilter.Blur,
+    LabelMediaFilter SelfHarm = LabelMediaFilter.Blur)
+{
+    /// <summary>Selects a known label's filters, retaining blur for nonconfigurable content warnings.</summary>
+    internal LabelMediaFilter ForLabel(string label) => label switch
+    {
+        "graphic-media" => GraphicMedia,
+        "porn" => Porn,
+        "nudity" => Nudity,
+        "sexual" => Sexual,
+        "self-harm" => SelfHarm,
+        _ => LabelMediaFilter.Blur
+    };
+
+    /// <summary>Rejects bits that do not identify a supported display filter.</summary>
+    internal void Validate()
+    {
+        if ((GraphicMedia | Porn | Nudity | Sexual | SelfHarm) is < LabelMediaFilter.None or > (LabelMediaFilter)7)
+        {
+            throw new ArgumentOutOfRangeException(nameof(GraphicMedia), "Only blur, grayscale and translucent filters are supported.");
+        }
+    }
 }
 
 /// <summary>Identifies the authorized dataset being inspected.</summary>
@@ -118,7 +168,7 @@ internal sealed record LabelTableQuery(
     internal void Validate()
     {
         if (Page <= 0 || !Columns.Contains(Sort) || !Enum.IsDefined(Queue) ||
-            Workflow is { } workflow && workflow is not (LabelCaseWorkflow.Unresolved or LabelCaseWorkflow.InReview or LabelCaseWorkflow.Resolved or LabelCaseWorkflow.All) ||
+            Workflow is { } workflow && workflow is not (LabelCaseWorkflow.Unresolved or LabelCaseWorkflow.InReview or LabelCaseWorkflow.Escalated or LabelCaseWorkflow.Resolved or LabelCaseWorkflow.All) ||
             AuditActor is { Length: > 2048 } ||
             TeamMember is not null && !idunno.AtProto.Did.TryParse(TeamMember, out _) ||
             AuditAfterSequence < 0 || AuditThroughSequence is < 0 ||
@@ -141,9 +191,10 @@ internal sealed record LabelTablePage(
     IReadOnlyList<LabelTeamMember>? Team = null,
     IReadOnlyList<LabelAuthorReportSummary>? AuthorSummaries = null,
     IReadOnlyList<long>? PendingAppealCaseIds = null,
-    IReadOnlyList<LabelPendingModerationReport>? PendingReports = null);
+    IReadOnlyList<LabelPendingModerationReport>? PendingReports = null,
+    IReadOnlyList<long>? EscalatedCaseIds = null);
 
-/// <summary>Contains a confidential report awaiting policy verification or closed after a subject-scope check.</summary>
+/// <summary>Contains a confidential report retained without a case because of policy verification, scope or a reporter mute.</summary>
 internal sealed record LabelPendingModerationReport(
     long Id,
     LabelReportSubmission Submission,
@@ -152,7 +203,8 @@ internal sealed record LabelPendingModerationReport(
     bool PendingVerification,
     string? PolicyVersion,
     DateTimeOffset? ProcessedAt,
-    string? ResolutionReason);
+    string? ResolutionReason,
+    bool ReporterMuted = false);
 
 /// <summary>Contains live unresolved-case, unhandled-report and pending-appeal totals.</summary>
 internal sealed record LabelNavigationCounts(long Cases, long Reports, long Appeals);

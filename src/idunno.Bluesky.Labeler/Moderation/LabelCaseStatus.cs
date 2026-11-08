@@ -11,5 +11,7 @@ public enum LabelCaseStatus
     /// <summary>A moderator is reviewing the subject.</summary>
     InReview,
     /// <summary>A reasoned outcome closed the review.</summary>
-    Resolved
+    Resolved,
+    /// <summary>The subject awaits further moderator review without changing its assignment.</summary>
+    Escalated
 }

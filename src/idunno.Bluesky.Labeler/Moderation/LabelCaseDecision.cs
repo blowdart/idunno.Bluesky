@@ -24,7 +24,8 @@ public sealed class LabelCaseDecision
     /// <exception cref="ArgumentNullException"><paramref name="actions"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Text, actions or explicit appeal resolution arguments are invalid.</exception>
     /// <exception cref="ArgumentOutOfRangeException">An identifier, revision, text, action count or appeal count exceeds its bounds.</exception>
-    /// <remarks><para>Pending appeals require explicit review. Upholding unchanged outcomes and acknowledging
+    /// <remarks><para>Label changes with pending appeals require explicit review. Report-only acknowledgment
+    /// leaves pending appeals open and keeps the case in review. Upholding unchanged outcomes and acknowledging
     /// superseded outcomes cannot mutate labels. Other pending appeals keep the case in review.</para></remarks>
     public LabelCaseDecision(
         string operationId,

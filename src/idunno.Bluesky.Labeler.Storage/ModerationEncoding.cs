@@ -39,7 +39,8 @@ internal sealed record ModerationCaseData(
     LabelCaseStatus Status,
     string? Assignee,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt)
+    DateTimeOffset UpdatedAt,
+    LabelRecordResolution? RecordResolution = null)
 {
     /// <summary>Validates persisted subject and workflow metadata when constructing a public snapshot.</summary>
     internal LabelModerationCase ToCase()
@@ -57,7 +58,10 @@ internal sealed record ModerationCaseData(
             status: Status,
             assignee: Assignee is null ? null : new(Assignee),
             createdAt: CreatedAt,
-            updatedAt: UpdatedAt);
+            updatedAt: UpdatedAt)
+        {
+            RecordResolution = RecordResolution
+        };
     }
 }
 
@@ -341,7 +345,8 @@ internal sealed record ModerationReportData(
     string? DecisionOperationId = null,
     DateTimeOffset? HandledAt = null,
     string? ResolutionReason = null,
-    string? AppealLabelValue = null)
+    string? AppealLabelValue = null,
+    LabelRecordResolution? RecordResolution = null)
 {
     /// <summary>Revalidates a retained report and defensively clones arbitrary tool metadata.</summary>
     internal LabelModerationReport ToReport()
@@ -362,7 +367,10 @@ internal sealed record ModerationReportData(
                 reason: Reason,
                 modToolName: ToolName,
                 modToolMetadata: metadata,
-                appealLabelValue: AppealLabelValue),
+                appealLabelValue: AppealLabelValue)
+            {
+                RecordResolution = RecordResolution
+            },
             reportedBy: new(Reporter),
             createdAt: CreatedAt,
             policyVersion: PolicyVersion,
@@ -392,7 +400,9 @@ internal sealed record PendingModerationReportData(
     bool PendingVerification = true,
     string? PolicyVersion = null,
     DateTimeOffset? ProcessedAt = null,
-    string? ResolutionReason = null)
+    string? ResolutionReason = null,
+    bool ReporterMuted = false,
+    LabelRecordResolution? RecordResolution = null)
 {
     /// <summary>Revalidates the bounded report intent before exposing it to an authorized moderator.</summary>
     internal LabelPendingModerationReport ToPendingReport()
@@ -412,13 +422,17 @@ internal sealed record PendingModerationReportData(
                 reason: Reason,
                 modToolName: ToolName,
                 modToolMetadata: metadata,
-                appealLabelValue: AppealLabelValue),
+                appealLabelValue: AppealLabelValue)
+            {
+                RecordResolution = RecordResolution
+            },
             ReportedBy: new(Reporter),
             CreatedAt: CreatedAt,
             PendingVerification: PendingVerification,
             PolicyVersion: PolicyVersion,
             ProcessedAt: ProcessedAt,
-            ResolutionReason: ResolutionReason);
+            ResolutionReason: ResolutionReason,
+            ReporterMuted: ReporterMuted);
     }
 
     /// <summary>Copies the pending submission into the ordinary report representation for verified promotion.</summary>
@@ -436,7 +450,8 @@ internal sealed record PendingModerationReportData(
         PolicyVersion: policyVersion,
         Audience: Audience,
         TokenHash: TokenHash,
-        AppealLabelValue: AppealLabelValue);
+        AppealLabelValue: AppealLabelValue,
+        RecordResolution: RecordResolution);
 }
 
 /// <summary>Supplies trimming-safe metadata for moderation state, retry intent and history.</summary>

@@ -105,10 +105,12 @@ CREATE TABLE IF NOT EXISTS label_cases (
     case_id INTEGER PRIMARY KEY CHECK(case_id>0),
     subject_hash BLOB NOT NULL CHECK(length(subject_hash)=32),
     subject_key BLOB NOT NULL,
-    status INTEGER NOT NULL CHECK(status BETWEEN 0 AND 2),
+    status INTEGER NOT NULL CHECK(status BETWEEN 0 AND 3),
     assignee_hash BLOB NULL CHECK(assignee_hash IS NULL OR length(assignee_hash)=32),
     assignee_key BLOB NULL,
-    payload BLOB NOT NULL
+    payload BLOB NOT NULL,
+    mute_subject_hash BLOB NOT NULL CHECK(length(mute_subject_hash)=32),
+    mute_subject_key BLOB NOT NULL
 );
 CREATE INDEX IF NOT EXISTS label_cases_subject ON label_cases(subject_hash, status);
 CREATE INDEX IF NOT EXISTS label_cases_status ON label_cases(status, case_id);
@@ -127,7 +129,9 @@ CREATE TABLE IF NOT EXISTS label_reports (
     case_id INTEGER NOT NULL REFERENCES label_cases(case_id),
     reason_hash BLOB NOT NULL CHECK(length(reason_hash)=32),
     reason_type TEXT NOT NULL,
-    payload BLOB NOT NULL
+    payload BLOB NOT NULL,
+    mute_subject_hash BLOB NOT NULL CHECK(length(mute_subject_hash)=32),
+    mute_subject_key BLOB NOT NULL
 );
 CREATE INDEX IF NOT EXISTS label_reports_case ON label_reports(case_id, report_id);
 CREATE INDEX IF NOT EXISTS label_reports_reason ON label_reports(reason_hash, case_id);
@@ -171,6 +175,7 @@ CREATE TABLE IF NOT EXISTS label_appeals (
 );
 CREATE INDEX IF NOT EXISTS label_appeals_case ON label_appeals(case_id, status, appeal_id);
 CREATE INDEX IF NOT EXISTS label_appeals_pending ON label_appeals(pending_hash, status);
+CREATE INDEX IF NOT EXISTS label_appeals_status ON label_appeals(status, appeal_id);
 CREATE TABLE IF NOT EXISTS label_appeal_reports (
     report_id INTEGER PRIMARY KEY REFERENCES label_reports(report_id),
     appeal_id INTEGER NOT NULL REFERENCES label_appeals(appeal_id)
@@ -211,4 +216,48 @@ CREATE TABLE IF NOT EXISTS label_post_review_checks (
     case_id INTEGER PRIMARY KEY REFERENCES label_cases(case_id),
     checked_ms INTEGER NOT NULL
 );
-INSERT OR IGNORE INTO label_schema(id, version) VALUES(1, 14);
+CREATE TABLE IF NOT EXISTS label_mutes (
+    kind INTEGER NOT NULL CHECK(kind IN (0,1)),
+    event_id INTEGER NOT NULL,
+    subject_hash BLOB NOT NULL CHECK(length(subject_hash)=32),
+    subject_key BLOB NOT NULL,
+    until_ms INTEGER NOT NULL,
+    PRIMARY KEY(kind,subject_hash)
+);
+CREATE TABLE IF NOT EXISTS label_case_queries (
+    case_id INTEGER PRIMARY KEY REFERENCES label_cases(case_id) ON DELETE CASCADE,
+    created_at TEXT COLLATE BINARY,
+    assignee_hash BLOB CHECK(assignee_hash IS NULL OR length(assignee_hash)=32),
+    assignee_key BLOB
+);
+CREATE INDEX IF NOT EXISTS label_case_queries_assignee ON label_case_queries(assignee_hash,created_at,case_id);
+CREATE INDEX IF NOT EXISTS label_case_queries_created ON label_case_queries(created_at,case_id);
+CREATE TABLE IF NOT EXISTS label_report_queries (
+    report_id INTEGER PRIMARY KEY REFERENCES label_reports(report_id) ON DELETE CASCADE,
+    case_id INTEGER NOT NULL,
+    subject TEXT COLLATE BINARY NOT NULL,
+    repository_hash BLOB NOT NULL CHECK(length(repository_hash)=32),
+    repository_key BLOB NOT NULL,
+    handled INTEGER NOT NULL CHECK(handled IN (0,1)),
+    created_at TEXT COLLATE BINARY
+);
+CREATE INDEX IF NOT EXISTS label_report_queries_repository ON label_report_queries(repository_hash,report_id);
+CREATE INDEX IF NOT EXISTS label_report_queries_handled ON label_report_queries(handled,created_at,report_id);
+CREATE INDEX IF NOT EXISTS label_report_queries_created ON label_report_queries(created_at,report_id);
+CREATE INDEX IF NOT EXISTS label_report_queries_subject ON label_report_queries(subject,report_id);
+CREATE INDEX IF NOT EXISTS label_report_queries_activity ON label_report_queries(case_id,created_at,report_id);
+CREATE TABLE IF NOT EXISTS label_activity_queries (
+    seq INTEGER PRIMARY KEY REFERENCES label_case_events(seq) ON DELETE CASCADE,
+    case_id INTEGER NOT NULL,
+    created_at TEXT COLLATE BINARY
+);
+CREATE INDEX IF NOT EXISTS label_activity_queries_case ON label_activity_queries(case_id,created_at,seq);
+CREATE TABLE IF NOT EXISTS label_audit_queries (
+    seq INTEGER PRIMARY KEY REFERENCES label_admin_audit(seq) ON DELETE CASCADE,
+    actor TEXT COLLATE BINARY,
+    succeeded INTEGER CHECK(succeeded IN (0,1)),
+    created_ms NUMERIC
+);
+CREATE INDEX IF NOT EXISTS label_audit_queries_actor ON label_audit_queries(actor,succeeded,seq);
+CREATE INDEX IF NOT EXISTS label_audit_queries_time ON label_audit_queries(created_ms,seq);
+INSERT OR IGNORE INTO label_schema(id, version) VALUES(1, 18);

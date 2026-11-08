@@ -1,0 +1,120 @@
+@page
+@model idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Subjects.DetailModel
+@{
+    ViewData["Title"] = (Model.IsAccount, Model.Preview?.Kind) switch
+    {
+        (true, _) => "Account details",
+        (false, { } kind) => $"{kind} record details",
+        _ => "Record details"
+    };
+}
+<h1>@ViewData["Title"]</h1>
+@if (Model.Preview is { } preview && Model.Target is { } target && Model.RecordUri is { } record)
+{
+    <section class="panel" aria-label="Subject details">
+        @if (Model.IsAccount)
+        {
+            <p>Account subject: <code>@target</code>. The profile record below supplies the public profile preview; account and profile-record labels are separate.</p>
+        }
+        <dl class="record-details">
+            <div><dt>Handle</dt><dd>@if (preview.Handle is { } handle && !handle.StartsWith("did:", StringComparison.Ordinal))
+                {
+                    <a asp-page="/Subjects/Detail" asp-route-target="@Model.Author">@@@handle</a>
+                }
+                else
+                {
+                    <span class="muted">Unavailable</span>
+                }</dd></div>
+            <div><dt>DID</dt><dd><a asp-page="/Subjects/Detail" asp-route-target="@Model.Author"><code>@Model.Author</code></a></dd></div>
+            <div><dt>Collection</dt><dd><code>@record.Collection</code></dd></div>
+            <div><dt>Rkey</dt><dd><code>@record.RecordKey</code></dd></div>
+            <div><dt>URI</dt><dd><code>@record</code></dd></div>
+            <div><dt>CID</dt><dd>@if (preview.Cid is { } cid)
+                {
+                    <code>@cid</code>
+                }
+                else
+                {
+                    <span class="muted">Unavailable</span>
+                }</dd></div>
+        </dl>
+        @if (target != Model.Author)
+        {
+            <p><a asp-page="/Subjects/Detail" asp-route-target="@Model.Author">View author's profile</a></p>
+        }
+        <h2>@(Model.IsAccount ? "Account labels" : "Record labels")</h2>
+        <h3>This labeler</h3>
+        @if (!Model.LabelsAvailable)
+        {
+            <p role="status">Current labels could not be checked.</p>
+        }
+        else if (Model.Labels.Length == 0)
+        {
+            <p class="muted">None</p>
+        }
+        else
+        {
+            <ul>@foreach (ModerationLabelChoiceView label in Model.Labels)
+                {
+                    <li><code>@label.Value</code><partial name="_LabelExpiry" model="label.ExpiresAt" /></li>
+                }</ul>
+        }
+        @if (Model.IsAccount)
+        {
+            <h3>Bluesky account moderation</h3>
+            @if (preview.AccountLabels is { Length: > 0 } accountLabels)
+            {
+                <ul>@foreach (string label in accountLabels)
+                    {
+                        <li>@label</li>
+                    }</ul>
+            }
+            else if (preview.RecordJson is not null && !preview.ModerationUnavailable)
+            {
+                <p class="muted">None</p>
+            }
+            else
+            {
+                <p role="status">Account moderation labels could not be fully checked.</p>
+            }
+        }
+        <h3>@(Model.IsAccount ? "Profile record self-labels and Bluesky moderation" : "Record self-labels and Bluesky moderation")</h3>
+        @if (preview.CurrentLabels is { Length: > 0 } labels)
+        {
+            <ul>@foreach (string label in labels)
+                {
+                    <li>@label</li>
+                }</ul>
+        }
+        else if (preview.RecordJson is not null && !preview.ModerationUnavailable)
+        {
+            <p class="muted">None</p>
+        }
+        @if (preview.RecordJson is null || preview.ModerationUnavailable)
+        {
+            <p role="status">Some labels could not be checked. Labels from other labelers are not included.</p>
+        }
+        else
+        {
+            <p class="muted">Labels from other labelers are not included.</p>
+        }
+    </section>
+    @if (preview.RecordJson is { } json)
+    {
+        <details class="panel record-contents" open>
+            <summary>Contents</summary>
+            <pre><code>@json</code></pre>
+        </details>
+    }
+    @if (preview.Kind != "Record")
+    {
+        <section class="panel">
+            <partial name="_SubjectPreview" model="preview" />
+        </section>
+    }
+    else if (preview.Error is { } error)
+    {
+        <p class="panel" role="status">@error</p>
+    }
+    <p class="muted">Current public content. Reported content versions remain on the original report and case pages; this view does not replace that evidence.</p>
+}

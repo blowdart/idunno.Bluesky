@@ -59,9 +59,25 @@ internal sealed class SqliteLabelStore(string connectionString, ILogger<SqliteLa
     /// <summary>Commits schema changes together while holding the same immediate writer lock used for data operations.</summary>
     protected override async Task MigrateAsync(DbConnection connection, CancellationToken token)
     {
-        DbTransaction transaction = await BeginAsync(connection, token).ConfigureAwait(false);
-        await using ConfiguredAsyncDisposable transactionDisposal = transaction.ConfigureAwait(false);
-        await ApplySchemaAsync(connection, transaction, token).ConfigureAwait(false);
-        await transaction.CommitAsync(token).ConfigureAwait(false);
+        await ExecuteAsync(connection: connection, transaction: null, sql: "PRAGMA foreign_keys=OFF", token: token).ConfigureAwait(false);
+        try
+        {
+            DbTransaction transaction = await BeginAsync(connection, token).ConfigureAwait(false);
+            await using ConfiguredAsyncDisposable transactionDisposal = transaction.ConfigureAwait(false);
+            await ApplySchemaAsync(connection, transaction, token).ConfigureAwait(false);
+            if (await ScalarAsync(
+                connection: connection,
+                transaction: transaction,
+                sql: "PRAGMA foreign_key_check",
+                token: token).ConfigureAwait(false) is not null)
+            {
+                throw new InvalidDataException("The label schema upgrade failed its foreign key integrity check.");
+            }
+            await transaction.CommitAsync(token).ConfigureAwait(false);
+        }
+        finally
+        {
+            await ExecuteAsync(connection: connection, transaction: null, sql: "PRAGMA foreign_keys=ON", token: CancellationToken.None).ConfigureAwait(false);
+        }
     }
 }

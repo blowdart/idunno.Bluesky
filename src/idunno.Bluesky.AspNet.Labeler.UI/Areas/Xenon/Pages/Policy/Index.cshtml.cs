@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
+using idunno.Bluesky.Labeler.Moderation;
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -23,7 +24,7 @@ public sealed class IndexModel : PageModel
     /// <summary>Gets the selected report reasons, or null when every reason is accepted.</summary>
     internal string[]? ReasonTypes { get; private set; }
 
-    /// <summary>Gets the existing declaration as a starting point for the next immutable draft.</summary>
+    /// <summary>Gets the existing declaration as a starting point for draft editing.</summary>
     internal string DeclarationText { get; private set; } = string.Empty;
 
     /// <summary>Gets the definition being edited independently of the selected publication state.</summary>
@@ -54,7 +55,7 @@ public sealed class IndexModel : PageModel
     internal string LabelerHandle { get; private set; } = string.Empty;
 
     /// <summary>Gets the active editor source description.</summary>
-    internal string EditorSource { get; private set; } = "New policy";
+    internal string EditorSource { get; private set; } = "Working on policy draft: new, unsaved";
 
     /// <summary>Tracks whether posted editor values must survive validation failures.</summary>
     private bool EditorSubmitted { get; set; }
@@ -62,9 +63,19 @@ public sealed class IndexModel : PageModel
     /// <summary>Gets whether the page is redisplaying unsaved submitted draft values.</summary>
     internal bool HasSubmittedDraft => EditorSubmitted;
 
+    /// <summary>Gets the saved unpublished draft being edited, or an empty identifier for a new draft.</summary>
+    internal string EditingDraft { get; private set; } = string.Empty;
+
+    /// <summary>Gets the editor tab to retain after saving or redisplaying submitted values.</summary>
+    internal string EditorTab { get; private set; } = "policy-labels";
+
     /// <summary>Loads the persisted and independently verified policy state.</summary>
     public async Task OnGetAsync()
     {
+        if (!EditorSubmitted && Request.Query["editorTab"].ToString() is "policy-labels" or "policy-moderation" or "policy-advanced")
+        {
+            EditorTab = Request.Query["editorTab"].ToString();
+        }
         if (TempData["PublicationError"] is string publicationError)
         {
             ViewData["Error"] = publicationError;
@@ -107,7 +118,8 @@ public sealed class IndexModel : PageModel
 
         Editor = CurrentDefinition;
         EditorSource = CurrentDefinition.ValueKind == JsonValueKind.Object
-            ? "Current policy: " + CurrentDefinition.GetProperty("version").GetString() : "New policy";
+            ? "Working on policy draft: new, based on current policy " + CurrentDefinition.GetProperty("version").GetString()
+            : "Working on policy draft: new, unsaved";
         if (Request.Query["editor"] == "draft")
         {
             string requested = Request.Query["draft"].ToString();
@@ -116,7 +128,9 @@ public sealed class IndexModel : PageModel
             if (draft.ValueKind == JsonValueKind.Object)
             {
                 Editor = draft;
-                EditorSource = "Saved draft: " + draft.GetProperty("version").GetString();
+                EditingDraft = draft.GetProperty("version").GetString()!;
+                Version = EditingDraft;
+                EditorSource = "Working on policy draft: " + draft.GetProperty("version").GetString();
             }
             else
             {
@@ -126,7 +140,7 @@ public sealed class IndexModel : PageModel
         else if (Request.Query["editor"] == "clear")
         {
             Editor = default;
-            EditorSource = "New policy";
+            EditorSource = "Working on policy draft: new, unsaved";
         }
 
         if (Editor.ValueKind != JsonValueKind.Object)
@@ -170,6 +184,7 @@ public sealed class IndexModel : PageModel
                 if (entry.Action == "Draft" && entry.Definition is { } draft)
                 {
                     drafts[draft.Version] = (entry.Sequence, draft);
+                    deleted.Remove(draft.Version);
                 }
                 else if (entry.Action == "Publication" && entry.State?.Definition is { } selected)
                 {
@@ -255,7 +270,7 @@ public sealed class IndexModel : PageModel
         phase == "VerifiedActive" &&
         verifiedUntil is { } deadline &&
         deadline > databaseTime &&
-        databaseTime >= deadline.AddMilliseconds(-freshnessMilliseconds);
+        !PolicyVerificationClock.IsRollbackBeyondTolerance(deadline.AddMilliseconds(-freshnessMilliseconds), databaseTime);
 
     /// <summary>Determines whether an unpublished draft is available to begin publication.</summary>
     internal static bool CanBeginPublication(int draftCount) => draftCount > 0;
@@ -304,14 +319,18 @@ public sealed class IndexModel : PageModel
         if (response.Succeeded)
         {
             TempData["Status"] = $"Draft {version} deleted. Its history is kept.";
-            return RedirectToPage();
+            return RedirectToPage(
+                pageName: "./Index",
+                pageHandler: null,
+                routeValues: null,
+                fragment: "main");
         }
 
         await OnGetAsync().ConfigureAwait(false);
         return Page();
     }
 
-    /// <summary>Saves an immutable policy version with submission as the administrator's confirmation.</summary>
+    /// <summary>Saves or updates an unpublished draft with submission as the administrator's confirmation.</summary>
     /// <returns>An action result that displays the outcome of the policy save.</returns>
     public async Task<IActionResult> OnPostSaveAsync()
     {
@@ -323,10 +342,13 @@ public sealed class IndexModel : PageModel
         string operationId = await UiPageHelpers.FormValueAsync(this, "operationId", 256).ConfigureAwait(false);
         Microsoft.AspNetCore.Http.IFormCollection form = await Request.ReadFormAsync(HttpContext.RequestAborted).ConfigureAwait(false);
         EditorSubmitted = true;
+        string editorTab = await UiPageHelpers.FormValueAsync(this, "editorTab", 64).ConfigureAwait(false);
+        EditorTab = editorTab is "policy-labels" or "policy-moderation" or "policy-advanced" ? editorTab : "policy-labels";
+        EditingDraft = await UiPageHelpers.FormValueAsync(this, "editingDraft", 256).ConfigureAwait(false);
         Version = version;
         SaveReason = reason;
         DeclarationText = declarationText;
-        EditorSource = "Unsaved edits";
+        EditorSource = "Working on policy draft: " + (version.Length > 0 ? version : "new") + " (unsaved changes)";
         bool allCollections = form["structuredIssuance"] == "true" ? form["issueAllCollections"] == "true" : collections.Length == 0;
         string[]? allowed = allCollections ? null : collections.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
         using JsonDocument emptyDeclaration = JsonDocument.Parse("{}");
@@ -337,6 +359,12 @@ public sealed class IndexModel : PageModel
             AllowRecords: form["allowRecords"] == "true",
             AllowedRecordCollections: allowed,
             Rules: rules)))).GetProperty("moderation").GetProperty("definition").Clone();
+        if (EditingDraft.Length > 0 && EditingDraft != version)
+        {
+            ViewData["Error"] = "The draft ID changed. Reload the draft before updating it.";
+            await OnGetAsync().ConfigureAwait(false);
+            return Page();
+        }
         if (string.IsNullOrWhiteSpace(Version))
         {
             ViewData["Error"] = "Enter a Policy ID before saving.";
@@ -382,6 +410,18 @@ public sealed class IndexModel : PageModel
                 using JsonDocument scoped = JsonDocument.Parse(updated.ToJsonString());
                 editedDeclaration = scoped.RootElement.Clone();
             }
+            if (editedDeclaration.TryGetProperty("subjectTypes", out JsonElement subjects) &&
+                subjects.ValueKind == JsonValueKind.Array &&
+                subjects.EnumerateArray().Any(value => value.ValueKind == JsonValueKind.String && value.GetString() == "account") &&
+                editedDeclaration.TryGetProperty("subjectCollections", out JsonElement reportScope) &&
+                reportScope.ValueKind == JsonValueKind.Array &&
+                !reportScope.EnumerateArray().Any(value => value.ValueKind == JsonValueKind.String && value.GetString() == "app.bsky.actor.profile"))
+            {
+                JsonObject updated = JsonNode.Parse(editedDeclaration.GetRawText())!.AsObject();
+                updated["subjectCollections"]!.AsArray().Add("app.bsky.actor.profile");
+                using JsonDocument compatible = JsonDocument.Parse(updated.ToJsonString());
+                editedDeclaration = compatible.RootElement.Clone();
+            }
             DeclarationText = PrettyJson(editedDeclaration);
             AdministrationResponse response = await UiPageHelpers.DispatchAsync(
                 this,
@@ -398,8 +438,14 @@ public sealed class IndexModel : PageModel
                         Rules: rules))).ConfigureAwait(false);
             if (response.Succeeded)
             {
-                TempData["Status"] = $"Policy draft {version} saved. It has not been published.";
-                return RedirectToPage();
+                TempData["Status"] = EditingDraft.Length > 0
+                    ? $"Policy draft {version} updated. It has not been published."
+                    : $"Policy draft {version} saved. It has not been published.";
+                return RedirectToPage(
+                    pageName: "./Index",
+                    pageHandler: null,
+                    routeValues: new { editor = "draft", draft = version, editorTab = EditorTab },
+                    fragment: "main");
             }
         }
         catch (JsonException)
