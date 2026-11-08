@@ -7,6 +7,15 @@ bring it to our attention by posting an issue.
 
 The attached notices are provided for information only.
 
+PostgreSQL container runtime
+----------------------------
+
+The PostgreSQL host container installs Ubuntu's libgssapi-krb5-2 package
+and its runtime dependencies libkrb5-3, libk5crypto3, libkrb5support0 and
+libkeyutils1. Their distribution-supplied copyright and license notices
+are retained in /usr/share/doc/<package>/copyright inside the image.
+These operating-system packages are not bundled in the NuGet libraries.
+
 Build tooling
 -------------
 

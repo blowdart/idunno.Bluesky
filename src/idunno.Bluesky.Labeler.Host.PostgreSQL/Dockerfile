@@ -13,6 +13,9 @@ RUN test -n "$SOURCE_REVISION_ID" && dotnet publish src/idunno.Bluesky.Labeler.H
     --property:BuildCommitId="$SOURCE_REVISION_ID" -bl:/tmp/host-publish.binlog
 
 FROM ${LABELER_BASE}
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends libgssapi-krb5-2 && rm -rf /var/lib/apt/lists/*
+USER 1654
 WORKDIR /app
 COPY --from=build /out .
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \

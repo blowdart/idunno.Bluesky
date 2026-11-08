@@ -56,6 +56,8 @@
 * Documented that the canonical host ships untrimmed and does not support trimming or Native AOT because it includes Razor Pages; disabling the UI at runtime does not remove that dependency.
 * Provider-neutral, non-packable canonical hosting library with reusable registration, initialization, mapping and lifecycle extensions over the existing hosting helpers; no additional NuGet packages.
 * Separate provider-neutral base, PostgreSQL and MySQL containers, with no database fallback or bundled server. Thin canonical applications reuse the existing storage and authentication packages and retain independently optional Xenon moderation, web UI and Ozone compatibility.
+* PostgreSQL containers include the Kerberos/GSSAPI runtime library, avoiding missing-library messages during database connection initialization.
+* Both canonical hosts include UTC timestamps in their default console logging.
 * Externally supplied provider-specific connections, non-secret defaults and optional external JSON configuration for separately mounted secrets.
 * Environment-backed signing keys by default, optional mounted PEM keys, database-backed active-key selection and coordinated rotation. Terminal retired labelers can use explicit keyless read-only distribution.
 * Website and native CLI OAuth metadata, trusted TLS-forwarding proxy configuration, SSRF-protected identity resolution and owner-only local administration sockets.
