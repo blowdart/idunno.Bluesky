@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+      uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
       with:
         egress-policy: audit
 
@@ -88,7 +88,7 @@ jobs:
       LABELER_TEST_MYSQL_CONNECTION: "Server=127.0.0.1;Port=3306;User ID=root;Password=labeler-disposable-ci;Pooling=false"
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+      uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
       with:
         egress-policy: audit
 
@@ -99,7 +99,7 @@ jobs:
         persist-credentials: false
 
     - name: "Validate pushed tag"
-      uses: lfreleng-actions/tag-validate-action@63470621b8ebc5c4fc86ebb616727dd0a7285dd9 # v1.1.7
+      uses: lfreleng-actions/tag-validate-action@eab7d92e02c8b447a4de04e68bd5ee7eae3450eb # v1.1.8
       with:
         require_type: semver
         require_signed: ssh
@@ -338,7 +338,7 @@ jobs:
       id-token: write
     steps:
     - name: 'Harden Runner'
-      uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+      uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
       with:
         egress-policy: audit
 
@@ -406,7 +406,7 @@ jobs:
       discussions: write
     steps:
     - name: 'Harden Runner'
-      uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+      uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
       with:
         egress-policy: audit
 

@@ -147,6 +147,7 @@
 * Added recursive `IValidatableObject` support to draft images, videos, captions, galleries, external links, record references and local file references. Failures include indexed member paths; local file validation checks path text only and never accesses files.
 * Added `IValidatableObject` support and JSON `Parse`/`TryParse` overloads to `Actor.Link`, `Actor.Status` and `Feed.Generator`. Validation checks HTTPS link destinations, title and icon constraints, status durations and nested external cards, and generator text, description facets and avatar metadata. Passing `validate: false` retains constraint-invalid values for later validation without relaxing existing public constructor or setter guards. Unknown status strings and generator content modes retain their existing handling.
 * Added `BlueskyAgent.GetProfileLinks`, `AddProfileLink` and `RemoveProfileLink` helpers for viewing and managing links on the authenticated user's profile.
+* Made `Graph.ListItem` public, with constructors and null validation for list and subject values, including object initializers and `with` expressions.
 
 * Added `CreateStarterPack()`, `UpdateStarterPack()` and `DeleteStarterPack()` helpers, and `CollectionNsid.StarterPack`. Creation supports caller-supplied record keys, and updates using repository records compare the previous CID to protect against concurrent changes. These helpers modify only the starter pack record, not its referenced list or feeds.
 
