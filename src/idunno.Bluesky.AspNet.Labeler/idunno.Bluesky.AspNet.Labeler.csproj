@@ -11,8 +11,6 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="System.Formats.Cbor" />
     <ProjectReference Include="..\idunno.Bluesky.Labeler\idunno.Bluesky.Labeler.csproj" />
-    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
-    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
     <None Include="readme.md" Pack="true" PackagePath="\" />
     <None Include="icon.png" Pack="true" PackagePath="\" />
     <None Include="..\..\exclusion.dic" Link="exclusion.dic" />

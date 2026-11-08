@@ -1,0 +1,8 @@
+#nullable enable
+idunno.Bluesky.Labeler.Host.ILabelerHostAuthenticationPersistence
+idunno.Bluesky.Labeler.Host.ILabelerHostAuthenticationPersistence.InitializeAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+idunno.Bluesky.Labeler.Host.LabelerApplicationExtensions
+static idunno.Bluesky.Labeler.Host.LabelerApplicationExtensions.RunAsync(string![]! args, System.Action<Microsoft.AspNetCore.Builder.WebApplicationBuilder!>! configureStorage) -> System.Threading.Tasks.Task<int>!
+static idunno.Bluesky.Labeler.Host.LabelerApplicationExtensions.AddCanonicalBlueskyLabeler(this Microsoft.AspNetCore.Builder.WebApplicationBuilder! builder, System.Net.Http.HttpClient! identityClient, idunno.Bluesky.Labeler.Signing.ILabelSigningKeyRing? signingKeyRing) -> Microsoft.AspNetCore.Builder.WebApplicationBuilder!
+static idunno.Bluesky.Labeler.Host.LabelerApplicationExtensions.InitializeCanonicalBlueskyLabelerAsync(this Microsoft.AspNetCore.Builder.WebApplication! app, idunno.Bluesky.Labeler.Signing.ILabelSigningKeyRing? signingKeyRing, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+static idunno.Bluesky.Labeler.Host.LabelerApplicationExtensions.MapCanonicalBlueskyLabeler(this Microsoft.AspNetCore.Builder.WebApplication! app) -> Microsoft.AspNetCore.Builder.WebApplication!

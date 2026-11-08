@@ -157,7 +157,14 @@ public sealed partial class RelationalProviderTests
         await store.Database.HandleAsync(11, [work], null, CancellationToken.None);
         await store.Database.HandleAsync(12, [], null, CancellationToken.None, root.Uri.ToString());
 
-        BotAction deleted = (await store.Database.NextWorkAsync(CancellationToken.None))!;
+        BotAction? deleted = await store.Database.NextWorkAsync(CancellationToken.None);
+        if (deleted is null && provider == "MySql")
+        {
+            long pending = await store.CountAsync("reply_work WHERE status IN ('pending','uncertain')");
+            long future = await store.CountAsync("reply_work WHERE next_retry > TIMESTAMPDIFF(MICROSECOND, '1970-01-01', UTC_TIMESTAMP(6))");
+            Assert.Fail($"No eligible work: pending rows={pending}; rows with a future retry deadline={future}.");
+        }
+        Assert.NotNull(deleted);
         Assert.True(deleted.TargetDeleted);
         Assert.Equal(0, await store.Database.MarkAttemptAsync(deleted, CancellationToken.None));
 

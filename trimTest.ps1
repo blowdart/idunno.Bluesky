@@ -107,6 +107,10 @@ $excludedProjects = @{
         'The standalone administration CLI is not currently part of the supported trimming or Native AOT library surface.'
     'src/idunno.Bluesky.Labeler.Host/idunno.Bluesky.Labeler.Host.csproj' =
         'The canonical ASP.NET Core host explicitly disables trimming and Native AOT and is not part of the supported library surface.'
+    'src/idunno.Bluesky.Labeler.Host.MySQL/idunno.Bluesky.Labeler.Host.MySQL.csproj' =
+        'The canonical MySQL application includes Razor Pages and explicitly disables trimming and Native AOT.'
+    'src/idunno.Bluesky.Labeler.Host.PostgreSQL/idunno.Bluesky.Labeler.Host.PostgreSQL.csproj' =
+        'The canonical PostgreSQL application includes Razor Pages and explicitly disables trimming and Native AOT.'
 }
 
 if ([string]::IsNullOrWhiteSpace($Rid))

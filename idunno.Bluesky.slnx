@@ -56,6 +56,7 @@
     <File Path=".github/workflows/lexicon.yml" />
     <File Path=".github/workflows/openssf-scorecard.yml" />
     <File Path=".github/workflows/prerelease.yml" />
+    <File Path=".github/workflows/publish-labeler-images.yml" />
     <File Path=".github/workflows/release.yml" />
   </Folder>
   <Folder Name="/.vscode/">
@@ -387,6 +388,8 @@
     <Project Path="src/idunno.Bluesky.Labeler.Agent/idunno.Bluesky.Labeler.Agent.csproj" />
     <Project Path="src/idunno.Bluesky.Labeler.Cli/idunno.Bluesky.Labeler.Cli.csproj" />
     <Project Path="src/idunno.Bluesky.Labeler.Host/idunno.Bluesky.Labeler.Host.csproj" />
+    <Project Path="src/idunno.Bluesky.Labeler.Host.MySQL/idunno.Bluesky.Labeler.Host.MySQL.csproj" />
+    <Project Path="src/idunno.Bluesky.Labeler.Host.PostgreSQL/idunno.Bluesky.Labeler.Host.PostgreSQL.csproj" />
     <Project Path="src/idunno.Bluesky.Labeler/idunno.Bluesky.Labeler.csproj" />
     <Project Path="src/idunno.Bluesky/idunno.Bluesky.csproj" />
   </Folder>

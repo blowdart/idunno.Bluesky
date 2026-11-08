@@ -54,11 +54,16 @@
 #### idunno.Bluesky.Labeler.Host
 
 * Documented that the canonical host ships untrimmed and does not support trimming or Native AOT because it includes Razor Pages; disabling the UI at runtime does not remove that dependency.
-* Standalone labeler application and container with public label distribution, all three storage providers, protected administration and independently optional Xenon moderation, web UI and Ozone compatibility.
-* PostgreSQL defaults with an externally supplied connection string; SQLite and MySQL alternatives; non-secret configuration defaults; and optional external JSON configuration for separately mounted secrets.
+* Provider-neutral, non-packable canonical hosting library with reusable registration, initialization, mapping and lifecycle extensions over the existing hosting helpers; no additional NuGet packages.
+* Separate provider-neutral base, PostgreSQL and MySQL containers, with no database fallback or bundled server. Thin canonical applications reuse the existing storage and authentication packages and retain independently optional Xenon moderation, web UI and Ozone compatibility.
+* PostgreSQL containers include the Kerberos/GSSAPI runtime library, avoiding missing-library messages during database connection initialization.
+* Both canonical hosts include UTC timestamps in their default console logging.
+* Opt-in Prometheus scraping on an isolated, loopback-by-default listener and optional OTLP metrics export, collecting label persistence, hosting, moderation, authentication, AT Protocol client and built-in HTTP metrics.
+* Externally supplied provider-specific connections, non-secret defaults and optional external JSON configuration for separately mounted secrets.
 * Environment-backed signing keys by default, optional mounted PEM keys, database-backed active-key selection and coordinated rotation. Terminal retired labelers can use explicit keyless read-only distribution.
 * Website and native CLI OAuth metadata, trusted TLS-forwarding proxy configuration, SSRF-protected identity resolution and owner-only local administration sockets.
-* Database-persisted OAuth sessions and Data Protection keys, a built-in readiness probe, crawler-exclusion `robots.txt`, and the matching Linux CLI available as `labeler-admin` in the container.
+* Database-persisted OAuth identities, refresh locks, single-use correlation state and origin-bound Data Protection keys/revocations in both PostgreSQL and MySQL canonical hosts; built-in readiness probes, crawler-exclusion `robots.txt`, and the matching Linux CLI.
+* Optional prerelease publication of all three images independent of NuGet signing/publication, with distinct run/commit-qualified tags, mandatory keyless Cosign signatures, provenance/SBOMs, GitHub attestations and anonymous verification.
 * Separate `Xenon.TestHost` for isolated browser and CLI testing, with persistent SQLite state, configurable HTTPS origins and explicit Debug-only fixture seeding for policies, teams, queues, appeals and media previews.
 
 #### idunno.Bluesky.Labeler.Cli
@@ -69,7 +74,7 @@
 * Resumable maintenance and signing-key rotation, public did:web identity snippets, authenticated PLC publication and recovery, and explicit retirement, grace, stopped-host attestation, local purge and external key-removal commands.
 * Optional `--remember-me` credentials in `~/.xenon` and `forget-me`, using current-user DPAPI on Windows or explicitly confirmed owner-only unencrypted files on macOS/Linux, with rotating-credential persistence and account/client/scope/service binding.
 * Human-readable results and progress, explicit success/failure feedback, confirmed irreversible actions and raw JSON output through `--verbose`.
-* Attestation-verified executable self-updates and confirmed digest-pinned Docker Compose redeployment with graceful stop, readiness checks and previous-image rollback. Releases include an attested GHCR host image and its immutable digest.
+* Attestation-verified executable self-updates and confirmed digest-pinned Docker Compose redeployment for canonical PostgreSQL/MySQL images and compatible legacy digests, with graceful stop, readiness checks and previous-image rollback; provider-neutral base images are not service-update targets.
 
 #### idunno.Bluesky.Labeler
 
@@ -143,6 +148,7 @@
 * Added recursive `IValidatableObject` support to draft images, videos, captions, galleries, external links, record references and local file references. Failures include indexed member paths; local file validation checks path text only and never accesses files.
 * Added `IValidatableObject` support and JSON `Parse`/`TryParse` overloads to `Actor.Link`, `Actor.Status` and `Feed.Generator`. Validation checks HTTPS link destinations, title and icon constraints, status durations and nested external cards, and generator text, description facets and avatar metadata. Passing `validate: false` retains constraint-invalid values for later validation without relaxing existing public constructor or setter guards. Unknown status strings and generator content modes retain their existing handling.
 * Added `BlueskyAgent.GetProfileLinks`, `AddProfileLink` and `RemoveProfileLink` helpers for viewing and managing links on the authenticated user's profile.
+* Made `Graph.ListItem` public, with constructors and null validation for list and subject values, including object initializers and `with` expressions.
 
 * Added `CreateStarterPack()`, `UpdateStarterPack()` and `DeleteStarterPack()` helpers, and `CollectionNsid.StarterPack`. Creation supports caller-supplied record keys, and updates using repository records compare the previous CID to protect against concurrent changes. These helpers modify only the starter pack record, not its referenced list or feeds.
 

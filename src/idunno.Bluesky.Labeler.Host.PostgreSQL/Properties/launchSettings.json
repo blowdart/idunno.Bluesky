@@ -1,6 +1,6 @@
 {
   "profiles": {
-    "idunno.Bluesky.Labeler.Host": {
+    "idunno.Bluesky.Labeler.Host.PostgreSQL": {
       "commandName": "Project",
       "launchBrowser": false,
       "environmentVariables": {

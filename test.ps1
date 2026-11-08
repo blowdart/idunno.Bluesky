@@ -25,6 +25,8 @@ $environmentNames = @(
     'MYSQL_ROOT_PASSWORD',
     'LABELER_TEST_POSTGRESQL_CONNECTION',
     'LABELER_TEST_MYSQL_CONNECTION',
+    'BOTSDK_TEST_POSTGRESQL_CONNECTION',
+    'BOTSDK_TEST_MYSQL_CONNECTION',
     'DOTNET_PROCESSOR_COUNT'
 )
 $previousEnvironment = @{}
@@ -102,6 +104,8 @@ try
     $myPort = $Matches[1]
     $env:LABELER_TEST_POSTGRESQL_CONNECTION = "Host=127.0.0.1;Port=$pgPort;Username=postgres;Password=$password;Database=postgres;SSL Mode=Disable"
     $env:LABELER_TEST_MYSQL_CONNECTION = "Server=127.0.0.1;Port=$myPort;User ID=root;Password=$password;SslMode=None;AllowPublicKeyRetrieval=True"
+    $env:BOTSDK_TEST_POSTGRESQL_CONNECTION = $env:LABELER_TEST_POSTGRESQL_CONNECTION
+    $env:BOTSDK_TEST_MYSQL_CONNECTION = $env:LABELER_TEST_MYSQL_CONNECTION
     Invoke-DotNet -Name 'database-preflight' -Arguments @(
         'test', '--project', 'test/idunno.Bluesky.Labeler.Test/idunno.Bluesky.Labeler.Test.csproj',
         '--no-build', '--no-restore', '--max-parallel-test-modules', '1', '--max-threads', '1',

@@ -293,6 +293,7 @@ public partial class ModerationTests
             identity: identity,
             remoteEnabled: true,
             ozone: true);
+        await fixture.Clock.PolicyVerificationRegistrations.Reader.ReadAsync(token);
         await VerifyPolicyAsync(fixture);
         LabelAdministrationCaller administrator = (await fixture.Services.GetRequiredService<ILabelAdministrationStore>()
             .AuthenticateLocalAsync("uid:0", token)).Result!;
@@ -314,7 +315,9 @@ public partial class ModerationTests
             key: key,
             method: "tools.ozone.moderation.emitEvent",
             body: label);
-        Assert.Equal(HttpStatusCode.OK, issued.StatusCode);
+        Assert.True(
+            issued.StatusCode == HttpStatusCode.OK,
+            await issued.Content.ReadAsStringAsync(token));
         using (JsonDocument unreviewed = await QueryStatusFilterAsync(fixture, key, "?lastReviewedBy=" + s_administrator.Value))
         {
             Assert.Empty(unreviewed.RootElement.GetProperty("subjectStatuses").EnumerateArray());
