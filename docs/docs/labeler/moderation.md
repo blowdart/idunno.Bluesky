@@ -446,6 +446,13 @@ closes the incident without discarding an undelivered alert. Reports remain queu
 and non-actionable while verification is unavailable; email configuration does not
 change report intake or return behavior.
 
+Failure emails distinguish remote timeouts and network failures from public-policy or
+account mismatches, clock rollback, and local database failures, with appropriate retry
+or administrator-investigation guidance. They contain locally authored explanations,
+not exception text, remote response bodies, credentials or policy contents. Older retained
+alerts with only a broad category explicitly direct administrators to the original logs;
+their cause cannot be reconstructed from that category alone.
+
 Active administrators can register or clear their own alert address on the Xenon
 Team or Preferences page. Both forms require enabled SMTP with a configured server.
 Only active administrators with a registered address receive alerts.

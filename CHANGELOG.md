@@ -101,6 +101,7 @@
 * Shared persistence for teams, replay protection, policies, reports, cases, appeals, mutes, search projections, Ozone events, notification leases and resumable maintenance/retirement checkpoints.
 * Indexed subject-wide mute exclusion for moderation counts and queues, avoiding repeated scans of retained expired mutes. Schema seventeen backfills CID-independent subject keys without changing evidence, mute deadlines or concurrency fences.
 * Indexed report handling, author summaries, received-time ordering, assignment queues and audit filters. Schema eighteen backfills query projections without rewriting evidence; author summaries and navigation counts use fewer database round trips, and activity pages bound each history branch before merging.
+* Policy-verification emails distinguish timeouts, connectivity failures, policy/account mismatches, clock rollback and local database failures, with safe diagnostic explanations and administrator guidance.
 * Durable Bluesky AppView publication limits: 5 labels per rolling second, 10,000 per rolling hour and 100,000 per rolling 24 hours, including negations. Accounting survives restarts and multiple hosts; excess remains pending.
 * Restartable schema initialization, packaged `schema.sql`, real-engine conformance coverage and setup/backup guidance. MySQL requires InnoDB; older writers reject incompatible schemas, and rollback requires a compatible database backup.
 * Named-volume MySQL/PostgreSQL development helpers and SQLite database creation tooling.
@@ -174,6 +175,7 @@
 #### idunno.AtProto.OAuthCallback
 
 * Callback server disposal awaits listener shutdown before disposing the host, preventing competing host disposal paths from racing file-system watcher cleanup. Failed startup also releases the host only once.
+* Callback disposal during pending startup waits for startup ownership to settle, retains a stable shutdown listener, and releases cancellation resources even when shutdown faults.
 
 #### idunno.AtProto
 

@@ -16,6 +16,56 @@ namespace idunno.AtProto.OAuthCallback.Test;
 [Collection("CallbackServer")]
 public class CallbackServerFactoryTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DisposalDuringPendingStartupWaitsAndReleasesHostResources(bool startupFails)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        TaskCompletionSource barrier = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        CallbackServer? candidate = null;
+        Task<CallbackServer> creation = CallbackServer.CreateAsync(
+            configure: server =>
+            {
+                candidate = server;
+                server.StartupBarrier = barrier.Task;
+            },
+            cancellationToken: token);
+        Assert.NotNull(candidate);
+        Assert.False(candidate.Startup.IsCompleted);
+        Task<string> callback = candidate.WaitForCallbackAsync(cancellationToken: token);
+        Task disposal = candidate.DisposeAsync().AsTask();
+        try
+        {
+            Assert.False(disposal.IsCompleted);
+            await Assert.ThrowsAsync<ObjectDisposedException>(() => callback);
+        }
+        finally
+        {
+            if (startupFails)
+            {
+                barrier.TrySetException(new InvalidOperationException("Deliberate startup failure."));
+            }
+            else
+            {
+                barrier.TrySetResult();
+            }
+        }
+        await disposal.WaitAsync(TimeSpan.FromSeconds(30), token);
+        if (startupFails)
+        {
+            await Assert.ThrowsAsync<InvalidOperationException>(() => creation);
+        }
+        else
+        {
+            Assert.Same(candidate, await creation);
+            Assert.True(candidate.ListenerShutdown.IsCompletedSuccessfully);
+        }
+        await candidate.DisposeAsync();
+        using TcpListener probe = new(IPAddress.Loopback, candidate.Uri.Port);
+        probe.Start();
+    }
+
     [Fact]
     public async Task PublicConstructorStartsAndServesCallbacks()
     {

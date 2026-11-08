@@ -640,6 +640,8 @@ internal sealed partial class AdministrationDispatcher(
             string? verifiedKey = null;
             bool needsSigning = action == "beginRetirement" ||
                 action == "resumeRetirement" && (await store.GetStateAsync(token).ConfigureAwait(false)).Phase == LabelerLifecyclePhase.Retiring;
+            // This action-specific signing check does not bypass authorization: retirement inspection,
+            // execution and receipt recovery independently enforce current permissions in the store.
             if (needsSigning)
             {
                 if (signingKeyRing is null || publicEndpoint is null)

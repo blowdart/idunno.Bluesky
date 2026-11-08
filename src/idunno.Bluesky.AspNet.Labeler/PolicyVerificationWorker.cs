@@ -37,8 +37,9 @@ internal sealed partial class PolicyVerificationWorker(
                     LabelServiceResult<LabelPolicyState>? verification = await VerifyPolicyAsync(linked.Token, stoppingToken).ConfigureAwait(false);
                     if (verification is { } result && !result.Succeeded)
                     {
-                        VerificationFailed(logger, result.Error.Code.ToString());
-                        await RecordFailureNotificationAsync(result.Error.Code.ToString(), stoppingToken).ConfigureAwait(false);
+                        string category = result.Error.VerificationFailureCategory ?? result.Error.Code.ToString();
+                        VerificationFailed(logger, category);
+                        await RecordFailureNotificationAsync(category, stoppingToken).ConfigureAwait(false);
                     }
                     else if (verification is { Succeeded: true } verified)
                     {
@@ -106,8 +107,9 @@ internal sealed partial class PolicyVerificationWorker(
         }
         catch (Exception exception) when (exception is DbException or InvalidDataException)
         {
-            VerificationFailed(logger, exception.GetType().Name);
-            await RecordFailureNotificationAsync(exception.GetType().Name, stoppingToken).ConfigureAwait(false);
+            string category = exception is DbException ? "StorageUnavailable" : "InvalidStoredData";
+            VerificationFailed(logger, category);
+            await RecordFailureNotificationAsync(category, stoppingToken).ConfigureAwait(false);
             return null;
         }
     }

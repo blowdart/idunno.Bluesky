@@ -69,24 +69,35 @@ public sealed class LabelPolicyService(
             LabelPolicyState? state = await _store.ReadPolicyStateAsync(cancellationToken).ConfigureAwait(false);
             if (activeOnly && state?.Phase != LabelPolicyPhase.VerifiedActive)
             {
-                return Reject(LabelServiceErrorCode.PolicyUnavailable, "Scheduled verification requires an active policy.");
+                return Reject(
+                    code: LabelServiceErrorCode.PolicyUnavailable,
+                    message: "Scheduled verification requires an active policy.",
+                    category: "PolicyNotActive");
             }
             if (state is not null && state.Issuer != _issuer)
             {
-                return Reject(LabelServiceErrorCode.PolicyUnavailable, "The policy database belongs to a different labeler account.");
+                return Reject(
+                    code: LabelServiceErrorCode.PolicyUnavailable,
+                    message: "The policy database belongs to a different labeler account.",
+                    category: "IssuerMismatch");
             }
 
             if (state?.Policy is null || state.Phase is LabelPolicyPhase.Conflict or LabelPolicyPhase.Withdrawing)
             {
-                return Reject(LabelServiceErrorCode.PolicyUnavailable, "Publish and check a policy before allowing new reports or label changes.");
+                return Reject(
+                    code: LabelServiceErrorCode.PolicyUnavailable,
+                    message: "Publish and check a policy before allowing new reports or label changes.",
+                    category: "PolicyNotActive");
             }
 
             if (state.VerifiedUntil is { } deadline &&
                 PolicyVerificationClock.IsRollbackBeyondTolerance(deadline - state.VerificationFreshness, state.DatabaseTime))
             {
                 long rollbackMilliseconds = (long)((deadline - state.VerificationFreshness) - state.DatabaseTime).TotalMilliseconds;
-                return Reject(LabelServiceErrorCode.PolicyUnavailable,
-                    $"The database clock is {rollbackMilliseconds} milliseconds earlier than the saved policy check. An administrator must investigate before checks can continue.");
+                return Reject(
+                    code: LabelServiceErrorCode.PolicyUnavailable,
+                    message: $"The database clock is {rollbackMilliseconds} milliseconds earlier than the saved policy check. An administrator must investigate before checks can continue.",
+                    category: "ClockRollback");
             }
 
             if (!forceVerification && state.Phase == LabelPolicyPhase.VerifiedActive && state.VerifiedUntil > state.DatabaseTime)
@@ -101,7 +112,10 @@ public sealed class LabelPolicyService(
                 cancellationToken: cancellationToken).ConfigureAwait(false);
             if (pds is null)
             {
-                return Reject(LabelServiceErrorCode.PolicyUnavailable, "The server storing the labeler account's data could not be found.");
+                return Reject(
+                    code: LabelServiceErrorCode.PolicyUnavailable,
+                    message: "The server storing the labeler account's data could not be found.",
+                    category: "ServerDiscoveryFailed");
             }
 
             AtUri uri = new($"at://{_issuer}/app.bsky.labeler.service/self");
@@ -119,7 +133,10 @@ public sealed class LabelPolicyService(
                 (response.StatusCode == HttpStatusCode.NotFound || response.AtErrorDetail?.Error == "RecordNotFound");
             if (!response.Succeeded && !missing)
             {
-                return Reject(LabelServiceErrorCode.PolicyUnavailable, "The account's public policy could not be read.");
+                return Reject(
+                    code: LabelServiceErrorCode.PolicyUnavailable,
+                    message: "The account's public policy could not be read.",
+                    category: "PublicPolicyReadFailed");
             }
 
             Cid? observedCid;
@@ -128,7 +145,10 @@ public sealed class LabelPolicyService(
             {
                 if (response.Result.Uri != uri || response.Result.Value is null)
                 {
-                    return Reject(LabelServiceErrorCode.PolicyUnavailable, "The account server returned a policy that does not match this labeler account.");
+                    return Reject(
+                        code: LabelServiceErrorCode.PolicyUnavailable,
+                        message: "The account server returned a policy that does not match this labeler account.",
+                        category: "IssuerMismatch");
                 }
 
                 observedCid = response.Result.Cid;
@@ -153,33 +173,66 @@ public sealed class LabelPolicyService(
                 return observation;
             }
 
-            return observation.Result.Phase == LabelPolicyPhase.VerifiedActive &&
-                observation.Result.VerifiedUntil > observation.Result.DatabaseTime
-                ? observation : Reject(LabelServiceErrorCode.PolicyUnavailable, "The account's public policy differs from the selected policy. New reports and label changes remain blocked.");
+            if (observation.Result.Phase == LabelPolicyPhase.VerifiedActive &&
+                observation.Result.VerifiedUntil > observation.Result.DatabaseTime)
+            {
+                return observation;
+            }
+
+            bool mismatch = observation.Result.Phase == LabelPolicyPhase.Conflict;
+            return Reject(
+                code: LabelServiceErrorCode.PolicyUnavailable,
+                message: mismatch
+                    ? "The account's public policy differs from the selected policy. New reports and label changes remain blocked."
+                    : "The policy check did not establish a fresh active verification.",
+                category: mismatch ? "PolicyMismatch" : "VerificationExpired");
         }
         catch (HttpRequestException exception)
         {
-            return Reject(LabelServiceErrorCode.PolicyUnavailable, "The public policy check failed.", exception);
+            return Reject(
+                code: LabelServiceErrorCode.PolicyUnavailable,
+                message: "The public policy check failed.",
+                exception: exception,
+                category: "NetworkFailure");
         }
         catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
         {
-            return Reject(LabelServiceErrorCode.PolicyUnavailable, "The public policy check took too long.", exception);
+            return Reject(
+                code: LabelServiceErrorCode.PolicyUnavailable,
+                message: "The public policy check took too long.",
+                exception: exception,
+                category: "Timeout");
         }
         catch (JsonException exception)
         {
-            return Reject(LabelServiceErrorCode.PolicyUnavailable, "The account server returned invalid public policy JSON.", exception);
+            return Reject(
+                code: LabelServiceErrorCode.PolicyUnavailable,
+                message: "The account server returned invalid public policy JSON.",
+                exception: exception,
+                category: "InvalidPublicPolicy");
         }
         catch (DbException exception)
         {
-            return Reject(LabelServiceErrorCode.StorageUnavailable, "The declaration verification store is unavailable.", exception);
+            return Reject(
+                code: LabelServiceErrorCode.StorageUnavailable,
+                message: "The declaration verification store is unavailable.",
+                exception: exception,
+                category: "StorageUnavailable");
         }
     }
 
     /// <summary>Surfaces a classified failure without logging declaration contents or repository diagnostics.</summary>
-    private LabelServiceResult<LabelPolicyState> Reject(LabelServiceErrorCode code, string message, Exception? exception = null)
+    private LabelServiceResult<LabelPolicyState> Reject(
+        LabelServiceErrorCode code,
+        string message,
+        Exception? exception = null,
+        string? category = null)
     {
         LabelModerationLog.VerificationRejected(_logger, code, message);
-        return LabelServiceResult<LabelPolicyState>.Failure(new(code: code, message: message, exception: exception));
+        return LabelServiceResult<LabelPolicyState>.Failure(new(code: code, message: message, exception: exception)
+        {
+            VerificationFailureCategory = category
+        });
     }
 }
 

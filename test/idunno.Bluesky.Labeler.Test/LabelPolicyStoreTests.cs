@@ -32,6 +32,65 @@ public class LabelPolicyStoreTests
     private static readonly string[] s_expectedVersions = ["v1", "v2"];
 
     [Theory]
+    [InlineData("Timeout", LabelPolicyPhase.VerifiedActive)]
+    [InlineData("NetworkFailure", LabelPolicyPhase.VerifiedActive)]
+    [InlineData("PolicyMismatch", LabelPolicyPhase.Conflict)]
+    public async Task IndependentVerificationClassifiesFailuresWithoutChangingAdmissionRules(
+        string category,
+        LabelPolicyPhase expectedPhase)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync("sqlite");
+        LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
+        ILabelPolicyStore store = (ILabelPolicyStore)fixture.Store;
+        LabelPolicyState active = await ActivateAsync(store, administrator, token);
+        using HttpClient client = new(new VerificationFailureHandler(category));
+        LabelPolicyService verifier = new(issuer: StoreFixture.s_issuer, store: store, httpClient: client);
+        LabelServiceResult<LabelPolicyState> result = await verifier.VerifyActivePolicyAsync(token);
+        Assert.False(result.Succeeded);
+        Assert.Equal(LabelServiceErrorCode.PolicyUnavailable, result.Error.Code);
+        Assert.Equal(category, result.Error.VerificationFailureCategory);
+        LabelPolicyState after = (await store.ReadPolicyStateAsync(token))!;
+        Assert.Equal(expectedPhase, after.Phase);
+        Assert.Equal(category == "PolicyMismatch" ? null : active.VerifiedUntil, after.VerifiedUntil);
+        Assert.DoesNotContain("private diagnostic", result.Error.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>Produces remote timeout, transport failure or changed declaration responses without real network requests.</summary>
+    private sealed class VerificationFailureHandler(string category) : HttpMessageHandler
+    {
+        /// <summary>Returns the issuer's directory entry before simulating the selected repository outcome.</summary>
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (request.RequestUri?.Host == "plc.directory")
+            {
+                return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+                {
+                    Content = new StringContent($$"""
+                        {"id":"{{StoreFixture.s_issuer}}","alsoKnownAs":[],"verificationMethod":[],"service":[
+                        {"id":"#atproto_pds","type":"AtprotoPersonalDataServer","serviceEndpoint":"https://pds.example"}]}
+                        """, System.Text.Encoding.UTF8, "application/json")
+                });
+            }
+            if (category == "Timeout")
+            {
+                throw new TaskCanceledException("private diagnostic");
+            }
+            if (category == "NetworkFailure")
+            {
+                throw new HttpRequestException("private diagnostic");
+            }
+            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent($$$"""
+                    {"uri":"at://{{{StoreFixture.s_issuer}}}/app.bsky.labeler.service/self","cid":"{{{s_cid}}}","value":{}}
+                    """, System.Text.Encoding.UTF8, "application/json")
+            });
+        }
+    }
+
+    [Theory]
     [InlineData("sqlite")]
     [InlineData("postgresql")]
     [InlineData("mysql")]

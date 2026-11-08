@@ -196,6 +196,10 @@ internal sealed partial class LabelerPolicyEmailService(
                 "After a successful background check, queued reports are processed automatically.\n\n" +
                 "Review the Xenon moderation health status and server logs for the current state. " +
                 "A policy conflict or persistent verification problem may require administrator action.";
+        if (delivery.ChangeDescription is null)
+        {
+            body += "\n\nFailure details: " + VerificationFailureDetails(delivery.Category);
+        }
         body = await FormatIdentitiesAsync(body, cancellationToken).ConfigureAwait(false);
         MailMessage message = new()
         {
@@ -208,6 +212,25 @@ internal sealed partial class LabelerPolicyEmailService(
         message.To.Add(new MailAddress(recipient));
         return message;
     }
+
+    /// <summary>Explains trusted failure categories without exposing remote response bodies or exception diagnostics.</summary>
+    internal static string VerificationFailureDetails(string category) => category switch
+    {
+        "Timeout" => "The remote public-policy check timed out. This is not evidence of a policy mismatch. The next scheduled check will retry; investigate connectivity or host resource pressure if it persists.",
+        "deadline" => "The independent verification exceeded its worker deadline. This does not establish a policy mismatch or identify whether remote access or local storage was delayed. Investigate server logs and host resource pressure if it persists.",
+        "PolicyMismatch" => "The published public policy differs from the selected local policy. Administrator action is required: review the published declaration and Xenon Policy page before authorizing recovery. New reports and label changes remain blocked.",
+        "IssuerMismatch" => "The policy database or returned repository record does not match this labeler account. Administrator action is required: investigate account and database configuration.",
+        "ClockRollback" => "The database clock moved backwards beyond the allowed tolerance. Administrator action is required: investigate time synchronization before allowing verification to continue.",
+        "PolicyNotActive" => "The local policy is no longer active or available for independent verification. Review the Xenon Policy page and administration history; do not assume that retrying will authorize recovery.",
+        "ServerDiscoveryFailed" => "The labeler account's repository server could not be discovered. Check DID resolution and network availability; repeated failures require investigation.",
+        "PublicPolicyReadFailed" => "The repository server did not return a successful public-policy response. This does not establish a policy mismatch. Check server availability and logs for the HTTP outcome.",
+        "NetworkFailure" => "A network request failed while checking the public policy. This does not establish a policy mismatch. Check connectivity and repository-server availability if retries continue to fail.",
+        "InvalidPublicPolicy" => "The repository server returned invalid public-policy JSON. Administrator investigation is required: review the published declaration and repository-server response diagnostics.",
+        "InvalidStoredData" or "InvalidDataException" => "Verification encountered invalid local stored data. Administrator investigation is required: review database integrity and server logs.",
+        "StorageUnavailable" or "DbException" or "NpgsqlException" => "The local verification database operation failed. This is not evidence of a public-policy mismatch. Investigate database availability, contention and host resource pressure.",
+        "VerificationExpired" => "The check did not establish a fresh active verification before its freshness deadline. Investigate check duration and server clocks if this persists.",
+        _ => "This retained alert contains only a broad failure category; its specific cause cannot be determined from the email. Review the corresponding server logs rather than assuming a timeout or policy mismatch."
+    };
 
     /// <summary>Adds verified handles to canonical identities without changing persisted notification or audit records.</summary>
     private async Task<string> FormatIdentitiesAsync(string body, CancellationToken cancellationToken)

@@ -315,6 +315,53 @@ public class PolicyAlertEmailOptionsTests
     }
 
     [Theory]
+    [InlineData("Timeout", "not evidence of a policy mismatch")]
+    [InlineData("deadline", "does not establish a policy mismatch")]
+    [InlineData("PolicyMismatch", "Administrator action is required")]
+    [InlineData("IssuerMismatch", "does not match this labeler account")]
+    [InlineData("ClockRollback", "clock moved backwards")]
+    [InlineData("ServerDiscoveryFailed", "could not be discovered")]
+    [InlineData("PublicPolicyReadFailed", "successful public-policy response")]
+    [InlineData("NetworkFailure", "network request failed")]
+    [InlineData("StorageUnavailable", "local verification database operation failed")]
+    [InlineData("NpgsqlException", "local verification database operation failed")]
+    [InlineData("InvalidPublicPolicy", "invalid public-policy JSON")]
+    [InlineData("InvalidStoredData", "invalid local stored data")]
+    [InlineData("VerificationExpired", "freshness deadline")]
+    [InlineData("PolicyNotActive", "local policy is no longer active")]
+    [InlineData("PolicyUnavailable", "specific cause cannot be determined")]
+    public async Task VerificationEmailsRetainSpecificFailureDetailsInDurableAlerts(string category, string expectedDetail)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync();
+        ILabelAdministrationStore team = (ILabelAdministrationStore)fixture.Store;
+        Did administratorDid = new("did:plc:email-admin");
+        Assert.True((await team.BootstrapAsync(administratorDid, "uid:0", "details-bootstrap", token)).Succeeded);
+        LabelAdministrationCaller administrator = (await team.AuthenticateLocalAsync("uid:0", token)).Result!;
+        Assert.True((await team.SetTeamNotificationEmailAsync(
+            caller: administrator,
+            change: new("details-email", administratorDid, "admin@example.invalid", "Register alerts."),
+            cancellationToken: token)).Succeeded);
+        ILabelPolicyAlertStore alerts = (ILabelPolicyAlertStore)fixture.Store;
+        await alerts.RecordVerificationFailureAsync(category, token);
+        LabelPolicyAlertDelivery delivery = Assert.IsType<LabelPolicyAlertDelivery>(await alerts.ClaimPendingAlertAsync(
+            leaseId: "details-message",
+            leaseDuration: TimeSpan.FromMinutes(2),
+            cancellationToken: token));
+        Assert.Equal(category, delivery.Category);
+        LabelerPolicyEmailService service = new(
+            issuer: TestServerBuilder.s_issuer,
+            alerts: alerts,
+            settings: new() { FromAddress = "labeler@example.invalid" },
+            clock: fixture.Clock,
+            logger: NullLogger<LabelerPolicyEmailService>.Instance);
+        using System.Net.Mail.MailMessage message = await service.CreateMessageAsync(delivery, delivery.Recipients[0], token);
+        Assert.Contains("Failure details: ", message.Body, StringComparison.Ordinal);
+        Assert.Contains(expectedDetail, message.Body, StringComparison.Ordinal);
+        Assert.Contains($"({category}).", message.Body, StringComparison.Ordinal);
+    }
+
+    [Theory]
     [InlineData(true)]
     [InlineData(false)]
     public async Task EmailIdentitiesPreservePunctuationAndCanonicalDidsWhenHandlesAreUnavailable(bool resolved)
