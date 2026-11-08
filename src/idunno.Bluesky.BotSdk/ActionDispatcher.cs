@@ -65,12 +65,14 @@ internal sealed class ActionHandlerRegistry(IEnumerable<IBotActionHandler> handl
 /// <param name="logger">The structured action outcome logger.</param>
 /// <param name="statistics">The per-process counter updated only after a newly committed completion.</param>
 /// <param name="handlers">The exact kind/version handler registry.</param>
+/// <param name="metrics">The optional host-owned instrumentation.</param>
 internal sealed class ActionDispatcher(
     IDatabaseProvider database,
     BotOptions options,
     ILogger<ActionDispatcher> logger,
     ActionStatistics statistics,
-    ActionHandlerRegistry handlers)
+    ActionHandlerRegistry handlers,
+    BotMetrics? metrics = null)
 {
     /// <summary>Executes one saved intent without regenerating its payload or assuming an uncertain write failed.</summary>
     /// <param name="action">The complete durable action loaded from storage.</param>
@@ -81,13 +83,45 @@ internal sealed class ActionDispatcher(
         IBotActionRemote? remote,
         CancellationToken cancellationToken)
     {
+        long started = metrics?.Timestamp ?? 0;
+        string outcome = "failure";
+        try
+        {
+            outcome = await SendCoreAsync(action, remote, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is OperationCanceledException or RateWaitException or
+            RemoteFailureException or HttpRequestException or TimeoutException or OwnershipLostException)
+        {
+            outcome = exception switch
+                {
+                    OperationCanceledException => "cancelled",
+                    OwnershipLostException => "ownership_lost",
+                    RateWaitException => "deferred",
+                    RemoteFailureException { Retryable: true } => "retryable",
+                    HttpRequestException or TimeoutException => "transport_error",
+                    _ => "failure"
+                };
+            throw;
+        }
+        finally
+        {
+            metrics?.RecordDuration(metrics.DispatchDuration, started, outcome);
+        }
+    }
+
+    /// <summary>Dispatches one saved intent and returns only a newly persisted completion classification.</summary>
+    private async Task<string> SendCoreAsync(
+        BotAction action,
+        IBotActionRemote? remote,
+        CancellationToken cancellationToken)
+    {
         IBotActionHandler handler = handlers.Get(action);
         handler.Validate(action);
         if (options.DeveloperMode)
         {
             if (action.TargetDeleted)
             {
-                await FinishAsync(action, new BotActionResult(false, null, "target deleted"), cancellationToken).ConfigureAwait(false);
+                return await FinishAsync(action, new BotActionResult(false, null, "target deleted"), cancellationToken).ConfigureAwait(false);
             }
             else
             {
@@ -100,11 +134,13 @@ internal sealed class ActionDispatcher(
                 if (completed == 1)
                 {
                     statistics.RecordCompletion();
+                    metrics?.ActionsCompleted.Add(1, BotMetrics.Tag("status", "simulated"));
                     BotLog.WouldAct(logger, action.ActionKind, action.SourceUri.ToString(), action.ActionKey);
+                    return "simulated";
                 }
             }
 
-            return;
+            return "no_completion";
         }
 
         ArgumentNullException.ThrowIfNull(remote);
@@ -112,40 +148,72 @@ internal sealed class ActionDispatcher(
         // Pending excluded work must not contact remote services.
         if (action.Status != "uncertain" && action.TargetDeleted)
         {
-            await FinishAsync(action, new BotActionResult(false, null, "target deleted"), cancellationToken).ConfigureAwait(false);
-
-            return;
+            return await FinishAsync(action, new BotActionResult(false, null, "target deleted"), cancellationToken).ConfigureAwait(false);
         }
-        BotActionResult? reconciled = await handler.ReconcileAsync(action, remote, cancellationToken).ConfigureAwait(false);
+        BotActionResult? reconciled = await ReconcileAsync(
+            handler: handler,
+            action: action,
+            remote: remote,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
         if (reconciled is not null)
         {
-            await FinishAsync(action, reconciled, cancellationToken).ConfigureAwait(false);
-
-            return;
+            return await FinishAsync(action, reconciled, cancellationToken).ConfigureAwait(false);
         }
         if (action.TargetDeleted)
         {
-            await FinishAsync(action, new BotActionResult(false, null, "target deleted"), cancellationToken).ConfigureAwait(false);
-
-            return;
+            return await FinishAsync(action, new BotActionResult(false, null, "target deleted"), cancellationToken).ConfigureAwait(false);
         }
 
         // Persist uncertainty and recheck target deletion after remote preflight reads.
         if (await database.MarkAttemptAsync(action, cancellationToken).ConfigureAwait(false) != 1)
         {
-            await FinishAsync(action, new BotActionResult(false, null, "target deleted while preparing action"), cancellationToken).ConfigureAwait(false);
-
-            return;
+            return await FinishAsync(action, new BotActionResult(false, null, "target deleted while preparing action"), cancellationToken).ConfigureAwait(false);
         }
         BotActionResult result = await handler.ExecuteAsync(action, remote, cancellationToken).ConfigureAwait(false);
-        await FinishAsync(action, result, cancellationToken).ConfigureAwait(false);
+        return await FinishAsync(action, result, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Measures reconciliation without treating unresolved effects as remote failures.</summary>
+    /// <param name="handler">The registered action handler.</param>
+    /// <param name="action">The saved intent.</param>
+    /// <param name="remote">The accounted transport.</param>
+    /// <param name="cancellationToken">The operation cancellation token.</param>
+    /// <returns>The confirmed result, or <see langword="null"/> when unresolved.</returns>
+    private async Task<BotActionResult?> ReconcileAsync(
+        IBotActionHandler handler,
+        BotAction action,
+        IBotActionRemote remote,
+        CancellationToken cancellationToken)
+    {
+        long started = metrics?.Timestamp ?? 0;
+        string outcome = "failure";
+        try
+        {
+            BotActionResult? result = await handler.ReconcileAsync(action, remote, cancellationToken).ConfigureAwait(false);
+            outcome = result switch
+            {
+                null => "unresolved",
+                { Succeeded: true } => "confirmed_success",
+                _ => "confirmed_rejection"
+            };
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            outcome = "cancelled";
+            throw;
+        }
+        finally
+        {
+            metrics?.RecordDuration(metrics.ReconciliationDuration, started, outcome);
+        }
     }
 
     /// <summary>Commits a confirmed terminal outcome before updating counters or logging successful completion.</summary>
     /// <param name="action">The durable action identity.</param>
     /// <param name="result">The confirmed effect or terminal rejection.</param>
     /// <param name="cancellationToken">The active ownership/shutdown token.</param>
-    private async Task FinishAsync(
+    private async Task<string> FinishAsync(
         BotAction action,
         BotActionResult result,
         CancellationToken cancellationToken)
@@ -159,6 +227,7 @@ internal sealed class ActionDispatcher(
             cancellationToken).ConfigureAwait(false);
         if (completed == 1)
         {
+            metrics?.ActionsCompleted.Add(1, BotMetrics.Tag("status", status));
             if (result.Succeeded)
             {
                 statistics.RecordCompletion();
@@ -172,6 +241,7 @@ internal sealed class ActionDispatcher(
                 result.RemoteReference,
                 result.Reason);
         }
+        return completed == 1 ? status : "no_completion";
     }
 }
 

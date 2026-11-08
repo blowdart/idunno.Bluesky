@@ -1,12 +1,14 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.Metrics;
 using System.Text.Json;
 
 using idunno.AtProto.Jetstream;
 using idunno.Bluesky.BotSdk.DataProviders;
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -42,6 +44,8 @@ public sealed class ReplayProgressTests
     public async Task SuccessfulHandlingPublishesExactObservation(string kind)
     {
         using ReaderFixture fixture = await ReaderFixture.CreateAsync();
+        using MetricCollector<long> handled = new(fixture.MeterFactory, BotMetrics.MeterName, BotMetrics.Prefix + "events.handled");
+        using MetricCollector<long> enqueued = new(fixture.MeterFactory, BotMetrics.MeterName, BotMetrics.Prefix + "actions.enqueued");
         fixture.Policy.EvaluateEvent = _ => kind switch
         {
             "action" => [TestRecords.Work()],
@@ -60,6 +64,20 @@ public sealed class ReplayProgressTests
         Assert.Equal(11, await fixture.HandleAsync(item));
         ReplayProgressSnapshot snapshot = fixture.Observations.Snapshot;
         AssertObservation(snapshot, 11, TestRecords.Start, observedAt);
+        string classification = kind switch
+        {
+            "json" or "malformed" => "malformed",
+            _ => kind
+        };
+        Assert.Equal(classification, Assert.Single(handled.GetMeasurementSnapshot()).Tags["classification"]);
+        if (kind == "action")
+        {
+            Assert.Equal(1, Assert.Single(enqueued.GetMeasurementSnapshot()).Value);
+        }
+        else
+        {
+            Assert.Empty(enqueued.GetMeasurementSnapshot());
+        }
 
         ReplayState durable = await fixture.Database.LoadStateAsync(CancellationToken.None);
         if (kind == "ignored")
@@ -180,6 +198,8 @@ public sealed class ReplayProgressTests
     {
         using ReaderFixture fixture = await ReaderFixture.CreateAsync();
         await fixture.HandleAsync(TestRecords.Event());
+        using MetricCollector<long> handled = new(fixture.MeterFactory, BotMetrics.MeterName, BotMetrics.Prefix + "events.handled");
+        using MetricCollector<long> enqueued = new(fixture.MeterFactory, BotMetrics.MeterName, BotMetrics.Prefix + "actions.enqueued");
         ReplayProgressSnapshot before = fixture.Observations.Snapshot;
         fixture.Policy.EvaluateEvent = _ => malformed
             ? throw new MalformedEventException("Malformed source record.")
@@ -188,6 +208,8 @@ public sealed class ReplayProgressTests
         fixture.Time.Advance(TimeSpan.FromSeconds(2));
         await Assert.ThrowsAsync<OwnershipLostException>(() => fixture.HandleAsync(TestRecords.Event(sequence: 12), 11));
         Assert.Equal(before, fixture.Observations.Snapshot);
+        Assert.Empty(handled.GetMeasurementSnapshot());
+        Assert.Empty(enqueued.GetMeasurementSnapshot());
     }
 
     /// <summary>Preserves observations and their age across quiet waits, restoration, and same-period re-enumeration.</summary>
@@ -337,6 +359,7 @@ public sealed class ReplayProgressTests
         }
 
         public FakeTimeProvider Time { get; }
+        public IMeterFactory MeterFactory => _provider.GetRequiredService<IMeterFactory>();
         public TestPolicy Policy { get; }
         public BotReplayProgress Observations { get; }
         public IDatabaseProvider Database { get; }

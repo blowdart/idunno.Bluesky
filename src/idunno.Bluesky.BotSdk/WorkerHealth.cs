@@ -10,6 +10,32 @@ namespace idunno.Bluesky.BotSdk;
 /// <param name="time">The clock used to evaluate operation deadlines.</param>
 internal sealed class WorkerHealth(TimeProvider time)
 {
+    private readonly Dictionary<string, string> _recoveries = new(StringComparer.Ordinal);
+
+    /// <summary>Reports entry into an actual dependency recovery episode.</summary>
+    internal event Action<string, string>? Recovery;
+
+    /// <summary>Reports an unrecoverable worker failure.</summary>
+    internal event Action<string>? Failure;
+
+    /// <summary>Clears an episode only after the worker has successfully resumed work.</summary>
+    internal void Recovered(string worker)
+    {
+        lock (_gate)
+        {
+            _recoveries.Remove(worker);
+        }
+    }
+
+    /// <summary>Gets whether a worker remains in a dependency recovery episode.</summary>
+    internal bool IsRecovering(string worker)
+    {
+        lock (_gate)
+        {
+            return _recoveries.ContainsKey(worker);
+        }
+    }
+
 #if NET9_0_OR_GREATER
     private readonly Lock _gate = new();
 #else
@@ -32,6 +58,21 @@ internal sealed class WorkerHealth(TimeProvider time)
         lock (_gate)
         {
             _states[worker] = new(phase, time.GetUtcNow() + deadline, dependency);
+            if (BotMetrics.IsRecovery(dependency))
+            {
+                string reason = dependency switch
+                {
+                    "database" => "database",
+                    "archive generation" => "archive_generation",
+                    "archive bandwidth" => "archive_bandwidth",
+                    _ => "remote"
+                };
+                if (!_recoveries.TryGetValue(worker, out string? current) || current != reason)
+                {
+                    _recoveries[worker] = reason;
+                    Recovery?.Invoke(worker, reason);
+                }
+            }
         }
     }
 
@@ -41,7 +82,13 @@ internal sealed class WorkerHealth(TimeProvider time)
     {
         lock (_gate)
         {
+            bool newlyFailed = !_states.TryGetValue(worker, out HealthState? previous) || previous.Phase != "failed";
             _states[worker] = new("failed", DateTimeOffset.MinValue, null);
+            _recoveries.Remove(worker);
+            if (newlyFailed)
+            {
+                Failure?.Invoke(worker);
+            }
         }
     }
 

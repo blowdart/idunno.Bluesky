@@ -293,10 +293,12 @@ public static class BotHosting
         services.AddSingleton<IBotPolicy, TPolicy>();
         services.AddSingleton(new LookbackOverride(lookbackCutoff));
         services.TryAddSingleton(TimeProvider.System);
+        services.AddMetrics();
+        services.AddSingleton<BotMetrics>();
         services.TryAddSingleton(provider => new ActionStatistics(provider.GetRequiredService<TimeProvider>().GetUtcNow()));
         services.AddSingleton<Ownership>();
         services.AddSingleton<WorkerHealth>();
-        services.AddSingleton(_ => new BotReplayProgress());
+        services.AddSingleton(provider => new BotReplayProgress(provider.GetRequiredService<TimeProvider>()));
         services.AddSingleton<CredentialVault>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBotActionHandler, ReplyActionHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBotActionHandler, LikeActionHandler>());
@@ -406,6 +408,20 @@ public static class BotHosting
                 content.AppendLine("# TYPE bluesky_bot_retry_due_actions gauge");
                 content.Append("bluesky_bot_retry_due_actions ")
                     .AppendLine(snapshot.RetryDueActions.ToString(CultureInfo.InvariantCulture));
+                content.AppendLine("# HELP bluesky_bot_unfinished_actions_unknown_enqueue_time Unfinished rows without a known enqueue time.");
+                content.AppendLine("# TYPE bluesky_bot_unfinished_actions_unknown_enqueue_time gauge");
+                content.Append("bluesky_bot_unfinished_actions_unknown_enqueue_time ")
+                    .AppendLine(snapshot.UnfinishedActionsWithUnknownEnqueueTime.ToString(CultureInfo.InvariantCulture));
+                AppendAgeMetric(
+                    content: content,
+                    name: "bluesky_bot_oldest_unfinished_action_age_seconds",
+                    description: "Age since durable enqueue of the oldest unfinished action, including future retries; absent if empty or any enqueue time is unknown.",
+                    seconds: snapshot.OldestUnfinishedAgeSeconds);
+                AppendAgeMetric(
+                    content: content,
+                    name: "bluesky_bot_oldest_eligible_action_overdue_seconds",
+                    description: "Time since the earliest eligible retry deadline among unfinished actions; absent if no action is eligible.",
+                    seconds: snapshot.OldestEligibleOverdueSeconds);
 
                 await Results.Text(
                     content.ToString(),
@@ -424,6 +440,21 @@ public static class BotHosting
             .Append(status)
             .Append("\"} ")
             .AppendLine(value.ToString(CultureInfo.InvariantCulture));
+
+    /// <summary>Appends a durable age gauge without fabricating a value for unknown or empty state.</summary>
+    /// <param name="content">The response being assembled.</param>
+    /// <param name="name">The fixed instrument name.</param>
+    /// <param name="description">The instrument's interpretation.</param>
+    /// <param name="seconds">The measured age, or <see langword="null"/> when unavailable.</param>
+    private static void AppendAgeMetric(StringBuilder content, string name, string description, double? seconds)
+    {
+        content.Append("# HELP ").Append(name).Append(' ').AppendLine(description);
+        content.Append("# TYPE ").Append(name).AppendLine(" gauge");
+        if (seconds is double value)
+        {
+            content.Append(name).Append(' ').AppendLine(value.ToString("R", CultureInfo.InvariantCulture));
+        }
+    }
 
     /// <summary>Configures timestamped console diagnostics for the bot runtime.</summary>
     /// <param name="logging">The host logging builder.</param>

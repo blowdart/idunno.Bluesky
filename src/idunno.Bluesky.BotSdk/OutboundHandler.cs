@@ -17,12 +17,14 @@ namespace idunno.Bluesky.BotSdk;
 /// <param name="time">The clock used for pacing deadlines.</param>
 /// <param name="health">The deadline tracker for actual outbound waits.</param>
 /// <param name="logger">The HTTP outcome logger, which never logs request credentials.</param>
+/// <param name="metrics">The optional host-owned instrumentation.</param>
 internal sealed class OutboundHandler(
     IDatabaseProvider database,
     BotOptions options,
     TimeProvider time,
     WorkerHealth health,
-    ILogger<OutboundHandler> logger) : DelegatingHandler
+    ILogger<OutboundHandler> logger,
+    BotMetrics? metrics = null) : DelegatingHandler
 {
     /// <inheritdoc/>
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -36,11 +38,17 @@ internal sealed class OutboundHandler(
         }
 
         int writePoints = await WritePointsAsync(operation, request, cancellationToken).ConfigureAwait(false);
+        bool budgetDeferred = false;
         while (await database.ReserveRequestAsync(
             writePoints,
             operation == "com.atproto.server.createSession",
             cancellationToken).ConfigureAwait(false) is DateTimeOffset until)
         {
+            if (!budgetDeferred)
+            {
+                metrics?.RateDeferrals.Add(1, BotMetrics.Tag("reason", "budget"));
+                budgetDeferred = true;
+            }
             TimeSpan delay = until - time.GetUtcNow();
 
             if (delay > TimeSpan.FromSeconds(10))
@@ -50,7 +58,29 @@ internal sealed class OutboundHandler(
             }
 
             health.Set("sender", "outbound pacing", TimeSpan.FromSeconds(45));
-            await Task.Delay(delay > TimeSpan.Zero ? delay : TimeSpan.FromMilliseconds(100), cancellationToken).ConfigureAwait(false);
+            long started = metrics?.Timestamp ?? 0;
+            string outcome = "failure";
+            try
+            {
+                await Task.Delay(
+                    delay: delay > TimeSpan.Zero ? delay : TimeSpan.FromMilliseconds(100),
+                    timeProvider: time,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+                outcome = "success";
+            }
+            catch (OperationCanceledException)
+            {
+                outcome = "cancelled";
+                throw;
+            }
+            finally
+            {
+                metrics?.RecordDuration(
+                    histogram: metrics.RateWaitDuration,
+                    started: started,
+                    outcome: outcome,
+                    location: "outbound");
+            }
         }
 
         // Reserve before touching the network: timeouts and failed writes still consume the durable budget.
@@ -59,6 +89,10 @@ internal sealed class OutboundHandler(
 
         try
         {
+            if (response.StatusCode == HttpStatusCode.TooManyRequests)
+            {
+                metrics?.RateDeferrals.Add(1, BotMetrics.Tag("reason", "http_429"));
+            }
             if (cooldown is DateTimeOffset reset)
             {
                 await database.CooldownAsync(reset, cancellationToken).ConfigureAwait(false);

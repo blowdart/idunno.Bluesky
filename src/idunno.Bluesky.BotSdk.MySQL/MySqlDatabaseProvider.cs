@@ -29,8 +29,13 @@ public sealed class MySqlDatabaseProvider(
     string connectionString,
     BotOptions options,
     TimeProvider time,
-    ILogger<MySqlDatabaseProvider> logger) : IDatabaseProvider, IBotDatabaseDiagnostics
+    ILogger<MySqlDatabaseProvider> logger) : IDatabaseProvider, IBotDatabaseDiagnostics, IBotActionTimingSource
 {
+    private readonly BotActionTiming _timing = new();
+
+    /// <inheritdoc/>
+    BotActionTiming IBotActionTimingSource.Timing => _timing;
+
     private static readonly JsonTypeInfo<SnapshotRequest> s_snapshotRequestTypeInfo =
         BotJson.SnapshotRequest;
     private static readonly JsonTypeInfo<SnapshotCheckpoint> s_snapshotCheckpointTypeInfo =
@@ -268,7 +273,8 @@ public sealed class MySqlDatabaseProvider(
             {
                 ("action_kind", "VARCHAR(128) COLLATE utf8mb4_0900_bin NOT NULL DEFAULT 'reply' CHECK(CHAR_LENGTH(action_kind) BETWEEN 1 AND 128)"),
                 ("action_key", "VARCHAR(128) COLLATE utf8mb4_0900_bin NOT NULL DEFAULT 'default' CHECK(CHAR_LENGTH(action_key) BETWEEN 1 AND 128)"),
-                ("payload_version", "INTEGER NOT NULL DEFAULT 1 CHECK(payload_version > 0)")
+                ("payload_version", "INTEGER NOT NULL DEFAULT 1 CHECK(payload_version > 0)"),
+                ("enqueued_at", "BIGINT NULL")
             })
             {
                 DbCommand column = Command(
@@ -363,7 +369,7 @@ public sealed class MySqlDatabaseProvider(
         return [
             "CREATE TABLE IF NOT EXISTS bot_ownership (id INTEGER PRIMARY KEY CHECK(id = 1), owner VARCHAR(32) NOT NULL, lease_until BIGINT NOT NULL, ready_at BIGINT NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin",
             "CREATE TABLE IF NOT EXISTS bot_state (id INTEGER PRIMARY KEY CHECK(id = 1), started_at BIGINT NOT NULL, service LONGTEXT NOT NULL, bot_did LONGTEXT NOT NULL, developer_mode INTEGER NOT NULL, request LONGTEXT, checkpoint LONGTEXT, processed_through BIGINT NOT NULL DEFAULT 0, credentials LONGBLOB, archive_cooldown BIGINT NOT NULL DEFAULT 0) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin",
-            "CREATE TABLE IF NOT EXISTS reply_work (source_hash BINARY(32) NOT NULL, source_uri LONGTEXT NOT NULL, action_kind VARCHAR(128) COLLATE utf8mb4_0900_bin NOT NULL DEFAULT 'reply' CHECK(CHAR_LENGTH(action_kind) BETWEEN 1 AND 128), action_key VARCHAR(128) COLLATE utf8mb4_0900_bin NOT NULL DEFAULT 'default' CHECK(CHAR_LENGTH(action_key) BETWEEN 1 AND 128), payload_version INTEGER NOT NULL DEFAULT 1 CHECK(payload_version > 0), source_sequence BIGINT NOT NULL, source_did LONGTEXT NOT NULL, record_key VARCHAR(128) NOT NULL, record JSON NOT NULL, root_uri LONGTEXT, status VARCHAR(16) NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','uncertain','sent','not-sent','simulated')), attempts INTEGER NOT NULL DEFAULT 0, next_retry BIGINT NOT NULL, outcome LONGTEXT, reply_uri LONGTEXT, completed_at BIGINT, target_deleted INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(source_hash, action_kind, action_key)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin",
+            "CREATE TABLE IF NOT EXISTS reply_work (source_hash BINARY(32) NOT NULL, source_uri LONGTEXT NOT NULL, action_kind VARCHAR(128) COLLATE utf8mb4_0900_bin NOT NULL DEFAULT 'reply' CHECK(CHAR_LENGTH(action_kind) BETWEEN 1 AND 128), action_key VARCHAR(128) COLLATE utf8mb4_0900_bin NOT NULL DEFAULT 'default' CHECK(CHAR_LENGTH(action_key) BETWEEN 1 AND 128), payload_version INTEGER NOT NULL DEFAULT 1 CHECK(payload_version > 0), source_sequence BIGINT NOT NULL, source_did LONGTEXT NOT NULL, record_key VARCHAR(128) NOT NULL, record JSON NOT NULL, root_uri LONGTEXT, status VARCHAR(16) NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','uncertain','sent','not-sent','simulated')), attempts INTEGER NOT NULL DEFAULT 0, next_retry BIGINT NOT NULL, enqueued_at BIGINT, outcome LONGTEXT, reply_uri LONGTEXT, completed_at BIGINT, target_deleted INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(source_hash, action_kind, action_key)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin",
             "CREATE TABLE IF NOT EXISTS rate_accounting (id BIGINT PRIMARY KEY AUTO_INCREMENT, requested_at BIGINT NOT NULL, points INTEGER NOT NULL, session_create INTEGER NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin",
             "CREATE TABLE IF NOT EXISTS rate_state (id INTEGER PRIMARY KEY CHECK(id = 1), next_request BIGINT NOT NULL DEFAULT 0, cooldown_until BIGINT NOT NULL DEFAULT 0) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin",
             "INSERT INTO rate_state(id) VALUES(1) ON DUPLICATE KEY UPDATE id = id",
@@ -498,7 +504,11 @@ public sealed class MySqlDatabaseProvider(
                 COUNT(CASE WHEN status IN ('pending', 'uncertain') AND next_retry <= {NowSql} THEN 1 END),
                 COUNT(CASE WHEN status = 'sent' THEN 1 END),
                 COUNT(CASE WHEN status = 'not-sent' THEN 1 END),
-                COUNT(CASE WHEN status = 'simulated' THEN 1 END)
+                COUNT(CASE WHEN status = 'simulated' THEN 1 END),
+                COUNT(CASE WHEN status IN ('pending', 'uncertain') AND enqueued_at IS NULL THEN 1 END),
+                CASE WHEN COUNT(CASE WHEN status IN ('pending', 'uncertain') AND enqueued_at IS NULL THEN 1 END) = 0
+                    THEN GREATEST(0, ({NowSql} - MIN(CASE WHEN status IN ('pending', 'uncertain') THEN enqueued_at END)) / 1000000.0) END,
+                ({NowSql} - MIN(CASE WHEN status IN ('pending', 'uncertain') AND next_retry <= {NowSql} THEN next_retry END)) / 1000000.0
             FROM reply_work
             """);
         await using ConfiguredAsyncDisposable commandDisposal = command.ConfigureAwait(false);
@@ -516,7 +526,12 @@ public sealed class MySqlDatabaseProvider(
             Integer(reader.GetValue(3)),
             Integer(reader.GetValue(4)),
             Integer(reader.GetValue(5)),
-            Integer(reader.GetValue(6)));
+            Integer(reader.GetValue(6)))
+        {
+            UnfinishedActionsWithUnknownEnqueueTime = Integer(reader.GetValue(7)),
+            OldestUnfinishedAgeSeconds = await reader.IsDBNullAsync(8, cancellationToken).ConfigureAwait(false) ? null : Convert.ToDouble(reader.GetValue(8), CultureInfo.InvariantCulture),
+            OldestEligibleOverdueSeconds = await reader.IsDBNullAsync(9, cancellationToken).ConfigureAwait(false) ? null : Convert.ToDouble(reader.GetValue(9), CultureInfo.InvariantCulture)
+        };
     }
 
     /// <summary>Saves the original replay request only when no request has already been saved.</summary>
@@ -605,8 +620,8 @@ public sealed class MySqlDatabaseProvider(
                         transaction,
                         """
                         INSERT INTO reply_work(source_hash, source_uri, source_sequence, source_did, record_key,
-                            record, root_uri, next_retry, action_kind, action_key, payload_version, status, attempts, target_deleted)
-                        VALUES(@hash,@uri,@seq,@did,@key,@record,@root,@now,@kind,@action,@version,@status,@attempts,@deleted)
+                            record, root_uri, next_retry, enqueued_at, action_kind, action_key, payload_version, status, attempts, target_deleted)
+                        VALUES(@hash,@uri,@seq,@did,@key,@record,@root,@now,@now,@kind,@action,@version,@status,@attempts,@deleted)
                         """,
                         cancellationToken,
                         ("@hash", hash),
@@ -836,7 +851,7 @@ public sealed class MySqlDatabaseProvider(
                 transaction,
                 """
                 SELECT source_uri, source_sequence, source_did, record_key, record, status, attempts,
-                    target_deleted, action_kind, action_key, payload_version
+                    target_deleted, action_kind, action_key, payload_version, enqueued_at
                 FROM reply_work WHERE status IN ('pending','uncertain') AND next_retry <= @now
                 ORDER BY next_retry, source_sequence LIMIT 1
                 """,
@@ -857,7 +872,10 @@ public sealed class MySqlDatabaseProvider(
                 reader.GetInt32(7) != 0,
                 reader.GetString(8),
                 reader.GetString(9),
-                reader.GetInt32(10));
+                reader.GetInt32(10))
+            {
+                EnqueuedAt = await reader.IsDBNullAsync(11, cancellationToken).ConfigureAwait(false) ? null : Timestamp(reader.GetInt64(11))
+            };
         },
             cancellationToken);
 
@@ -915,20 +933,53 @@ public sealed class MySqlDatabaseProvider(
     /// <param name="reason">The outcome reason.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The number of affected rows.</returns>
-    public Task<int> FinishAsync(
+    public async Task<int> FinishAsync(
         BotAction work,
         string status,
         string? remoteReference,
         string reason,
-        CancellationToken cancellationToken) =>
-        UpdateWorkAsync(
-            work,
-            "status = @status, completed_at = @now, reply_uri = @reply, outcome = @reason",
-            cancellationToken,
-            "",
-            ("@status", status),
-            ("@reply", remoteReference),
-            ("@reason", reason));
+        CancellationToken cancellationToken)
+    {
+        (int count, DateTimeOffset? enqueuedAt, DateTimeOffset completedAt) = await TransactionAsync(
+            owned: true,
+            action: async (connection, transaction, now) =>
+            {
+                (string Name, object? Value)[] identity =
+                [
+                    ("@hash", SourceHash(work.SourceUri.ToString())),
+                    ("@uri", work.SourceUri.ToString()),
+                    ("@kind", work.ActionKind),
+                    ("@action", work.ActionKey)
+                ];
+                object? enqueue = await ScalarAsync(
+                    connection,
+                    transaction,
+                    "SELECT enqueued_at FROM reply_work WHERE source_hash = @hash AND source_uri = @uri AND action_kind = @kind AND action_key = @action AND status IN ('pending','uncertain') FOR UPDATE",
+                    cancellationToken,
+                    identity).ConfigureAwait(false);
+                int affected = await ExecuteAsync(
+                    connection,
+                    transaction,
+                    "UPDATE reply_work SET status = @status, completed_at = @now, reply_uri = @reply, outcome = @reason WHERE source_hash = @hash AND source_uri = @uri AND action_kind = @kind AND action_key = @action AND status IN ('pending','uncertain')",
+                    cancellationToken,
+                    [
+                        .. identity,
+                        ("@status", status),
+                        ("@now", now),
+                        ("@reply", remoteReference),
+                        ("@reason", reason)
+                    ]).ConfigureAwait(false);
+
+                return (affected, enqueue is null ? (DateTimeOffset?)null : Timestamp(Integer(enqueue)), Timestamp(now));
+            },
+            token: cancellationToken).ConfigureAwait(false);
+        if (count == 1)
+        {
+            _timing.Record(status, enqueuedAt, completedAt);
+        }
+
+        return count;
+    }
 
     /// <summary>Schedules another reconciliation or send attempt without changing its fixed record.</summary>
     /// <param name="work">The work to retry.</param>

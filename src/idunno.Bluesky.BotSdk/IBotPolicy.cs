@@ -57,7 +57,12 @@ public sealed record BotAction(
     bool TargetDeleted = false,
     string ActionKind = "reply",
     string ActionKey = "default",
-    int PayloadVersion = 1);
+    int PayloadVersion = 1)
+{
+    /// <summary>Gets the storage-assigned enqueue time, when known.</summary>
+    /// <value>The durable enqueue timestamp, or <see langword="null"/> for unsaved intents or legacy rows.</value>
+    public DateTimeOffset? EnqueuedAt { get; init; }
+}
 
 /// <summary>Stores the complete durable replay configuration, checkpoint, and handling boundary.</summary>
 /// <param name="StartedAt">The saved witnessed-time eligibility boundary.</param>

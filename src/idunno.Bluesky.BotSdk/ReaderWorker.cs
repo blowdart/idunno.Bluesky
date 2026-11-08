@@ -29,6 +29,7 @@ namespace idunno.Bluesky.BotSdk;
 /// <param name="lookback">The optional one-time instruction to deliberately skip older history.</param>
 /// <param name="policy">The application policy that chooses complete actions without remote writes.</param>
 /// <param name="handlers">The registry used to validate policy output before durable handling.</param>
+/// <param name="metrics">The optional host-owned instrumentation.</param>
 internal sealed class ReaderWorker(
     IDatabaseProvider database,
     Ownership ownership,
@@ -40,7 +41,8 @@ internal sealed class ReaderWorker(
     TimeProvider time,
     LookbackOverride lookback,
     IBotPolicy policy,
-    ActionHandlerRegistry handlers) : BackgroundService
+    ActionHandlerRegistry handlers,
+    BotMetrics? metrics = null) : BackgroundService
 {
     private static readonly TimeSpan s_readSlice = TimeSpan.FromMinutes(5);
     private readonly GenerationRecovery _generationRecovery = new();
@@ -412,10 +414,45 @@ internal sealed class ReaderWorker(
         ReplayProgress progress,
         CancellationToken cancellationToken)
     {
+        long started = metrics?.Timestamp ?? 0;
+        string outcome = "failure";
+        try
+        {
+            long result = await HandleEventCoreAsync(
+                item: item,
+                startedAt: startedAt,
+                processed: processed,
+                diagnostics: diagnostics,
+                progress: progress,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+            outcome = result == processed ? "duplicate" : "success";
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            outcome = "cancelled";
+            throw;
+        }
+        finally
+        {
+            metrics?.RecordDuration(metrics.EventDuration, started, outcome);
+        }
+    }
+
+    /// <summary>Handles one event before publishing observations or successful instrumentation.</summary>
+    private async ValueTask<long> HandleEventCoreAsync(
+        JetstreamEvent item,
+        DateTimeOffset startedAt,
+        long processed,
+        ReplayDiagnostics diagnostics,
+        ReplayProgress progress,
+        CancellationToken cancellationToken)
+    {
         (long sequence, DateTimeOffset witnessedAt) = ValidateReplayPosition(item);
 
         if (sequence <= processed)
         {
+            metrics?.EventsDuplicates.Add(1);
             // Still consume duplicates so SDK checkpoints can advance. Never repeat the
             // application side effects just because archive recovery repeats an event.
             return processed;
@@ -470,6 +507,19 @@ internal sealed class ReaderWorker(
         }
 
         progress.Observe(sequence, witnessedAt);
+        health.Recovered("reader");
+        string classification = (malformed is not null, deletedUri is not null, work.Count > 0) switch
+        {
+            (true, _, _) => "malformed",
+            (_, true, _) => "delete",
+            (_, _, true) => "action",
+            _ => "ignored"
+        };
+        metrics?.EventsHandled.Add(1, BotMetrics.Tag("classification", classification));
+        if (inserted > 0)
+        {
+            metrics?.ActionsEnqueued.Add(inserted);
+        }
 
         return sequence;
     }

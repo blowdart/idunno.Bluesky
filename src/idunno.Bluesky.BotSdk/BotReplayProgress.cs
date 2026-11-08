@@ -20,9 +20,24 @@ public sealed class BotReplayProgress
     private readonly object _gate = new();
 #endif
     private CancellationToken? _ownershipPeriod;
+    private readonly TimeProvider _time;
+    private long? _observedTimestamp;
 
-    internal BotReplayProgress()
+    /// <summary>Initializes a new instance of the <see cref="BotReplayProgress"/> class.</summary>
+    /// <param name="time">The observation clock, or <see langword="null"/> for the system clock.</param>
+    internal BotReplayProgress(TimeProvider? time = null)
     {
+        _time = time ?? TimeProvider.System;
+    }
+
+    /// <summary>Gets the monotonic timestamp of the last handled event, when known.</summary>
+    /// <returns>The timestamp, or <see langword="null"/> before an event is observed.</returns>
+    internal long? GetObservedTimestamp()
+    {
+        lock (_gate)
+        {
+            return _observedTimestamp;
+        }
     }
 
     /// <summary>Gets an immutable, atomic copy of the last handled-event observation.</summary>
@@ -48,6 +63,7 @@ public sealed class BotReplayProgress
             {
                 _ownershipPeriod = ownershipPeriod;
                 Snapshot = default;
+                _observedTimestamp = null;
             }
         }
     }
@@ -57,6 +73,7 @@ public sealed class BotReplayProgress
         lock (_gate)
         {
             Snapshot = new(sequence, witnessedAt, observedAt);
+            _observedTimestamp = _time.GetTimestamp();
         }
     }
 }

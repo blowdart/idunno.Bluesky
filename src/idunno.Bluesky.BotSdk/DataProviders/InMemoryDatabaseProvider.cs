@@ -17,7 +17,7 @@ namespace idunno.Bluesky.BotSdk.DataProviders;
 internal sealed class InMemoryDatabaseProvider(
     BotOptions options,
     TimeProvider timeProvider,
-    ILogger<InMemoryDatabaseProvider> logger) : IDatabaseProvider, IBotDatabaseDiagnostics
+    ILogger<InMemoryDatabaseProvider> logger) : IDatabaseProvider, IBotDatabaseDiagnostics, IBotActionTimingSource
 {
     private static readonly TimeSpan s_leaseLength = TimeSpan.FromSeconds(90);
     private static readonly TimeSpan s_readyDelay = TimeSpan.FromSeconds(40);
@@ -48,6 +48,11 @@ internal sealed class InMemoryDatabaseProvider(
     private DateTimeOffset _archiveCooldownUntil = DateTimeOffset.UnixEpoch;
     private byte[]? _credentials;
     private bool _initialized;
+
+    private readonly BotActionTiming _timing = new();
+
+    /// <inheritdoc/>
+    BotActionTiming IBotActionTimingSource.Timing => _timing;
 
     /// <inheritdoc/>
     public Guid Owner { get; } = Guid.NewGuid();
@@ -200,6 +205,7 @@ internal sealed class InMemoryDatabaseProvider(
             }
 
             List<(ActionIdentity Identity, WorkState Work)> newWork = [];
+            DateTimeOffset now = timeProvider.GetUtcNow();
             HashSet<ActionIdentity> identities = [.. _work.Keys];
             int inserted = 0;
             foreach (BotAction action in actions)
@@ -219,7 +225,7 @@ internal sealed class InMemoryDatabaseProvider(
                 }
 
                 string? rootUri = GetRootUri(action);
-                newWork.Add((identity, new WorkState(action, timeProvider.GetUtcNow(), null, rootUri, null, null)));
+                newWork.Add((identity, new WorkState(action with { EnqueuedAt = now }, now, null, rootUri, null, null)));
                 inserted++;
             }
 
@@ -243,7 +249,7 @@ internal sealed class InMemoryDatabaseProvider(
 
             if (malformedReason is not null)
             {
-                _skippedData.Add(new SkippedData(timeProvider.GetUtcNow(), sequence, "post", malformedReason));
+                _skippedData.Add(new SkippedData(now, sequence, "post", malformedReason));
             }
 
             _state = _state with { ProcessedThrough = sequence };
@@ -398,6 +404,8 @@ internal sealed class InMemoryDatabaseProvider(
         ArgumentException.ThrowIfNullOrWhiteSpace(status);
         ArgumentNullException.ThrowIfNull(reason);
         cancellationToken.ThrowIfCancellationRequested();
+        DateTimeOffset? enqueuedAt;
+        DateTimeOffset completedAt;
         lock (_gate)
         {
             RequireOwned();
@@ -408,15 +416,19 @@ internal sealed class InMemoryDatabaseProvider(
                 return Task.FromResult(0);
             }
 
+            enqueuedAt = current.Action.EnqueuedAt;
+            completedAt = timeProvider.GetUtcNow();
             _work[identity] = current with
             {
                 Action = current.Action with { Status = status },
-                CompletedAt = timeProvider.GetUtcNow(),
+                CompletedAt = completedAt,
                 RemoteUri = remoteReference,
                 Outcome = reason
             };
-            return Task.FromResult(1);
         }
+
+        _timing.Record(status, enqueuedAt, completedAt);
+        return Task.FromResult(1);
     }
 
     /// <inheritdoc/>
@@ -615,10 +627,17 @@ internal sealed class InMemoryDatabaseProvider(
         cancellationToken.ThrowIfCancellationRequested();
         lock (_gate)
         {
+            DateTimeOffset now = timeProvider.GetUtcNow();
+            WorkState[] unfinished = [.. _work.Values.Where(work => work.Action.Status is "pending" or "uncertain")];
+            long unknownEnqueues = unfinished.LongCount(work => work.Action.EnqueuedAt is null);
+            DateTimeOffset? oldestEnqueue = unfinished.Min(work => work.Action.EnqueuedAt);
+            DateTimeOffset? oldestEligible = unfinished
+                .Where(work => work.NextRetryAt <= now)
+                .Min(work => (DateTimeOffset?)work.NextRetryAt);
             long pending = _work.Values.LongCount(work => work.Action.Status == "pending");
             long uncertain = _work.Values.LongCount(work => work.Action.Status == "uncertain");
             long retryDue = _work.Values.LongCount(work =>
-                (work.Action.Status is "pending" or "uncertain") && work.NextRetryAt <= timeProvider.GetUtcNow());
+                (work.Action.Status is "pending" or "uncertain") && work.NextRetryAt <= now);
             long sent = _work.Values.LongCount(work => work.Action.Status == "sent");
             long rejected = _work.Values.LongCount(work => work.Action.Status == "not-sent");
             long simulated = _work.Values.LongCount(work => work.Action.Status == "simulated");
@@ -629,7 +648,12 @@ internal sealed class InMemoryDatabaseProvider(
                 retryDue,
                 sent,
                 rejected,
-                simulated));
+                simulated)
+            {
+                UnfinishedActionsWithUnknownEnqueueTime = unknownEnqueues,
+                OldestUnfinishedAgeSeconds = unknownEnqueues == 0 && oldestEnqueue is DateTimeOffset enqueue ? Math.Max(0, (now - enqueue).TotalSeconds) : null,
+                OldestEligibleOverdueSeconds = oldestEligible is DateTimeOffset eligible ? (now - eligible).TotalSeconds : null
+            });
         }
     }
 
