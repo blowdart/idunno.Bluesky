@@ -27,7 +27,10 @@ namespace idunno.Bluesky.Labeler.Host;
 internal static partial class Program
 {
     /// <summary>Runs either the standalone labeler host or an isolated readiness probe.</summary>
-    internal static async Task<int> Main(string[] args)
+    internal static Task<int> Main(string[] args) => RunAsync(args, configureStorage: null);
+
+    /// <summary>Runs the canonical application with explicitly supplied provider registration.</summary>
+    internal static async Task<int> RunAsync(string[] args, Action<WebApplicationBuilder>? configureStorage)
     {
         if (args is ["--health-check", ..])
         {
@@ -49,52 +52,94 @@ internal static partial class Program
         {
             builder.Configuration.AddJsonFile(additionalConfiguration, optional: false, reloadOnChange: false);
         }
+        using IDisposable? keyRingLifetime = IsKeylessConfiguration(builder.Configuration)
+            ? null
+            : CreateSigningKeyRing(builder.Configuration);
+        ILabelSigningKeyRing? keyRing = (ILabelSigningKeyRing?)keyRingLifetime;
+        using HttpClient identityClient = CreateIdentityClient();
+        if (configureStorage is null)
+        {
+            throw new InvalidOperationException("Use an explicitly configured PostgreSQL or MySQL canonical host.");
+        }
+        configureStorage(builder);
+        builder.AddCanonicalBlueskyLabeler(identityClient, keyRing);
+
+        WebApplication app = builder.Build();
+        await using ConfiguredAsyncDisposable appDisposal = app.ConfigureAwait(false);
+        await app.InitializeCanonicalBlueskyLabelerAsync(keyRing, app.Lifetime.ApplicationStopping).ConfigureAwait(false);
+
+        string? bootstrapAdministrator = builder.Configuration["bootstrap-admin"];
+        if (bootstrapAdministrator is not null)
+        {
+            string operationId = Required(builder.Configuration, "bootstrap-operation-id");
+            LabelServiceResult<LabelAdministrationReceipt> bootstrap = await DatabaseRetry.ExecuteStartupAsync(
+                token => app.Services.BootstrapLocalAdministratorAsync(
+                    AtIdentifier.Create(bootstrapAdministrator),
+                    operationId,
+                    token),
+                app.Services.GetRequiredService<TimeProvider>(),
+                app.Logger,
+                "administrator bootstrap",
+                app.Lifetime.ApplicationStopping)
+                .ConfigureAwait(false);
+            if (!bootstrap.Succeeded)
+            {
+                await Console.Error.WriteLineAsync($"Administrator bootstrap failed: {bootstrap.Error.Code}").ConfigureAwait(false);
+                return 1;
+            }
+
+            Console.WriteLine(JsonSerializer.Serialize(bootstrap.Result, HostJsonSerializerContext.Default.LabelAdministrationReceipt));
+            return 0;
+        }
+
+        app.MapCanonicalBlueskyLabeler();
+        await app.RunAsync().ConfigureAwait(false);
+        return 0;
+    }
+
+    /// <summary>Composes canonical hosting through existing distribution and administration registrations.</summary>
+    internal static void AddCanonicalServices(
+        WebApplicationBuilder builder,
+        HttpClient identityClient,
+        ILabelSigningKeyRing? keyRing)
+    {
+        if (builder.Services.Any(service => service.ServiceType == typeof(CanonicalLabelerSettings)))
+        {
+            throw new InvalidOperationException("Register canonical hosting only once.");
+        }
+        if (IsKeylessConfiguration(builder.Configuration) != (keyRing is null))
+        {
+            throw new InvalidOperationException("The signing-key ring must match the explicitly configured signing role.");
+        }
         Did issuer = new(Required(builder.Configuration, "Labeler:IssuerDid"));
         Uri publicEndpoint = new(Required(builder.Configuration, "Labeler:PublicEndpoint"));
-        string provider = builder.Configuration["Labeler:DatabaseProvider"] ?? "postgresql";
-        string connectionString = Required(builder.Configuration, "Labeler:ConnectionString");
-        string localAdministrationEndpoint =
-            builder.Configuration["Labeler:LocalAdministrationEndpoint"] ??
-            (OperatingSystem.IsWindows() ? "idunno-labeler-admin" : "/run/labeler/admin.sock");
         AtProtoServiceReference audience = ParseAudience(Required(builder.Configuration, "Labeler:AdministrationAudience"));
         if (audience.Did != issuer || audience.Fragment != Audience.Administration)
         {
             throw new InvalidOperationException(
                 "Labeler:AdministrationAudience must match Labeler:IssuerDid and use the labeler_admin fragment.");
         }
-
-        using IDisposable? keyRingLifetime = IsKeylessConfiguration(builder.Configuration)
-            ? null
-            : CreateSigningKeyRing(builder.Configuration);
-        ILabelSigningKeyRing? keyRing = (ILabelSigningKeyRing?)keyRingLifetime;
-        using HttpClient identityClient = CreateIdentityClient();
-        switch (provider)
-        {
-            case "sqlite":
-                builder.Services.AddSqliteLabelStorage(connectionString);
-                break;
-            case "postgresql":
-                builder.Services.AddPostgreSqlLabelStorage(connectionString);
-                break;
-            case "mysql":
-                builder.Services.AddMySqlLabelStorage(connectionString);
-                break;
-            default:
-                throw new InvalidOperationException("Labeler:DatabaseProvider must be sqlite, postgresql, or mysql.");
-        }
-
+        string localAdministrationEndpoint =
+            builder.Configuration["Labeler:LocalAdministrationEndpoint"] ??
+            (OperatingSystem.IsWindows() ? "idunno-labeler-admin" : "/run/labeler/admin.sock");
         bool moderationEnabled = builder.Configuration.GetValue<bool>("LabelerModeration:Enabled");
         bool uiEnabled = builder.Configuration.GetValue<bool>("LabelerUI:Enabled");
-        bool ozoneEnabled = builder.Configuration.GetValue<bool>("LabelerOzone:Enabled");
         if (uiEnabled && !moderationEnabled)
         {
             throw new InvalidOperationException("Enable LabelerModeration before enabling the Xenon web UI.");
         }
+        builder.Services.AddSingleton(new CanonicalLabelerSettings(
+            Issuer: issuer,
+            PublicEndpoint: publicEndpoint,
+            Audience: audience,
+            ModerationEnabled: moderationEnabled,
+            UiEnabled: uiEnabled,
+            OzoneEnabled: builder.Configuration.GetValue<bool>("LabelerOzone:Enabled"),
+            SigningKeyRing: keyRing));
 
-        LabelerModerationOptions moderationOptions = new();
         if (moderationEnabled)
         {
-            moderationOptions = builder.Configuration.GetSection("LabelerModeration").Get<LabelerModerationOptions>() ?? new();
+            LabelerModerationOptions moderationOptions = builder.Configuration.GetSection("LabelerModeration").Get<LabelerModerationOptions>() ?? new();
             builder.Services.AddLabelerModeration(issuer: issuer, httpClient: identityClient, options: moderationOptions);
         }
         else
@@ -137,23 +182,36 @@ internal static partial class Program
         builder.Services.AddLabelerLocalAdministration(localAdministrationEndpoint);
         if (uiEnabled)
         {
-            if (provider == "postgresql")
+            if (builder.Services.Count(service => service.ServiceType == typeof(ILabelerHostAuthenticationPersistence)) != 1)
             {
-                AddPersistentAuthentication(builder.Services, connectionString, publicEndpoint);
+                throw new InvalidOperationException("Canonical website authentication requires exactly one persistent database integration.");
             }
             AddWebsiteAuthentication(builder.Services, publicEndpoint);
             builder.Services.AddLabelerUI();
         }
+    }
 
-        WebApplication app = builder.Build();
-        await using ConfiguredAsyncDisposable appDisposal = app.ConfigureAwait(false);
+    /// <summary>Initializes provider-independent storage, policy and signing state before requests are admitted.</summary>
+    internal static async Task InitializeCanonicalServicesAsync(
+        WebApplication app,
+        ILabelSigningKeyRing? keyRing,
+        CancellationToken cancellationToken)
+    {
+        CanonicalLabelerSettings settings = app.Services.GetRequiredService<CanonicalLabelerSettings>();
+        if (!ReferenceEquals(settings.SigningKeyRing, keyRing))
+        {
+            throw new InvalidOperationException("Initialize with the same signing-key ring used during canonical registration.");
+        }
+        Did issuer = settings.Issuer;
+        bool uiEnabled = settings.UiEnabled;
+        bool moderationEnabled = settings.ModerationEnabled;
         await DatabaseRetry.ExecuteStartupAsync(
-            async cancellationToken =>
+            async token =>
             {
-                if (uiEnabled && provider == "postgresql")
+                if (uiEnabled)
                 {
-                    await app.Services.GetRequiredService<PostgreSqlXmlRepository>()
-                        .InitializeAsync(cancellationToken).ConfigureAwait(false);
+                    await app.Services.GetRequiredService<ILabelerHostAuthenticationPersistence>()
+                        .InitializeAsync(token).ConfigureAwait(false);
                 }
                 if (keyRing is null)
                 {
@@ -162,34 +220,34 @@ internal static partial class Program
                         store: app.Services.GetRequiredService<ILabelStore>(),
                         maintenance: app.Services.GetRequiredService<ILabelMaintenanceStore>(),
                         policies: app.Services.GetService<ILabelPolicyStore>(),
-                        cancellationToken: cancellationToken).ConfigureAwait(false);
+                        cancellationToken: token).ConfigureAwait(false);
                 }
                 else
                 {
                     await app.Services.GetRequiredService<ILabelStore>()
-                        .InitializeAsync(issuer, cancellationToken)
+                        .InitializeAsync(issuer, token)
                         .ConfigureAwait(false);
                 }
                 if (moderationEnabled)
                 {
                     await app.Services.GetRequiredService<ILabelPolicyStore>().InitializePolicyAsync(
-                        verificationFreshness: moderationOptions.VerificationFreshness,
-                        cancellationToken: cancellationToken).ConfigureAwait(false);
+                        verificationFreshness: app.Services.GetRequiredService<LabelerModerationOptions>().VerificationFreshness,
+                        cancellationToken: token).ConfigureAwait(false);
                 }
                 if (keyRing is EnvironmentLabelSigningKeyRing environmentKeys)
                 {
                     await environmentKeys.InitializeAsync(
                         selectionStore: app.Services.GetRequiredService<ILabelSigningKeySelectionStore>(),
                         maintenance: app.Services.GetRequiredService<ILabelMaintenanceStore>(),
-                        initialKeyId: builder.Configuration["Labeler:InitialSigningKeyId"],
-                        cancellationToken: cancellationToken).ConfigureAwait(false);
+                        initialKeyId: app.Configuration["Labeler:InitialSigningKeyId"],
+                        cancellationToken: token).ConfigureAwait(false);
                 }
                 else if (keyRing is PemDirectoryLabelSigningKeyRing pemKeys)
                 {
                     await pemKeys.InitializeAsync(
                         selectionStore: app.Services.GetRequiredService<ILabelSigningKeySelectionStore>(),
                         maintenance: app.Services.GetRequiredService<ILabelMaintenanceStore>(),
-                        cancellationToken: cancellationToken).ConfigureAwait(false);
+                        cancellationToken: token).ConfigureAwait(false);
                 }
 
                 return true;
@@ -197,32 +255,16 @@ internal static partial class Program
             app.Services.GetRequiredService<TimeProvider>(),
             app.Logger,
             "host initialization",
-            app.Lifetime.ApplicationStopping).ConfigureAwait(false);
+            cancellationToken).ConfigureAwait(false);
+    }
 
-        string? bootstrapAdministrator = builder.Configuration["bootstrap-admin"];
-        if (bootstrapAdministrator is not null)
-        {
-            string operationId = Required(builder.Configuration, "bootstrap-operation-id");
-            LabelServiceResult<LabelAdministrationReceipt> bootstrap = await DatabaseRetry.ExecuteStartupAsync(
-                token => app.Services.BootstrapLocalAdministratorAsync(
-                    AtIdentifier.Create(bootstrapAdministrator),
-                    operationId,
-                    token),
-                app.Services.GetRequiredService<TimeProvider>(),
-                app.Logger,
-                "administrator bootstrap",
-                app.Lifetime.ApplicationStopping)
-                .ConfigureAwait(false);
-            if (!bootstrap.Succeeded)
-            {
-                await Console.Error.WriteLineAsync($"Administrator bootstrap failed: {bootstrap.Error.Code}").ConfigureAwait(false);
-                return 1;
-            }
-
-            Console.WriteLine(JsonSerializer.Serialize(bootstrap.Result, HostJsonSerializerContext.Default.LabelAdministrationReceipt));
-            return 0;
-        }
-
+    /// <summary>Maps the canonical pipeline with explicit proxy trust and independently enabled features.</summary>
+    internal static void MapCanonicalRoutes(WebApplication app)
+    {
+        CanonicalLabelerSettings settings = app.Services.GetRequiredService<CanonicalLabelerSettings>();
+        Uri publicEndpoint = settings.PublicEndpoint;
+        AtProtoServiceReference audience = settings.Audience;
+        bool uiEnabled = settings.UiEnabled;
         ConfigureForwardedHeaders(app);
         app.UseBlueskyOAuthClientMetadata(
             CreateNativeOAuthOptions(publicEndpoint, audience),
@@ -241,22 +283,20 @@ internal static partial class Program
         MapRootRoute(app);
         app.MapBlueskyLabeler();
         app.MapLabelerAdministration();
-        if (ozoneEnabled)
+        if (settings.OzoneEnabled)
         {
-            app.MapOzoneCompatibility(builder.Configuration.GetSection("LabelerOzone:AllowedOrigins").Get<string[]>() ?? []);
+            app.MapOzoneCompatibility(app.Configuration.GetSection("LabelerOzone:AllowedOrigins").Get<string[]>() ?? []);
         }
-        if (moderationEnabled)
+        if (settings.ModerationEnabled)
         {
             app.MapLabelerModeration();
         }
+
         if (uiEnabled)
         {
             app.MapStaticAssets();
             app.MapRazorPages().WithStaticAssets();
         }
-
-        await app.RunAsync().ConfigureAwait(false);
-        return 0;
     }
 
     /// <summary>Maps the plain-text root banner and public crawler exclusion instructions.</summary>
@@ -381,7 +421,7 @@ internal static partial class Program
     }
 
     /// <summary>Requires a nonempty configuration value before starting the host.</summary>
-    private static string Required(ConfigurationManager configuration, string key) =>
+    internal static string Required(IConfiguration configuration, string key) =>
         !string.IsNullOrWhiteSpace(configuration[key])
             ? configuration[key]!
             : throw new InvalidOperationException($"Configuration value '{key}' is required.");
@@ -516,3 +556,13 @@ internal static partial class Program
         app.UseForwardedHeaders(options);
     }
 }
+
+/// <summary>Preserves the registered identity, signing role and feature flags across initialization and mapping.</summary>
+internal sealed record CanonicalLabelerSettings(
+    Did Issuer,
+    Uri PublicEndpoint,
+    AtProtoServiceReference Audience,
+    bool ModerationEnabled,
+    bool UiEnabled,
+    bool OzoneEnabled,
+    ILabelSigningKeyRing? SigningKeyRing);

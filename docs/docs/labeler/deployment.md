@@ -1,17 +1,24 @@
 # Standalone labeler deployment
 
-`idunno.Bluesky.Labeler.Host` is the canonical deployable ASP.NET Core application for the public label distribution
-endpoints, authenticated remote administration, and OS-protected local administration.
-It supports SQLite, PostgreSQL and MySQL storage, environment-supplied keys by default, an opt-in PEM key ring, and
-configuration-driven issuance policy. Its configuration is deliberately external to the
-image: no database password, account credential or private key is baked into the application.
+`idunno.Bluesky.Labeler.Host` is the provider-neutral, non-packable shared canonical hosting library.
+Thin `idunno.Bluesky.Labeler.Host.PostgreSQL` and `idunno.Bluesky.Labeler.Host.MySQL` applications
+compose it with the existing label-storage and OAuth provider packages. No new NuGet packages
+are introduced. Both applications host public label distribution, authenticated remote administration,
+OS-protected local administration and an [optional Xenon web UI](ui.md), disabled by default.
+Database servers remain external; neither image bundles a database or falls back to SQLite.
+Environment-supplied signing keys are the default, with an opt-in PEM key ring and configuration-driven
+issuance policy. No database password, account credential or private key is baked into an image.
 
-The project lives in `src\idunno.Bluesky.Labeler.Host`, targets .NET 10, and is published as the
-labeler container image, not a NuGet library. The independent SDK libraries remain available
-for custom hosts. This application hosts the administration backend and an
-[optional Xenon web UI](ui.md), disabled by default.
-Build the image from the repository root with
-`docker build --build-arg SOURCE_REVISION_ID=$(git rev-parse HEAD) --file src\idunno.Bluesky.Labeler.Host\Dockerfile --tag idunno-bluesky-labeler .`.
+All three projects target .NET 10. Build the provider-neutral base and then the desired variant
+from the repository root:
+
+```powershell
+docker build --build-arg SOURCE_REVISION_ID=$(git rev-parse HEAD) --file src\idunno.Bluesky.Labeler.Host\Dockerfile --tag idunno-bluesky-labeler-base .
+docker build --build-arg LABELER_BASE=idunno-bluesky-labeler-base --build-arg SOURCE_REVISION_ID=$(git rev-parse HEAD) --file src\idunno.Bluesky.Labeler.Host.PostgreSQL\Dockerfile --tag idunno-bluesky-labeler-postgresql .
+```
+
+Use the MySQL project's Dockerfile and the `idunno-bluesky-labeler-mysql` tag for MySQL.
+Release builds pin the base by digest rather than a mutable tag.
 The source revision is embedded in the Xenon UI footer as the build identifier.
 The image also includes the matching Linux CLI in `/opt/labeler-cli`, which is on
 `PATH`. Run `docker exec <container> labeler-admin --help` for its commands. The
@@ -37,7 +44,7 @@ replace authentication or access controls.
 
 ## Required configuration
 
-When Xenon is enabled with PostgreSQL storage, the canonical host also uses
+When Xenon is enabled in either canonical variant, the host also uses
 `Labeler:ConnectionString` for website identities, refresh locks, single-use OAuth
 login state and the append-only `labeler_data_protection_keys` key ring.
 Authentication tables are initialized additively before serving requests.
@@ -50,8 +57,8 @@ key ring is not separately encrypted by default: database access and backups mus
 be restricted as secrets, because access to both keys and payloads permits
 decryption. Back up these tables together with the labeler database; do not delete
 old keys or revocation records. Existing sessions lost by the earlier ephemeral
-configuration require one new sign-in. SQLite/MySQL canonical hosts do not use
-this PostgreSQL authentication persistence.
+configuration require one new sign-in. PostgreSQL and MySQL use their respective existing
+OAuth stores; refresh locks and single-use correlation state remain database-coordinated.
 
 Set the following configuration values through environment variables, a protected secret
 provider, or a host-owned configuration file:
@@ -60,8 +67,8 @@ provider, or a host-owned configuration file:
 |---|---|
 | `Labeler:IssuerDid` | The DID bound to the initialized label database |
 | `Labeler:PublicEndpoint` | The externally published HTTPS origin; never inferred from `Host` |
-| `Labeler:DatabaseProvider` | `postgresql` (default), or explicit `sqlite` or `mysql` |
-| `Labeler:ConnectionString` | Persistent SQLite file or dedicated PostgreSQL/MySQL database |
+| `Labeler:DatabaseProvider` | Optional compatibility check: must match the chosen variant (`postgresql` or `mysql`); it cannot change providers |
+| `Labeler:ConnectionString` | Dedicated external PostgreSQL or MySQL database, matching the executable/image |
 | `Labeler:SigningKeyProvider` | `environment` (default) or explicit opt-in `pem`; configure only the selected provider |
 | `Labeler:SigningKeyDirectory` | PEM provider: read-only directory containing one `<key-id>.pem` per preinstalled key; defaults to `/run/labeler-keys` |
 | `Labeler:ActiveKeyPath` | PEM provider: writable persistent file containing the active key ID; defaults to `/data/active-key` |
@@ -140,18 +147,31 @@ Bootstrap the first administrator only from an explicitly invoked setup process 
 OS identity that will use local administration:
 
 ```powershell
-dotnet run --project src\idunno.Bluesky.Labeler.Host -- `
+dotnet run --project src\idunno.Bluesky.Labeler.Host.PostgreSQL -- `
   --bootstrap-admin did:plc:administrator `
   --bootstrap-operation-id initial-team-setup
 ```
 
 This one-shot command initializes storage, verifies the DID/handle and records the initial
 OS binding. It exits without starting the HTTP host. Do not put bootstrap parameters in a
-service's ordinary startup arguments or configuration.
+service's ordinary startup arguments or configuration. Select the MySQL project for a MySQL deployment.
 
 ## Custom applications and derived images
 
-Custom .NET 10 applications can compose the same independent provider,
+Custom .NET 10 applications can reference the non-packable shared host project and reuse
+`AddCanonicalBlueskyLabeler`, `InitializeCanonicalBlueskyLabelerAsync` and
+`MapCanonicalBlueskyLabeler` extensions, built on the existing registration and mapping helpers.
+Register exactly one storage provider first. With Xenon enabled, register exactly one
+`ILabelerHostAuthenticationPersistence` integration and durable OAuth/Data Protection services.
+The variant extensions `AddPostgreSqlCanonicalLabelerStorage` and `AddMySqlCanonicalLabelerStorage`
+provide that wiring through project references, without another builder or NuGet package.
+
+`LabelerApplicationExtensions.RunAsync(args, configureStorage)` reuses the complete canonical
+configuration, bootstrap, key/HTTP-client ownership and shutdown lifecycle. Applications
+composing the individual extensions own their hardened identity client and signing-key ring;
+keep both alive until the application is disposed, and pass the same ring during registration
+and initialization. Identity, feature flags and signing role are captured at registration.
+For independently selected behavior, applications can instead compose the independent provider,
 `AddBlueskyLabeler`, optional `AddLabelerModeration`, and
 `AddLabelerAdministration` services. Initialize the shared store and optional
 policy gate before serving, using the same issuer, hardened caller-owned HTTP
@@ -172,8 +192,9 @@ must also honor the existing durable host-role, draining and key-activation
 contracts; sharing a database alone is not a drain acknowledgment. Do not expose
 raw trusted infrastructure services as anonymous HTTP handlers.
 
-The existing canonical image supplies the non-root runtime, port, writable
-directory layout and probe. A derived image can add a framework-dependent custom
+The provider-neutral base image supplies the non-root ASP.NET runtime, matching CLI, port and writable
+directory layout, with no database provider or canonical executable. Its default command is
+`labeler-admin --help`; it is not a running labeler. A derived image can add a framework-dependent custom
 publish directory without copying secrets or replacing that infrastructure:
 
 ```dockerfile
@@ -186,20 +207,12 @@ ENTRYPOINT ["dotnet", "/app/custom/CustomLabeler.dll"]
 Publish the custom application for the image's .NET version and architecture,
 including its dependencies and native runtime assets, into `publish/`.
 Set `LABELER_BASE` at build time to the verified immutable
-`ghcr.io/blowdart/idunno-bluesky-labeler@sha256:<release-digest>` reference.
-The default `/app` working directory keeps the inherited canonical readiness
-probe executable available. Retain UID 1654, private networking and externally
-supplied database/key configuration. If changing probe paths, explicitly update
-the probe rather than weakening readiness.
-
-An isolated derived-image exercise covered a custom two-label atomic decision,
-public distribution, UID 1654, the inherited probe, persistent-volume restart
-and byte-for-byte signature recovery. Its identity/declaration responses and
-setup authority were deterministic fixtures, not live OAuth/PDS validation.
-Production deployments must use real discovery and independent policy
-verification. Integrated application samples and direct image signing/attestation
-remain separate follow-ups. Canonical-host trimming evaluation is resolved by the
-Razor Pages support boundary described above; no trimmed-host support is claimed.
+`ghcr.io/blowdart/idunno-bluesky-labeler-base@sha256:<release-digest>` reference.
+The base has no inherited health check. Supply a probe for the custom application's actual
+readiness endpoint, without loading another host, keys or database connections.
+Retain UID 1654, private networking and externally supplied database/key configuration.
+Production deployments must use real discovery and independent policy verification.
+No trimmed-host support is claimed.
 
 ## Key installation and rotation
 
@@ -256,33 +269,48 @@ acknowledgements. Do not manually delete maintenance rows or reopen a partial ro
 
 ## Run the GHCR image
 
-Release tags publish the standalone `linux/amd64` image to the public package
-`ghcr.io/blowdart/idunno-bluesky-labeler`. The release includes
-`idunno.Bluesky.Labeler.image-digest.txt`, which contains the immutable digest reference
-produced by that workflow. Verify the release artifact before deployment and pin the image
-by digest rather than using a mutable tag:
+Stable release tags publish three `linux/amd64` images:
 
-Before the first image release, a repository maintainer must set the GHCR container package's
+| Package | Purpose | Digest file |
+|---|---|---|
+| `ghcr.io/blowdart/idunno-bluesky-labeler-base` | Provider-neutral infrastructure for custom derived applications | `idunno.Bluesky.Labeler.base.image-digest.txt` |
+| `ghcr.io/blowdart/idunno-bluesky-labeler-postgresql` | Canonical PostgreSQL host | `idunno.Bluesky.Labeler.postgresql.image-digest.txt` |
+| `ghcr.io/blowdart/idunno-bluesky-labeler-mysql` | Canonical MySQL host | `idunno.Bluesky.Labeler.mysql.image-digest.txt` |
+
+The `labeler-image-digests` workflow artifact contains the immutable references. Images carry
+Buildx provenance and SBOMs, GitHub attestations and mandatory keyless Cosign signatures.
+Verify the digest file, OCI attestation and signature before deployment; pin the image by digest.
+Before the first publication, a repository maintainer must set all three GHCR packages'
 visibility to **public** in the package settings. GitHub Actions verifies anonymous access to
 the pushed image before uploading its digest; it does not attempt to change package visibility
 through an unsupported API.
 
+The manual prerelease workflow independently offers `Sign NuGet packages`, `Publish Prerelease` (NuGet)
+and `Publish signed prerelease container images`. Container publication does not require NuGet
+publication or NuGet signing: it builds the checked-out source and always signs all three images.
+Prerelease tags are `vMAJOR.MINOR.PATCH-prerelease-<run-id>-<attempt>-<short-sha>`.
+They never move stable version or `latest` tags. Stable tags remain exactly `vMAJOR.MINOR.PATCH`.
+
 ```text
-gh attestation verify idunno.Bluesky.Labeler.image-digest.txt --repo blowdart/idunno.Bluesky
-docker pull ghcr.io/blowdart/idunno-bluesky-labeler@sha256:<release-digest>
+gh attestation verify idunno.Bluesky.Labeler.postgresql.image-digest.txt --repo blowdart/idunno.Bluesky
+gh attestation verify oci://ghcr.io/blowdart/idunno-bluesky-labeler-postgresql@sha256:<release-digest> --repo blowdart/idunno.Bluesky
+cosign verify ghcr.io/blowdart/idunno-bluesky-labeler-postgresql@sha256:<release-digest> --certificate-oidc-issuer https://token.actions.githubusercontent.com --certificate-identity https://github.com/blowdart/idunno.Bluesky/.github/workflows/publish-labeler-images.yml@refs/tags/v9.0.0
+docker pull ghcr.io/blowdart/idunno-bluesky-labeler-postgresql@sha256:<release-digest>
 ```
 
-The image runs as UID 1654, listens on port 8080 and defaults to PostgreSQL, as does a direct
-run of the application. Supply `Labeler__ConnectionString` through protected configuration;
-the image contains no default connection string or database credentials. When using SQLite
-and opt-in PEM keys, set `Labeler__DatabaseProvider=sqlite`,
-`Labeler__ConnectionString=Data Source=/data/labels.db`, and `Labeler__SigningKeyProvider=pem`,
-mount `/data` as durable storage, the key directory read-only, and a
-service-owned mode-`0700` socket directory at `/run/labeler`. A bind mount replaces the image's
+Replace the identity's release tag with the exact published version; for prereleases, use
+`publish-labeler-images.yml@refs/heads/version/vMAJOR.MINOR.PATCH`. Fulcio identifies the reusable
+signing workflow, not its caller. Select the matching MySQL image/file when appropriate.
+
+Both canonical images run as UID 1654 and listen on port 8080. Supply `Labeler__ConnectionString`
+for the chosen external engine through protected configuration; neither image contains a default
+connection string, database credentials or an alternative provider. With opt-in PEM keys, set
+`Labeler__SigningKeyProvider=pem`, mount the key directory read-only and the active-key file on durable
+storage, and use a service-owned mode-`0700` socket directory at `/run/labeler`. A bind mount replaces the image's
 directory permissions: set its ownership to UID 1654 and mode to `0700` on the host too.
 Supply the required identity, policy and
 administration audience settings separately. For remote databases, set
-`Labeler__DatabaseProvider` and `Labeler__ConnectionString` using a secret provider. A
+`Labeler__ConnectionString` using a secret provider. A
 container deployment must retain its external database, configuration, key material and active
 key state when replacing the image. Environment-backed deployments use the shared database and
 encrypted platform variables instead of key/data mounts.
@@ -292,7 +320,7 @@ ASP.NET Core health-check middleware. Liveness does not require database access;
 verifies the publisher and durable store. Its Docker `HEALTHCHECK` probes readiness on
 `http://127.0.0.1:8080/health/labeler/ready` every 30 seconds, with a 30-second startup grace
 period, a 10-second process timeout and three failures before marking the container unhealthy.
-It runs `dotnet idunno.Bluesky.Labeler.Host.dll --health-check <URL>` as the container user, without
+It runs `dotnet idunno.Bluesky.Labeler.Host.PostgreSQL.dll --health-check <URL>` (or the MySQL DLL) as the container user, without
 starting another host or loading configuration, keys or database connections. The probe accepts
 only HTTP 200, does not follow redirects or use an outbound HTTP proxy, and has a five-second
 HTTP timeout. No curl installation is required.
@@ -302,7 +330,7 @@ or use HTTPS-only binding, override the check with the actual internal readiness
 
 ```yaml
 healthcheck:
-  test: ["CMD", "dotnet", "idunno.Bluesky.Labeler.Host.dll", "--health-check", "http://127.0.0.1:8081/health/labeler/ready"]
+  test: ["CMD", "dotnet", "idunno.Bluesky.Labeler.Host.PostgreSQL.dll", "--health-check", "http://127.0.0.1:8081/health/labeler/ready"]
   interval: 30s
   timeout: 10s
   start_period: 30s
@@ -342,8 +370,7 @@ services:
       - "8080:8080"
     stop_grace_period: 90s
     environment:
-      Labeler__DatabaseProvider: sqlite
-      Labeler__ConnectionString: Data Source=/data/labels.db
+      Labeler__ConnectionString: ${LABELER_CONNECTION:?Set a protected external PostgreSQL connection}
       Labeler__SigningKeyProvider: pem
     volumes:
       - /srv/labeler/data:/data
@@ -362,8 +389,8 @@ recreates only the selected service:
 labeler-admin service-update \
   --compose-file ./compose.yml \
   --service labeler \
-  --image ghcr.io/blowdart/idunno-bluesky-labeler@sha256:<new-digest> \
-  --previous-image ghcr.io/blowdart/idunno-bluesky-labeler@sha256:<current-digest> \
+  --image ghcr.io/blowdart/idunno-bluesky-labeler-postgresql@sha256:<new-digest> \
+  --previous-image ghcr.io/blowdart/idunno-bluesky-labeler-postgresql@sha256:<current-digest> \
   --ready-url https://labeler.example/health/labeler/ready \
   --backup-confirmed \
   --schema-compatible \
@@ -377,6 +404,9 @@ the previous digest if readiness fails. Verify the restored service's readiness 
 If the command is interrupted during deployment, inspect `docker compose ps`, the running image
 digest and readiness endpoint before taking action. Never run an older binary against a database
 already migrated by a newer release.
+Select the matching MySQL image for MySQL; changing image variants does not migrate databases.
+The updater also accepts legacy monolithic digests for compatible rollback, but never the base
+image as a service. Assess provider and schema compatibility explicitly.
 
 The CLI ZIPs contain trimmed, self-contained single-file executables for each supported platform;
 they bundle the runtime and do not require a separate .NET installation. Verify their GitHub release attestation
@@ -394,8 +424,8 @@ mechanism; do not assume the CLI can safely redeploy an arbitrary provider-manag
 
 ## Provider examples
 
-* **SQLite:** use a persistent local file on storage with reliable locking; do not place the
-  database on an unsupported network filesystem.
+* **SQLite (custom hosts only):** compose the existing SQLite package explicitly, using a persistent
+  local file on storage with reliable locking; do not place it on an unsupported network filesystem.
 * **PostgreSQL:** use a dedicated PostgreSQL 17+ database and a connection secret scoped to the
   labeler. Preserve transactions, migrations and backups together.
 * **MySQL:** use a dedicated MySQL 8.4+ database with compatible transaction and collation

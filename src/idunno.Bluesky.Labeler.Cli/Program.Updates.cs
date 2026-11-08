@@ -670,7 +670,7 @@ internal static partial class Program
         image is not null &&
         Regex.IsMatch(
             image,
-            $"^{Regex.Escape(LabelerImageRepository)}@sha256:[0-9a-f]{{64}}$",
+            $"^{Regex.Escape(LabelerImageRepository)}(?:-postgresql|-mysql)?@sha256:[0-9a-f]{{64}}$",
             RegexOptions.CultureInvariant | RegexOptions.NonBacktracking,
             TimeSpan.FromSeconds(1));
 

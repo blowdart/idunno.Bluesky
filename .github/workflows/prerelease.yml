@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       perform_sign:
-        description: 'Sign'
+        description: 'Sign NuGet packages'
         type: boolean
         required: true
         default: true
@@ -12,6 +12,11 @@ on:
         type: boolean
         required: true
         default: true
+      perform_publish_containers:
+        description: 'Publish signed prerelease container images'
+        type: boolean
+        required: true
+        default: false
 
 env:
   DOTNET_NOLOGO: true
@@ -178,6 +183,19 @@ jobs:
         name: build-artifacts
         path: ${{ env.BUILD_OUTPUT }}/*
         retention-days: 7
+
+  publish-labeler-images:
+    name: Publish signed prerelease labeler images
+    needs: build
+    if: ${{ inputs.perform_publish_containers }}
+    uses: ./.github/workflows/publish-labeler-images.yml
+    with:
+      prerelease: true
+    permissions:
+      attestations: write
+      contents: read
+      id-token: write
+      packages: write
 
   sign:
     name: Sign

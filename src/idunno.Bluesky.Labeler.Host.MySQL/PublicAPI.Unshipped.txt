@@ -1,0 +1,3 @@
+#nullable enable
+idunno.Bluesky.Labeler.Host.MySQL.MySqlLabelerHostExtensions
+static idunno.Bluesky.Labeler.Host.MySQL.MySqlLabelerHostExtensions.AddMySqlCanonicalLabelerStorage(this Microsoft.AspNetCore.Builder.WebApplicationBuilder! builder) -> Microsoft.AspNetCore.Builder.WebApplicationBuilder!

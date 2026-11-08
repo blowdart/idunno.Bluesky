@@ -15,11 +15,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
-    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Include="readme.md" Pack="true" PackagePath="\" />
     <None Include="..\idunno.Bluesky.AspNet.Authentication\icon.png" Link="icon.png" Pack="true" PackagePath="\" />
     <None Include="..\..\exclusion.dic" Link="exclusion.dic" />

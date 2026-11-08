@@ -399,12 +399,14 @@ These commands operate locally rather than through `@ipc`/`@remote`.
 
 ```powershell
 labeler-admin update --tag v9.0.1
-labeler-admin service-update --compose-file compose.yml --service labeler --image ghcr.io/blowdart/idunno-bluesky-labeler@sha256:<new-digest> --previous-image ghcr.io/blowdart/idunno-bluesky-labeler@sha256:<previous-digest> --ready-url https://labeler.example/health/labeler/ready --backup-confirmed --schema-compatible --timeout-seconds 180 --drain-seconds 90
+labeler-admin service-update --compose-file compose.yml --service labeler --image ghcr.io/blowdart/idunno-bluesky-labeler-postgresql@sha256:<new-digest> --previous-image ghcr.io/blowdart/idunno-bluesky-labeler-postgresql@sha256:<previous-digest> --ready-url https://labeler.example/health/labeler/ready --backup-confirmed --schema-compatible --timeout-seconds 180 --drain-seconds 90
 ```
 
 Replace the example release, registry image and digests with actual supported,
 verified artifacts. See [deployment updates](deployment.md#safe-updates-and-rollback)
-for the published image name, supported platforms and rollback constraints.
+for the published image names, supported platforms and rollback constraints. Use the MySQL variant
+for MySQL. Provider-neutral base images cannot be deployed by this command; legacy monolithic
+digests remain accepted for compatible rollback. Changing variants does not migrate databases.
 
 | Option | Meaning |
 |---|---|

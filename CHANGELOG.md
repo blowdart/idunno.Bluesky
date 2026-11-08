@@ -54,11 +54,13 @@
 #### idunno.Bluesky.Labeler.Host
 
 * Documented that the canonical host ships untrimmed and does not support trimming or Native AOT because it includes Razor Pages; disabling the UI at runtime does not remove that dependency.
-* Standalone labeler application and container with public label distribution, all three storage providers, protected administration and independently optional Xenon moderation, web UI and Ozone compatibility.
-* PostgreSQL defaults with an externally supplied connection string; SQLite and MySQL alternatives; non-secret configuration defaults; and optional external JSON configuration for separately mounted secrets.
+* Provider-neutral, non-packable canonical hosting library with reusable registration, initialization, mapping and lifecycle extensions over the existing hosting helpers; no additional NuGet packages.
+* Separate provider-neutral base, PostgreSQL and MySQL containers, with no database fallback or bundled server. Thin canonical applications reuse the existing storage and authentication packages and retain independently optional Xenon moderation, web UI and Ozone compatibility.
+* Externally supplied provider-specific connections, non-secret defaults and optional external JSON configuration for separately mounted secrets.
 * Environment-backed signing keys by default, optional mounted PEM keys, database-backed active-key selection and coordinated rotation. Terminal retired labelers can use explicit keyless read-only distribution.
 * Website and native CLI OAuth metadata, trusted TLS-forwarding proxy configuration, SSRF-protected identity resolution and owner-only local administration sockets.
-* Database-persisted OAuth sessions and Data Protection keys, a built-in readiness probe, crawler-exclusion `robots.txt`, and the matching Linux CLI available as `labeler-admin` in the container.
+* Database-persisted OAuth identities, refresh locks, single-use correlation state and origin-bound Data Protection keys/revocations in both PostgreSQL and MySQL canonical hosts; built-in readiness probes, crawler-exclusion `robots.txt`, and the matching Linux CLI.
+* Optional prerelease publication of all three images independent of NuGet signing/publication, with distinct run/commit-qualified tags, mandatory keyless Cosign signatures, provenance/SBOMs, GitHub attestations and anonymous verification.
 * Separate `Xenon.TestHost` for isolated browser and CLI testing, with persistent SQLite state, configurable HTTPS origins and explicit Debug-only fixture seeding for policies, teams, queues, appeals and media previews.
 
 #### idunno.Bluesky.Labeler.Cli
@@ -69,7 +71,7 @@
 * Resumable maintenance and signing-key rotation, public did:web identity snippets, authenticated PLC publication and recovery, and explicit retirement, grace, stopped-host attestation, local purge and external key-removal commands.
 * Optional `--remember-me` credentials in `~/.xenon` and `forget-me`, using current-user DPAPI on Windows or explicitly confirmed owner-only unencrypted files on macOS/Linux, with rotating-credential persistence and account/client/scope/service binding.
 * Human-readable results and progress, explicit success/failure feedback, confirmed irreversible actions and raw JSON output through `--verbose`.
-* Attestation-verified executable self-updates and confirmed digest-pinned Docker Compose redeployment with graceful stop, readiness checks and previous-image rollback. Releases include an attested GHCR host image and its immutable digest.
+* Attestation-verified executable self-updates and confirmed digest-pinned Docker Compose redeployment for canonical PostgreSQL/MySQL images and compatible legacy digests, with graceful stop, readiness checks and previous-image rollback; provider-neutral base images are not service-update targets.
 
 #### idunno.Bluesky.Labeler
 

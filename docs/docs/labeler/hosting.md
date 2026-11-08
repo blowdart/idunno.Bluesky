@@ -11,7 +11,8 @@ explicit opt-in; it does not change these public routes. There is no moderation 
 provisioning, automatic retention, or signing-key manager.
 
 To deploy the canonical application rather than compose your own host, use
-[`idunno.Bluesky.Labeler.Host`](deployment.md). The package described here remains the reusable
+[the PostgreSQL or MySQL canonical variant](deployment.md). Both reuse the non-packable
+`idunno.Bluesky.Labeler.Host` library. The package described here remains the reusable
 HTTP distribution layer.
 
 [Optional Xenon moderation](moderation.md) adds independently authenticated
