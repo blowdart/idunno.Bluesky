@@ -72,6 +72,10 @@ public class CanonicalTelemetryTests
         Assert.Equal(HttpStatusCode.NotFound, privateRoot.StatusCode);
         using HttpResponseMessage privateReadiness = await scrape.GetAsync("/health/ready", token);
         Assert.Equal(HttpStatusCode.NotFound, privateReadiness.StatusCode);
+        // Kestrel can flush the response before request completion records the duration.
+        using CancellationTokenSource watchdog = CancellationTokenSource.CreateLinkedTokenSource(token);
+        watchdog.CancelAfter(TimeSpan.FromSeconds(30));
+        await requestDuration.WaitForMeasurementsAsync(1, watchdog.Token);
         Assert.NotEmpty(requestDuration.GetMeasurementSnapshot());
 
         string[] meters =
