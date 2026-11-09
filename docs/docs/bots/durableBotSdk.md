@@ -346,7 +346,38 @@ The runtime provides endpoints you can wire up to monitoring tools:
 - **`/metrics`**: Emits Prometheus-formatted metrics, including:
   - `bluesky_bot_processed_through_sequence`: The highest Jetstream sequence number durably committed.
   - `bluesky_bot_actions`: The count of actions grouped by status (`pending`, `uncertain`, `sent`, `simulated`, `not-sent`).
-  - `bluesky_bot_retry_due_actions`: The count of actions currently scheduled for retry.
+  - `bluesky_bot_retry_due_actions`: Pending or uncertain actions whose saved eligibility deadline has arrived, including initially eligible work.
+  - `bluesky_bot_unfinished_actions_unknown_enqueue_time`: Unfinished rows with an unknown original enqueue time.
+  - `bluesky_bot_oldest_unfinished_action_age_seconds`: Age since the oldest unfinished enqueue, including future retries; absent for an empty queue or if any unfinished enqueue time is unknown.
+  - `bluesky_bot_oldest_eligible_action_overdue_seconds`: Time since the earliest eligible unfinished action's deadline; absent if no action is eligible.
+
+The Prometheus endpoint reads storage on each scrape. Terminal action counts are retained-row
+gauges that can decrease during pruning, not lifetime success counters. Relational state survives
+restarts; in-memory state does not. Do not sum identical storage snapshots from several replicas.
+
+The runtime separately publishes .NET metrics through the `idunno.Bluesky.BotSdk` meter.
+To select them in an existing OpenTelemetry hosting configuration:
+
+```csharp
+using OpenTelemetry.Metrics;
+
+builder.Services.AddOpenTelemetry()
+    .WithMetrics(metrics => metrics.AddBlueskyBotMetrics());
+```
+
+Configure your chosen exporter separately. This does not replace or collect the storage-backed
+endpoint, and observable runtime gauges never query dependencies. If you map a Prometheus runtime
+exporter too, use a different route from `/metrics`.
+
+See the [public metrics reference](../metrics.md#idunnoblueskybotsdk) for every instrument, unit,
+bounded tag, emission boundary and reset rule. In particular, `idunno.bluesky.bot.actions.completed`
+counts newly committed terminal outcomes, while `idunno.bluesky.bot.action.latency` measures
+original storage enqueue to terminal confirmation, including retry and reconciliation delays
+across restarts. Its `status` is `sent`, `not-sent` or `simulated`; a simulation is not a remote send.
+
+Old rows retain an unknown enqueue timestamp. Do not backfill it from the author's creation time,
+Jetstream witnessed time or mutable retry deadline. Such completions still count, but produce no
+latency sample. Clock rollback also suppresses negative latency samples rather than inventing zero.
 
 #### Reading handled replay progress
 
@@ -375,6 +406,190 @@ All three fields are `null` before the first successfully handled event. Observa
 Wall-clock minus service witnessed time estimates replay lag, not post age. The estimate can be negative because clocks differ. Even a near-zero lag does not prove live-stream mode or socket connectivity; a healthy worker may still be hours behind. Continue using the unchanged health endpoints for **liveness**, not backlog.
 
 Quiet reads, reconnects, and transient re-enumeration within the same ownership period retain the last observation and its original local timestamp, even when logs are disabled or throttled. While in standby, the retained observation is historical, not evidence of current ownership. When the reader acquires a new ownership period, the snapshot resets to unknown until another event is handled. Observations are process-local and are lost on restart.
+
+#### Diagnosing a stuck action
+
+Use backlog age and completed-action latency together. The latency histogram contains **only
+actions that reached a newly committed terminal outcome**; a permanently stuck action contributes
+no sample. A quiet histogram is not evidence of a fast or empty queue.
+
+| Observation | Investigation |
+| --- | --- |
+| Unfinished count and age rise, but eligible count is zero | Work is scheduled for the future. Inspect `next_retry` and saved reasons before concluding it is stuck. |
+| Unfinished age and eligible overdue duration rise | Work is due but unresolved. Check ownership/drain, cooldown, sender health, retry persistence and reconciliation. |
+| Completion rate continues but the oldest age rises | Other actions are completing while at least one old action remains. Find the specific old row; averages and latency percentiles can hide it. |
+| Eligible overdue duration stays small but unfinished age rises | Retry deadlines may keep moving. Inspect repeated reasons and uncertainty; resetting eligibility does not reset enqueue age. |
+| Oldest age falls and high-latency terminal samples arrive | Old work may be resolving. Confirm matching rows/outcome logs; pruning, a different oldest row or an unknown-age population can also change the gauge. |
+| Unfinished age is absent and unknown-enqueue count is nonzero | Legacy work prevents a reliable oldest enqueue age. Use eligibility, identities, stored outcomes and retained logs instead of substituting zero. |
+
+For example, an action queued an hour ago with a retry still ten minutes in the future increases
+unfinished age but contributes nothing to eligible overdue duration. Once its deadline arrives,
+overdue duration starts at zero. If it is finally confirmed `sent` twenty minutes after the
+initial observation, its latency includes the whole eighty minutes, not just the latest attempt.
+
+##### 1. Preserve observations from the correct bot
+
+Record UTC capture time, the runtime database and storage provider, host/resource identity,
+developer mode, metric samples and recent structured logs. Inspect each replica's
+`ownership.active`, `worker.healthy` and `worker.recovering` separately.
+Health endpoints and these runtime gauges reflect recorded phases/deadlines, not active database
+or remote-service probes. An ownership-acquired log from yesterday does not prove current ownership.
+
+Collect repeated snapshots far enough apart to see whether counts, deadlines and outcomes actually
+change. A single snapshot cannot distinguish an intentional wait from a stall. Protect the evidence:
+logs and action rows can contain account/content identifiers, while configuration, credentials and
+encrypted session data should not be copied into a diagnostic report.
+
+##### 2. Connect read-only to the runtime database
+
+Use a restricted database account or a read-only tool. For SQLite, open the actual configured
+database with `sqlite3 -readonly bot.db`; do not inspect an unrelated development file.
+Use your PostgreSQL/MySQL client's protected authentication and TLS configuration, rather than
+putting passwords in command-line arguments or logs.
+
+These queries work against the built-in SQLite, PostgreSQL and MySQL providers:
+
+```sql
+SELECT source_uri, action_kind, action_key, source_sequence, status, attempts,
+       enqueued_at, next_retry, outcome, record_key, reply_uri, completed_at,
+       target_deleted
+FROM reply_work
+WHERE status IN ('pending', 'uncertain')
+ORDER BY next_retry, source_sequence
+LIMIT 20;
+
+SELECT bot_did, service, developer_mode, processed_through FROM bot_state;
+SELECT owner, lease_until, ready_at FROM bot_ownership;
+SELECT next_request, cooldown_until FROM rate_state;
+```
+
+The first query lists earliest eligibility deadlines, not necessarily the oldest enqueue.
+To locate the row responsible for a known oldest unfinished age, run:
+
+```sql
+SELECT source_uri, action_kind, action_key, source_sequence, status, attempts,
+       enqueued_at, next_retry, outcome, record_key, reply_uri, completed_at,
+       target_deleted
+FROM reply_work
+WHERE status IN ('pending', 'uncertain') AND enqueued_at IS NOT NULL
+ORDER BY enqueued_at, source_sequence
+LIMIT 20;
+```
+
+That second list does not make an oldest-age estimate reliable when other unfinished rows have
+unknown enqueue times. It only identifies the oldest **known** rows.
+
+Each query is an independent read; the four results are not one atomic snapshot. On an actively
+changing bot, repeat the same reads and retain capture times, or use a short read-only consistent
+transaction supported by your engine. Do not leave diagnostic transactions open: they can retain
+versions or interfere with maintenance. Reads do not acquire ownership or prove a write would pass
+the storage fence.
+
+##### 3. Compare deadlines using the storage clock
+
+SQLite and MySQL persist these timestamps as epoch **microseconds**, not milliseconds.
+PostgreSQL persists `timestamptz`. Obtain storage time with:
+
+# [SQLite](#tab/diagnosticsSqlite)
+
+```sql
+SELECT CAST(unixepoch('subsec') * 1000000 AS INTEGER) AS database_now_microseconds;
+```
+
+For a readable SQLite timestamp, use `datetime(enqueued_at / 1000000.0, 'unixepoch')`
+in your projection. That display discards subsecond precision; use raw microseconds for comparison.
+
+# [PostgreSQL](#tab/diagnosticsPostgreSql)
+
+```sql
+SELECT now() AS database_now;
+```
+
+Display `timestamptz` values in UTC for comparison with logs. `now()` is transaction-start time,
+so a long-running diagnostic transaction does not advance this clock.
+
+# [MySQL](#tab/diagnosticsMySql)
+
+```sql
+SELECT TIMESTAMPDIFF(MICROSECOND, '1970-01-01', UTC_TIMESTAMP(6))
+       AS database_now_microseconds;
+```
+
+***
+
+For each unfinished row, compare `next_retry` with database time. Initial eligibility and later
+retry/reconciliation schedules use that same column; it is **not** the original enqueue time.
+Changing it can make an old action temporarily ineligible without making the action young.
+`completed_at` is terminal persistence time and should be absent on unfinished work.
+Negative unfinished ages are clamped to zero; an eligibility deadline in the future is excluded
+from overdue duration. Application log timestamps and database clocks can differ.
+
+Then inspect the control rows:
+
+- `bot_state`: Verify `bot_did`, replay `service` and `developer_mode` before associating logs or
+  metrics with this database. `processed_through` is a durable sequence boundary, not a timestamp,
+  event count or proof that the sender finished those events.
+- `bot_ownership`: Compare `lease_until` and `ready_at` with database time. An owner may still be
+  draining before work is allowed. The `owner` is a provider-instance identity, not a connection or
+  database session ID; PostgreSQL stores a UUID and SQLite/MySQL store its 32-character form.
+- `rate_state`: `next_request` controls request spacing; `cooldown_until` is the saved shared
+  cooldown. Work counted as eligible may still be waiting here. Compare with rate deferrals,
+  scheduled retry delays and actual wait-duration samples rather than assuming every due row
+  should already have reached the network.
+
+##### 4. Correlate a complete action identity with logs
+
+An action is identified by **`source_uri`, `action_kind`, and `action_key` together**.
+Do not identify it by source alone or by `record_key`: several actions can share those values.
+SQLite/MySQL source hashes are internal indexing aids, not substitutes for the composite identity.
+Use parameterized equality predicates on all three identity columns to inspect one action,
+including after it becomes terminal; omit the unfinished-status filter for that follow-up query.
+Avoid broad payload dumps.
+
+Search structured logs for these existing events and properties:
+
+| Event ID | Evidence | Limitation |
+| --- | --- | --- |
+| 5 | `Sequence`, `ActionCount`: actions committed with an event | Batch-level evidence, not individual action identity. |
+| 10 | `SourceUri`, `Attempt`, `RetryAt`, `Reason`: scheduled retry diagnostic | No action kind/key. Ambiguous when several actions share a source. The loaded attempt value can lag a newly saved increment; confirm current state in storage. |
+| 9 | `ActionKind`, `ActionKey`, `SourceUri`, `Outcome`, `RemoteUri`, `Reason` | Newly committed terminal outcome. A `sent` outcome may be reconciliation of an earlier effect, not a new write at log time. |
+| 8 | `ActionKind`, `ActionKey`, `SourceUri`: developer-mode simulation | No remote effect occurred. |
+| 13 / 33 | `Operation`, `StatusCode`, optional `CooldownUntil` | HTTP-level evidence without action identity; do not assign it to an action solely because timestamps are close. |
+| 2 / 3 | `Worker`, dependency/retry deadline or failure reason and exception | Recovery deadlines are not necessarily the row's persisted `next_retry`. Preserve exception chains and stack traces. |
+| 1 | `Owner`, `ReadyAt`: acquired lease and safety drain | Historical acquisition, not ongoing lease validation. |
+
+Use source sequence to connect enqueue batches with action rows, then the full composite identity
+to connect terminal outcomes. SDK replay logs can also carry enumeration scopes; retain those
+scopes when investigating reader recovery. If logs were disabled, throttled, rotated or already
+pruned, say which evidence is missing rather than inventing an attempt history.
+
+`attempts` counts accepted pre-write transitions into uncertainty, **not HTTP requests** or
+successful effects. Reads, authentication and reconciliation can make requests without incrementing
+it. `outcome` is the latest saved retry/terminal reason, not an append-only history.
+In particular, event 10 alone does not prove retry persistence succeeded: retry counters count only
+successful updates, and a no-op update can still leave a diagnostic log. Compare the saved deadline
+and status between reads.
+
+##### 5. Distinguish a delayed action from an uncertain remote effect
+
+If a row stays `uncertain`, preserve its original record key and payload. A timeout can occur
+after the remote server has already applied the write. Inspect the registered handler's
+reconciliation result, dispatch/reconciliation outcomes, matching remote record and latest storage
+state before treating absence of a local `sent` row as absence of a remote effect.
+
+Successful reconciliation produces terminal confirmation and a latency sample only if that
+terminal update newly commits and the original enqueue time is known. Failed/fenced persistence
+does not increment completion counters; the durable pending/uncertain action remains for recovery.
+After a confirmed completion, re-read the same composite identity and compare `completed_at`,
+`outcome` and `reply_uri` with event 9 and the terminal-status metrics. The oldest queue row may
+then change to a different action. Terminal rows can later disappear through ordinary pruning.
+
+> [!WARNING]
+> Do not repair a metric by deleting queue rows, resetting progress/attempts/status, moving retry
+> deadlines, regenerating record keys, changing the database's developer mode, or editing lease
+> and rate-control rows. Those changes can lose work, duplicate remote effects or bypass safety
+> drains and budgets. Preserve state and resolve the dependency, ownership or handler problem.
+> A restart alone does not prove an uncertain effect failed.
 
 ### Rate limiting and cooldowns
 

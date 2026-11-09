@@ -154,7 +154,7 @@ public sealed class InMemoryProviderTests
             [action with { RecordJson = """{"createdAt":"regenerated"}""", RecordKey = "changed" }],
             null,
             CancellationToken.None));
-        Assert.Equal(action, await database.NextWorkAsync(CancellationToken.None));
+        Assert.Equal(action with { EnqueuedAt = timeProvider.GetUtcNow() }, await database.NextWorkAsync(CancellationToken.None));
 
         BotOperationalSnapshot snapshot =
             await ((IBotDatabaseDiagnostics)database).GetOperationalSnapshotAsync(CancellationToken.None);
@@ -174,6 +174,86 @@ public sealed class InMemoryProviderTests
         (database, timeProvider) = await CreateProvider();
         timeProvider.Advance(TimeSpan.FromSeconds(55));
         await Assert.ThrowsAsync<OwnershipLostException>(() => database.LoadStateAsync(CancellationToken.None));
+    }
+
+    /// <summary>Measures unfinished age independently of future retry eligibility and preserves enqueue time across retries.</summary>
+    [Fact]
+    public async Task QueueAgesUseDurableEnqueueAndEligibleRetry()
+    {
+        (InMemoryDatabaseProvider database, FakeTimeProvider clock) = await CreateProvider();
+        BotOperationalSnapshot empty = await database.GetOperationalSnapshotAsync(CancellationToken.None);
+        Assert.Null(empty.OldestUnfinishedAgeSeconds);
+        Assert.Null(empty.OldestEligibleOverdueSeconds);
+        Assert.Equal(0, empty.UnfinishedActionsWithUnknownEnqueueTime);
+
+        DateTimeOffset enqueuedAt = clock.GetUtcNow();
+        BotAction action = TestRecords.Work() with { EnqueuedAt = enqueuedAt.AddDays(-1) };
+        await database.HandleAsync(sequence: 11, actions: [action], malformedReason: null, cancellationToken: CancellationToken.None);
+        BotAction saved = Assert.IsType<BotAction>(await database.NextWorkAsync(CancellationToken.None));
+        Assert.Equal(enqueuedAt, saved.EnqueuedAt);
+        await database.RetryAsync(
+            work: saved,
+            retryAt: enqueuedAt.AddSeconds(20),
+            reason: "future retry",
+            cancellationToken: CancellationToken.None);
+        clock.Advance(TimeSpan.FromSeconds(10));
+        BotOperationalSnapshot future = await database.GetOperationalSnapshotAsync(CancellationToken.None);
+        Assert.Equal(10, future.OldestUnfinishedAgeSeconds);
+        Assert.Null(future.OldestEligibleOverdueSeconds);
+        Assert.Equal(0, future.RetryDueActions);
+        Assert.NotNull(await database.AcquireOrRenewAsync(CancellationToken.None));
+        clock.Advance(TimeSpan.FromSeconds(15));
+        BotOperationalSnapshot due = await database.GetOperationalSnapshotAsync(CancellationToken.None);
+        Assert.Equal(25, due.OldestUnfinishedAgeSeconds);
+        Assert.Equal(5, due.OldestEligibleOverdueSeconds);
+        Assert.Equal(1, due.RetryDueActions);
+        Assert.Equal(enqueuedAt, (await database.NextWorkAsync(CancellationToken.None))!.EnqueuedAt);
+    }
+
+    /// <summary>Publishes terminal timing once after a committed outcome, including retries, and omits failed completions.</summary>
+    /// <param name="status">The terminal outcome.</param>
+    [Theory]
+    [InlineData("sent")]
+    [InlineData("not-sent")]
+    [InlineData("simulated")]
+    public async Task TerminalTimingUsesOriginalEnqueueExactlyOnce(string status)
+    {
+        (InMemoryDatabaseProvider database, FakeTimeProvider clock) = await CreateProvider();
+        List<(string Status, double Seconds)> timings = [];
+        ((IBotActionTimingSource)database).Timing.Completed += (outcome, seconds) => timings.Add((outcome, seconds));
+        BotAction action = TestRecords.Work();
+        await database.HandleAsync(sequence: 11, actions: [action], malformedReason: null, cancellationToken: CancellationToken.None);
+        await database.MarkAttemptAsync(action, CancellationToken.None);
+        await database.RetryAsync(
+            work: action,
+            retryAt: clock.GetUtcNow().AddSeconds(5),
+            reason: "reconcile",
+            cancellationToken: CancellationToken.None);
+        clock.Advance(TimeSpan.FromSeconds(10));
+        using CancellationTokenSource canceled = new();
+        canceled.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => database.FinishAsync(
+            work: action,
+            status: status,
+            remoteReference: null,
+            reason: "canceled",
+            cancellationToken: canceled.Token));
+        Assert.Empty(timings);
+        Assert.Equal(1, await database.FinishAsync(
+            work: action,
+            status: status,
+            remoteReference: null,
+            reason: "complete",
+            cancellationToken: CancellationToken.None));
+        Assert.Equal((status, 10d), Assert.Single(timings));
+        Assert.Equal(0, await database.FinishAsync(
+            work: action,
+            status: status,
+            remoteReference: null,
+            reason: "duplicate",
+            cancellationToken: CancellationToken.None));
+        Assert.Single(timings);
+        Assert.Null((await database.GetOperationalSnapshotAsync(CancellationToken.None)).OldestUnfinishedAgeSeconds);
     }
 
     private static async Task<(InMemoryDatabaseProvider Database, FakeTimeProvider TimeProvider)> CreateProvider()

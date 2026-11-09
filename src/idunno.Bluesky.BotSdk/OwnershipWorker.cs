@@ -11,6 +11,21 @@ namespace idunno.Bluesky.BotSdk;
 /// <summary>Signals local permission to work and cancels operations when the database lease is lost.</summary>
 internal sealed class Ownership : IDisposable
 {
+    /// <summary>Reports actual local admission transitions using fixed reasons.</summary>
+    internal event Action<string>? Transition;
+
+    /// <summary>Gets whether this process currently admits work.</summary>
+    internal bool IsActive
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _active;
+            }
+        }
+    }
+
 #if NET9_0_OR_GREATER
     private readonly Lock _gate = new();
 #else
@@ -33,16 +48,21 @@ internal sealed class Ownership : IDisposable
                 _retiredLost.Add(_lost);
                 _lost = new();
                 _active = true;
+                Transition?.Invoke("activated");
             }
         }
     }
 
     /// <summary>Stops admission and cancels all operations from the current ownership period.</summary>
-    public void Suspend()
+    public void Suspend(string reason = "lost")
     {
         lock (_gate)
         {
-            _active = false;
+            if (_active)
+            {
+                _active = false;
+                Transition?.Invoke(reason);
+            }
             _lost.Cancel();
         }
     }
@@ -159,6 +179,7 @@ internal sealed class OwnershipWorker(
 
                         health.Set("ownership", ready > time.GetUtcNow() ? "deployment drain" : "lease renewed", TimeSpan.FromSeconds(25));
                     }
+                    health.Recovered("ownership");
                 }
                 catch (Exception exception) when (database.IsTransientDatabaseException(exception) || exception is TimeoutException)
                 {
@@ -186,7 +207,7 @@ internal sealed class OwnershipWorker(
         {
             // Release is best-effort with its own deadline. If it cannot reach storage,
             // lease expiry still allows a replacement to take over after the safety drain.
-            ownership.Suspend();
+            ownership.Suspend("shutdown");
 
             using CancellationTokenSource cleanup = new(TimeSpan.FromSeconds(5));
 

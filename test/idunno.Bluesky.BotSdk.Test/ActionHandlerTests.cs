@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.Metrics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -12,7 +13,10 @@ using idunno.Bluesky.Feed;
 using idunno.Bluesky.Record;
 
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 
 using Xunit;
 
@@ -108,6 +112,20 @@ public sealed class ActionHandlerTests
     public async Task CustomHandlerReconcilesAcceptedWriteAfterLostResponse()
     {
         await using Store store = await Store.CreateAsync();
+        using ServiceProvider services = new ServiceCollection().AddMetrics().BuildServiceProvider();
+        IMeterFactory factory = services.GetRequiredService<IMeterFactory>();
+        FakeTimeProvider time = new(TestRecords.Start);
+        using Ownership ownership = new();
+        using BotMetrics metrics = new(
+            factory: factory,
+            time: time,
+            database: store.Database,
+            ownership: ownership,
+            health: new(time),
+            progress: new(time));
+        using MetricCollector<long> completed = new(factory, BotMetrics.MeterName, BotMetrics.Prefix + "actions.completed");
+        using MetricCollector<double> reconciliation = new(factory, BotMetrics.MeterName, BotMetrics.Prefix + "action.reconciliation.duration");
+        using MetricCollector<double> dispatch = new(factory, BotMetrics.MeterName, BotMetrics.Prefix + "action.dispatch.duration");
         FakeNotificationService service = new() { LoseResponse = true };
         CustomNotificationHandler handler = new(service);
         ActionHandlerRegistry handlers = new(
@@ -132,7 +150,8 @@ public sealed class ActionHandlerTests
             store.Options,
             NullLogger<ActionDispatcher>.Instance,
             new ActionStatistics(TestRecords.Start),
-            handlers);
+            handlers,
+            metrics);
         FakeRemote remote = new();
 
         await Assert.ThrowsAsync<HttpRequestException>(() =>
@@ -147,6 +166,13 @@ public sealed class ActionHandlerTests
         Assert.Equal(1, service.Writes);
         Assert.Equal("Matching post observed.", service.AcceptedMessage);
         Assert.Null(await store.Database.NextWorkAsync(CancellationToken.None));
+        Assert.Equal("sent", Assert.Single(completed.GetMeasurementSnapshot()).Tags["status"]);
+        Assert.Equal(
+            ["unresolved", "confirmed_success"],
+            reconciliation.GetMeasurementSnapshot().Select(item => item.Tags["outcome"]));
+        Assert.Equal(
+            ["transport_error", "sent"],
+            dispatch.GetMeasurementSnapshot().Select(item => item.Tags["outcome"]));
     }
 
     /// <summary>Preserves list-item JSON through the SDK's generated public base-record contract.</summary>

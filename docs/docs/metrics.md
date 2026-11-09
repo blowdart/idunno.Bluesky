@@ -248,6 +248,147 @@ For dependency-injection scenarios, supply the application's `IMeterFactory` thr
 | `connection.duration` | Histogram&lt;double&gt; | s | Duration of completed firehose connections, tagged with the server origin. |
 | `message.interarrival.duration` | Histogram&lt;double&gt; | s | Time between successive frames received on a firehose connection, tagged with the server origin. A rising interval can indicate an idle or stalled stream; it measures frame arrival, not event processing. |
 
+## idunno.Bluesky.BotSdk
+
+`AddBlueskyBot` registers host-owned instrumentation through `IMeterFactory`. The meter is
+`idunno.Bluesky.BotSdk`, version `1.0.0`. Subscribe with the OpenTelemetry hosting package and
+your chosen exporter:
+
+```csharp
+using OpenTelemetry.Metrics;
+
+builder.Services.AddOpenTelemetry()
+    .WithMetrics(metrics => metrics.AddBlueskyBotMetrics());
+```
+
+`AddBlueskyBotMetrics()` selects the meter; it does not install an exporter, map an endpoint,
+or poll storage. For development:
+
+```powershell
+dotnet-counters monitor --process-id <pid> --counters idunno.Bluesky.BotSdk
+```
+
+The separate `MapBlueskyBotMetricsEndpoint()` endpoint queries storage at scrape time.
+Subscribing to the runtime meter does **not** collect that durable snapshot.
+
+### Runtime counters
+
+Names in the following runtime tables have the prefix `idunno.bluesky.bot.`.
+
+| Name | Instrument Type | Unit | Tags | Description |
+| --- | --- | --- | --- | --- |
+| `events.handled` | Counter&lt;long&gt; | {events} | `classification` | Successfully handled nonduplicate events, including deliberately audited malformed events. Ignored-event progress may still await coalesced checkpoint persistence. |
+| `events.duplicates` | Counter&lt;long&gt; | {events} | None | Events suppressed by the handled sequence boundary; not counted again as handled. |
+| `actions.enqueued` | Counter&lt;long&gt; | {actions} | None | Actual new action rows inserted by successful event transactions, not the number of policy intents evaluated. |
+| `actions.completed` | Counter&lt;long&gt; | {actions} | `status` | Newly committed terminal outcomes. Failed, fenced-out and no-op terminal updates add nothing. |
+| `actions.retries.scheduled` | Counter&lt;long&gt; | {retries} | `reason` | Retry schedules successfully saved for an unfinished action. Failed and no-op updates add nothing. |
+| `rate_limit.deferrals` | Counter&lt;long&gt; | {deferrals} | `reason` | Once per outbound request's budget-deferral episode, and once per observed HTTP 429. Short pacing loops do not count the same budget episode repeatedly. |
+| `ownership.transitions` | Counter&lt;long&gt; | {transitions} | `transition` | Actual local activation, loss or shutdown; ordinary lease renewal and repeated suspension add nothing. |
+| `worker.recovery.episodes` | Counter&lt;long&gt; | {episodes} | `worker`, `reason` | Entry into recovery for a dependency category. Repeated attempts in that category remain one episode until that dependency successfully resumes; overlapping categories are tracked independently. Successful sender storage selection or reader state restoration clears database recovery without requiring new events. Neither clears remote recovery. Sender remote recovery clears after successful remote-capable dispatch/reconciliation, not idle polls, simulation or local exclusions. Ownership standby and lease loss are excluded. |
+| `worker.failures` | Counter&lt;long&gt; | {failures} | `worker` | Newly recorded unrecoverable worker failures, excluding ordinary shutdown. |
+
+Counter values are telemetry from this host's lifetime, not reconstructed lifetime totals from
+the database. Collect them while the host is running. They are independent of terminal-row pruning.
+
+### Runtime histograms
+
+| Name | Instrument Type | Unit | Tags | Description |
+| --- | --- | --- | --- | --- |
+| `event.handling.duration` | Histogram&lt;double&gt; | s | `outcome` | Elapsed handling attempt, including required persistence. Duplicate, failed and cancelled exits also produce samples. |
+| `action.dispatch.duration` | Histogram&lt;double&gt; | s | `outcome` | Elapsed dispatch, including handler validation, reconciliation and terminal persistence. Excludes the sender's preceding authentication and subsequent retry scheduling/backoff. |
+| `action.reconciliation.duration` | Histogram&lt;double&gt; | s | `outcome` | Elapsed handler reconciliation call. An unresolved result is not a confirmed rejection. |
+| `action.retry.delay` | Histogram&lt;double&gt; | s | `reason` | Saved retry deadline minus application time after successful persistence, clamped to zero. This is scheduled delay, not elapsed waiting. |
+| `rate_limit.wait.duration` | Histogram&lt;double&gt; | s | `location`, `outcome` | Actual elapsed short outbound pacing or sender rate backoff, recorded when the wait exits, including partial cancelled waits. A future durable retry deadline is not itself a wait sample. |
+| `action.latency` | Histogram&lt;double&gt; | s | `status` | Persisted enqueue-to-terminal interval from a newly committed terminal outcome in a built-in provider, including retries, reconciliation and time across restarts. |
+
+Handling, dispatch, reconciliation and wait durations use the application's monotonic
+`TimeProvider` timestamps. Action latency uses the storage clock instead: database time for SQLite,
+PostgreSQL and MySQL, or the provider's clock for in-memory storage.
+
+`action.latency` measures **confirmation**, not the unknowable instant a remote server applied a
+write. Both endpoints of the interval are timestamps captured within their successful storage
+operations; relational providers publish the measurement only after the terminal transaction
+commits. A later reconciled success therefore includes the time before confirmation.
+Unknown legacy enqueue timestamps and negative intervals caused by clock rollback produce no
+latency sample, rather than a fabricated zero. The terminal completion counter still records
+the newly committed outcome.
+
+### Runtime observable gauges
+
+| Name | Instrument Type | Unit | Tags | Description |
+| --- | --- | --- | --- | --- |
+| `ownership.active` | ObservableGauge&lt;int&gt; | None | None | 1 while this process locally admits work, otherwise 0. Not an independent database-lease probe. |
+| `worker.healthy` | ObservableGauge&lt;int&gt; | None | `worker` | 1 while the recorded operation deadline is in the future, otherwise 0. A healthy idle or recovering worker need not be making progress. |
+| `worker.recovering` | ObservableGauge&lt;int&gt; | None | `worker` | 1 while a dependency recovery episode remains recorded, otherwise 0. Ownership standby is excluded. |
+| `replay.observation.available` | ObservableGauge&lt;int&gt; | None | None | 1 when a handled-event observation exists in this ownership period, otherwise 0. |
+| `replay.witnessed.age` | ObservableGauge&lt;double&gt; | s | None | Application wall-clock time minus the last handled event's service witnessed time. Absent when unknown; negative values preserve clock-skew evidence. |
+| `replay.observation.age` | ObservableGauge&lt;double&gt; | s | None | Monotonic elapsed time since the last successfully handled event. Absent before an observation; quiet reads and reconnects do not refresh it. |
+
+Observable callbacks read memory only: they perform no database or network I/O. Cross-instrument
+gauge readings are not one atomic snapshot. Replay observations
+reset on a new ownership period and on restart; restored checkpoints and suppressed duplicates do
+not establish one. Handled replay progress can be ahead of durable progress and says nothing about
+outbox completion. A witnessed age near zero does not prove live-stream mode or connectivity.
+
+### Bounded tags and host lifetime
+
+| Tag | Values |
+| --- | --- |
+| `classification` | `malformed`, `delete`, `action`, `ignored`, in that precedence order |
+| `status` | `sent`, `not-sent`, `simulated` |
+| Retry `reason` | `rate_limit`, `remote_result`, `transport` |
+| Deferral `reason` | `budget`, `http_429` |
+| `transition` | `activated`, `lost`, `shutdown` |
+| `worker` | `ownership`, `reader`, `sender` |
+| Recovery `reason` | `database`, `archive_generation`, `archive_bandwidth`, `remote` |
+| Handling `outcome` | `success`, `duplicate`, `failure`, `cancelled` |
+| Dispatch `outcome` | `sent`, `not-sent`, `simulated`, `no_completion`, `failure`, `cancelled`, `ownership_lost`, `deferred`, `retryable`, `transport_error` |
+| Reconciliation `outcome` | `unresolved`, `confirmed_success`, `confirmed_rejection`, `failure`, `cancelled` |
+| Wait `outcome` | `success`, `failure`, `cancelled` |
+| Wait `location` | `outbound`, `sender` |
+
+Cancellation classifications include `OperationCanceledException`; they are not proof that the
+remote server did nothing. No runtime tag contains a DID, handle, source/record/request URI,
+action key, arbitrary action kind, record key, sequence, cursor, credential or exception message.
+These actions are still measured; identity belongs in controlled-access logs and storage, not
+metric dimensions.
+
+The host's meter factory owns instrument lifetime and observable callbacks; disposing the host
+removes them. Use exporter resource attributes to distinguish hosts. Do not sum boolean or age
+gauges across hosts and interpret the result as one bot's state. Separate hosts can report
+different local ownership, recovery and replay observations against the same database.
+
+### Storage-backed Prometheus gauges
+
+`MapBlueskyBotMetricsEndpoint()` maps `/metrics`. All built-in providers implement
+`IBotDatabaseDiagnostics`; a custom provider without that interface returns HTTP 501 instead
+of an empty, success-shaped response. Database failures are not converted to zero-valued samples.
+Restrict access to operational endpoints. If a runtime Prometheus exporter is also mapped, give
+it a different route to avoid colliding with this endpoint.
+
+These names are complete and **do not** use the runtime prefix:
+
+| Name | Labels | Description |
+| --- | --- | --- |
+| `bluesky_bot_processed_through_sequence` | None | Highest durably handled Jetstream sequence; not a timestamp, event count or action-completion boundary. |
+| `bluesky_bot_actions` | `status`: `pending`, `uncertain`, `sent`, `not-sent`, `simulated` | Retained rows by status. Terminal counts can decrease during pruning; they are not lifetime completion counters. |
+| `bluesky_bot_retry_due_actions` | None | Pending or uncertain actions with `next_retry` at or before the snapshot's storage time, including initially eligible work, not just previously failed attempts. |
+| `bluesky_bot_unfinished_actions_unknown_enqueue_time` | None | Pending or uncertain rows without an original enqueue timestamp. |
+| `bluesky_bot_oldest_unfinished_action_age_seconds` | None | Storage time minus the oldest unfinished enqueue, clamped to zero and including future retries. Absent if empty or **any** unfinished enqueue is unknown. |
+| `bluesky_bot_oldest_eligible_action_overdue_seconds` | None | Storage time minus the earliest eligible `next_retry` among unfinished rows. Absent if no unfinished row is eligible; zero when the deadline has just arrived. |
+
+All are gauges; age units are seconds. HELP and TYPE declarations remain even when an age sample
+is absent. Pair unfinished age with the sum of `pending` and `uncertain` counts, and eligible
+overdue duration with `bluesky_bot_retry_due_actions`. Missing ages do not mean zero.
+An eligible action can still be waiting on ownership, request pacing or a shared cooldown.
+
+Relational snapshots survive host restart; in-memory snapshots do not. Scraping multiple hosts
+against one database repeats the same durable queue: select or deduplicate a scrape per logical
+database instead of summing those copies. Runtime completed-action latency covers only terminal
+observations collected from running hosts, so it cannot by itself reveal work that never finishes.
+See [Diagnosing a stuck action](bots/durableBotSdk.md#diagnosing-a-stuck-action) for the combined
+metrics, database and log investigation.
+
 ## idunno.Bluesky.Labeler.Persistence
 
 The SQLite, PostgreSQL and MySQL labeler persistence providers report through the

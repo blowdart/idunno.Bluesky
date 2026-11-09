@@ -33,8 +33,13 @@ public sealed class PostgreSqlDatabaseProvider(
     NpgsqlDataSource source,
     BotOptions options,
     TimeProvider time,
-    ILogger<PostgreSqlDatabaseProvider> logger) : IDatabaseProvider, IBotDatabaseDiagnostics
+    ILogger<PostgreSqlDatabaseProvider> logger) : IDatabaseProvider, IBotDatabaseDiagnostics, IBotActionTimingSource
 {
+    private readonly BotActionTiming _timing = new();
+
+    /// <inheritdoc/>
+    BotActionTiming IBotActionTimingSource.Timing => _timing;
+
     private static readonly JsonTypeInfo<SnapshotRequest> s_snapshotRequestTypeInfo =
         BotJson.SnapshotRequest;
     private static readonly JsonTypeInfo<SnapshotCheckpoint> s_snapshotCheckpointTypeInfo =
@@ -110,6 +115,7 @@ public sealed class PostgreSqlDatabaseProvider(
                 PRIMARY KEY (source_uri, action_kind, action_key)
             );
             ALTER TABLE reply_work ADD COLUMN IF NOT EXISTS target_deleted boolean NOT NULL DEFAULT false;
+            ALTER TABLE reply_work ADD COLUMN IF NOT EXISTS enqueued_at timestamptz;
             ALTER TABLE reply_work ADD COLUMN IF NOT EXISTS action_kind text NOT NULL DEFAULT 'reply' CHECK (length(action_kind) BETWEEN 1 AND 128);
             ALTER TABLE reply_work ADD COLUMN IF NOT EXISTS action_key text NOT NULL DEFAULT 'default' CHECK (length(action_key) BETWEEN 1 AND 128);
             ALTER TABLE reply_work ADD COLUMN IF NOT EXISTS payload_version integer NOT NULL DEFAULT 1 CHECK (payload_version > 0);
@@ -361,7 +367,12 @@ public sealed class PostgreSqlDatabaseProvider(
                 count(*) FILTER (WHERE status IN ('pending', 'uncertain') AND next_retry <= now()),
                 count(*) FILTER (WHERE status = 'sent'),
                 count(*) FILTER (WHERE status = 'not-sent'),
-                count(*) FILTER (WHERE status = 'simulated')
+                count(*) FILTER (WHERE status = 'simulated'),
+                count(*) FILTER (WHERE status IN ('pending', 'uncertain') AND enqueued_at IS NULL),
+                CASE WHEN count(*) FILTER (WHERE status IN ('pending', 'uncertain') AND enqueued_at IS NULL) = 0
+                    AND min(enqueued_at) FILTER (WHERE status IN ('pending', 'uncertain')) IS NOT NULL
+                    THEN GREATEST(0, EXTRACT(EPOCH FROM (now() - min(enqueued_at) FILTER (WHERE status IN ('pending', 'uncertain')))))::double precision END,
+                EXTRACT(EPOCH FROM (now() - min(next_retry) FILTER (WHERE status IN ('pending', 'uncertain') AND next_retry <= now())))::double precision
             FROM reply_work
             """,
             connection);
@@ -380,7 +391,12 @@ public sealed class PostgreSqlDatabaseProvider(
             reader.GetInt64(3),
             reader.GetInt64(4),
             reader.GetInt64(5),
-            reader.GetInt64(6));
+            reader.GetInt64(6))
+        {
+            UnfinishedActionsWithUnknownEnqueueTime = reader.GetInt64(7),
+            OldestUnfinishedAgeSeconds = await reader.IsDBNullAsync(8, cancellationToken).ConfigureAwait(false) ? null : reader.GetDouble(8),
+            OldestEligibleOverdueSeconds = await reader.IsDBNullAsync(9, cancellationToken).ConfigureAwait(false) ? null : reader.GetDouble(9)
+        };
     }
 
     /// <summary>Saves the original replay request only when no request has already been saved.</summary>
@@ -481,8 +497,8 @@ public sealed class PostgreSqlDatabaseProvider(
                 NpgsqlCommand enqueue = new(
                     """
                     INSERT INTO reply_work (source_uri, source_sequence, source_did, record_key, record,
-                        action_kind, action_key, payload_version, status, attempts, target_deleted)
-                    VALUES (@uri, @seq, @did, @key, @record, @kind, @action, @version, @status, @attempts, @deleted)
+                        action_kind, action_key, payload_version, status, attempts, target_deleted, enqueued_at)
+                    VALUES (@uri, @seq, @did, @key, @record, @kind, @action, @version, @status, @attempts, @deleted, now())
                     ON CONFLICT (source_uri, action_kind, action_key) DO NOTHING
                     """,
                     connection,
@@ -748,7 +764,7 @@ public sealed class PostgreSqlDatabaseProvider(
             NpgsqlCommand command = new(
                 """
                 SELECT source_uri, source_sequence, source_did, record_key, record::text, status, attempts,
-                    target_deleted, action_kind, action_key, payload_version
+                    target_deleted, action_kind, action_key, payload_version, enqueued_at
                 FROM reply_work WHERE status IN ('pending', 'uncertain') AND next_retry <= now()
                 ORDER BY next_retry, source_sequence LIMIT 1
                 """,
@@ -775,7 +791,10 @@ public sealed class PostgreSqlDatabaseProvider(
                 reader.GetBoolean(7),
                 reader.GetString(8),
                 reader.GetString(9),
-                reader.GetInt32(10));
+                reader.GetInt32(10))
+            {
+                EnqueuedAt = await reader.IsDBNullAsync(11, cancellationToken).ConfigureAwait(false) ? null : new DateTimeOffset(reader.GetDateTime(11))
+            };
         },
             cancellationToken);
 
@@ -821,20 +840,22 @@ public sealed class PostgreSqlDatabaseProvider(
     /// <param name="reason">The outcome reason.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The number of affected rows.</returns>
-    public Task<int> FinishAsync(
+    public async Task<int> FinishAsync(
         BotAction work,
         string status,
         string? remoteReference,
         string reason,
-        CancellationToken cancellationToken) =>
-        OwnedAsync(
-            async (connection, transaction) =>
+        CancellationToken cancellationToken)
+    {
+        (int count, DateTimeOffset? enqueuedAt, DateTimeOffset completedAt) = await OwnedAsync(
+            action: async (connection, transaction) =>
         {
             NpgsqlCommand command = new(
                 """
                 UPDATE reply_work SET status = @status, completed_at = now(), reply_uri = @reply, outcome = @reason
                 WHERE source_uri = @uri AND action_kind = @kind AND action_key = @action
                     AND status IN ('pending', 'uncertain')
+                RETURNING enqueued_at, completed_at
                 """,
                 connection,
                 transaction);
@@ -850,9 +871,26 @@ public sealed class PostgreSqlDatabaseProvider(
             command.Parameters.Add("reply", NpgsqlDbType.Text).Value = remoteReference is null ? DBNull.Value : remoteReference;
             command.Parameters.AddWithValue("reason", reason);
 
-            return await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            NpgsqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            await using ConfiguredAsyncDisposable readerDisposal = reader.ConfigureAwait(false);
+            if (!await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                return (0, (DateTimeOffset?)null, default);
+            }
+
+            return (
+                1,
+                await reader.IsDBNullAsync(0, cancellationToken).ConfigureAwait(false) ? (DateTimeOffset?)null : new DateTimeOffset(reader.GetDateTime(0)),
+                new DateTimeOffset(reader.GetDateTime(1)));
         },
-            cancellationToken);
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (count == 1)
+        {
+            _timing.Record(status, enqueuedAt, completedAt);
+        }
+
+        return count;
+    }
 
     /// <summary>Schedules another reconciliation or send attempt without changing its fixed record.</summary>
     /// <param name="work">The work to retry.</param>

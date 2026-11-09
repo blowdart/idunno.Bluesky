@@ -32,7 +32,7 @@ public sealed class SqliteDatabaseProvider(
     string connectionString,
     BotOptions options,
     TimeProvider time,
-    ILogger<SqliteDatabaseProvider> logger) : IDatabaseProvider, IBotDatabaseDiagnostics
+    ILogger<SqliteDatabaseProvider> logger) : IDatabaseProvider, IBotDatabaseDiagnostics, IBotActionTimingSource
 {
     private static readonly JsonTypeInfo<SnapshotRequest> s_snapshotRequestTypeInfo =
         BotJson.SnapshotRequest;
@@ -50,6 +50,11 @@ public sealed class SqliteDatabaseProvider(
     private readonly TimeProvider _time = time;
     private readonly ILogger _logger = logger;
     private const string NowSql = "CAST(unixepoch('subsec') * 1000000 AS INTEGER)";
+
+    private readonly BotActionTiming _timing = new();
+
+    /// <inheritdoc/>
+    BotActionTiming IBotActionTimingSource.Timing => _timing;
 
     /// <summary>Requires persistent local storage and bounds waits for another writer.</summary>
     /// <param name="connectionString">The host-supplied connection settings identifying a local database file.</param>
@@ -298,6 +303,20 @@ public sealed class SqliteDatabaseProvider(
         {
             await ExecuteAsync(connection, transaction, statement, cancellationToken).ConfigureAwait(false);
         }
+        long enqueueColumns = Integer(await ScalarAsync(
+            connection,
+            transaction,
+            "SELECT count(*) FROM pragma_table_info('reply_work') WHERE name = 'enqueued_at'",
+            cancellationToken).ConfigureAwait(false));
+        if (enqueueColumns == 0)
+        {
+            await ExecuteAsync(
+                connection,
+                transaction,
+                "ALTER TABLE reply_work ADD COLUMN enqueued_at INTEGER",
+                cancellationToken).ConfigureAwait(false);
+        }
+
         // SQLite cannot replace a primary key in place. Copy every saved field inside the
         // same writer transaction, so interrupted initialization leaves the old table intact.
         long identityColumns = Integer(await ScalarAsync(
@@ -337,9 +356,9 @@ public sealed class SqliteDatabaseProvider(
                 transaction,
                 $"""
                 INSERT INTO reply_work(source_hash, source_uri, source_sequence, source_did, record_key,
-                    record, root_uri, status, attempts, next_retry, outcome, reply_uri, completed_at, target_deleted{actionColumns})
+                    record, root_uri, status, attempts, next_retry, outcome, reply_uri, completed_at, target_deleted, enqueued_at{actionColumns})
                 SELECT source_hash, source_uri, source_sequence, source_did, record_key,
-                    record, root_uri, status, attempts, next_retry, outcome, reply_uri, completed_at, target_deleted{actionColumns}
+                    record, root_uri, status, attempts, next_retry, outcome, reply_uri, completed_at, target_deleted, enqueued_at{actionColumns}
                 FROM reply_work_legacy;
                 DROP TABLE reply_work_legacy;
                 """,
@@ -402,7 +421,7 @@ public sealed class SqliteDatabaseProvider(
         return [
             "CREATE TABLE IF NOT EXISTS bot_ownership (id INTEGER PRIMARY KEY CHECK(id = 1), owner VARCHAR(32) NOT NULL, lease_until INTEGER NOT NULL, ready_at INTEGER NOT NULL)",
             "CREATE TABLE IF NOT EXISTS bot_state (id INTEGER PRIMARY KEY CHECK(id = 1), started_at INTEGER NOT NULL, service TEXT NOT NULL, bot_did TEXT NOT NULL, developer_mode INTEGER NOT NULL, request TEXT, checkpoint TEXT, processed_through INTEGER NOT NULL DEFAULT 0, credentials BLOB, archive_cooldown INTEGER NOT NULL DEFAULT 0)",
-            "CREATE TABLE IF NOT EXISTS reply_work (source_hash BLOB NOT NULL, source_uri TEXT NOT NULL, action_kind TEXT NOT NULL DEFAULT 'reply' CHECK(length(action_kind) BETWEEN 1 AND 128), action_key TEXT NOT NULL DEFAULT 'default' CHECK(length(action_key) BETWEEN 1 AND 128), payload_version INTEGER NOT NULL DEFAULT 1 CHECK(payload_version > 0), source_sequence INTEGER NOT NULL, source_did TEXT NOT NULL, record_key VARCHAR(128) NOT NULL, record TEXT CHECK (json_valid(record)) NOT NULL, root_uri TEXT, status VARCHAR(16) NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','uncertain','sent','not-sent','simulated')), attempts INTEGER NOT NULL DEFAULT 0, next_retry INTEGER NOT NULL, outcome TEXT, reply_uri TEXT, completed_at INTEGER, target_deleted INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(source_hash, action_kind, action_key))",
+            "CREATE TABLE IF NOT EXISTS reply_work (source_hash BLOB NOT NULL, source_uri TEXT NOT NULL, action_kind TEXT NOT NULL DEFAULT 'reply' CHECK(length(action_kind) BETWEEN 1 AND 128), action_key TEXT NOT NULL DEFAULT 'default' CHECK(length(action_key) BETWEEN 1 AND 128), payload_version INTEGER NOT NULL DEFAULT 1 CHECK(payload_version > 0), source_sequence INTEGER NOT NULL, source_did TEXT NOT NULL, record_key VARCHAR(128) NOT NULL, record TEXT CHECK (json_valid(record)) NOT NULL, root_uri TEXT, status VARCHAR(16) NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','uncertain','sent','not-sent','simulated')), attempts INTEGER NOT NULL DEFAULT 0, next_retry INTEGER NOT NULL, enqueued_at INTEGER, outcome TEXT, reply_uri TEXT, completed_at INTEGER, target_deleted INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(source_hash, action_kind, action_key))",
             "CREATE TABLE IF NOT EXISTS rate_accounting (id INTEGER PRIMARY KEY AUTOINCREMENT, requested_at INTEGER NOT NULL, points INTEGER NOT NULL, session_create INTEGER NOT NULL)",
             "CREATE TABLE IF NOT EXISTS rate_state (id INTEGER PRIMARY KEY CHECK(id = 1), next_request INTEGER NOT NULL DEFAULT 0, cooldown_until INTEGER NOT NULL DEFAULT 0)",
             "INSERT INTO rate_state(id) VALUES(1) ON CONFLICT(id) DO NOTHING",
@@ -535,7 +554,11 @@ public sealed class SqliteDatabaseProvider(
                 COALESCE(SUM(status IN ('pending', 'uncertain') AND next_retry <= {NowSql}), 0),
                 COALESCE(SUM(status = 'sent'), 0),
                 COALESCE(SUM(status = 'not-sent'), 0),
-                COALESCE(SUM(status = 'simulated'), 0)
+                COALESCE(SUM(status = 'simulated'), 0),
+                COALESCE(SUM(status IN ('pending', 'uncertain') AND enqueued_at IS NULL), 0),
+                CASE WHEN COALESCE(SUM(status IN ('pending', 'uncertain') AND enqueued_at IS NULL), 0) = 0
+                    THEN MAX(0, ({NowSql} - MIN(CASE WHEN status IN ('pending', 'uncertain') THEN enqueued_at END)) / 1000000.0) END,
+                ({NowSql} - MIN(CASE WHEN status IN ('pending', 'uncertain') AND next_retry <= {NowSql} THEN next_retry END)) / 1000000.0
             FROM reply_work
             """);
         await using ConfiguredAsyncDisposable commandDisposal = command.ConfigureAwait(false);
@@ -553,7 +576,12 @@ public sealed class SqliteDatabaseProvider(
             reader.GetInt64(3),
             reader.GetInt64(4),
             reader.GetInt64(5),
-            reader.GetInt64(6));
+            reader.GetInt64(6))
+        {
+            UnfinishedActionsWithUnknownEnqueueTime = reader.GetInt64(7),
+            OldestUnfinishedAgeSeconds = await reader.IsDBNullAsync(8, cancellationToken).ConfigureAwait(false) ? null : reader.GetDouble(8),
+            OldestEligibleOverdueSeconds = await reader.IsDBNullAsync(9, cancellationToken).ConfigureAwait(false) ? null : reader.GetDouble(9)
+        };
     }
 
     /// <summary>Saves the original replay request only when no request has already been saved.</summary>
@@ -642,8 +670,8 @@ public sealed class SqliteDatabaseProvider(
                         transaction,
                         """
                         INSERT INTO reply_work(source_hash, source_uri, source_sequence, source_did, record_key,
-                            record, root_uri, next_retry, action_kind, action_key, payload_version, status, attempts, target_deleted)
-                        VALUES(@hash,@uri,@seq,@did,@key,@record,@root,@now,@kind,@action,@version,@status,@attempts,@deleted)
+                            record, root_uri, next_retry, enqueued_at, action_kind, action_key, payload_version, status, attempts, target_deleted)
+                        VALUES(@hash,@uri,@seq,@did,@key,@record,@root,@now,@now,@kind,@action,@version,@status,@attempts,@deleted)
                         """,
                         cancellationToken,
                         ("@hash", hash),
@@ -873,7 +901,7 @@ public sealed class SqliteDatabaseProvider(
                 transaction,
                 """
                 SELECT source_uri, source_sequence, source_did, record_key, record, status, attempts,
-                    target_deleted, action_kind, action_key, payload_version
+                    target_deleted, action_kind, action_key, payload_version, enqueued_at
                 FROM reply_work WHERE status IN ('pending','uncertain') AND next_retry <= @now
                 ORDER BY next_retry, source_sequence LIMIT 1
                 """,
@@ -894,7 +922,10 @@ public sealed class SqliteDatabaseProvider(
                 reader.GetInt32(7) != 0,
                 reader.GetString(8),
                 reader.GetString(9),
-                reader.GetInt32(10));
+                reader.GetInt32(10))
+            {
+                EnqueuedAt = await reader.IsDBNullAsync(11, cancellationToken).ConfigureAwait(false) ? null : Timestamp(reader.GetInt64(11))
+            };
         },
             cancellationToken);
 
@@ -952,20 +983,53 @@ public sealed class SqliteDatabaseProvider(
     /// <param name="reason">The outcome reason.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The number of affected rows.</returns>
-    public Task<int> FinishAsync(
+    public async Task<int> FinishAsync(
         BotAction work,
         string status,
         string? remoteReference,
         string reason,
-        CancellationToken cancellationToken) =>
-        UpdateWorkAsync(
-            work,
-            "status = @status, completed_at = @now, reply_uri = @reply, outcome = @reason",
-            cancellationToken,
-            "",
-            ("@status", status),
-            ("@reply", remoteReference),
-            ("@reason", reason));
+        CancellationToken cancellationToken)
+    {
+        (int count, DateTimeOffset? enqueuedAt, DateTimeOffset completedAt) = await TransactionAsync(
+            owned: true,
+            action: async (connection, transaction, now) =>
+            {
+                (string Name, object? Value)[] identity =
+                [
+                    ("@hash", SourceHash(work.SourceUri.ToString())),
+                    ("@uri", work.SourceUri.ToString()),
+                    ("@kind", work.ActionKind),
+                    ("@action", work.ActionKey)
+                ];
+                object? enqueue = await ScalarAsync(
+                    connection,
+                    transaction,
+                    "SELECT enqueued_at FROM reply_work WHERE source_hash = @hash AND source_uri = @uri AND action_kind = @kind AND action_key = @action AND status IN ('pending','uncertain')",
+                    cancellationToken,
+                    identity).ConfigureAwait(false);
+                int affected = await ExecuteAsync(
+                    connection,
+                    transaction,
+                    "UPDATE reply_work SET status = @status, completed_at = @now, reply_uri = @reply, outcome = @reason WHERE source_hash = @hash AND source_uri = @uri AND action_kind = @kind AND action_key = @action AND status IN ('pending','uncertain')",
+                    cancellationToken,
+                    [
+                        .. identity,
+                        ("@status", status),
+                        ("@now", now),
+                        ("@reply", remoteReference),
+                        ("@reason", reason)
+                    ]).ConfigureAwait(false);
+
+                return (affected, enqueue is null ? (DateTimeOffset?)null : Timestamp(Integer(enqueue)), Timestamp(now));
+            },
+            token: cancellationToken).ConfigureAwait(false);
+        if (count == 1)
+        {
+            _timing.Record(status, enqueuedAt, completedAt);
+        }
+
+        return count;
+    }
 
     /// <summary>Schedules another reconciliation or send attempt without changing its fixed record.</summary>
     /// <param name="work">The work to retry.</param>

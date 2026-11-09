@@ -156,6 +156,12 @@
 
 * Added production native public-client metadata and independent explicit-options metadata documents, with literal loopback callbacks and unchanged web-client defaults.
 
+#### idunno.Bluesky.BotSdk
+
+* Host-owned .NET runtime metrics for ingestion, dispatch, reconciliation, committed completions, retries, rate limits, ownership, worker recovery and replay observations, with `AddBlueskyBotMetrics()` OpenTelemetry registration.
+* Persisted action enqueue timestamps, oldest unfinished/eligible backlog gauges and enqueue-to-terminal latency across retries and restarts in the built-in storage providers, without fabricating timestamps for legacy rows.
+* Public metrics reference and read-only database/log troubleshooting guidance for delayed and uncertain bot actions.
+
 ### 🟢 Changed
 
 #### Packaging

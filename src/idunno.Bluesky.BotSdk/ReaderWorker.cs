@@ -29,6 +29,7 @@ namespace idunno.Bluesky.BotSdk;
 /// <param name="lookback">The optional one-time instruction to deliberately skip older history.</param>
 /// <param name="policy">The application policy that chooses complete actions without remote writes.</param>
 /// <param name="handlers">The registry used to validate policy output before durable handling.</param>
+/// <param name="metrics">The optional host-owned instrumentation.</param>
 internal sealed class ReaderWorker(
     IDatabaseProvider database,
     Ownership ownership,
@@ -40,7 +41,8 @@ internal sealed class ReaderWorker(
     TimeProvider time,
     LookbackOverride lookback,
     IBotPolicy policy,
-    ActionHandlerRegistry handlers) : BackgroundService
+    ActionHandlerRegistry handlers,
+    BotMetrics? metrics = null) : BackgroundService
 {
     private static readonly TimeSpan s_readSlice = TimeSpan.FromMinutes(5);
     private readonly GenerationRecovery _generationRecovery = new();
@@ -133,10 +135,15 @@ internal sealed class ReaderWorker(
                 {
                     LogExit(exception, diagnostics, stoppingToken, leaseToken);
                     await RecoverAsync(
-                        database.IsDatabaseException(exception) ? "database" : "replay transport",
-                        TimeSpan.FromSeconds(10),
-                        stoppingToken,
-                        exception).ConfigureAwait(false);
+                        dependency: exception switch
+                        {
+                            OwnershipLostException => "ownership",
+                            _ when database.IsDatabaseException(exception) => "database",
+                            _ => "replay transport"
+                        },
+                        delay: TimeSpan.FromSeconds(10),
+                        cancellationToken: stoppingToken,
+                        exception: exception).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException exception) when (stoppingToken.IsCancellationRequested)
                 {
@@ -168,6 +175,28 @@ internal sealed class ReaderWorker(
         }
     }
 
+    /// <summary>Restores durable replay state and clears only the dependency proven available by those reads.</summary>
+    /// <param name="diagnostics">The enumeration's dependency timing tracker.</param>
+    /// <param name="cancellationToken">The active ownership/shutdown token.</param>
+    /// <returns>The saved replay state after checking the durable archive cooldown.</returns>
+    internal async Task<ReplayState> RestoreStateAsync(ReplayDiagnostics diagnostics, CancellationToken cancellationToken)
+    {
+        health.Set("reader", "restoring replay state", TimeSpan.FromSeconds(60));
+
+        ReplayState state = await diagnostics.DatabaseAsync(() => database.LoadStateAsync(cancellationToken)).ConfigureAwait(false);
+        diagnostics.Restored(state.ProcessedThrough);
+
+        DateTimeOffset archiveCooldown = await diagnostics.DatabaseAsync(() => database.ArchiveCooldownAsync(cancellationToken)).ConfigureAwait(false);
+        health.Recovered("reader", "database");
+
+        if (archiveCooldown > time.GetUtcNow())
+        {
+            throw new RateWaitException(archiveCooldown);
+        }
+
+        return state;
+    }
+
     /// <summary>Restores complete replay state, consumes events in order, and drains an outstanding read before cleanup.</summary>
     /// <param name="diagnostics">The bounded counters and correlation scope for this enumeration.</param>
     /// <param name="stoppingToken">The host shutdown token, retained to classify cancellation.</param>
@@ -179,17 +208,7 @@ internal sealed class ReaderWorker(
         CancellationToken leaseToken,
         CancellationToken cancellationToken)
     {
-        health.Set("reader", "restoring replay state", TimeSpan.FromSeconds(60));
-
-        ReplayState state = await diagnostics.DatabaseAsync(() => database.LoadStateAsync(cancellationToken)).ConfigureAwait(false);
-        diagnostics.Restored(state.ProcessedThrough);
-
-        DateTimeOffset archiveCooldown = await diagnostics.DatabaseAsync(() => database.ArchiveCooldownAsync(cancellationToken)).ConfigureAwait(false);
-
-        if (archiveCooldown > time.GetUtcNow())
-        {
-            throw new RateWaitException(archiveCooldown);
-        }
+        ReplayState state = await RestoreStateAsync(diagnostics, cancellationToken).ConfigureAwait(false);
 
         if (lookback.IgnoreIfUninitialized(state))
         {
@@ -412,10 +431,45 @@ internal sealed class ReaderWorker(
         ReplayProgress progress,
         CancellationToken cancellationToken)
     {
+        long started = metrics?.Timestamp ?? 0;
+        string outcome = "failure";
+        try
+        {
+            long result = await HandleEventCoreAsync(
+                item: item,
+                startedAt: startedAt,
+                processed: processed,
+                diagnostics: diagnostics,
+                progress: progress,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+            outcome = result == processed ? "duplicate" : "success";
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            outcome = "cancelled";
+            throw;
+        }
+        finally
+        {
+            metrics?.RecordDuration(metrics.EventDuration, started, outcome);
+        }
+    }
+
+    /// <summary>Handles one event before publishing observations or successful instrumentation.</summary>
+    private async ValueTask<long> HandleEventCoreAsync(
+        JetstreamEvent item,
+        DateTimeOffset startedAt,
+        long processed,
+        ReplayDiagnostics diagnostics,
+        ReplayProgress progress,
+        CancellationToken cancellationToken)
+    {
         (long sequence, DateTimeOffset witnessedAt) = ValidateReplayPosition(item);
 
         if (sequence <= processed)
         {
+            metrics?.EventsDuplicates.Add(1);
             // Still consume duplicates so SDK checkpoints can advance. Never repeat the
             // application side effects just because archive recovery repeats an event.
             return processed;
@@ -470,6 +524,19 @@ internal sealed class ReaderWorker(
         }
 
         progress.Observe(sequence, witnessedAt);
+        health.Recovered("reader");
+        string classification = (malformed is not null, deletedUri is not null, work.Count > 0) switch
+        {
+            (true, _, _) => "malformed",
+            (_, true, _) => "delete",
+            (_, _, true) => "action",
+            _ => "ignored"
+        };
+        metrics?.EventsHandled.Add(1, BotMetrics.Tag("classification", classification));
+        if (inserted > 0)
+        {
+            metrics?.ActionsEnqueued.Add(inserted);
+        }
 
         return sequence;
     }
@@ -727,6 +794,6 @@ internal sealed class ReaderWorker(
     {
         health.Set("reader", "recovering", delay + TimeSpan.FromSeconds(10), dependency);
         BotLog.Recovering(logger, "reader", dependency, time.GetUtcNow() + delay, exception);
-        await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+        await Task.Delay(delay, time, cancellationToken).ConfigureAwait(false);
     }
 }

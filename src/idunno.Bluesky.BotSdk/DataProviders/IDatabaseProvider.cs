@@ -206,4 +206,16 @@ public sealed record BotOperationalSnapshot(
     long RetryDueActions,
     long SentActions,
     long RejectedActions,
-    long SimulatedActions);
+    long SimulatedActions)
+{
+    /// <summary>Gets the number of unfinished actions whose durable enqueue time is unknown.</summary>
+    public long UnfinishedActionsWithUnknownEnqueueTime { get; init; }
+
+    /// <summary>Gets the age in seconds of the oldest durable enqueue among unfinished actions, including future retries.</summary>
+    /// <value>The nonnegative age measured using database time, or <see langword="null"/> when the queue is empty or any unfinished enqueue time is unknown.</value>
+    public double? OldestUnfinishedAgeSeconds { get; init; }
+
+    /// <summary>Gets the overdue age in seconds of the earliest eligible retry among unfinished actions.</summary>
+    /// <value>The nonnegative age measured using database time, or <see langword="null"/> when no unfinished action is eligible.</value>
+    public double? OldestEligibleOverdueSeconds { get; init; }
+}

@@ -10,6 +10,45 @@ namespace idunno.Bluesky.BotSdk;
 /// <param name="time">The clock used to evaluate operation deadlines.</param>
 internal sealed class WorkerHealth(TimeProvider time)
 {
+    private readonly Dictionary<string, HashSet<string>> _recoveries = new(StringComparer.Ordinal);
+
+    /// <summary>Reports entry into an actual dependency recovery episode.</summary>
+    internal event Action<string, string>? Recovery;
+
+    /// <summary>Reports an unrecoverable worker failure.</summary>
+    internal event Action<string>? Failure;
+
+    /// <summary>Clears recovery only for dependencies whose work has successfully resumed.</summary>
+    /// <param name="worker">The worker name.</param>
+    /// <param name="reason">The recovered category, or <see langword="null"/> when all dependencies have recovered.</param>
+    internal void Recovered(string worker, string? reason = null)
+    {
+        lock (_gate)
+        {
+            if (reason is null)
+            {
+                _recoveries.Remove(worker);
+            }
+            else if (_recoveries.TryGetValue(worker, out HashSet<string>? reasons))
+            {
+                reasons.Remove(reason);
+                if (reasons.Count == 0)
+                {
+                    _recoveries.Remove(worker);
+                }
+            }
+        }
+    }
+
+    /// <summary>Gets whether a worker remains in a dependency recovery episode.</summary>
+    internal bool IsRecovering(string worker)
+    {
+        lock (_gate)
+        {
+            return _recoveries.ContainsKey(worker);
+        }
+    }
+
 #if NET9_0_OR_GREATER
     private readonly Lock _gate = new();
 #else
@@ -32,6 +71,25 @@ internal sealed class WorkerHealth(TimeProvider time)
         lock (_gate)
         {
             _states[worker] = new(phase, time.GetUtcNow() + deadline, dependency);
+            if (BotMetrics.IsRecovery(dependency))
+            {
+                string reason = dependency switch
+                {
+                    "database" => "database",
+                    "archive generation" => "archive_generation",
+                    "archive bandwidth" => "archive_bandwidth",
+                    _ => "remote"
+                };
+                if (!_recoveries.TryGetValue(worker, out HashSet<string>? reasons))
+                {
+                    reasons = new(StringComparer.Ordinal);
+                    _recoveries[worker] = reasons;
+                }
+                if (reasons.Add(reason))
+                {
+                    Recovery?.Invoke(worker, reason);
+                }
+            }
         }
     }
 
@@ -41,7 +99,13 @@ internal sealed class WorkerHealth(TimeProvider time)
     {
         lock (_gate)
         {
+            bool newlyFailed = !_states.TryGetValue(worker, out HealthState? previous) || previous.Phase != "failed";
             _states[worker] = new("failed", DateTimeOffset.MinValue, null);
+            _recoveries.Remove(worker);
+            if (newlyFailed)
+            {
+                Failure?.Invoke(worker);
+            }
         }
     }
 

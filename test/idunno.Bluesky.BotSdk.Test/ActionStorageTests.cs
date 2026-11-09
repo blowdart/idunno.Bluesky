@@ -100,7 +100,7 @@ public sealed class ActionStorageTests
             BotAction saved = Assert.IsType<BotAction>(await database.NextWorkAsync(CancellationToken.None));
             BotAction expected = remaining[saved.RecordKey];
             bool deleted = expected.SourceUri == original.SourceUri || expected.ActionKind == "reply";
-            Assert.Equal(expected with { TargetDeleted = deleted, RecordJson = saved.RecordJson }, saved);
+            Assert.Equal(expected with { TargetDeleted = deleted, RecordJson = saved.RecordJson, EnqueuedAt = saved.EnqueuedAt }, saved);
             Assert.True(JsonNode.DeepEquals(JsonNode.Parse(expected.RecordJson), JsonNode.Parse(saved.RecordJson)));
             Assert.True(remaining.Remove(saved.RecordKey));
             await database.FinishAsync(saved, "not-sent", null, "test completed", CancellationToken.None);
@@ -169,9 +169,10 @@ public sealed class ActionStorageTests
         await store.Database.InitializeAsync(CancellationToken.None);
         await store.Database.InitializeAsync(CancellationToken.None);
         await store.MakeRetriesDueAsync();
+        BotAction savedFirst = Assert.IsType<BotAction>(await store.Database.NextWorkAsync(CancellationToken.None));
         Assert.Equal(
-            first,
-            await store.Database.NextWorkAsync(CancellationToken.None));
+            first with { EnqueuedAt = savedFirst.EnqueuedAt },
+            savedFirst);
         BotAction second = first with
         {
             SourceUri = first.SourceUri + "-second",
@@ -197,9 +198,10 @@ public sealed class ActionStorageTests
                 "one row only",
                 CancellationToken.None));
         await store.SetPendingReadyAsync(ready: true);
+        BotAction savedSecond = Assert.IsType<BotAction>(await store.Database.NextWorkAsync(CancellationToken.None));
         Assert.Equal(
-            second,
-            await store.Database.NextWorkAsync(CancellationToken.None));
+            second with { EnqueuedAt = savedSecond.EnqueuedAt },
+            savedSecond);
         Assert.Equal(
             1,
             await store.Database.FinishAsync(
@@ -277,14 +279,14 @@ public sealed class ActionStorageTests
         await store.SetPendingReadyAsync(ready: true);
         BotAction durable = (await store.Database.NextWorkAsync(CancellationToken.None))!;
         Assert.Equal(
-            secondLike,
+            secondLike with { EnqueuedAt = durable.EnqueuedAt },
             durable);
         await store.Database.ReleaseAsync(CancellationToken.None);
         IDatabaseProvider restarted = store.NewProvider();
         Assert.NotNull(await restarted.AcquireOrRenewAsync(CancellationToken.None));
         await store.MakeReadyAsync();
         Assert.Equal(
-            secondLike,
+            durable,
             await restarted.NextWorkAsync(CancellationToken.None));
         Assert.Equal(
             0,
@@ -321,7 +323,7 @@ public sealed class ActionStorageTests
         await store.MakeRetriesDueAsync();
         durable = (await restarted.NextWorkAsync(CancellationToken.None))!;
         Assert.Equal(
-            like with { Status = "uncertain", Attempts = 1, TargetDeleted = true },
+            like with { Status = "uncertain", Attempts = 1, TargetDeleted = true, EnqueuedAt = durable.EnqueuedAt },
             durable);
     }
 
@@ -440,6 +442,7 @@ public sealed class ActionStorageTests
             legacy: true);
         await store.MakeRetriesDueAsync();
         BotAction durable = Assert.IsType<BotAction>(await store.Database.NextWorkAsync(CancellationToken.None));
+        Assert.Null(durable.EnqueuedAt);
         Assert.Equal(
             Action(
                 "reply",
@@ -478,6 +481,48 @@ public sealed class ActionStorageTests
         Assert.Equal(
             "bookmark",
             next.ActionKind);
+    }
+
+    /// <summary>Preserves enqueue timestamps while SQLite rebuilds composite action tables with obsolete unique record-key indexes.</summary>
+    /// <param name="knownEnqueue"><see langword="true"/> to retain an existing enqueue timestamp; otherwise, <see langword="false"/> for an older schema.</param>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task SqliteCompositeRebuildPreservesEnqueueKnowledge(bool knownEnqueue)
+    {
+        await using Store store = await Store.CreateAsync("Sqlite");
+        BotAction action = Action("reply", "default", "fixed");
+        await store.Database.HandleAsync(
+            sequence: 11,
+            actions: [action],
+            malformedReason: null,
+            cancellationToken: CancellationToken.None);
+        BotAction original = Assert.IsType<BotAction>(await store.Database.NextWorkAsync(CancellationToken.None));
+        Assert.NotNull(original.EnqueuedAt);
+        if (!knownEnqueue)
+        {
+            await store.SqlAsync("ALTER TABLE reply_work DROP COLUMN enqueued_at");
+        }
+
+        await store.AddLegacyRecordKeyIndexAsync();
+        await store.Database.InitializeAsync(CancellationToken.None);
+        await store.Database.InitializeAsync(CancellationToken.None);
+        BotAction migrated = Assert.IsType<BotAction>(await store.Database.NextWorkAsync(CancellationToken.None));
+        Assert.Equal(knownEnqueue ? original.EnqueuedAt : null, migrated.EnqueuedAt);
+        BotOperationalSnapshot snapshot = await ((IBotDatabaseDiagnostics)store.Database).GetOperationalSnapshotAsync(CancellationToken.None);
+        Assert.Equal(knownEnqueue ? 0 : 1, snapshot.UnfinishedActionsWithUnknownEnqueueTime);
+    }
+
+    /// <summary>Preserves known enqueue timestamps while SQLite rebuilds a legacy source-only primary key.</summary>
+    [Fact]
+    public async Task SqliteLegacyPrimaryKeyRebuildPreservesKnownEnqueue()
+    {
+        await using Store store = await Store.CreateAsync(
+            provider: "Sqlite",
+            legacy: true,
+            legacyEnqueueKnown: true);
+        BotAction migrated = Assert.IsType<BotAction>(await store.Database.NextWorkAsync(CancellationToken.None));
+        Assert.Equal(DateTimeOffset.UnixEpoch.AddSeconds(1), migrated.EnqueuedAt);
     }
 
     private static BotAction Action(
@@ -572,7 +617,8 @@ public sealed class ActionStorageTests
 
         public static async Task<Store> CreateAsync(
             string provider,
-            bool legacy = false)
+            bool legacy = false,
+            bool legacyEnqueueKnown = false)
         {
             Store store = new(provider);
             if (provider != "Sqlite")
@@ -586,6 +632,11 @@ public sealed class ActionStorageTests
             if (legacy)
             {
                 await store.CreateLegacyAsync();
+                if (legacyEnqueueKnown)
+                {
+                    await store.SqlAsync(
+                        "ALTER TABLE reply_work ADD COLUMN enqueued_at BIGINT; UPDATE reply_work SET enqueued_at = 1000000");
+                }
             }
             await store.Database.InitializeAsync(CancellationToken.None);
             await store.Database.InitializeAsync(CancellationToken.None);

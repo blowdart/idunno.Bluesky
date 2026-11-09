@@ -118,6 +118,85 @@ public sealed class ProviderBudgetDataAttribute : DataAttribute
 /// <summary>Checks shared durability and lease guarantees across PostgreSQL, SQLite, and MySQL.</summary>
 public sealed partial class RelationalProviderTests
 {
+    /// <summary>Verifies troubleshooting queries and their result columns against initialized storage with one queued action.</summary>
+    /// <param name="provider">The provider under test.</param>
+    [Theory]
+    [InlineData("Sqlite")]
+    [MySqlData]
+    [PostgreSqlData]
+    public async Task TroubleshootingQueriesMatchStoredState(string provider)
+    {
+        await using Store store = await Store.CreateAsync(provider);
+        BotAction work = TestRecords.Work();
+        await store.Database.HandleAsync(
+            sequence: 11,
+            actions: [work],
+            malformedReason: null,
+            cancellationToken: CancellationToken.None);
+        object[] queued = await store.QuerySingleRowAsync(
+            """
+            SELECT source_uri,action_kind,action_key,source_sequence,status,attempts,enqueued_at,next_retry,outcome,record_key,reply_uri,completed_at,target_deleted
+            FROM reply_work WHERE status IN ('pending','uncertain')
+            ORDER BY next_retry,source_sequence LIMIT 20
+            """,
+            [
+                "source_uri", "action_kind", "action_key", "source_sequence", "status", "attempts",
+                "enqueued_at", "next_retry", "outcome", "record_key", "reply_uri", "completed_at", "target_deleted"
+            ]);
+        Assert.Equal(work.SourceUri.ToString(), queued[0]);
+        Assert.Equal(work.ActionKind, queued[1]);
+        Assert.Equal(work.ActionKey, queued[2]);
+        Assert.Equal(work.SourceSequence, queued[3]);
+        Assert.Equal("pending", queued[4]);
+        Assert.Equal(0, Convert.ToInt64(queued[5]));
+        if (provider == "Postgres")
+        {
+            Assert.IsType<DateTime>(queued[6]);
+        }
+        else
+        {
+            Assert.IsType<long>(queued[6]);
+        }
+
+        Assert.Equal(queued[6], queued[7]);
+        Assert.Equal(DBNull.Value, queued[8]);
+        Assert.Equal(work.RecordKey, queued[9]);
+        Assert.Equal(DBNull.Value, queued[10]);
+        Assert.Equal(DBNull.Value, queued[11]);
+        Assert.False(Convert.ToBoolean(queued[12]));
+
+        object[] state = await store.QuerySingleRowAsync(
+            "SELECT bot_did,service,developer_mode,processed_through FROM bot_state",
+            ["bot_did", "service", "developer_mode", "processed_through"]);
+        Assert.Equal(store.Options.Did.ToString(), state[0]);
+        Assert.Equal(store.Options.JetstreamService.ToString(), state[1]);
+        Assert.Equal(store.Options.DeveloperMode, Convert.ToBoolean(state[2]));
+        Assert.Equal(11L, state[3]);
+
+        object[] ownership = await store.QuerySingleRowAsync(
+            "SELECT owner,lease_until,ready_at FROM bot_ownership",
+            ["owner", "lease_until", "ready_at"]);
+        if (provider == "Postgres")
+        {
+            Assert.Equal(store.Database.Owner, ownership[0]);
+            Assert.IsType<DateTime>(ownership[1]);
+            Assert.Equal(DateTime.UnixEpoch, ownership[2]);
+        }
+        else
+        {
+            Assert.Equal(store.Database.Owner.ToString("N"), ownership[0]);
+            Assert.IsType<long>(ownership[1]);
+            Assert.Equal(0L, ownership[2]);
+        }
+
+        object[] rate = await store.QuerySingleRowAsync(
+            "SELECT next_request,cooldown_until FROM rate_state",
+            ["next_request", "cooldown_until"]);
+        object initialDeadline = provider == "Postgres" ? DateTime.MinValue : (object)0L;
+        Assert.Equal(initialDeadline, rate[0]);
+        Assert.Equal(initialDeadline, rate[1]);
+    }
+
     /// <summary>Reports durable action states and verifies connectivity without mutating state.</summary>
     /// <param name="provider">The provider under test.</param>
     [Theory]
@@ -659,6 +738,31 @@ public sealed partial class RelationalProviderTests
             command.CommandText = $"SELECT count(*) FROM {table}";
 
             return Convert.ToInt64(await command.ExecuteScalarAsync());
+        }
+
+        /// <summary>Checks the exact columns and single-row shape of a read-only troubleshooting query.</summary>
+        /// <param name="sql">The provider-independent troubleshooting query.</param>
+        /// <param name="columns">The expected ordered result column names.</param>
+        /// <returns>The values of the only result row, retaining database nulls.</returns>
+        public async Task<object[]> QuerySingleRowAsync(string sql, string[] columns)
+        {
+            await using DbConnection connection = Connection();
+            await connection.OpenAsync(TestContext.Current.CancellationToken);
+            await using DbCommand command = connection.CreateCommand();
+            command.CommandText = sql;
+            await using DbDataReader reader = await command.ExecuteReaderAsync(TestContext.Current.CancellationToken);
+            Assert.Equal(columns.Length, reader.FieldCount);
+            for (int index = 0; index < columns.Length; index++)
+            {
+                Assert.Equal(columns[index], reader.GetName(index));
+            }
+
+            Assert.True(await reader.ReadAsync(TestContext.Current.CancellationToken));
+            object[] values = new object[reader.FieldCount];
+            Assert.Equal(values.Length, reader.GetValues(values));
+            Assert.False(await reader.ReadAsync(TestContext.Current.CancellationToken));
+
+            return values;
         }
 
         public async Task<DateTimeOffset> TimestampAsync(string column, string table)

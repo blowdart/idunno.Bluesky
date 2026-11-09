@@ -1,1 +1,11 @@
 #nullable enable
+idunno.Bluesky.BotSdk.BotAction.EnqueuedAt.get -> System.DateTimeOffset?
+idunno.Bluesky.BotSdk.BotAction.EnqueuedAt.init -> void
+idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot.OldestEligibleOverdueSeconds.get -> double?
+idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot.OldestEligibleOverdueSeconds.init -> void
+idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot.OldestUnfinishedAgeSeconds.get -> double?
+idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot.OldestUnfinishedAgeSeconds.init -> void
+idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot.UnfinishedActionsWithUnknownEnqueueTime.get -> long
+idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot.UnfinishedActionsWithUnknownEnqueueTime.init -> void
+OpenTelemetry.Metrics.BotMetricsExtensions
+static OpenTelemetry.Metrics.BotMetricsExtensions.AddBlueskyBotMetrics(this OpenTelemetry.Metrics.MeterProviderBuilder! builder) -> OpenTelemetry.Metrics.MeterProviderBuilder!

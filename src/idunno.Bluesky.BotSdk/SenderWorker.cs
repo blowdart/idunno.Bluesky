@@ -24,6 +24,7 @@ namespace idunno.Bluesky.BotSdk;
 /// <param name="loggerFactory">The factory for SDK and session diagnostics.</param>
 /// <param name="logger">The sender diagnostic logger.</param>
 /// <param name="time">The clock used for retry scheduling and worker deadlines.</param>
+/// <param name="metrics">The optional host-owned instrumentation.</param>
 internal sealed class SenderWorker(
     IDatabaseProvider database,
     Ownership ownership,
@@ -34,7 +35,8 @@ internal sealed class SenderWorker(
     CredentialVault vault,
     ILoggerFactory loggerFactory,
     ILogger<SenderWorker> logger,
-    TimeProvider time) : BackgroundService
+    TimeProvider time,
+    BotMetrics? metrics = null) : BackgroundService
 {
     internal static bool RequiresAuthentication(BotAction action) =>
         !action.TargetDeleted || action.Status == "uncertain";
@@ -69,77 +71,12 @@ internal sealed class SenderWorker(
             while (!stoppingToken.IsCancellationRequested)
             {
                 CancellationToken leaseToken = await ownership.WaitAsync("sender", health, stoppingToken).ConfigureAwait(false);
-                using CancellationTokenSource active = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, leaseToken);
-                BotAction? work = null;
-
-                try
-                {
-                    health.Set("sender", "selecting durable work", TimeSpan.FromSeconds(60));
-                    await database.LoadStateAsync(active.Token).ConfigureAwait(false);
-
-                    if (time.GetUtcNow() >= nextPrune)
-                    {
-                        await database.PruneAsync(active.Token).ConfigureAwait(false);
-                        nextPrune = time.GetUtcNow().AddHours(1);
-                    }
-
-                    work = await database.NextWorkAsync(active.Token).ConfigureAwait(false);
-
-                    if (work is not null)
-                    {
-                        health.Set("sender", "authenticating / sending / reconciling", TimeSpan.FromMinutes(3));
-
-                        if (!options.DeveloperMode && RequiresAuthentication(work))
-                        {
-                            await session.AuthenticateAsync(active.Token).ConfigureAwait(false);
-                        }
-
-                        await dispatcher.SendAsync(work, options.DeveloperMode ? null : remote, active.Token).ConfigureAwait(false);
-                    }
-
-                    await WaitAsync("idle / scheduled work", TimeSpan.FromSeconds(2), null, stoppingToken).ConfigureAwait(false);
-                }
-                catch (RateWaitException exception)
-                {
-                    // Persist long waits on the item instead of holding a network operation open.
-                    // The reader keeps ingesting and this schedule survives a process restart.
-                    if (work is not null)
-                    {
-                        await ScheduleRetryAsync(work, exception.Until, "durable rate budget or server cooldown", active.Token).ConfigureAwait(false);
-                    }
-
-                    await WaitAsync("rate-limit wait", TimeSpan.FromSeconds(5), null, stoppingToken).ConfigureAwait(false);
-                }
-                catch (RemoteFailureException exception) when (exception.Retryable && work is not null)
-                {
-                    session.RefreshRequired |= exception.Status == HttpStatusCode.Unauthorized;
-                    await ScheduleRetryAsync(work, RetryAt(work.Attempts), exception.Message, active.Token).ConfigureAwait(false);
-                    await WaitAsync("retry wait", TimeSpan.FromSeconds(2), "PDS/AppView", stoppingToken).ConfigureAwait(false);
-                }
-                catch (Exception exception) when (exception is HttpRequestException or TimeoutException ||
-                    (exception is OperationCanceledException && !stoppingToken.IsCancellationRequested && !leaseToken.IsCancellationRequested))
-                {
-                    // Do not label a timeout "not sent": the server may have accepted the write.
-                    // MarkAttemptAsync has already left it uncertain if the create was admitted.
-                    BotLog.Recovering(logger, "sender", "remote transport", time.GetUtcNow().AddSeconds(10), exception);
-
-                    if (work is not null)
-                    {
-                        await ScheduleRetryAsync(work, RetryAt(work.Attempts), "network timeout or unknown remote outcome", active.Token).ConfigureAwait(false);
-                    }
-
-                    await WaitAsync("remote recovery", TimeSpan.FromSeconds(10), "PDS", stoppingToken).ConfigureAwait(false);
-                }
-                catch (OperationCanceledException) when (leaseToken.IsCancellationRequested && !stoppingToken.IsCancellationRequested)
-                {
-                    await WaitAsync("ownership recovery", TimeSpan.FromSeconds(2), "database/ownership", stoppingToken).ConfigureAwait(false);
-                }
-                catch (Exception exception) when (exception is OwnershipLostException ||
-                    database.IsTransientDatabaseException(exception))
-                {
-                    BotLog.Recovering(logger, "sender", "database/ownership", time.GetUtcNow().AddSeconds(10), exception);
-                    await WaitAsync("database recovery", TimeSpan.FromSeconds(10), "database", stoppingToken).ConfigureAwait(false);
-                }
+                nextPrune = await ProcessOwnedIterationAsync(
+                    session: session,
+                    remote: remote,
+                    nextPrune: nextPrune,
+                    stoppingToken: stoppingToken,
+                    leaseToken: leaseToken).ConfigureAwait(false);
             }
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -156,20 +93,161 @@ internal sealed class SenderWorker(
         }
     }
 
+    /// <summary>Owns the linked cancellation source for one sender iteration.</summary>
+    /// <param name="session">The worker's retained authenticated session.</param>
+    /// <param name="remote">The accounted transport.</param>
+    /// <param name="nextPrune">The next pruning deadline.</param>
+    /// <param name="stoppingToken">The host shutdown token.</param>
+    /// <param name="leaseToken">The current ownership token.</param>
+    /// <returns>The next pruning deadline after the iteration.</returns>
+    private async Task<DateTimeOffset> ProcessOwnedIterationAsync(
+        BlueskySession session,
+        IBotActionRemote remote,
+        DateTimeOffset nextPrune,
+        CancellationToken stoppingToken,
+        CancellationToken leaseToken)
+    {
+        using CancellationTokenSource active = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, leaseToken);
+
+        return await ProcessIterationAsync(
+            session: session,
+            remote: remote,
+            nextPrune: nextPrune,
+            stoppingToken: stoppingToken,
+            leaseToken: leaseToken,
+            activeToken: active.Token).ConfigureAwait(false);
+    }
+
+    /// <summary>Selects durable work and applies the existing send and recovery policy for one iteration.</summary>
+    /// <param name="session">The worker's retained authenticated session.</param>
+    /// <param name="remote">The accounted transport.</param>
+    /// <param name="nextPrune">The next pruning deadline.</param>
+    /// <param name="stoppingToken">The host shutdown token.</param>
+    /// <param name="leaseToken">The ownership cancellation signal.</param>
+    /// <param name="activeToken">The linked operation cancellation token.</param>
+    /// <returns>The next pruning deadline after the iteration.</returns>
+    internal async Task<DateTimeOffset> ProcessIterationAsync(
+        BlueskySession session,
+        IBotActionRemote remote,
+        DateTimeOffset nextPrune,
+        CancellationToken stoppingToken,
+        CancellationToken leaseToken,
+        CancellationToken activeToken)
+    {
+        BotAction? work = null;
+        try
+        {
+            health.Set("sender", "selecting durable work", TimeSpan.FromSeconds(60));
+            await database.LoadStateAsync(activeToken).ConfigureAwait(false);
+
+            if (time.GetUtcNow() >= nextPrune)
+            {
+                await database.PruneAsync(activeToken).ConfigureAwait(false);
+                nextPrune = time.GetUtcNow().AddHours(1);
+            }
+
+            work = await database.NextWorkAsync(activeToken).ConfigureAwait(false);
+            health.Recovered("sender", "database");
+
+            if (work is not null)
+            {
+                health.Set("sender", "authenticating / sending / reconciling", TimeSpan.FromMinutes(3));
+
+                if (!options.DeveloperMode && RequiresAuthentication(work))
+                {
+                    await session.AuthenticateAsync(activeToken).ConfigureAwait(false);
+                }
+
+                await dispatcher.SendAsync(work, options.DeveloperMode ? null : remote, activeToken).ConfigureAwait(false);
+                if (!options.DeveloperMode && RequiresAuthentication(work))
+                {
+                    health.Recovered("sender", "remote");
+                }
+            }
+
+            await WaitAsync("idle / scheduled work", TimeSpan.FromSeconds(2), null, stoppingToken).ConfigureAwait(false);
+        }
+        catch (RateWaitException exception)
+        {
+            // Persist long waits on the item instead of holding a network operation open.
+            // The reader keeps ingesting and this schedule survives a process restart.
+            if (work is not null)
+            {
+                await ScheduleRetryAsync(
+                    work: work,
+                    retryAt: exception.Until,
+                    reason: "durable rate budget or server cooldown",
+                    cancellationToken: activeToken,
+                    classification: "rate_limit").ConfigureAwait(false);
+            }
+
+            await WaitAsync("rate-limit wait", TimeSpan.FromSeconds(5), null, stoppingToken).ConfigureAwait(false);
+        }
+        catch (RemoteFailureException exception) when (exception.Retryable && work is not null)
+        {
+            session.RefreshRequired |= exception.Status == HttpStatusCode.Unauthorized;
+            await ScheduleRetryAsync(
+                work: work,
+                retryAt: RetryAt(work.Attempts),
+                reason: exception.Message,
+                cancellationToken: activeToken,
+                classification: "remote_result").ConfigureAwait(false);
+            await WaitAsync("retry wait", TimeSpan.FromSeconds(2), "PDS/AppView", stoppingToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TimeoutException ||
+            (exception is OperationCanceledException && !stoppingToken.IsCancellationRequested && !leaseToken.IsCancellationRequested))
+        {
+            // Do not label a timeout "not sent": the server may have accepted the write.
+            // MarkAttemptAsync has already left it uncertain if the create was admitted.
+            BotLog.Recovering(logger, "sender", "remote transport", time.GetUtcNow().AddSeconds(10), exception);
+
+            if (work is not null)
+            {
+                await ScheduleRetryAsync(work, RetryAt(work.Attempts), "network timeout or unknown remote outcome", activeToken).ConfigureAwait(false);
+            }
+
+            await WaitAsync("remote recovery", TimeSpan.FromSeconds(10), "PDS", stoppingToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (leaseToken.IsCancellationRequested && !stoppingToken.IsCancellationRequested)
+        {
+            await WaitAsync("ownership recovery", TimeSpan.FromSeconds(2), "database/ownership", stoppingToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is OwnershipLostException ||
+            database.IsTransientDatabaseException(exception))
+        {
+            BotLog.Recovering(logger, "sender", "database/ownership", time.GetUtcNow().AddSeconds(10), exception);
+            await WaitAsync(
+                phase: "database recovery",
+                delay: TimeSpan.FromSeconds(10),
+                dependency: exception is OwnershipLostException ? "ownership" : "database",
+                cancellationToken: stoppingToken).ConfigureAwait(false);
+        }
+        return nextPrune;
+    }
+
     /// <summary>Saves the next attempt time without erasing uncertainty when retry persistence is unavailable.</summary>
     /// <param name="work">The existing durable intent, including its original key and payload.</param>
     /// <param name="retryAt">The earliest time another attempt may start.</param>
     /// <param name="reason">The diagnostic retry reason.</param>
     /// <param name="cancellationToken">The active ownership/shutdown cancellation token.</param>
-    private async Task ScheduleRetryAsync(
+    /// <param name="classification">The fixed metric classification for the retry.</param>
+    internal async Task ScheduleRetryAsync(
         BotAction work,
         DateTimeOffset retryAt,
         string reason,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string classification = "transport")
     {
         try
         {
-            await database.RetryAsync(work, retryAt, reason, cancellationToken).ConfigureAwait(false);
+            int scheduled = await database.RetryAsync(work, retryAt, reason, cancellationToken).ConfigureAwait(false);
+            if (scheduled == 1)
+            {
+                metrics?.RetriesScheduled.Add(1, BotMetrics.Tag("reason", classification));
+                metrics?.RetryDelay.Record(
+                    Math.Max(0, (retryAt - time.GetUtcNow()).TotalSeconds),
+                    BotMetrics.Tag("reason", classification));
+            }
             BotLog.Retrying(logger, work.SourceUri.ToString(), work.Attempts, retryAt, reason);
         }
         catch (Exception exception) when (exception is OwnershipLostException or OperationCanceledException ||
@@ -198,13 +276,35 @@ internal sealed class SenderWorker(
     /// <param name="delay">The wait duration.</param>
     /// <param name="dependency">The recovering dependency, or <see langword="null"/> for a healthy idle wait.</param>
     /// <param name="cancellationToken">The host shutdown token.</param>
-    private async Task WaitAsync(
+    internal async Task WaitAsync(
         string phase,
         TimeSpan delay,
         string? dependency,
         CancellationToken cancellationToken)
     {
         health.Set("sender", phase, delay + TimeSpan.FromSeconds(15), dependency);
-        await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+        long started = metrics?.Timestamp ?? 0;
+        string outcome = "failure";
+        try
+        {
+            await Task.Delay(delay, time, cancellationToken).ConfigureAwait(false);
+            outcome = "success";
+        }
+        catch (OperationCanceledException)
+        {
+            outcome = "cancelled";
+            throw;
+        }
+        finally
+        {
+            if (phase == "rate-limit wait")
+            {
+                metrics?.RecordDuration(
+                    histogram: metrics.RateWaitDuration,
+                    started: started,
+                    outcome: outcome,
+                    location: "sender");
+            }
+        }
     }
 }

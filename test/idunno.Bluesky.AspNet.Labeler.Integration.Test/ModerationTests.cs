@@ -1312,6 +1312,7 @@ public partial class ModerationTests
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()));
         await using TestServerBuilder fixture = await CreateAsync(key: key, identity: identity, remoteEnabled: true);
+        await fixture.Clock.PolicyVerificationRegistrations.Reader.ReadAsync(token);
         await VerifyPolicyAsync(fixture);
         LabelAdministrationCaller administrator = (await fixture.Services.GetRequiredService<ILabelAdministrationStore>()
             .AuthenticateLocalAsync("uid:0", token)).Result!;
@@ -1373,7 +1374,9 @@ public partial class ModerationTests
                     AppealIds: [appeal.Id],
                     AppealOutcome: LabelAppealStatus.Upheld)));
         using HttpResponseMessage decided = await fixture.Client.SendAsync(decide, token);
-        Assert.Equal(HttpStatusCode.OK, decided.StatusCode);
+        Assert.True(
+            decided.StatusCode == HttpStatusCode.OK,
+            await decided.Content.ReadAsStringAsync(token));
         AdministrationResponse retained = await dispatcher.DispatchAsync(
             administrator, new(Method: "getAppeal", Moderation: new(AppealId: appeal.Id)), token);
         Assert.Equal("Upheld", Assert.Single(retained.Moderation!.Appeals!).Status);

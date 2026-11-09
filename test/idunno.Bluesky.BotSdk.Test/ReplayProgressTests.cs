@@ -1,15 +1,18 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.Metrics;
 using System.Text.Json;
 
 using idunno.AtProto.Jetstream;
 using idunno.Bluesky.BotSdk.DataProviders;
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Time.Testing;
 
 using Xunit;
@@ -42,6 +45,8 @@ public sealed class ReplayProgressTests
     public async Task SuccessfulHandlingPublishesExactObservation(string kind)
     {
         using ReaderFixture fixture = await ReaderFixture.CreateAsync();
+        using MetricCollector<long> handled = new(fixture.MeterFactory, BotMetrics.MeterName, BotMetrics.Prefix + "events.handled");
+        using MetricCollector<long> enqueued = new(fixture.MeterFactory, BotMetrics.MeterName, BotMetrics.Prefix + "actions.enqueued");
         fixture.Policy.EvaluateEvent = _ => kind switch
         {
             "action" => [TestRecords.Work()],
@@ -60,6 +65,20 @@ public sealed class ReplayProgressTests
         Assert.Equal(11, await fixture.HandleAsync(item));
         ReplayProgressSnapshot snapshot = fixture.Observations.Snapshot;
         AssertObservation(snapshot, 11, TestRecords.Start, observedAt);
+        string classification = kind switch
+        {
+            "json" or "malformed" => "malformed",
+            _ => kind
+        };
+        Assert.Equal(classification, Assert.Single(handled.GetMeasurementSnapshot()).Tags["classification"]);
+        if (kind == "action")
+        {
+            Assert.Equal(1, Assert.Single(enqueued.GetMeasurementSnapshot()).Value);
+        }
+        else
+        {
+            Assert.Empty(enqueued.GetMeasurementSnapshot());
+        }
 
         ReplayState durable = await fixture.Database.LoadStateAsync(CancellationToken.None);
         if (kind == "ignored")
@@ -180,6 +199,8 @@ public sealed class ReplayProgressTests
     {
         using ReaderFixture fixture = await ReaderFixture.CreateAsync();
         await fixture.HandleAsync(TestRecords.Event());
+        using MetricCollector<long> handled = new(fixture.MeterFactory, BotMetrics.MeterName, BotMetrics.Prefix + "events.handled");
+        using MetricCollector<long> enqueued = new(fixture.MeterFactory, BotMetrics.MeterName, BotMetrics.Prefix + "actions.enqueued");
         ReplayProgressSnapshot before = fixture.Observations.Snapshot;
         fixture.Policy.EvaluateEvent = _ => malformed
             ? throw new MalformedEventException("Malformed source record.")
@@ -188,6 +209,109 @@ public sealed class ReplayProgressTests
         fixture.Time.Advance(TimeSpan.FromSeconds(2));
         await Assert.ThrowsAsync<OwnershipLostException>(() => fixture.HandleAsync(TestRecords.Event(sequence: 12), 11));
         Assert.Equal(before, fixture.Observations.Snapshot);
+        Assert.Empty(handled.GetMeasurementSnapshot());
+        Assert.Empty(enqueued.GetMeasurementSnapshot());
+    }
+
+    /// <summary>Clears restored storage recovery without requiring a new event or clearing unrelated outages.</summary>
+    /// <param name="duplicate">Whether the quiet reader consumes an already handled event.</param>
+    /// <param name="remoteRecovery">Whether a separate replay transport outage remains active.</param>
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task StateRestorationClearsDatabaseRecoveryWithoutNewEvents(bool duplicate, bool remoteRecovery)
+    {
+        using ReaderFixture fixture = await ReaderFixture.CreateAsync();
+        using MetricCollector<long> episodes = new(fixture.MeterFactory, BotMetrics.MeterName, BotMetrics.Prefix + "worker.recovery.episodes");
+        using MetricCollector<int> recovering = new(fixture.MeterFactory, BotMetrics.MeterName, BotMetrics.Prefix + "worker.recovering");
+        if (remoteRecovery)
+        {
+            fixture.Health.Set("reader", "recovering", TimeSpan.FromSeconds(20), "replay transport");
+        }
+        for (int episode = 0; episode < 2; episode++)
+        {
+            fixture.Health.Set("reader", "recovering", TimeSpan.FromSeconds(20), "database");
+            Assert.True(fixture.Health.IsRecovering("reader"));
+            ReplayState state = await fixture.Reader.RestoreStateAsync(fixture.Diagnostics, CancellationToken.None);
+            Assert.Equal(10, state.ProcessedThrough);
+            if (duplicate)
+            {
+                Assert.Equal(10, await fixture.HandleAsync(TestRecords.Event(sequence: 10)));
+            }
+            AssertUnknown(fixture.Observations.Snapshot);
+            recovering.RecordObservableInstruments();
+            Assert.Equal(
+                remoteRecovery ? 1 : 0,
+                recovering.GetMeasurementSnapshot().Last(item => (string?)item.Tags["worker"] == "reader").Value);
+            Assert.Equal(
+                episode + 1,
+                episodes.GetMeasurementSnapshot().Count(item => (string?)item.Tags["reason"] == "database"));
+        }
+        fixture.Health.Recovered("reader", "remote");
+        Assert.False(fixture.Health.IsRecovering("reader"));
+    }
+
+    /// <summary>Does not clear database recovery when state restoration is fenced.</summary>
+    [Fact]
+    public async Task FailedStateRestorationRetainsDatabaseRecovery()
+    {
+        using ReaderFixture fixture = await ReaderFixture.CreateAsync();
+        fixture.Health.Set("reader", "recovering", TimeSpan.FromSeconds(20), "database");
+        await fixture.Database.ReleaseAsync(CancellationToken.None);
+        await Assert.ThrowsAsync<OwnershipLostException>(
+            () => fixture.Reader.RestoreStateAsync(fixture.Diagnostics, CancellationToken.None));
+        Assert.True(fixture.Health.IsRecovering("reader"));
+        AssertUnknown(fixture.Observations.Snapshot);
+    }
+
+    /// <summary>Classifies fenced reader operations as ownership loss rather than remote or database outages.</summary>
+    /// <param name="expireLease">Whether fencing comes from expiry rather than explicit release.</param>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task FencedReaderDoesNotRecordDependencyRecovery(bool expireLease)
+    {
+        TaskCompletionSource recovering = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        FakeLogger<ReaderWorker> logger = new(message =>
+        {
+            if (message.Contains("reader is recovering", StringComparison.Ordinal))
+            {
+                recovering.TrySetResult();
+            }
+        });
+        using ReaderFixture fixture = await ReaderFixture.CreateAsync(logger);
+        if (expireLease)
+        {
+            fixture.Time.Advance(TimeSpan.FromMinutes(2));
+        }
+        else
+        {
+            await fixture.Database.ReleaseAsync(CancellationToken.None);
+        }
+        fixture.Ownership.Activate();
+        using MetricCollector<long> episodes = new(fixture.MeterFactory, BotMetrics.MeterName, BotMetrics.Prefix + "worker.recovery.episodes");
+        using MetricCollector<int> gauge = new(fixture.MeterFactory, BotMetrics.MeterName, BotMetrics.Prefix + "worker.recovering");
+        await fixture.Reader.StartAsync(CancellationToken.None);
+        try
+        {
+            await recovering.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+            HealthState state = fixture.Health.Snapshot().Workers["reader"];
+            Assert.Equal("recovering", state.Phase);
+            Assert.Equal("ownership", state.Dependency);
+            Assert.False(fixture.Health.IsRecovering("reader"));
+            Assert.Empty(episodes.GetMeasurementSnapshot());
+            gauge.RecordObservableInstruments();
+            Assert.Equal(0, gauge.GetMeasurementSnapshot().Last(item => (string?)item.Tags["worker"] == "reader").Value);
+            FakeLogRecord recovery = Assert.Single(logger.Collector.GetSnapshot(), record => record.Id.Id == 2);
+            Assert.IsType<OwnershipLostException>(recovery.Exception);
+        }
+        finally
+        {
+            await fixture.Reader.StopAsync(CancellationToken.None);
+        }
+        Assert.True(fixture.Reader.ExecuteTask!.IsCompletedSuccessfully);
     }
 
     /// <summary>Preserves observations and their age across quiet waits, restoration, and same-period re-enumeration.</summary>
@@ -337,6 +461,9 @@ public sealed class ReplayProgressTests
         }
 
         public FakeTimeProvider Time { get; }
+        public IMeterFactory MeterFactory => _provider.GetRequiredService<IMeterFactory>();
+        public WorkerHealth Health => _provider.GetRequiredService<WorkerHealth>();
+        public Ownership Ownership => _provider.GetRequiredService<Ownership>();
         public TestPolicy Policy { get; }
         public BotReplayProgress Observations { get; }
         public IDatabaseProvider Database { get; }
@@ -344,7 +471,7 @@ public sealed class ReplayProgressTests
         public ReplayDiagnostics Diagnostics { get; }
         public ReplayProgress Progress { get; }
 
-        public static async Task<ReaderFixture> CreateAsync()
+        public static async Task<ReaderFixture> CreateAsync(ILogger<ReaderWorker>? logger = null)
         {
             FakeTimeProvider time = new(TestRecords.Start);
             TestPolicy policy = new();
@@ -353,6 +480,10 @@ public sealed class ReplayProgressTests
             services.AddSingleton<TimeProvider>(time);
             services.AddBlueskyBot<TestPolicy>(TestRecords.Options(), "progress-test/1.0").WithInMemoryStorage();
             services.AddSingleton<IBotPolicy>(policy);
+            if (logger is not null)
+            {
+                services.AddSingleton(logger);
+            }
             ReaderFixture fixture = new(services.BuildServiceProvider(), time, policy);
             await fixture.Database.InitializeAsync(CancellationToken.None);
             await fixture.Database.AcquireOrRenewAsync(CancellationToken.None);

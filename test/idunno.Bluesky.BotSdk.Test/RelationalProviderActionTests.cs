@@ -68,7 +68,8 @@ public sealed partial class RelationalProviderTests
         await Assert.ThrowsAsync<HttpRequestException>(() => dispatcher.SendAsync(work, remote, CancellationToken.None));
         Assert.StartsWith("0 actions completed since ", statistics.Summary);
 
-        BotAction uncertain = (await store.Database.NextWorkAsync(CancellationToken.None))!;
+        await store.SetRetryReadyAsync();
+        BotAction uncertain = Assert.IsType<BotAction>(await store.Database.NextWorkAsync(CancellationToken.None));
         Assert.Equal("uncertain", uncertain.Status);
         await dispatcher.SendAsync(uncertain, remote, CancellationToken.None);
         Assert.Equal(1, remote.Writes);

@@ -504,6 +504,11 @@ public sealed class BotHostingTests
             Assert.Contains("bluesky_bot_actions{status=\"uncertain\"} 0", metrics, StringComparison.Ordinal);
             Assert.Contains("bluesky_bot_actions{status=\"not-sent\"} 0", metrics, StringComparison.Ordinal);
             Assert.Contains("bluesky_bot_retry_due_actions 0", metrics, StringComparison.Ordinal);
+            Assert.Contains("bluesky_bot_unfinished_actions_unknown_enqueue_time 0", metrics, StringComparison.Ordinal);
+            Assert.Contains("# TYPE bluesky_bot_oldest_unfinished_action_age_seconds gauge", metrics, StringComparison.Ordinal);
+            Assert.Contains("# TYPE bluesky_bot_oldest_eligible_action_overdue_seconds gauge", metrics, StringComparison.Ordinal);
+            Assert.DoesNotContain("\nbluesky_bot_oldest_unfinished_action_age_seconds ", metrics, StringComparison.Ordinal);
+            Assert.DoesNotContain("\nbluesky_bot_oldest_eligible_action_overdue_seconds ", metrics, StringComparison.Ordinal);
             Assert.DoesNotContain("bluesky_bot_actions{status=\"retry_due\"}", metrics, StringComparison.Ordinal);
         }
         finally
