@@ -109,9 +109,11 @@ try
     Invoke-DotNet -Name 'database-preflight' -Arguments @(
         'test', '--project', 'test/idunno.Bluesky.Labeler.Test/idunno.Bluesky.Labeler.Test.csproj',
         '--no-build', '--no-restore', '--max-parallel-test-modules', '1', '--max-threads', '1',
-        '--filter-method', 'idunno.Bluesky.Labeler.Test.ProviderConformanceTests.RefusesRotationWithoutARegisteredHost')
+        '--filter-method', 'idunno.Bluesky.Labeler.Test.ProviderConformanceTests.RefusesRotationWithoutARegisteredHost',
+        "-bl:$logDirectory\database-preflight-{}.binlog")
     Invoke-DotNet -Name 'tests' -Arguments @(
-        'test', '--no-build', '--no-restore', '--max-parallel-test-modules', '4', '--max-threads', '4')
+        'test', '--no-build', '--no-restore', '--max-parallel-test-modules', '4', '--max-threads', '4',
+        "-bl:$logDirectory\tests-{}.binlog")
 }
 finally
 {
