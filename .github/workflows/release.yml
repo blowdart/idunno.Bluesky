@@ -66,7 +66,7 @@ jobs:
         persist-credentials: false
 
     - name: "Validate pushed tag"
-      uses: lfreleng-actions/tag-validate-action@eab7d92e02c8b447a4de04e68bd5ee7eae3450eb # v1.1.8
+      uses: lfreleng-actions/tag-validate-action@a44a0eae476cd22c6695121448c85d45b04d6c03 # v1.1.9
       with:
         require_type: semver
         require_signed: ssh
