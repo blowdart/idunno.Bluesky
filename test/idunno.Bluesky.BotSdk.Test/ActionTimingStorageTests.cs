@@ -35,7 +35,7 @@ public sealed partial class RelationalProviderTests
         IDatabaseProvider restarted = store.NewProvider();
         await restarted.InitializeAsync(CancellationToken.None);
         Assert.NotNull(await restarted.AcquireOrRenewAsync(CancellationToken.None));
-        await store.SetReadyNowAsync();
+        await store.SetReadyAsync();
         await store.SetRetryReadyAsync();
         BotAction restored = Assert.IsType<BotAction>(await restarted.NextWorkAsync(CancellationToken.None));
         Assert.Equal(enqueue, restored.EnqueuedAt);
