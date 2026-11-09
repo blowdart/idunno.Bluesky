@@ -135,10 +135,15 @@ internal sealed class ReaderWorker(
                 {
                     LogExit(exception, diagnostics, stoppingToken, leaseToken);
                     await RecoverAsync(
-                        database.IsDatabaseException(exception) ? "database" : "replay transport",
-                        TimeSpan.FromSeconds(10),
-                        stoppingToken,
-                        exception).ConfigureAwait(false);
+                        dependency: exception switch
+                        {
+                            OwnershipLostException => "ownership",
+                            _ when database.IsDatabaseException(exception) => "database",
+                            _ => "replay transport"
+                        },
+                        delay: TimeSpan.FromSeconds(10),
+                        cancellationToken: stoppingToken,
+                        exception: exception).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException exception) when (stoppingToken.IsCancellationRequested)
                 {
@@ -170,6 +175,28 @@ internal sealed class ReaderWorker(
         }
     }
 
+    /// <summary>Restores durable replay state and clears only the dependency proven available by those reads.</summary>
+    /// <param name="diagnostics">The enumeration's dependency timing tracker.</param>
+    /// <param name="cancellationToken">The active ownership/shutdown token.</param>
+    /// <returns>The saved replay state after checking the durable archive cooldown.</returns>
+    internal async Task<ReplayState> RestoreStateAsync(ReplayDiagnostics diagnostics, CancellationToken cancellationToken)
+    {
+        health.Set("reader", "restoring replay state", TimeSpan.FromSeconds(60));
+
+        ReplayState state = await diagnostics.DatabaseAsync(() => database.LoadStateAsync(cancellationToken)).ConfigureAwait(false);
+        diagnostics.Restored(state.ProcessedThrough);
+
+        DateTimeOffset archiveCooldown = await diagnostics.DatabaseAsync(() => database.ArchiveCooldownAsync(cancellationToken)).ConfigureAwait(false);
+        health.Recovered("reader", "database");
+
+        if (archiveCooldown > time.GetUtcNow())
+        {
+            throw new RateWaitException(archiveCooldown);
+        }
+
+        return state;
+    }
+
     /// <summary>Restores complete replay state, consumes events in order, and drains an outstanding read before cleanup.</summary>
     /// <param name="diagnostics">The bounded counters and correlation scope for this enumeration.</param>
     /// <param name="stoppingToken">The host shutdown token, retained to classify cancellation.</param>
@@ -181,17 +208,7 @@ internal sealed class ReaderWorker(
         CancellationToken leaseToken,
         CancellationToken cancellationToken)
     {
-        health.Set("reader", "restoring replay state", TimeSpan.FromSeconds(60));
-
-        ReplayState state = await diagnostics.DatabaseAsync(() => database.LoadStateAsync(cancellationToken)).ConfigureAwait(false);
-        diagnostics.Restored(state.ProcessedThrough);
-
-        DateTimeOffset archiveCooldown = await diagnostics.DatabaseAsync(() => database.ArchiveCooldownAsync(cancellationToken)).ConfigureAwait(false);
-
-        if (archiveCooldown > time.GetUtcNow())
-        {
-            throw new RateWaitException(archiveCooldown);
-        }
+        ReplayState state = await RestoreStateAsync(diagnostics, cancellationToken).ConfigureAwait(false);
 
         if (lookback.IgnoreIfUninitialized(state))
         {
@@ -777,6 +794,6 @@ internal sealed class ReaderWorker(
     {
         health.Set("reader", "recovering", delay + TimeSpan.FromSeconds(10), dependency);
         BotLog.Recovering(logger, "reader", dependency, time.GetUtcNow() + delay, exception);
-        await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+        await Task.Delay(delay, time, cancellationToken).ConfigureAwait(false);
     }
 }
