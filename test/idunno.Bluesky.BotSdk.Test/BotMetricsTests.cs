@@ -110,6 +110,123 @@ public sealed class BotMetricsTests
         Assert.Equal(2, collector.GetMeasurementSnapshot().Count);
     }
 
+    /// <summary>Retains overlapping outages until each dependency resumes successfully.</summary>
+    [Fact]
+    public void RecoveryCategoriesClearIndependently()
+    {
+        using Fixture fixture = new();
+        using MetricCollector<long> collector = fixture.LongCollector("worker.recovery.episodes");
+        fixture.Health.Set("sender", "remote recovery", TimeSpan.FromSeconds(10), "PDS");
+        fixture.Health.Set("sender", "database recovery", TimeSpan.FromSeconds(10), "database");
+        fixture.Health.Recovered("sender", "database");
+        Assert.True(fixture.Health.IsRecovering("sender"));
+        fixture.Health.Set("sender", "remote recovery", TimeSpan.FromSeconds(10), "PDS/AppView");
+        Assert.Equal(2, collector.GetMeasurementSnapshot().Count);
+        fixture.Health.Recovered("sender", "remote");
+        Assert.False(fixture.Health.IsRecovering("sender"));
+        fixture.Health.Set("sender", "remote recovery", TimeSpan.FromSeconds(10), "PDS");
+        Assert.Equal(3, collector.GetMeasurementSnapshot().Count);
+    }
+
+    /// <summary>Keeps remote recovery active when no remote-capable action successfully resumes.</summary>
+    /// <param name="workKind">The saved work selected during recovery.</param>
+    [Theory]
+    [InlineData("future")]
+    [InlineData("deleted")]
+    [InlineData("simulated")]
+    public async Task SenderLocalWorkDoesNotClearRemoteRecovery(string workKind)
+    {
+        using Fixture fixture = new();
+        fixture.Options.DeveloperMode = workKind == "simulated";
+        await fixture.InitializeAsync();
+        BotAction action = TestRecords.Work();
+        await fixture.Database.HandleAsync(
+            sequence: 11,
+            actions: [action],
+            malformedReason: null,
+            cancellationToken: CancellationToken.None,
+            deletedUri: workKind == "deleted" ? action.SourceUri : null);
+        using SenderWorker sender = fixture.CreateSender();
+        if (workKind == "future")
+        {
+            await sender.ScheduleRetryAsync(
+                work: action,
+                retryAt: fixture.Time.GetUtcNow().AddSeconds(30),
+                reason: "network timeout or unknown remote outcome",
+                cancellationToken: CancellationToken.None);
+        }
+        using MetricCollector<long> episodes = fixture.LongCollector("worker.recovery.episodes");
+        using MetricCollector<int> recovering = new(fixture.Factory, BotMetrics.MeterName, BotMetrics.Prefix + "worker.recovering");
+        fixture.Health.Set("sender", "remote recovery", TimeSpan.FromSeconds(10), "PDS");
+        fixture.Health.Set("sender", "database recovery", TimeSpan.FromSeconds(10), "database");
+        using BlueskySession session = fixture.CreateSession();
+        BlueskyActionRemote remote = fixture.CreateRemote(session);
+        for (int iteration = 0; iteration < 2; iteration++)
+        {
+            Task<DateTimeOffset> processing = sender.ProcessIterationAsync(
+                session: session,
+                remote: remote,
+                nextPrune: fixture.Time.GetUtcNow().AddHours(1),
+                stoppingToken: CancellationToken.None,
+                leaseToken: CancellationToken.None,
+                activeToken: CancellationToken.None);
+            Assert.Equal("idle / scheduled work", fixture.Health.Snapshot().Workers["sender"].Phase);
+            Assert.False(processing.IsCompleted);
+            recovering.RecordObservableInstruments();
+            Assert.Equal(1, recovering.GetMeasurementSnapshot().Last(item => (string?)item.Tags["worker"] == "sender").Value);
+            fixture.Time.Advance(TimeSpan.FromSeconds(2));
+            await processing;
+        }
+        fixture.Health.Set("sender", "remote recovery", TimeSpan.FromSeconds(10), "PDS");
+        Assert.Equal(
+            ["remote", "database"],
+            episodes.GetMeasurementSnapshot().Select(item => item.Tags["reason"]));
+        fixture.Health.Recovered("sender", "remote");
+        Assert.False(fixture.Health.IsRecovering("sender"));
+        if (workKind == "future")
+        {
+            Assert.Null(await fixture.Database.NextWorkAsync(CancellationToken.None));
+        }
+    }
+
+    /// <summary>Excludes both fenced storage operations and ownership cancellation from outage metrics.</summary>
+    /// <param name="cancelLease">Whether ownership loss is signaled by cancellation instead of an expired storage lease.</param>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SenderLeaseLossDoesNotRecordDatabaseRecovery(bool cancelLease)
+    {
+        using Fixture fixture = new();
+        await fixture.InitializeAsync();
+        using CancellationTokenSource lease = new();
+        if (cancelLease)
+        {
+            await lease.CancelAsync();
+        }
+        else
+        {
+            fixture.Time.Advance(TimeSpan.FromMinutes(2));
+        }
+        using SenderWorker sender = fixture.CreateSender();
+        using BlueskySession session = fixture.CreateSession();
+        using MetricCollector<long> episodes = fixture.LongCollector("worker.recovery.episodes");
+        using MetricCollector<int> recovering = new(fixture.Factory, BotMetrics.MeterName, BotMetrics.Prefix + "worker.recovering");
+        Task<DateTimeOffset> processing = sender.ProcessIterationAsync(
+            session: session,
+            remote: fixture.CreateRemote(session),
+            nextPrune: fixture.Time.GetUtcNow().AddHours(1),
+            stoppingToken: CancellationToken.None,
+            leaseToken: lease.Token,
+            activeToken: lease.Token);
+        Assert.Equal(cancelLease ? "ownership recovery" : "database recovery", fixture.Health.Snapshot().Workers["sender"].Phase);
+        Assert.False(processing.IsCompleted);
+        recovering.RecordObservableInstruments();
+        Assert.Equal(0, recovering.GetMeasurementSnapshot().Last(item => (string?)item.Tags["worker"] == "sender").Value);
+        Assert.Empty(episodes.GetMeasurementSnapshot());
+        fixture.Time.Advance(TimeSpan.FromSeconds(cancelLease ? 2 : 10));
+        await processing;
+    }
+
     /// <summary>Isolates hosts with separate meter factories rather than adding per-action identity tags.</summary>
     [Fact]
     public void HostMeterFactoriesRemainIsolated()
@@ -503,6 +620,22 @@ public sealed class BotMetricsTests
 
         /// <summary>Creates a duration collector scoped to this fixture's meter factory.</summary>
         internal MetricCollector<double> DoubleCollector(string suffix) => new(Factory, BotMetrics.MeterName, BotMetrics.Prefix + suffix);
+
+        /// <summary>Creates an unauthenticated session for iterations that must not contact remote services.</summary>
+        internal BlueskySession CreateSession() => new(
+            agent: new BlueskyAgent(),
+            database: Database,
+            vault: new(Options),
+            options: Options,
+            logger: NullLogger<BlueskySession>.Instance);
+
+        /// <summary>Creates the real transport so accidental remote access cannot succeed silently.</summary>
+        /// <param name="session">The unauthenticated session.</param>
+        /// <returns>The runtime action transport.</returns>
+        internal BlueskyActionRemote CreateRemote(BlueskySession session) => new(
+            session,
+            Options,
+            _services.GetRequiredService<IHttpClientFactory>());
 
         /// <summary>Creates the sender with real storage, host services and instrument collectors.</summary>
         internal SenderWorker CreateSender() => new(

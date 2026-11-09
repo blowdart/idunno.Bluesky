@@ -10,7 +10,7 @@ namespace idunno.Bluesky.BotSdk;
 /// <param name="time">The clock used to evaluate operation deadlines.</param>
 internal sealed class WorkerHealth(TimeProvider time)
 {
-    private readonly Dictionary<string, string> _recoveries = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, HashSet<string>> _recoveries = new(StringComparer.Ordinal);
 
     /// <summary>Reports entry into an actual dependency recovery episode.</summary>
     internal event Action<string, string>? Recovery;
@@ -18,12 +18,25 @@ internal sealed class WorkerHealth(TimeProvider time)
     /// <summary>Reports an unrecoverable worker failure.</summary>
     internal event Action<string>? Failure;
 
-    /// <summary>Clears an episode only after the worker has successfully resumed work.</summary>
-    internal void Recovered(string worker)
+    /// <summary>Clears recovery only for dependencies whose work has successfully resumed.</summary>
+    /// <param name="worker">The worker name.</param>
+    /// <param name="reason">The recovered category, or <see langword="null"/> when all dependencies have recovered.</param>
+    internal void Recovered(string worker, string? reason = null)
     {
         lock (_gate)
         {
-            _recoveries.Remove(worker);
+            if (reason is null)
+            {
+                _recoveries.Remove(worker);
+            }
+            else if (_recoveries.TryGetValue(worker, out HashSet<string>? reasons))
+            {
+                reasons.Remove(reason);
+                if (reasons.Count == 0)
+                {
+                    _recoveries.Remove(worker);
+                }
+            }
         }
     }
 
@@ -67,9 +80,13 @@ internal sealed class WorkerHealth(TimeProvider time)
                     "archive bandwidth" => "archive_bandwidth",
                     _ => "remote"
                 };
-                if (!_recoveries.TryGetValue(worker, out string? current) || current != reason)
+                if (!_recoveries.TryGetValue(worker, out HashSet<string>? reasons))
                 {
-                    _recoveries[worker] = reason;
+                    reasons = new(StringComparer.Ordinal);
+                    _recoveries[worker] = reasons;
+                }
+                if (reasons.Add(reason))
+                {
                     Recovery?.Invoke(worker, reason);
                 }
             }

@@ -284,7 +284,7 @@ Names in the following runtime tables have the prefix `idunno.bluesky.bot.`.
 | `actions.retries.scheduled` | Counter&lt;long&gt; | {retries} | `reason` | Retry schedules successfully saved for an unfinished action. Failed and no-op updates add nothing. |
 | `rate_limit.deferrals` | Counter&lt;long&gt; | {deferrals} | `reason` | Once per outbound request's budget-deferral episode, and once per observed HTTP 429. Short pacing loops do not count the same budget episode repeatedly. |
 | `ownership.transitions` | Counter&lt;long&gt; | {transitions} | `transition` | Actual local activation, loss or shutdown; ordinary lease renewal and repeated suspension add nothing. |
-| `worker.recovery.episodes` | Counter&lt;long&gt; | {episodes} | `worker`, `reason` | Entry into recovery for a dependency category. Repeated attempts in that category remain one episode until successful resumption; a different category records a new entry. Ownership standby is excluded. |
+| `worker.recovery.episodes` | Counter&lt;long&gt; | {episodes} | `worker`, `reason` | Entry into recovery for a dependency category. Repeated attempts in that category remain one episode until that dependency successfully resumes; overlapping categories are tracked independently. Successful sender storage selection clears database recovery, not remote recovery. Remote recovery clears after successful remote-capable dispatch/reconciliation, not idle polls, simulation or local exclusions. Ownership standby and lease loss are excluded. |
 | `worker.failures` | Counter&lt;long&gt; | {failures} | `worker` | Newly recorded unrecoverable worker failures, excluding ordinary shutdown. |
 
 Counter values are telemetry from this host's lifetime, not reconstructed lifetime totals from

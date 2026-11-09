@@ -126,7 +126,7 @@ internal sealed class SenderWorker(
     /// <param name="leaseToken">The ownership cancellation signal.</param>
     /// <param name="activeToken">The linked operation cancellation token.</param>
     /// <returns>The next pruning deadline after the iteration.</returns>
-    private async Task<DateTimeOffset> ProcessIterationAsync(
+    internal async Task<DateTimeOffset> ProcessIterationAsync(
         BlueskySession session,
         IBotActionRemote remote,
         DateTimeOffset nextPrune,
@@ -147,6 +147,7 @@ internal sealed class SenderWorker(
             }
 
             work = await database.NextWorkAsync(activeToken).ConfigureAwait(false);
+            health.Recovered("sender", "database");
 
             if (work is not null)
             {
@@ -158,9 +159,12 @@ internal sealed class SenderWorker(
                 }
 
                 await dispatcher.SendAsync(work, options.DeveloperMode ? null : remote, activeToken).ConfigureAwait(false);
+                if (!options.DeveloperMode && RequiresAuthentication(work))
+                {
+                    health.Recovered("sender", "remote");
+                }
             }
 
-            health.Recovered("sender");
             await WaitAsync("idle / scheduled work", TimeSpan.FromSeconds(2), null, stoppingToken).ConfigureAwait(false);
         }
         catch (RateWaitException exception)
@@ -212,7 +216,11 @@ internal sealed class SenderWorker(
             database.IsTransientDatabaseException(exception))
         {
             BotLog.Recovering(logger, "sender", "database/ownership", time.GetUtcNow().AddSeconds(10), exception);
-            await WaitAsync("database recovery", TimeSpan.FromSeconds(10), "database", stoppingToken).ConfigureAwait(false);
+            await WaitAsync(
+                phase: "database recovery",
+                delay: TimeSpan.FromSeconds(10),
+                dependency: exception is OwnershipLostException ? "ownership" : "database",
+                cancellationToken: stoppingToken).ConfigureAwait(false);
         }
         return nextPrune;
     }
