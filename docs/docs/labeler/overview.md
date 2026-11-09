@@ -26,9 +26,10 @@ configure your identity, keys and deployment.
 > deploying the host does not supply automatic moderation decisions or a web UI.
 
 For the canonical deployable application, use
-[`idunno.Bluesky.Labeler.Host`](deployment.md). It combines public distribution and protected
-administration with configurable storage and signing-key providers. The SDK packages remain
-independent building blocks for custom hosts; a moderation web UI is not included.
+[the canonical PostgreSQL or MySQL host](deployment.md). Both combine public distribution and
+protected administration with optional Xenon moderation/UI. They share the non-packable
+`idunno.Bluesky.Labeler.Host` library and provider-neutral base image. The SDK packages remain
+independent building blocks for custom hosts.
 
 ## Meet the Bean Bureau
 

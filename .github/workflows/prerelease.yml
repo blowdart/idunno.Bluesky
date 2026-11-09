@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       perform_sign:
-        description: 'Sign'
+        description: 'Sign NuGet packages'
         type: boolean
         required: true
         default: true
@@ -12,6 +12,11 @@ on:
         type: boolean
         required: true
         default: true
+      perform_publish_containers:
+        description: 'Publish signed prerelease container images'
+        type: boolean
+        required: true
+        default: false
 
 env:
   DOTNET_NOLOGO: true
@@ -33,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+      uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
       with:
         egress-policy: audit
 
@@ -87,7 +92,7 @@ jobs:
       LABELER_TEST_MYSQL_CONNECTION: "Server=127.0.0.1;Port=3306;User ID=root;Password=labeler-disposable-ci;Pooling=false"
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+      uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
       with:
         egress-policy: audit
 
@@ -178,6 +183,19 @@ jobs:
         name: build-artifacts
         path: ${{ env.BUILD_OUTPUT }}/*
         retention-days: 7
+
+  publish-labeler-images:
+    name: Publish signed prerelease labeler images
+    needs: build
+    if: ${{ inputs.perform_publish_containers }}
+    uses: $/.github/workflows/publish-labeler-images.yml
+    with:
+      prerelease: true
+    permissions:
+      attestations: write
+      contents: read
+      id-token: write
+      packages: write
 
   sign:
     name: Sign
@@ -286,7 +304,7 @@ jobs:
       id-token: write
     steps:
     - name: 'Harden Runner'
-      uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+      uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
       with:
         egress-policy: audit
 

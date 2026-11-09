@@ -1,0 +1,3 @@
+#nullable enable
+idunno.Bluesky.Labeler.Host.PostgreSQL.PostgreSqlLabelerHostExtensions
+static idunno.Bluesky.Labeler.Host.PostgreSQL.PostgreSqlLabelerHostExtensions.AddPostgreSqlCanonicalLabelerStorage(this Microsoft.AspNetCore.Builder.WebApplicationBuilder! builder) -> Microsoft.AspNetCore.Builder.WebApplicationBuilder!

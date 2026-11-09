@@ -7,6 +7,15 @@ bring it to our attention by posting an issue.
 
 The attached notices are provided for information only.
 
+PostgreSQL container runtime
+----------------------------
+
+The PostgreSQL host container installs Ubuntu's libgssapi-krb5-2 package
+and its runtime dependencies libkrb5-3, libk5crypto3, libkrb5support0 and
+libkeyutils1. Their distribution-supplied copyright and license notices
+are retained in /usr/share/doc/<package>/copyright inside the image.
+These operating-system packages are not bundled in the NuGet libraries.
+
 Build tooling
 -------------
 
@@ -45,6 +54,10 @@ The labeler administration CLI bundles System.CommandLine (MIT).
 The standalone labeler host also uses idunno.Bluesky.AspNet.Authentication for native
 OAuth metadata publication and idunno.Security.Ssrf (MIT) for protected identity resolution.
 These components and their dependencies are listed below.
+
+Both canonical labeler hosts also bundle the OpenTelemetry OTLP and Prometheus
+ASP.NET Core exporters (Apache-2.0). The exporters include third-party .NET and
+gRPC for .NET code; their notices are reproduced below.
 
 The development-only Xenon.TestHost also uses the existing
 idunno.Bluesky.AspNet.Authentication.SQLite provider and Microsoft.Data.Sqlite
@@ -88,9 +101,11 @@ and Microsoft.Extensions.Logging (MIT). The SQLite provider uses Microsoft.Data.
 (MIT), the PostgreSQL provider uses Npgsql (PostgreSQL license), and the MySQL
 provider uses MySqlConnector (MIT), listed below.
 
-The canonical labeler host also uses idunno.Bluesky.AspNet.Authentication.PostgreSQL
-and Npgsql (PostgreSQL license) for retained website authentication state and
-Data Protection keys in PostgreSQL deployments.
+The canonical PostgreSQL and MySQL labeler hosts respectively use
+idunno.Bluesky.AspNet.Authentication.PostgreSQL with Npgsql (PostgreSQL license)
+and idunno.Bluesky.AspNet.Authentication.MySQL with MySqlConnector (MIT) for
+retained website authentication state and Data Protection keys/revocations.
+The provider-neutral shared host and base image do not select a database provider.
 
 The idunno.Bluesky.AspNet.Labeler hosting package uses the ASP.NET Core shared
 framework (MIT) and System.Formats.Cbor (MIT), as well as the shared labeler
@@ -116,6 +131,8 @@ Microsoft.Extensions.Logging                    MIT
 Microsoft.IdentityModel.JsonWebTokens           MIT
 MySqlConnector                                  MIT
 Npgsql                                          PostgreSQL
+OpenTelemetry.Exporter.OpenTelemetryProtocol     Apache-2.0
+OpenTelemetry.Exporter.Prometheus.AspNetCore      Apache-2.0
 OpenTelemetry.Extensions.Hosting                Apache-2.0
 SimpleBase                                      Apache-2.0
 StackExchange.Redis                             MIT
@@ -123,6 +140,51 @@ System.CommandLine                              MIT
 System.Formats.Cbor                             MIT
 System.Text.Json                                MIT
 ZstdSharp.Port                                  MIT
+
+OpenTelemetry exporters: license notice for .NET
+------------------------------------------------
+
+The MIT License (MIT)
+
+Copyright (c) .NET Foundation and Contributors
+
+All rights reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+OpenTelemetry exporters: license notice for gRPC for .NET
+--------------------------------------------------------
+
+Source: https://github.com/grpc/grpc-dotnet
+Copyright 2019 The gRPC Authors
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
 
 License notice for varint.cs (https://github.com/ipfs-shipyard/net-ipfs-core/)
 ------------------------------------------------------------------------------

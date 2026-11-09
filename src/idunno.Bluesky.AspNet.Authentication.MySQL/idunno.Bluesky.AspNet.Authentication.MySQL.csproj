@@ -36,10 +36,6 @@
     <WarningLevel>8</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
-    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <None Include="readme.md" Pack="true" PackagePath="\" />
     <None Include="icon.png" Pack="true" PackagePath="\" />
     <None Include="schema.sql" Pack="true" PackagePath="contentFiles\any\any" />

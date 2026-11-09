@@ -1141,6 +1141,7 @@ public partial class ModerationTests
         DeclarationHandler handler = new(key.ExportPublicKeyMultibase());
         using HttpClient identity = new(handler);
         await using TestServerBuilder fixture = await CreateAsync(key, identity);
+        await fixture.Clock.PolicyVerificationRegistrations.Reader.ReadAsync(TestContext.Current.CancellationToken);
         Assert.True((await fixture.Services.GetRequiredService<LabelPolicyService>()
             .GetVerifiedStateAsync(cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
         LabelPolicyService wrongIssuer = new(

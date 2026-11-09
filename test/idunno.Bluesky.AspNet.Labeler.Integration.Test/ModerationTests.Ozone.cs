@@ -268,6 +268,7 @@ public partial class ModerationTests
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()));
         await using TestServerBuilder fixture = await CreateAsync(key: key, identity: identity, remoteEnabled: true, ozone: true);
+        await fixture.Clock.PolicyVerificationRegistrations.Reader.ReadAsync(token);
         await VerifyPolicyAsync(fixture);
         List<long> reportIds = [];
         foreach (string subject in new[] { "did:plc:subject", "did:plc:subject", "did:plc:another" })
@@ -293,7 +294,9 @@ public partial class ModerationTests
             key: key,
             method: "tools.ozone.moderation.emitEvent",
             body: body);
-        Assert.Equal(HttpStatusCode.OK, acknowledged.StatusCode);
+        Assert.True(
+            acknowledged.StatusCode == HttpStatusCode.OK,
+            await acknowledged.Content.ReadAsStringAsync(token));
         ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
         LabelServiceResult<LabelAdministrationCaller> callerResult = await team.AuthenticateLocalAsync("uid:0", token);
         Assert.True(callerResult.Succeeded, $"{callerResult.Error?.Code}: {callerResult.Error?.Message}\n{callerResult.Error?.Exception}");

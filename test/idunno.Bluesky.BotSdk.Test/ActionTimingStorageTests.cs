@@ -23,6 +23,12 @@ public sealed partial class RelationalProviderTests
         DateTimeOffset enqueue = await store.TimestampAsync("enqueued_at", "reply_work");
         Assert.Equal(enqueue, await store.TimestampAsync("next_retry", "reply_work"));
         Assert.NotEqual(work.EnqueuedAt, enqueue);
+        await store.SqlAsync(provider == "Postgres"
+            ? "UPDATE reply_work SET enqueued_at = now() - interval '60 seconds'"
+            : provider == "Sqlite"
+                ? "UPDATE reply_work SET enqueued_at = CAST(unixepoch('subsec') * 1000000 AS INTEGER) - 60000000"
+                : "UPDATE reply_work SET enqueued_at = TIMESTAMPDIFF(MICROSECOND, '1970-01-01', UTC_TIMESTAMP(6)) - 60000000");
+        enqueue = await store.TimestampAsync("enqueued_at", "reply_work");
         await store.Database.MarkAttemptAsync(work, CancellationToken.None);
         await store.Database.RetryAsync(
             work: work,

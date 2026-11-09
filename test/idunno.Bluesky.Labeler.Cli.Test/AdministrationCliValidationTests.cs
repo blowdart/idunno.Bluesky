@@ -176,6 +176,10 @@ public class AdministrationCliValidationTests
 
     [Theory]
     [InlineData("ghcr.io/blowdart/idunno-bluesky-labeler@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", true)]
+    [InlineData("ghcr.io/blowdart/idunno-bluesky-labeler-postgresql@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", true)]
+    [InlineData("ghcr.io/blowdart/idunno-bluesky-labeler-mysql@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", true)]
+    [InlineData("ghcr.io/blowdart/idunno-bluesky-labeler-base@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", false)]
+    [InlineData("ghcr.io/blowdart/idunno-bluesky-labeler-mysql:latest", false)]
     [InlineData("ghcr.io/blowdart/idunno-bluesky-labeler:latest", false)]
     [InlineData("ghcr.io/other/image@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", false)]
     [InlineData("ghcr.io/blowdart/idunno-bluesky-labeler@sha256:xyz", false)]
