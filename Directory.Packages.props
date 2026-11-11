@@ -70,7 +70,7 @@
     <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Telemetry.Abstractions" Version="9.0.0" />
-    <PackageVersion Include="System.Formats.Cbor" Version="9.0.23" />
+    <PackageVersion Include="System.Formats.Cbor" Version="9.0.24" />
     <PackageVersion Include="System.Runtime.Caching" Version="9.0.0" />
     <PackageVersion Include="System.Text.Json" Version="9.0.0" />
   </ItemGroup>
