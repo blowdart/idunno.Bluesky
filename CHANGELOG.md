@@ -1,6 +1,6 @@
 # Version History
 
-## Unreleased
+## 8.0.1 - 2026-10-26
 
 ### ➕ Added
 
@@ -9,6 +9,11 @@
 * Made `Graph.ListItem` public, with constructors and null validation for list and subject values, including object initializers and `with` expressions.
 
 ### 🟢 Changed
+
+* Dependency updates, including 
+  * `System.Formats.Cbor` for [CVE-2026-118747](https://github.com/advisories/GHSA-vmv3-wvjp-wqpj)
+  * `Microsoft.AspNetCore.WebUtilities` for [CVE-2026-114149](https://github.com/advisories/GHSA-x33c-w48q-qrgc)
+* Minimum SDK version updated to .NET 10.0.404 for [CVE-2026-105544](https://github.com/dotnet/announcements/issues/517)
 
 #### Packaging
 
