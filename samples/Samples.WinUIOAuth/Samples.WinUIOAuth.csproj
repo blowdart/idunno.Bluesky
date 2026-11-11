@@ -42,8 +42,8 @@
   <!-- Do not even restore Windows packages or reference the SDK from the non-Windows placeholder.
        Local package versions keep sample tooling independent of the shared library dependencies. -->
   <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
-    <PackageVersion Include="Microsoft.WindowsAppSDK" Version="2.5.1" />
-    <PackageVersion Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2705" />
+    <PackageVersion Include="Microsoft.WindowsAppSDK" Version="2.6.5" />
+    <PackageVersion Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2957" />
     <PackageReference Include="Microsoft.WindowsAppSDK" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" />
     <ProjectReference Include="..\..\src\idunno.Bluesky\idunno.Bluesky.csproj" />
