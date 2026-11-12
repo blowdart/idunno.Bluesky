@@ -61,14 +61,16 @@ public sealed class ActionStorageTests
     public async Task SameEventDeletionMarksNewActions(string provider)
     {
         await using Store store = await Store.CreateAsync(provider);
-        await VerifySameEventDeletionAsync(store.Database);
+        await VerifySameEventDeletionAsync(store.Database, store.MakeRetriesDueAsync);
     }
 
-    internal static async Task VerifySameEventDeletionAsync(IDatabaseProvider database)
+    internal static async Task VerifySameEventDeletionAsync(
+        IDatabaseProvider database,
+        Func<Task>? makeRetriesDue = null)
     {
         BotAction original = TestRecords.Work();
-        await database.HandleAsync(11, [original], null, CancellationToken.None);
-        await database.MarkAttemptAsync(original, CancellationToken.None);
+        Assert.Equal(1, await database.HandleAsync(11, [original], null, CancellationToken.None));
+        Assert.Equal(1, await database.MarkAttemptAsync(original, CancellationToken.None));
         BotAction uncertain = original with { Status = "uncertain", Attempts = 1 };
         string[] kinds = ["reply", "like", "repost", "bookmark", "list-item", "custom"];
         List<BotAction> actions = [.. kinds.Select(kind => original with
@@ -89,6 +91,11 @@ public sealed class ActionStorageTests
         actions.AddRange([rootReply, rootCustom, unrelated]);
         Assert.Equal(9, await database.HandleAsync(12, actions, null, CancellationToken.None, original.SourceUri));
         Assert.Equal(12, (await database.LoadStateAsync(CancellationToken.None)).ProcessedThrough);
+        if (makeRetriesDue is not null)
+        {
+            // The database clock may move backwards between enqueue and selection.
+            await makeRetriesDue();
+        }
 
         Dictionary<string, BotAction> remaining = actions.Append(uncertain).ToDictionary(action => action.RecordKey);
         while (remaining.Count > 0)
@@ -99,7 +106,7 @@ public sealed class ActionStorageTests
             Assert.Equal(expected with { TargetDeleted = deleted, RecordJson = saved.RecordJson }, saved);
             Assert.True(JsonNode.DeepEquals(JsonNode.Parse(expected.RecordJson), JsonNode.Parse(saved.RecordJson)));
             Assert.True(remaining.Remove(saved.RecordKey));
-            await database.FinishAsync(saved, "not-sent", null, "test completed", CancellationToken.None);
+            Assert.Equal(1, await database.FinishAsync(saved, "not-sent", null, "test completed", CancellationToken.None));
         }
         Assert.Null(await database.NextWorkAsync(CancellationToken.None));
     }
@@ -161,9 +168,11 @@ public sealed class ActionStorageTests
             [first],
             null,
             CancellationToken.None);
+        DateTimeOffset retryAt = (await store.InitialRetryTimeAsync()).AddHours(1);
         await store.AddLegacyRecordKeyIndexAsync();
         await store.Database.InitializeAsync(CancellationToken.None);
         await store.Database.InitializeAsync(CancellationToken.None);
+        await store.MakeRetriesDueAsync();
         Assert.Equal(
             first,
             await store.Database.NextWorkAsync(CancellationToken.None));
@@ -179,6 +188,7 @@ public sealed class ActionStorageTests
                 [second],
                 null,
                 CancellationToken.None));
+        await store.MakeRetriesDueAsync();
         Assert.Equal(
             1,
             await store.Database.MarkAttemptAsync(
@@ -188,7 +198,7 @@ public sealed class ActionStorageTests
             1,
             await store.Database.RetryAsync(
                 first,
-                DateTimeOffset.UtcNow.AddHours(1),
+                retryAt,
                 "one row only",
                 CancellationToken.None));
         Assert.Equal(
@@ -239,6 +249,7 @@ public sealed class ActionStorageTests
             [reply, like, secondLike],
             null,
             CancellationToken.None));
+        DateTimeOffset retryAt = (await store.InitialRetryTimeAsync()).AddHours(1);
         Assert.Equal(
             0,
             await store.Database.HandleAsync(
@@ -246,6 +257,7 @@ public sealed class ActionStorageTests
             [reply with { RecordKey = "ignored" }, like, secondLike],
             null,
             CancellationToken.None));
+        await store.MakeRetriesDueAsync();
         Assert.Equal(
             1,
             await store.Database.MarkAttemptAsync(
@@ -255,7 +267,7 @@ public sealed class ActionStorageTests
             1,
             await store.Database.RetryAsync(
             like,
-            DateTimeOffset.UtcNow.AddHours(1),
+            retryAt,
             "retry only this like",
             CancellationToken.None));
         Assert.Equal(
@@ -334,6 +346,7 @@ public sealed class ActionStorageTests
             [original],
             null,
             CancellationToken.None);
+        await store.MakeRetriesDueAsync();
         BotAction first = Action(
             "like",
             "default",
@@ -427,6 +440,7 @@ public sealed class ActionStorageTests
         await using Store store = await Store.CreateAsync(
             provider,
             legacy: true);
+        await store.MakeRetriesDueAsync();
         BotAction durable = (await store.Database.NextWorkAsync(CancellationToken.None))!;
         Assert.Equal(
             Action(
@@ -461,6 +475,7 @@ public sealed class ActionStorageTests
             null,
             "legacy target deleted",
             CancellationToken.None));
+        await store.MakeRetriesDueAsync();
         Assert.Equal(
             "bookmark",
             (await store.Database.NextWorkAsync(CancellationToken.None))!.ActionKind);
@@ -656,8 +671,17 @@ public sealed class ActionStorageTests
             SqlAsync("CREATE UNIQUE INDEX legacy_record_key ON reply_work(record_key)");
 
         public Task MakeRetriesDueAsync() => SqlAsync(_provider == "Postgres"
-            ? "UPDATE reply_work SET next_retry = now()"
+            ? "UPDATE reply_work SET next_retry = 'epoch'"
             : "UPDATE reply_work SET next_retry = 0");
+
+        public async Task<DateTimeOffset> InitialRetryTimeAsync()
+        {
+            long microseconds = await ScalarAsync(_provider == "Postgres"
+                ? "SELECT CAST(EXTRACT(EPOCH FROM next_retry) * 1000000 AS BIGINT) FROM reply_work LIMIT 1"
+                : "SELECT next_retry FROM reply_work LIMIT 1");
+
+            return DateTimeOffset.UnixEpoch.AddTicks(checked(microseconds * 10));
+        }
 
         public Task<long> CountAsync(string condition) =>
             ScalarAsync($"SELECT count(*) FROM reply_work WHERE {condition}");

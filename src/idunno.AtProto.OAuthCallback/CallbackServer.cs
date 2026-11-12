@@ -68,9 +68,6 @@ public sealed class CallbackServer : IAsyncDisposable
     // otherwise a blocking continuation in the waiting caller stalls the response the browser is
     // waiting on.
     private readonly TaskCompletionSource<string> _source = new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-    private readonly Task _startupTask;
-
     private readonly CancellationTokenSource _disposalCancellationSource = new();
     private readonly Socket[] _ownedSockets;
 
@@ -82,7 +79,6 @@ public sealed class CallbackServer : IAsyncDisposable
 
     private CancellationTokenSource? _timeoutCancellationSource;
     private CancellationTokenSource? _timeoutTimerSource;
-    private TimeProvider _timeProvider = TimeProvider.System;
     private CancellationTokenRegistration _timeoutRegistration;
     private CancellationToken _callerCancellationToken;
     private long _callbackWaitStartTimestamp;
@@ -131,10 +127,13 @@ public sealed class CallbackServer : IAsyncDisposable
 
         path ??= string.Empty;
 
+        #pragma warning disable CA1307
+        // StartsWith character only checks don't work with Culture parameters.
         if (path.StartsWith('/'))
         {
             path = path[1..];
         }
+        #pragma warning restore CA1307
 
         // The path goes into both the route pattern and the advertised Uri without escaping. A '{', '}' or '*' would
         // be read as a route parameter or a catch all rather than as literal text, and a '?', '#' or a space would
@@ -163,7 +162,7 @@ public sealed class CallbackServer : IAsyncDisposable
 
         Uri = uri;
 
-        _startupTask = InitializeListenerAsync(port, path, loggerFactory, ownedSockets, configure, cancellationToken);
+        Startup = InitializeListenerAsync(port, path, loggerFactory, ownedSockets, configure, cancellationToken);
 
         _ = RunListenerAsync().ContinueWith(
             static (listenerTask, state) =>
@@ -193,7 +192,7 @@ public sealed class CallbackServer : IAsyncDisposable
             TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
             TaskScheduler.Default);
 
-        _ = _startupTask.ContinueWith(
+        _ = Startup.ContinueWith(
             static faulted => _ = faulted.Exception,
             CancellationToken.None,
             TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
@@ -364,7 +363,7 @@ public sealed class CallbackServer : IAsyncDisposable
                 server = new CallbackServer(attemptedPort, path, loggerFactory, sockets, configure, cancellationToken);
                 sockets = [];
 
-                await server._startupTask.ConfigureAwait(false);
+                await server.Startup.ConfigureAwait(false);
 
                 return server;
             }
@@ -449,7 +448,7 @@ public sealed class CallbackServer : IAsyncDisposable
     /// <summary>
     /// Gets the task which completes when the listener has started, or faults with its startup exception.
     /// </summary>
-    internal Task Startup => _startupTask;
+    internal Task Startup { get; }
 
     /// <summary>
     /// Runs the listener until shutdown, preserving the disposal performed by the host's RunAsync method.
@@ -458,7 +457,7 @@ public sealed class CallbackServer : IAsyncDisposable
     private async Task RunListenerAsync()
     {
         WebApplication? listener = _listener;
-        await _startupTask.ConfigureAwait(false);
+        await Startup.ConfigureAwait(false);
 
         if (listener is null)
         {
@@ -556,13 +555,13 @@ public sealed class CallbackServer : IAsyncDisposable
     /// <exception cref="ArgumentNullException">The value is <see langword="null"/>.</exception>
     internal TimeProvider TimeProvider
     {
-        get => _timeProvider;
+        get;
         set
         {
             ArgumentNullException.ThrowIfNull(value);
-            _timeProvider = value;
+            field = value;
         }
-    }
+    } = TimeProvider.System;
 
     /// <summary>
     /// Wait for the specified <paramref name="timeoutInSeconds"/> for an oauth callback.
@@ -842,7 +841,7 @@ public sealed class CallbackServer : IAsyncDisposable
             return;
         }
 
-        string? queryString = null;
+        string? queryString;
 
         // A page the user is visiting can point a browser at this server just as easily as the authorization server
         // can, and the Host it sends is the loopback address this server answers to, so neither host filtering nor the

@@ -13,7 +13,6 @@ using idunno.Bluesky.AspNet.Authentication.Events;
 
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -318,7 +317,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
             signInContext.Properties,
             Options);
 
-        string cookieValue = Options.TicketDataFormat.Protect(ticket, GetTlsTokenBinding());
+        string cookieValue = Options.TicketDataFormat.Protect(ticket, BlueskyAuthenticationHandler.GetTlsTokenBinding());
 
         Options.CookieManager.AppendResponseCookie(
             Context,
@@ -437,7 +436,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
                 properties.ExpiresUtc = _refreshExpiresUtc;
             }
 
-            string cookieValue = Options.TicketDataFormat.Protect(ticket, GetTlsTokenBinding());
+            string cookieValue = Options.TicketDataFormat.Protect(ticket, BlueskyAuthenticationHandler.GetTlsTokenBinding());
 
             CookieOptions cookieOptions = BuildCookieOptions();
             if (properties.IsPersistent && _refreshExpiresUtc.HasValue)
@@ -591,10 +590,9 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
         return _readCookieTask;
     }
 
-    private string? GetTlsTokenBinding()
+    private static string? GetTlsTokenBinding()
     {
-        byte[]? binding = Context.Features.Get<ITlsTokenBindingFeature>()?.GetProvidedTokenBindingId();
-        return binding == null ? null : Convert.ToBase64String(binding);
+        return null; // RFC 8471 Token Binding was never adopted by browsers and is now deprecated. This is left here for future use if it ever comes back.
     }
 
     /// <summary>
@@ -628,7 +626,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
             return false;
         }
 
-        AuthenticationTicket? ticket = Options.TicketDataFormat.Unprotect(cookie, GetTlsTokenBinding());
+        AuthenticationTicket? ticket = Options.TicketDataFormat.Unprotect(cookie, BlueskyAuthenticationHandler.GetTlsTokenBinding());
 
         Claim? didClaim = ticket?.Principal.Claims.FirstOrDefault(
             c => c.Type.Equals(AtProtoClaims.Did, StringComparison.OrdinalIgnoreCase));
@@ -706,7 +704,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
             return AuthenticateResult.NoResult();
         }
 
-        AuthenticationTicket? ticket = Options.TicketDataFormat.Unprotect(cookie, GetTlsTokenBinding());
+        AuthenticationTicket? ticket = Options.TicketDataFormat.Unprotect(cookie, BlueskyAuthenticationHandler.GetTlsTokenBinding());
         if (ticket == null)
         {
             return AuthenticateResults.s_failedUnprotectingTicket;
