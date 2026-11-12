@@ -7,7 +7,7 @@ These are just guidelines, not rules, so feel free to use your own judgement, an
 
 ## Building locally
 
-You will need, at a minimum, a [.NET SDK 10](https://dotnet.microsoft.com/en-us/download/dotnet/10.0) installed.
+You will need [.NET SDK 11.0.100](https://dotnet.microsoft.com/en-us/download/dotnet/11.0) or a compatible later .NET 11 SDK, as specified in `global.json`.
 
 If you want to use Visual Studio you will need [Visual Studio 2026](https://visualstudio.microsoft.com/downloads/) with the
 ASP.NET and web development workload installed. Visual Studio 2026 community edition will work just fine.
