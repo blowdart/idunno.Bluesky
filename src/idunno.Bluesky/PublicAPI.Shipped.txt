@@ -2716,6 +2716,15 @@ idunno.Bluesky.Graph.ListBlock.ListBlock(idunno.AtProto.AtUri! subject, System.D
 idunno.Bluesky.Graph.ListBlock.ListBlock(idunno.Bluesky.Graph.ListBlock! original) -> void
 idunno.Bluesky.Graph.ListBlock.Subject.get -> idunno.AtProto.AtUri!
 idunno.Bluesky.Graph.ListBlock.Subject.init -> void
+idunno.Bluesky.Graph.ListItem
+idunno.Bluesky.Graph.ListItem.List.get -> idunno.AtProto.AtUri!
+idunno.Bluesky.Graph.ListItem.List.init -> void
+idunno.Bluesky.Graph.ListItem.ListItem() -> void
+idunno.Bluesky.Graph.ListItem.ListItem(idunno.AtProto.AtUri! list, idunno.AtProto.Did! subject) -> void
+idunno.Bluesky.Graph.ListItem.ListItem(idunno.AtProto.AtUri! list, idunno.AtProto.Did! subject, System.DateTimeOffset createdAt) -> void
+idunno.Bluesky.Graph.ListItem.ListItem(idunno.Bluesky.Graph.ListItem! original) -> void
+idunno.Bluesky.Graph.ListItem.Subject.get -> idunno.AtProto.Did!
+idunno.Bluesky.Graph.ListItem.Subject.init -> void
 idunno.Bluesky.Graph.ListItemView
 idunno.Bluesky.Graph.ListItemView.Equals(idunno.Bluesky.Graph.ListItemView? other) -> bool
 idunno.Bluesky.Graph.ListItemView.Subject.get -> idunno.Bluesky.Actor.ProfileView!
@@ -4766,6 +4775,12 @@ override idunno.Bluesky.Graph.ListBlock.Equals(object? obj) -> bool
 override idunno.Bluesky.Graph.ListBlock.GetHashCode() -> int
 override idunno.Bluesky.Graph.ListBlock.PrintMembers(System.Text.StringBuilder! builder) -> bool
 override idunno.Bluesky.Graph.ListBlock.ToString() -> string!
+override idunno.Bluesky.Graph.ListItem.<Clone>$() -> idunno.Bluesky.Graph.ListItem!
+override idunno.Bluesky.Graph.ListItem.EqualityContract.get -> System.Type!
+override idunno.Bluesky.Graph.ListItem.Equals(object? obj) -> bool
+override idunno.Bluesky.Graph.ListItem.GetHashCode() -> int
+override idunno.Bluesky.Graph.ListItem.PrintMembers(System.Text.StringBuilder! builder) -> bool
+override idunno.Bluesky.Graph.ListItem.ToString() -> string!
 override idunno.Bluesky.Graph.ListItemView.<Clone>$() -> idunno.Bluesky.Graph.ListItemView!
 override idunno.Bluesky.Graph.ListItemView.Equals(object? obj) -> bool
 override idunno.Bluesky.Graph.ListItemView.GetHashCode() -> int
@@ -5202,6 +5217,7 @@ override sealed idunno.Bluesky.Graph.Block.Equals(idunno.Bluesky.Record.BlueskyT
 override sealed idunno.Bluesky.Graph.Follow.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
 override sealed idunno.Bluesky.Graph.List.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
 override sealed idunno.Bluesky.Graph.ListBlock.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
+override sealed idunno.Bluesky.Graph.ListItem.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
 override sealed idunno.Bluesky.Graph.ListItemView.Equals(idunno.Bluesky.View? other) -> bool
 override sealed idunno.Bluesky.Graph.ListView.Equals(idunno.Bluesky.Graph.ListViewBasic? other) -> bool
 override sealed idunno.Bluesky.Graph.ListViewBasic.Equals(idunno.Bluesky.View? other) -> bool
@@ -6042,6 +6058,8 @@ static idunno.Bluesky.Graph.List.operator !=(idunno.Bluesky.Graph.List? left, id
 static idunno.Bluesky.Graph.List.operator ==(idunno.Bluesky.Graph.List? left, idunno.Bluesky.Graph.List? right) -> bool
 static idunno.Bluesky.Graph.ListBlock.operator !=(idunno.Bluesky.Graph.ListBlock? left, idunno.Bluesky.Graph.ListBlock? right) -> bool
 static idunno.Bluesky.Graph.ListBlock.operator ==(idunno.Bluesky.Graph.ListBlock? left, idunno.Bluesky.Graph.ListBlock? right) -> bool
+static idunno.Bluesky.Graph.ListItem.operator !=(idunno.Bluesky.Graph.ListItem? left, idunno.Bluesky.Graph.ListItem? right) -> bool
+static idunno.Bluesky.Graph.ListItem.operator ==(idunno.Bluesky.Graph.ListItem? left, idunno.Bluesky.Graph.ListItem? right) -> bool
 static idunno.Bluesky.Graph.ListItemView.operator !=(idunno.Bluesky.Graph.ListItemView? left, idunno.Bluesky.Graph.ListItemView? right) -> bool
 static idunno.Bluesky.Graph.ListItemView.operator ==(idunno.Bluesky.Graph.ListItemView? left, idunno.Bluesky.Graph.ListItemView? right) -> bool
 static idunno.Bluesky.Graph.ListView.operator !=(idunno.Bluesky.Graph.ListView? left, idunno.Bluesky.Graph.ListView? right) -> bool
@@ -6561,6 +6579,7 @@ virtual idunno.Bluesky.Graph.FeedItem.PrintMembers(System.Text.StringBuilder! bu
 virtual idunno.Bluesky.Graph.Follow.Equals(idunno.Bluesky.Graph.Follow? other) -> bool
 virtual idunno.Bluesky.Graph.List.Equals(idunno.Bluesky.Graph.List? other) -> bool
 virtual idunno.Bluesky.Graph.ListBlock.Equals(idunno.Bluesky.Graph.ListBlock? other) -> bool
+virtual idunno.Bluesky.Graph.ListItem.Equals(idunno.Bluesky.Graph.ListItem? other) -> bool
 virtual idunno.Bluesky.Graph.ListViewBasic.Equals(idunno.Bluesky.Graph.ListViewBasic? other) -> bool
 virtual idunno.Bluesky.Graph.ListViewerState.<Clone>$() -> idunno.Bluesky.Graph.ListViewerState!
 virtual idunno.Bluesky.Graph.ListViewerState.EqualityContract.get -> System.Type!
