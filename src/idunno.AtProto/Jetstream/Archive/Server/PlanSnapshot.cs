@@ -1,7 +1,9 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+#pragma warning disable IDE0005 // Using directive is unnecessary
 using System.Net.Http.Json;
+#pragma warning restore IDE0005 // Using directive is unnecessary
 
 using idunno.AtProto.Jetstream.Archive;
 

@@ -253,7 +253,10 @@ public sealed class Handle : AtIdentifier, IEquatable<Handle>
             return false;
         }
 
+        #pragma warning disable CA1307
+        // StartsWith and EndsWith character only checks don't work with Culture parameters.
         if (s.StartsWith('.') || s.EndsWith('.'))
+        #pragma warning restore CA1307
         {
             if (throwOnError)
             {

@@ -81,7 +81,10 @@ public sealed partial class Nsid : IEquatable<Nsid>
     /// The NSID authority for this instance.
     /// </value>
     [JsonIgnore]
+#pragma warning disable CA1307
+    // LastIndexOf character only checks don't work with Culture parameters.
     public string Authority => _value[.._value.LastIndexOf('.')];
+#pragma warning restore CA1307
 
     /// <summary>
     /// Gets the NSID name for this instance.
@@ -90,7 +93,10 @@ public sealed partial class Nsid : IEquatable<Nsid>
     /// The NSID name for this instance.
     /// </value>
     [JsonIgnore]
+#pragma warning disable CA1307
+    // LastIndexOf character only checks don't work with Culture parameters.
     public string Name => _value[(_value.LastIndexOf('.') + 1)..];
+#pragma warning restore CA1307
 
     /// <summary>
     /// Returns a string representation of the <see cref="Nsid"/> current instance.

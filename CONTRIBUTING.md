@@ -46,6 +46,18 @@ When creating a pull request please create an issue first, unless it's a simple 
 
 Tests use the new MTP runner. If you attempt to `dotnet test --nologo` it will report "Zero tests ran" with an exit code of 5. Remove the `--nologo` parameter.
 
+### Database provider tests
+
+CI provisions disposable PostgreSQL 17 and MySQL 8.4 services for the Bot SDK provider tests. Each service is limited to
+two CPUs, 4 GiB of memory with no additional swap, and a 2 GiB tmpfs data directory. CI runs the shared provider cases
+separately on .NET 8, 9, and 10, treats skipped cases as failures, and requires at least the current 87 cases per framework.
+The normal test step excludes these cases so they are not run twice.
+
+To run them locally, set `BOTSDK_TEST_POSTGRESQL_CONNECTION` and `BOTSDK_TEST_MYSQL_CONNECTION` to disposable databases.
+The PostgreSQL account must be able to create and drop schemas; the MySQL account must be able to create and drop databases.
+Never point these tests at a production database. Without these variables, local runs explicitly skip the corresponding
+provider cases; SQLite cases need no server.
+
 ### Dependencies Upgrades
 
 Dependencies in the libraries should only be altered by maintainers.

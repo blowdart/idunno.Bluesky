@@ -545,9 +545,13 @@ public partial class BlueskyAgent
         StringComparison comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 
         // The separator is appended so that a root of "/media" does not match a sibling directory named "/mediaElsewhere".
+
+#pragma warning disable CA1307
+        // EndsWith character only checks don't work with Culture parameters.
         return DraftMediaRoots.Any(root => candidatePath.StartsWith(
             root.EndsWith(Path.DirectorySeparatorChar) ? root : root + Path.DirectorySeparatorChar,
             comparison));
+#pragma warning restore CA1307
     }
 
     private static bool IsUncOrDevicePath(string path)

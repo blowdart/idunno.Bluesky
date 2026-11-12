@@ -56,6 +56,7 @@ public sealed partial class RelationalProviderTests
         store.Options.DeveloperMode = false;
         BotAction work = TestRecords.Work();
         await store.Database.HandleAsync(11, [work], null, CancellationToken.None);
+        await store.SetRetryReadyAsync();
 
         FakeRemote remote = new(store.Options) { LoseFirstResponse = true };
         ActionStatistics statistics = new(TestRecords.Start);
@@ -119,6 +120,7 @@ public sealed partial class RelationalProviderTests
         store.Options.DeveloperMode = false;
         BotAction work = TestRecords.Work();
         await store.Database.HandleAsync(11, [work], null, CancellationToken.None);
+        await store.SetRetryReadyAsync();
         await store.Database.MarkAttemptAsync(work, CancellationToken.None);
         await store.Database.HandleAsync(12, [], null, CancellationToken.None, work.SourceUri);
 
@@ -155,6 +157,7 @@ public sealed partial class RelationalProviderTests
         StrongReference parent = new(initial.SourceUri, new Cid(TestRecords.CidValue));
         BotAction work = TestRecords.Work(new ReplyReferences(parent, root));
         await store.Database.HandleAsync(11, [work], null, CancellationToken.None);
+        await store.SetRetryReadyAsync();
         await store.Database.HandleAsync(12, [], null, CancellationToken.None, root.Uri.ToString());
 
         BotAction deleted = (await store.Database.NextWorkAsync(CancellationToken.None))!;
@@ -212,6 +215,7 @@ public sealed partial class RelationalProviderTests
         store.Options.DeveloperMode = false;
         BotAction work = TestRecords.Work();
         await store.Database.HandleAsync(11, [work], null, CancellationToken.None);
+        await store.SetRetryReadyAsync();
         await store.Database.MarkAttemptAsync(work, CancellationToken.None);
 
         FakeRemote remote = new(store.Options)

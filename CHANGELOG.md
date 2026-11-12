@@ -1,6 +1,6 @@
 # Version History
 
-## 8.0.1 - 2026-10-26
+## 8.0.1 - 2026-11-12
 
 ### ➕ Added
 
@@ -10,10 +10,21 @@
 
 ### 🟢 Changed
 
+#### idunno.Bluesky.AspNet.Authentication
+
+* Authentication cookies are no longer bound to the connection's TLS Token Binding ID, which current browsers do not support.
+  Cookies that earlier versions issued over token-bound connections can no longer be read, so those users must sign in again.
+
+#### Miscellaneous
+
 * Dependency updates, including 
   * `System.Formats.Cbor` for [CVE-2026-118747](https://github.com/advisories/GHSA-vmv3-wvjp-wqpj)
   * `Microsoft.AspNetCore.WebUtilities` for [CVE-2026-114149](https://github.com/advisories/GHSA-x33c-w48q-qrgc)
-* Minimum SDK version updated to .NET 10.0.404 for [CVE-2026-105544](https://github.com/dotnet/announcements/issues/517)
+* Minimum SDK version updated to .NET 11.0.100 for [CVE-2026-105544](https://github.com/dotnet/announcements/issues/517)
+
+#### Build and tests
+
+* CI now runs the Bot SDK provider tests against disposable PostgreSQL and MySQL services on every target framework, with skipped or missing cases failing the provider test step.
 
 #### Packaging
 

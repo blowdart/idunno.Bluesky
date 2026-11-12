@@ -201,7 +201,10 @@ public sealed partial class DefaultFacetExtractor : IFacetExtractor
             // A closing parenthesis only belongs to the link if the link also contains an opening one, so that
             // a link wrapped in parentheses drops the closing one, but a link such as
             // https://en.wikipedia.org/wiki/Foo_(bar) keeps it.
+#pragma warning disable CA1307
+            // EndsWith character only checks don't work with Culture parameters.
             if (uri.EndsWith(')') && !uri.Contains('(', StringComparison.Ordinal))
+#pragma warning restore CA1307
             {
                 uri = uri[..^1];
             }
@@ -232,7 +235,7 @@ public sealed partial class DefaultFacetExtractor : IFacetExtractor
         // The same handle can be mentioned more than once in a single piece of text, and resolving a handle is a
         // network call, so every distinct handle is resolved at most once. Handles which do not resolve are recorded
         // too, otherwise a handle which does not exist would be looked up again for each time it appears.
-        Dictionary<string, Did?> resolvedHandles = new(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, Did?> resolvedHandles = [with(StringComparer.OrdinalIgnoreCase)];
 
         foreach (Match match in matches)
         {
