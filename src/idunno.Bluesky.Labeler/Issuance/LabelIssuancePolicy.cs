@@ -34,7 +34,7 @@ public sealed class LabelIssuancePolicy
         ArgumentNullException.ThrowIfNull(declaredValues);
 
         string[] values = new string[declaredValues.Count];
-        HashSet<string> uniqueValues = new(StringComparer.Ordinal);
+        HashSet<string> uniqueValues = [with(StringComparer.Ordinal)];
         int index = 0;
         foreach (string? value in declaredValues)
         {
@@ -59,7 +59,7 @@ public sealed class LabelIssuancePolicy
         if (allowedRecordCollections is not null)
         {
             Nsid[] collections = new Nsid[allowedRecordCollections.Count];
-            HashSet<string> uniqueCollections = new(StringComparer.Ordinal);
+            HashSet<string> uniqueCollections = [with(StringComparer.Ordinal)];
             index = 0;
             foreach (Nsid? collection in allowedRecordCollections)
             {

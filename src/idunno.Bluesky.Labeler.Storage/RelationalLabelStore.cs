@@ -847,7 +847,7 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
         bool allowTiedTimestamps = false)
     {
         Dictionary<(string Subject, string Value), (StoredLabel? Current, bool Ambiguous)> decisions = [];
-        Dictionary<string, List<((string Subject, string Value) Key, byte[] IdentityKey)>> identities = new(StringComparer.Ordinal);
+        Dictionary<string, List<((string Subject, string Value) Key, byte[] IdentityKey)>> identities = [with(StringComparer.Ordinal)];
         foreach ((LabelTarget target, string value) in queries)
         {
             (string Subject, string Value) key = (target.Subject, value);
@@ -866,7 +866,7 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
             }
         }
 
-        List<(string Name, object? Value)> parameters = new(identities.Count);
+        List<(string Name, object? Value)> parameters = [with(identities.Count)];
         int parameterIndex = 0;
         foreach (string identityHash in identities.Keys)
         {
@@ -931,7 +931,7 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
             }
         }
 
-        List<LabelServiceResult<LabelDecisionSnapshot>> results = new(queries.Count);
+        List<LabelServiceResult<LabelDecisionSnapshot>> results = [with(queries.Count)];
         foreach ((LabelTarget target, string value) in queries)
         {
             (StoredLabel? Current, bool Ambiguous) = decisions[(target.Subject, value)];

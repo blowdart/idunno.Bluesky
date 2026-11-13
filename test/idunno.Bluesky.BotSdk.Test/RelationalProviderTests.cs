@@ -259,6 +259,7 @@ public sealed partial class RelationalProviderTests
         await using Store store = await Store.CreateAsync(provider);
         BotAction work = TestRecords.Work();
         Assert.True(await store.Database.HandleAsync(11, [work], null, CancellationToken.None) > 0);
+        await store.SetRetryReadyAsync();
         Assert.Equal(0, await store.Database.HandleAsync(12, [work with { RecordKey = "different" }], null, CancellationToken.None));
         // Persistence, not elapsed database time, determines this test's outcome.
         await store.SetRetryReadyAsync();
@@ -277,7 +278,7 @@ public sealed partial class RelationalProviderTests
         await store.Database.ReleaseAsync(CancellationToken.None);
         IDatabaseProvider restarted = store.NewProvider();
         Assert.NotNull(await restarted.AcquireOrRenewAsync(CancellationToken.None));
-        await store.SetReadyNowAsync();
+        await store.SetReadyAsync();
         Assert.Equal(12, (await restarted.LoadStateAsync(CancellationToken.None)).ProcessedThrough);
         Assert.Equal(0, await restarted.HandleAsync(11, [work], null, CancellationToken.None));
     }
@@ -397,6 +398,7 @@ public sealed partial class RelationalProviderTests
         await using Store store = await Store.CreateAsync(provider);
         BotAction work = TestRecords.Work();
         await store.Database.HandleAsync(11, [work], null, CancellationToken.None);
+        await store.SetRetryReadyAsync();
         await store.Database.MarkAttemptAsync(work, CancellationToken.None);
         ReplayState before = await store.Database.LoadStateAsync(CancellationToken.None);
         DateTimeOffset cutoff = before.StartedAt.AddMinutes(1);
@@ -441,7 +443,9 @@ public sealed partial class RelationalProviderTests
         await store.AgeCompletedWorkAsync();
         await store.Database.PruneAsync(CancellationToken.None);
         Assert.Equal(1, await store.CountAsync("reply_work"));
-        await store.Database.RetryAsync(work, DateTimeOffset.UtcNow.AddMinutes(10), "wait", CancellationToken.None);
+        DateTimeOffset retryAt = (await store.TimestampAsync("next_retry", "reply_work")).AddHours(1);
+        Assert.Equal(1, await store.Database.RetryAsync(work, retryAt, "wait", CancellationToken.None));
+        Assert.Equal(retryAt, await store.TimestampAsync("next_retry", "reply_work"));
         Assert.Null(await store.Database.NextWorkAsync(CancellationToken.None));
         await store.SetRetryReadyAsync();
         Assert.Equal(1, (await store.Database.NextWorkAsync(CancellationToken.None))!.Attempts);
@@ -463,6 +467,7 @@ public sealed partial class RelationalProviderTests
         await using Store store = await Store.CreateAsync(provider);
         BotAction work = TestRecords.Work();
         await store.Database.HandleAsync(11, [work], null, CancellationToken.None);
+        await store.SetRetryReadyAsync();
         string root = TestRecords.Post(work).Reply!.Root.Uri.ToString();
         await store.Database.HandleAsync(12, [], null, CancellationToken.None, root);
         await store.SetRetryReadyAsync();
@@ -697,12 +702,8 @@ public sealed partial class RelationalProviderTests
             ? "UPDATE bot_ownership SET ready_at = 'infinity'"
             : $"UPDATE bot_ownership SET ready_at = {long.MaxValue}");
 
-        public Task SetReadyNowAsync() => SqlAsync(_provider == "Postgres"
-            ? "UPDATE bot_ownership SET ready_at = now()"
-            : "UPDATE bot_ownership SET ready_at = 0");
-
         public Task ExpireLeaseAsync() => SqlAsync(_provider == "Postgres"
-            ? "UPDATE bot_ownership SET lease_until = now() - interval '1 second'"
+            ? "UPDATE bot_ownership SET lease_until = 'epoch'"
             : "UPDATE bot_ownership SET lease_until = 0");
 
         public Task AgeCompletedWorkAsync() => SqlAsync(_provider == "Postgres"
@@ -710,7 +711,7 @@ public sealed partial class RelationalProviderTests
             : "UPDATE reply_work SET completed_at = 0");
 
         public Task SetRetryReadyAsync() => SqlAsync(_provider == "Postgres"
-            ? "UPDATE reply_work SET next_retry = now() - interval '1 second'"
+            ? "UPDATE reply_work SET next_retry = 'epoch'"
             : "UPDATE reply_work SET next_retry = 0");
 
         public Task SetRateRequestReadyAsync() => SqlAsync(_provider == "Postgres"

@@ -147,7 +147,7 @@ public sealed class LabelPolicyDefinition
         if (value.ValueKind == JsonValueKind.Object)
         {
             writer.WriteStartObject();
-            HashSet<string> names = new(StringComparer.Ordinal);
+            HashSet<string> names = [with(StringComparer.Ordinal)];
             foreach (JsonProperty property in value.EnumerateObject().OrderBy(property => property.Name, StringComparer.Ordinal))
             {
                 if (!names.Add(property.Name))

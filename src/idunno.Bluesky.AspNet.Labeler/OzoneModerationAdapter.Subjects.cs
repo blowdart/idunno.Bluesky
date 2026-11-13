@@ -291,7 +291,7 @@ internal sealed partial class OzoneModerationAdapter
             throw new JsonException("The value must contain only graphicMediaPrefs.");
         }
         Dictionary<string, LabelMediaFilter> selected = s_mediaPreferenceLabels.ToDictionary(label => label, _ => LabelMediaFilter.None, StringComparer.Ordinal);
-        HashSet<string> seen = new(StringComparer.Ordinal);
+        HashSet<string> seen = [with(StringComparer.Ordinal)];
         foreach (JsonProperty property in filters.EnumerateObject())
         {
             bool matched = false;

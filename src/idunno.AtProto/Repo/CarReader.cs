@@ -559,7 +559,7 @@ public sealed class CarReader : IDisposable
         string? didValue = null;
         long? version = null;
         byte[]? signature = null;
-        HashSet<string> fields = new(StringComparer.Ordinal);
+        HashSet<string> fields = [with(StringComparer.Ordinal)];
         for (int index = 0; index < fieldCount; index++)
         {
             string key = reader.ReadTextString();

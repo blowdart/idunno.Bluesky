@@ -181,7 +181,7 @@ internal sealed class MainWindow : Window
             {
                 ClientId = OAuthCallbackRouter.ClientId,
                 ReturnUri = new Uri(OAuthCallbackRouter.RedirectUri),
-                Scopes = ["atproto", OAuthCallbackRouter.ProfileScope]
+                Scopes = (string[])["atproto", OAuthCallbackRouter.ProfileScope]
             }
         });
 

@@ -67,8 +67,8 @@ internal static partial class Program
     /// <summary>Creates independently parseable commands with the same options used by the executable.</summary>
     internal static RootCommand CreateRootCommand()
     {
-        RootCommand root = new(
-            "Administer a standalone AT Protocol labeler. Remote OAuth credentials are temporary by default; use --remember-me on a remote command to opt into account- and permission-scoped saving. Windows uses current-user DPAPI; other platforms require separate consent to save credentials unencrypted.");
+        RootCommand root = [with(
+            "Administer a standalone AT Protocol labeler. Remote OAuth credentials are temporary by default; use --remember-me on a remote command to opt into account- and permission-scoped saving. Windows uses current-user DPAPI; other platforms require separate consent to save credentials unencrypted.")];
         root.Options.Add(new Option<bool>("--verbose")
         {
             Description = "Include raw JSON responses instead of human-readable result details.",
@@ -1263,7 +1263,7 @@ internal static partial class Program
         await using ConfiguredAsyncDisposable signInCleanup = signInLifetime.ConfigureAwait(false);
         if (workflow is not null)
         {
-            Dictionary<string, AtProtoAgent> methodAgents = new(StringComparer.Ordinal);
+            Dictionary<string, AtProtoAgent> methodAgents = [with(StringComparer.Ordinal)];
             try
             {
                 return await workflow(
@@ -1788,7 +1788,7 @@ internal static partial class Program
             return false;
         }
 
-        HashSet<string> candidates = new(StringComparer.Ordinal);
+        HashSet<string> candidates = [with(StringComparer.Ordinal)];
         foreach (string value in scope.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
             if (!value.StartsWith(rpcPrefix, StringComparison.Ordinal))

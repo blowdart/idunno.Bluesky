@@ -50,7 +50,7 @@ internal sealed class LabelEventDecoder(FirehoseOptions options, FirehoseSignatu
         }
 
         IReadOnlyList<ReadOnlyMemory<byte>> encodedLabels = fields.GetArray("labels", options.MaximumLabelsPerMessage);
-        List<Label> labels = new(encodedLabels.Count);
+        List<Label> labels = [with(encodedLabels.Count)];
 
         foreach (ReadOnlyMemory<byte> encodedLabel in encodedLabels)
         {

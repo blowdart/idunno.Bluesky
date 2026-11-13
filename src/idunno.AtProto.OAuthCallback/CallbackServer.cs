@@ -130,10 +130,13 @@ public sealed class CallbackServer : IAsyncDisposable
 
         path ??= string.Empty;
 
+        #pragma warning disable CA1307
+        // StartsWith character only checks don't work with Culture parameters.
         if (path.StartsWith('/'))
         {
             path = path[1..];
         }
+        #pragma warning restore CA1307
 
         // The path goes into both the route pattern and the advertised Uri without escaping. A '{', '}' or '*' would
         // be read as a route parameter or a catch all rather than as literal text, and a '?', '#' or a space would
@@ -560,7 +563,8 @@ public sealed class CallbackServer : IAsyncDisposable
     /// <exception cref="ArgumentNullException">The value is <see langword="null"/>.</exception>
     internal TimeProvider TimeProvider
     {
-        get; set
+        get;
+        set
         {
             ArgumentNullException.ThrowIfNull(value);
             field = value;

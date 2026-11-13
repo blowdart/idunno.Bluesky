@@ -143,7 +143,7 @@ internal sealed class RepoEventDecoder(FirehoseOptions options, FirehoseSignatur
         IReadOnlyList<ReadOnlyMemory<byte>> encodedOperations = fields.GetArray("ops", MaximumOperations);
         IReadOnlyList<ReadOnlyMemory<byte>> encodedBlobs = fields.GetArray("blobs", MaximumBlobs);
 
-        List<Cid> blobs = new(encodedBlobs.Count);
+        List<Cid> blobs = [with(encodedBlobs.Count)];
         foreach (ReadOnlyMemory<byte> encodedBlob in encodedBlobs)
         {
             blobs.Add(FirehoseCbor.Wrap(() => FirehoseCbor.ReadCidLink(new CborReader(encodedBlob, CborConformanceMode.Canonical))));
@@ -158,7 +158,7 @@ internal sealed class RepoEventDecoder(FirehoseOptions options, FirehoseSignatur
 
         Cid data = await ValidateCommitBlockAsync(root, carBlocks, repo, rev, cancellationToken).ConfigureAwait(false);
 
-        List<FirehoseRepoOperation> operations = new(encodedOperations.Count);
+        List<FirehoseRepoOperation> operations = [with(encodedOperations.Count)];
         foreach (ReadOnlyMemory<byte> encodedOperation in encodedOperations)
         {
             operations.Add(DecodeOperation(FirehoseCbor.ReadFields(encodedOperation, s_operationFields), carBlocks));
@@ -238,6 +238,8 @@ internal sealed class RepoEventDecoder(FirehoseOptions options, FirehoseSignatur
     {
         int separator = path.IndexOf('/', StringComparison.Ordinal);
 
+#pragma warning disable CA1307
+        // LastIndexOf character only checks don't work with Culture parameters.
         if (separator > 0 &&
             separator == path.LastIndexOf('/') &&
             AtProto.Nsid.TryParse(path[..separator], out AtProto.Nsid? collection) &&
@@ -247,6 +249,7 @@ internal sealed class RepoEventDecoder(FirehoseOptions options, FirehoseSignatur
         {
             return (collection, recordKey);
         }
+#pragma warning restore CA1307
 
         throw new InvalidDataException("An operation path is not a valid collection and record key.");
     }

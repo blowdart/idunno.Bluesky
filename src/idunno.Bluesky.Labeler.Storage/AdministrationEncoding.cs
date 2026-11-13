@@ -14,8 +14,8 @@ internal sealed class AdministrationState
     public string? OwnerDid { get; set; }
     public long Sequence { get; set; }
     public bool RemoteAdministrationEnabled { get; set; }
-    public Dictionary<string, AdministrationMember> Members { get; set; } = new(StringComparer.Ordinal);
-    public Dictionary<string, AdministrationBinding> Bindings { get; set; } = new(StringComparer.Ordinal);
+    public Dictionary<string, AdministrationMember> Members { get; set; } = [with(StringComparer.Ordinal)];
+    public Dictionary<string, AdministrationBinding> Bindings { get; set; } = [with(StringComparer.Ordinal)];
     public bool PolicyVerificationFailureActive { get; set; }
     public PolicyFailureAlert? PendingPolicyAlert { get; set; }
     public long ChangeNotificationThrough { get; set; }

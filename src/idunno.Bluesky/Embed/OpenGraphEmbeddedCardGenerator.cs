@@ -137,7 +137,7 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
             throw new ArgumentException("URI must be absolute.", nameof(uri));
         }
 
-        Dictionary<string, string> openGraphProperties = new(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, string> openGraphProperties = [with(StringComparer.OrdinalIgnoreCase)];
 
         foreach (Match metaElement in s_MetaElementRegex().Matches(pageContent))
         {

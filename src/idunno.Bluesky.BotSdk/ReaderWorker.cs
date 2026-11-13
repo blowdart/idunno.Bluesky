@@ -695,7 +695,7 @@ internal sealed class ReaderWorker(
         long maxSealedSequence = 0;
         long? earliestTime = null;
         string? cursor = null;
-        HashSet<string> seenCursors = new(StringComparer.Ordinal);
+        HashSet<string> seenCursors = [with(StringComparer.Ordinal)];
         do
         {
             health.Set("reader", "selecting first-run archive boundary", TimeSpan.FromSeconds(60));

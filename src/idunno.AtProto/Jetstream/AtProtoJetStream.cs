@@ -3040,7 +3040,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
 
         // The $type has been consumed to pick the kind, so it is left out along with the properties the event carries.
         Dictionary<string, JsonElement> extensionData = eventPayload.ExtensionData is null
-            ? new Dictionary<string, JsonElement>(StringComparer.Ordinal)
+            ? [with(StringComparer.Ordinal)]
             : ExtensionDataExcept(eventPayload.ExtensionData, "$type");
 
         switch (kind)

@@ -399,7 +399,7 @@ public static class ServiceAuthentication
 
         try
         {
-            HashSet<string> names = new(StringComparer.Ordinal);
+            HashSet<string> names = [with(StringComparer.Ordinal)];
             foreach (JsonProperty property in element.EnumerateObject())
             {
                 if (!names.Add(property.Name))

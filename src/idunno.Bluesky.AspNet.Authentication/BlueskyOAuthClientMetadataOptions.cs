@@ -200,6 +200,9 @@ public sealed class BlueskyOAuthClientMetadataOptions
         // Uri removes explicit default ports from its normalized authority.
         string authority = uri.OriginalString[(uri.OriginalString.IndexOf("://", StringComparison.Ordinal) + 3)..].Split('/', '?', '#')[0];
 
+#pragma warning disable CA1307
+// LastIndexOf character only checks don't work with Culture parameters.
         return authority.LastIndexOf(':') > authority.LastIndexOf(']');
+#pragma warning restore CA1307
     }
 }

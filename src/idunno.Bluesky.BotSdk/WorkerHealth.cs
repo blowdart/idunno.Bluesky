@@ -10,7 +10,7 @@ namespace idunno.Bluesky.BotSdk;
 /// <param name="time">The clock used to evaluate operation deadlines.</param>
 internal sealed class WorkerHealth(TimeProvider time)
 {
-    private readonly Dictionary<string, HashSet<string>> _recoveries = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, HashSet<string>> _recoveries = [with(StringComparer.Ordinal)];
 
     /// <summary>Reports entry into an actual dependency recovery episode.</summary>
     internal event Action<string, string>? Recovery;
@@ -82,7 +82,7 @@ internal sealed class WorkerHealth(TimeProvider time)
                 };
                 if (!_recoveries.TryGetValue(worker, out HashSet<string>? reasons))
                 {
-                    reasons = new(StringComparer.Ordinal);
+                    reasons = [with(StringComparer.Ordinal)];
                     _recoveries[worker] = reasons;
                 }
                 if (reasons.Add(reason))

@@ -253,7 +253,7 @@ public static class DagCbor
 
         writer.WriteStartObject();
 
-        HashSet<string> keys = new(StringComparer.Ordinal);
+        HashSet<string> keys = [with(StringComparer.Ordinal)];
 
         while (read < length)
         {

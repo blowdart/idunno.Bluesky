@@ -76,7 +76,7 @@ internal sealed class LabelRetirementService(
             }
         }
 
-        List<SignedLabelSnapshot> signed = new(batch.Labels.Count);
+        List<SignedLabelSnapshot> signed = [with(batch.Labels.Count)];
         string? publicKey = null;
         try
         {

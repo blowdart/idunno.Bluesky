@@ -261,7 +261,7 @@ internal static partial class Program
         {
             throw new InvalidDataException("The policy envelope must be an object.");
         }
-        HashSet<string> fields = new(StringComparer.Ordinal);
+        HashSet<string> fields = [with(StringComparer.Ordinal)];
         if (document.RootElement.EnumerateObject().Any(field => !fields.Add(field.Name)))
         {
             throw new InvalidDataException("Duplicate policy envelope fields are not supported.");

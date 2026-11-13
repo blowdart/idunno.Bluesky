@@ -64,7 +64,7 @@ public sealed class SqliteDatabaseProvider(
     /// Disabling pooling lets callers close file handles predictably when connections are disposed.</para></remarks>
     private static string Configure(string connectionString)
     {
-        SqliteConnectionStringBuilder builder = new(connectionString);
+        SqliteConnectionStringBuilder builder = [with(connectionString)];
         if (string.IsNullOrWhiteSpace(builder.DataSource) || builder.DataSource == ":memory:" ||
             builder.Mode == SqliteOpenMode.Memory || IsMemoryUri(builder.DataSource))
         {
@@ -371,7 +371,7 @@ public sealed class SqliteDatabaseProvider(
     /// <param name="cancellationToken">The cancellation token.</param>
     public async Task CheckConnectionAsync(CancellationToken cancellationToken)
     {
-        SqliteConnectionStringBuilder builder = new(_connectionString);
+        SqliteConnectionStringBuilder builder = [with(_connectionString)];
         builder.DataSource = SetSqliteUriMode(builder.DataSource, "ro");
         builder.Mode = SqliteOpenMode.ReadOnly;
         builder.Pooling = false;

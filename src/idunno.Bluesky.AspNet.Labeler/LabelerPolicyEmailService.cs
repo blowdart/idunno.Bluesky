@@ -235,7 +235,7 @@ internal sealed partial class LabelerPolicyEmailService(
     /// <summary>Adds verified handles to canonical identities without changing persisted notification or audit records.</summary>
     private async Task<string> FormatIdentitiesAsync(string body, CancellationToken cancellationToken)
     {
-        Dictionary<string, string> identities = new(StringComparer.Ordinal);
+        Dictionary<string, string> identities = [with(StringComparer.Ordinal)];
         foreach (string value in IdentityPattern().Matches(body).Select(match => match.Value).Distinct(StringComparer.Ordinal))
         {
             cancellationToken.ThrowIfCancellationRequested();

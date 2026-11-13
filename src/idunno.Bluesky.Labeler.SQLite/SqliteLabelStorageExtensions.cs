@@ -31,7 +31,7 @@ public static class SqliteLabelStorageExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
-        SqliteConnectionStringBuilder settings = new(connectionString);
+        SqliteConnectionStringBuilder settings = [with(connectionString)];
         if (string.IsNullOrWhiteSpace(settings.DataSource) || settings.DataSource.Contains(":memory:", StringComparison.OrdinalIgnoreCase) ||
             settings.DataSource.StartsWith("file:", StringComparison.OrdinalIgnoreCase) ||
             settings.Mode == SqliteOpenMode.Memory || Path.GetFullPath(settings.DataSource).StartsWith(@"\\", StringComparison.Ordinal))

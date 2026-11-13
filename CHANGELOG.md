@@ -59,6 +59,7 @@
 * PostgreSQL containers include the Kerberos/GSSAPI runtime library, avoiding missing-library messages during database connection initialization.
 * Both canonical hosts include UTC timestamps in their default console logging.
 * Opt-in Prometheus scraping on an isolated, loopback-by-default listener and optional OTLP metrics export, collecting label persistence, hosting, moderation, authentication, AT Protocol client and built-in HTTP metrics.
+* Aligned the bundled OTLP and Prometheus exporters with the OpenTelemetry runtime version.
 * Externally supplied provider-specific connections, non-secret defaults and optional external JSON configuration for separately mounted secrets.
 * Environment-backed signing keys by default, optional mounted PEM keys, database-backed active-key selection and coordinated rotation. Terminal retired labelers can use explicit keyless read-only distribution.
 * Website and native CLI OAuth metadata, trusted TLS-forwarding proxy configuration, SSRF-protected identity resolution and owner-only local administration sockets.
@@ -208,6 +209,35 @@
 #### idunno.Bluesky.AspNet.Labeler.UI
 
 * Unsupported DID methods show unavailable public previews and current-version lookups instead of server errors, while retaining canonical subject details and issuer-local account label checks.
+## 8.0.1 - 2026-11-12
+
+### ➕ Added
+
+#### idunno.Bluesky
+
+* Made `Graph.ListItem` public, with constructors and null validation for list and subject values, including object initializers and `with` expressions.
+
+### 🟢 Changed
+
+#### idunno.Bluesky.AspNet.Authentication
+
+* Authentication cookies are no longer bound to the connection's TLS Token Binding ID, which current browsers do not support.
+  Cookies that earlier versions issued over token-bound connections can no longer be read, so those users must sign in again.
+
+#### Miscellaneous
+
+* Dependency updates, including
+  * `System.Formats.Cbor` for [CVE-2026-118747](https://github.com/advisories/GHSA-vmv3-wvjp-wqpj)
+  * `Microsoft.AspNetCore.WebUtilities` for [CVE-2026-114149](https://github.com/advisories/GHSA-x33c-w48q-qrgc)
+* Minimum SDK version updated to .NET 11.0.100 for [CVE-2026-105544](https://github.com/dotnet/announcements/issues/517)
+
+#### Build and tests
+
+* CI now runs the Bot SDK provider tests against disposable PostgreSQL and MySQL services on every target framework, with skipped or missing cases failing the provider test step.
+
+#### Packaging
+
+* Software Bill of Materials (SBOM) files are now generated with the CycloneDX .NET tool and Syft, giving both CycloneDX and SPDX formats. Each NuGet package contains a CycloneDX and an SPDX JSON file per target framework under `sbom/<target framework>/`, and build-only dependencies are excluded. The files are also published as release assets and attested.
 
 ## 8.0.0 - 2026-10-16
 

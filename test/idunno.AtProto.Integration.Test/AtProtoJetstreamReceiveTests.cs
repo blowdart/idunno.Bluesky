@@ -43,7 +43,7 @@ public class AtProtoJetstreamReceiveTests
     [Fact]
     public async Task AnUncompressedMessageIsDeliveredToRecordReceived()
     {
-        using var server = new TestJetstreamServer();
+        await using var server = new TestJetstreamServer();
 
         await server.Start(async (webSocket, cancellationToken) =>
         {
@@ -59,7 +59,7 @@ public class AtProtoJetstreamReceiveTests
     [Fact]
     public async Task ACompressedMessageIsDeliveredToRecordReceived()
     {
-        using var server = new TestJetstreamServer();
+        await using var server = new TestJetstreamServer();
 
         await server.Start(async (webSocket, cancellationToken) =>
         {
@@ -77,7 +77,7 @@ public class AtProtoJetstreamReceiveTests
     {
         const int maximumMessageSize = 64 * 1024;
 
-        using var server = new TestJetstreamServer();
+        await using var server = new TestJetstreamServer();
 
         await server.Start(async (webSocket, cancellationToken) =>
         {
@@ -115,7 +115,7 @@ public class AtProtoJetstreamReceiveTests
     {
         const int maximumMessageSize = 64 * 1024;
 
-        using var server = new TestJetstreamServer();
+        await using var server = new TestJetstreamServer();
 
         await server.Start(async (webSocket, cancellationToken) =>
         {
@@ -137,7 +137,7 @@ public class AtProtoJetstreamReceiveTests
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
-        using var server = new TestJetstreamServer();
+        await using var server = new TestJetstreamServer();
         await server.Start(async (webSocket, serverCancellationToken) =>
         {
             await SendText(webSocket, IdentityEvent(), serverCancellationToken);
@@ -180,7 +180,7 @@ public class AtProtoJetstreamReceiveTests
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
         TaskCompletionSource accept = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var server = new TestJetstreamServer { AcceptConnection = accept.Task };
+        await using var server = new TestJetstreamServer { AcceptConnection = accept.Task };
 
         await server.Start(async (webSocket, serverCancellationToken) =>
         {
@@ -238,7 +238,7 @@ public class AtProtoJetstreamReceiveTests
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
-        using var server = new TestJetstreamServer();
+        await using var server = new TestJetstreamServer();
 
         await server.Start(async (webSocket, serverCancellationToken) =>
         {
@@ -333,7 +333,7 @@ public class AtProtoJetstreamReceiveTests
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
-        using var server = new TestJetstreamServer();
+        await using var server = new TestJetstreamServer();
 
         await server.Start(async (webSocket, serverCancellationToken) =>
         {
@@ -412,7 +412,7 @@ public class AtProtoJetstreamReceiveTests
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
-        using var server = new TestJetstreamServer();
+        await using var server = new TestJetstreamServer();
 
         await server.Start(async (webSocket, serverCancellationToken) =>
         {
@@ -471,13 +471,51 @@ public class AtProtoJetstreamReceiveTests
     }
 
     [Fact]
+    public async Task ServerDisposalWaitsForTheConnectionHandler()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        TaskCompletionSource handlerStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource cancellationObserved = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource releaseHandler = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var server = new TestJetstreamServer();
+
+        await server.Start(async (webSocket, serverCancellationToken) =>
+        {
+            using CancellationTokenRegistration registration = serverCancellationToken.Register(
+                () => cancellationObserved.TrySetResult());
+            handlerStarted.TrySetResult();
+            await releaseHandler.Task;
+
+            // The listener must stay alive until the handler has finished using its stream.
+            await SendText(webSocket, IdentityEvent(), CancellationToken.None);
+        });
+
+        using var client = new ClientWebSocket();
+        Task? disposal = null;
+        try
+        {
+            await client.ConnectAsync(server.Uri, cancellationToken);
+            await handlerStarted.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+            disposal = server.DisposeAsync().AsTask();
+            await cancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+
+            Assert.False(disposal.IsCompleted);
+        }
+        finally
+        {
+            releaseHandler.TrySetResult();
+            await (disposal ?? server.DisposeAsync().AsTask()).WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+        }
+    }
+
+    [Fact]
     public async Task NoMoreMessagesAreParsedAtOnceThanTheConfiguredLimit()
     {
         const int messageCount = 8;
 
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
-        using var server = new TestJetstreamServer();
+        await using var server = new TestJetstreamServer();
         TaskCompletionSource firstParserEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource allMessagesSent = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using ManualResetEventSlim releaseParsers = new();
@@ -557,7 +595,7 @@ public class AtProtoJetstreamReceiveTests
 
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
-        using var server = new TestJetstreamServer();
+        await using var server = new TestJetstreamServer();
 
         await server.Start(async (webSocket, serverCancellationToken) =>
         {
@@ -618,7 +656,7 @@ public class AtProtoJetstreamReceiveTests
 
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
-        using var server = new TestJetstreamServer();
+        await using var server = new TestJetstreamServer();
 
         await server.Start(async (webSocket, serverCancellationToken) =>
         {
@@ -697,10 +735,13 @@ public class AtProtoJetstreamReceiveTests
             cancellationToken);
     }
 
-    private sealed class TestJetstreamServer : IDisposable
+    private sealed class TestJetstreamServer : IAsyncDisposable
     {
         private HttpListener _listener = new();
         private readonly CancellationTokenSource _cancellationTokenSource = new();
+        private readonly List<Task> _connections = [];
+        private Task _acceptTask = Task.CompletedTask;
+        private Task? _disposeTask;
         private int _connectionCount;
 
         public Uri Uri { get; private set; } = new("ws://localhost");
@@ -722,17 +763,24 @@ public class AtProtoJetstreamReceiveTests
         public Task Start(Func<WebSocket, CancellationToken, Task> onConnected)
         {
             StartListener();
+            _acceptTask = AcceptConnectionsAsync(onConnected);
 
-            _ = Task.Run(async () =>
+            return Task.CompletedTask;
+        }
+
+        private async Task AcceptConnectionsAsync(Func<WebSocket, CancellationToken, Task> onConnected)
+        {
+            CancellationToken cancellationToken = _cancellationTokenSource.Token;
+            try
             {
-                while (!_cancellationTokenSource.IsCancellationRequested)
+                while (true)
                 {
-                    HttpListenerContext context = await _listener.GetContextAsync();
+                    HttpListenerContext context = await _listener.GetContextAsync().WaitAsync(cancellationToken);
 
                     RequestQuery = context.Request.Url?.Query;
 
                     AcceptRequested.TrySetResult();
-                    await AcceptConnection.WaitAsync(_cancellationTokenSource.Token);
+                    await AcceptConnection.WaitAsync(cancellationToken);
 
                     HttpListenerWebSocketContext webSocketContext = await context.AcceptWebSocketAsync(subProtocol: null);
 
@@ -740,29 +788,35 @@ public class AtProtoJetstreamReceiveTests
                     // connection apart from the first by what arrives on it as well as by the count.
                     bool first = Interlocked.Increment(ref _connectionCount) == 1;
 
-                    _ = Task.Run(async () =>
-                    {
-                        using (WebSocket webSocket = webSocketContext.WebSocket)
-                        {
-                            if (first)
-                            {
-                                await onConnected(webSocket, _cancellationTokenSource.Token);
-                            }
-
-                            // Held open until the test disposes the server, as closing drops the connection under the client.
-                            try
-                            {
-                                await Task.Delay(Timeout.Infinite, _cancellationTokenSource.Token);
-                            }
-                            catch (OperationCanceledException)
-                            {
-                            }
-                        }
-                    }, _cancellationTokenSource.Token);
+                    _connections.Add(HandleConnectionAsync(webSocketContext.WebSocket, first, onConnected, cancellationToken));
                 }
-            }, _cancellationTokenSource.Token);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+            }
+        }
 
-            return Task.CompletedTask;
+        private static async Task HandleConnectionAsync(
+            WebSocket webSocket,
+            bool first,
+            Func<WebSocket, CancellationToken, Task> onConnected,
+            CancellationToken cancellationToken)
+        {
+            using (webSocket)
+            {
+                try
+                {
+                    if (first)
+                    {
+                        await onConnected(webSocket, cancellationToken);
+                    }
+
+                    await Task.Delay(Timeout.Infinite, cancellationToken);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                }
+            }
         }
 
         /// <summary>
@@ -802,34 +856,34 @@ public class AtProtoJetstreamReceiveTests
             }
         }
 
-        public void Dispose()
-        {
-            _cancellationTokenSource.Cancel();
+        public ValueTask DisposeAsync() => new(_disposeTask ??= StopAsync());
 
+        private async Task StopAsync()
+        {
             try
             {
-                // Abort() rather than Close(). Tests here deliberately abandon a connection instead of completing the
-                // close handshake, and Close() is the graceful path, so it tries to write the end of the response to a
-                // socket the client has already torn down. The managed HttpListener used on platforms without http.sys
-                // throws out of that write, and whether it does is a race against the listener reaping the connection,
-                // which made CI fail intermittently. Abort() discards the connections without flushing them.
-                //
-                // The catches mirror AtProtoJetstreamConnectionTests. The server is being torn down either way, so
-                // there is nothing to report.
-                _listener.Abort();
-            }
-            catch (ObjectDisposedException)
-            {
-            }
-            catch (HttpListenerException)
-            {
-            }
-            catch (SocketException)
-            {
+                await _cancellationTokenSource.CancelAsync();
+                try
+                {
+                    await _acceptTask;
+                }
+                finally
+                {
+                    await Task.WhenAll(_connections);
+                }
             }
             finally
             {
-                _cancellationTokenSource.Dispose();
+                try
+                {
+                    // Even Abort() can flush a response. Finish disposing the WebSockets first so the managed
+                    // listener cannot race a stream becoming non-writable between its CanWrite check and Write.
+                    _listener.Abort();
+                }
+                finally
+                {
+                    _cancellationTokenSource.Dispose();
+                }
             }
         }
 
