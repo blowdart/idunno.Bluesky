@@ -85,7 +85,7 @@ internal static class FirehoseCbor
         }
 
         int length = reader.ReadStartMap() ?? throw new InvalidDataException("The value is an indefinite length map.");
-        Dictionary<string, ReadOnlyMemory<byte>> fields = new(StringComparer.Ordinal);
+        Dictionary<string, ReadOnlyMemory<byte>> fields = [with(StringComparer.Ordinal)];
 
         for (int i = 0; i < length; i++)
         {

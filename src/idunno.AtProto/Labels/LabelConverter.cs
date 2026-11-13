@@ -24,7 +24,7 @@ internal sealed class LabelConverter : JsonConverter<Label>
         }
 
         StringComparer comparer = options.PropertyNameCaseInsensitive ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
-        Dictionary<string, JsonElement> fields = new(comparer);
+        Dictionary<string, JsonElement> fields = [with(comparer)];
         foreach (JsonProperty property in document.RootElement.EnumerateObject().Where(property => s_fields.Contains(property.Name, comparer)))
         {
             if (fields.ContainsKey(property.Name))

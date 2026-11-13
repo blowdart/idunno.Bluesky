@@ -248,7 +248,7 @@ internal static class ModerationWire
     {
         if (element.ValueKind == JsonValueKind.Object)
         {
-            HashSet<string> names = new(StringComparer.Ordinal);
+            HashSet<string> names = [with(StringComparer.Ordinal)];
             foreach (JsonProperty property in element.EnumerateObject())
             {
                 if (!names.Add(property.Name))

@@ -34,6 +34,25 @@ internal static class BotJson
         TypeInfoResolver = BlueskyJsonSerializerOptions.TypeInfoResolver
     };
 
+#if NET11_0_OR_GREATER
+    public static JsonTypeInfo<SnapshotRequest> SnapshotRequest { get; } =
+        s_stateOptions.GetTypeInfo<SnapshotRequest>();
+
+    public static JsonTypeInfo<SnapshotCheckpoint> SnapshotCheckpoint { get; } =
+        s_stateOptions.GetTypeInfo<SnapshotCheckpoint>();
+
+    public static JsonTypeInfo<Post> Post { get; } =
+        BlueskyJsonSerializerOptions.Default.GetTypeInfo<Post>();
+
+    public static JsonTypeInfo<Like> Like { get; } =
+        BlueskyJsonSerializerOptions.Default.GetTypeInfo<Like>();
+
+    public static JsonTypeInfo<Repost> Repost { get; } =
+        BlueskyJsonSerializerOptions.Default.GetTypeInfo<Repost>();
+
+    public static JsonTypeInfo<BlueskyRecord> BlueskyRecord { get; } =
+        BlueskyJsonSerializerOptions.Default.GetTypeInfo<BlueskyRecord>();
+#else
     public static JsonTypeInfo<SnapshotRequest> SnapshotRequest { get; } =
         (JsonTypeInfo<SnapshotRequest>)s_stateOptions.GetTypeInfo(typeof(SnapshotRequest));
 
@@ -51,6 +70,7 @@ internal static class BotJson
 
     public static JsonTypeInfo<BlueskyRecord> BlueskyRecord { get; } =
         (JsonTypeInfo<BlueskyRecord>)BlueskyJsonSerializerOptions.Default.GetTypeInfo(typeof(BlueskyRecord));
+#endif
 
 }
 

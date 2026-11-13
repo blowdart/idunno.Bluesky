@@ -35,7 +35,7 @@ internal sealed partial class AdministrationDispatcher
         {
             return new(LabelServiceErrorCode.IssuanceClosed, "Publication cleanup is paused during coordinated maintenance.");
         }
-        List<SignedLabelSnapshot> negations = new(batch.Labels.Count);
+        List<SignedLabelSnapshot> negations = [with(batch.Labels.Count)];
         string? publicKey = null;
         try
         {

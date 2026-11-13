@@ -70,8 +70,8 @@ public sealed class ActionStorageTests
     internal static async Task VerifySameEventDeletionAsync(IDatabaseProvider database, Func<Task> makeRetriesDue)
     {
         BotAction original = TestRecords.Work();
-        await database.HandleAsync(11, [original], null, CancellationToken.None);
-        await database.MarkAttemptAsync(original, CancellationToken.None);
+        Assert.Equal(1, await database.HandleAsync(11, [original], null, CancellationToken.None));
+        Assert.Equal(1, await database.MarkAttemptAsync(original, CancellationToken.None));
         BotAction uncertain = original with { Status = "uncertain", Attempts = 1 };
         string[] kinds = ["reply", "like", "repost", "bookmark", "list-item", "custom"];
         List<BotAction> actions = [.. kinds.Select(kind => original with
@@ -103,7 +103,7 @@ public sealed class ActionStorageTests
             Assert.Equal(expected with { TargetDeleted = deleted, RecordJson = saved.RecordJson, EnqueuedAt = saved.EnqueuedAt }, saved);
             Assert.True(JsonNode.DeepEquals(JsonNode.Parse(expected.RecordJson), JsonNode.Parse(saved.RecordJson)));
             Assert.True(remaining.Remove(saved.RecordKey));
-            await database.FinishAsync(saved, "not-sent", null, "test completed", CancellationToken.None);
+            Assert.Equal(1, await database.FinishAsync(saved, "not-sent", null, "test completed", CancellationToken.None));
         }
         Assert.Null(await database.NextWorkAsync(CancellationToken.None));
     }
@@ -185,6 +185,7 @@ public sealed class ActionStorageTests
                 [second],
                 null,
                 CancellationToken.None));
+        await store.MakeRetriesDueAsync();
         Assert.Equal(
             1,
             await store.Database.MarkAttemptAsync(
@@ -254,6 +255,7 @@ public sealed class ActionStorageTests
             [reply with { RecordKey = "ignored" }, like, secondLike],
             null,
             CancellationToken.None));
+        await store.MakeRetriesDueAsync();
         Assert.Equal(
             1,
             await store.Database.MarkAttemptAsync(
@@ -345,6 +347,7 @@ public sealed class ActionStorageTests
             [original],
             null,
             CancellationToken.None);
+        await store.MakeRetriesDueAsync();
         BotAction first = Action(
             "like",
             "default",

@@ -123,6 +123,7 @@ public sealed partial class RelationalProviderTests
         await store.SqlAsync("ALTER TABLE reply_work DROP COLUMN enqueued_at");
         await store.Database.InitializeAsync(CancellationToken.None);
         await store.Database.InitializeAsync(CancellationToken.None);
+        await store.SetRetryReadyAsync();
         BotAction old = Assert.IsType<BotAction>(await store.Database.NextWorkAsync(CancellationToken.None));
         Assert.Null(old.EnqueuedAt);
         BotOperationalSnapshot snapshot = await ((IBotDatabaseDiagnostics)store.Database).GetOperationalSnapshotAsync(CancellationToken.None);
@@ -131,6 +132,7 @@ public sealed partial class RelationalProviderTests
         Assert.NotNull(snapshot.OldestEligibleOverdueSeconds);
         BotAction fresh = work with { SourceSequence = 12, ActionKey = "fresh" };
         await store.Database.HandleAsync(sequence: 12, actions: [fresh], malformedReason: null, cancellationToken: CancellationToken.None);
+        await store.SetRetryReadyAsync();
         BotOperationalSnapshot mixed = await ((IBotDatabaseDiagnostics)store.Database).GetOperationalSnapshotAsync(CancellationToken.None);
         Assert.Equal(2, mixed.PendingActions);
         Assert.Equal(1, mixed.UnfinishedActionsWithUnknownEnqueueTime);
@@ -182,7 +184,7 @@ public sealed partial class RelationalProviderTests
             cancellationToken: CancellationToken.None));
         Assert.Empty(timings);
         Assert.NotNull(await store.Database.AcquireOrRenewAsync(CancellationToken.None));
-        await store.SetReadyNowAsync();
+        await store.SetReadyAsync();
         DateTimeOffset enqueue = await store.TimestampAsync("enqueued_at", "reply_work");
         await store.SqlAsync(provider == "Postgres"
             ? "UPDATE reply_work SET enqueued_at = now() + interval '1 day'"

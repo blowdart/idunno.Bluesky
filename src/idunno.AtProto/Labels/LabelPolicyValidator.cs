@@ -16,7 +16,7 @@ public static class LabelPolicyValidator
     {
         ArgumentNullException.ThrowIfNull(labelValues);
         ArgumentNullException.ThrowIfNull(definitions);
-        HashSet<string> values = new(StringComparer.Ordinal);
+        HashSet<string> values = [with(StringComparer.Ordinal)];
         foreach (string value in labelValues)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(value);
@@ -26,7 +26,7 @@ public static class LabelPolicyValidator
             }
         }
 
-        HashSet<string> identifiers = new(StringComparer.Ordinal);
+        HashSet<string> identifiers = [with(StringComparer.Ordinal)];
         foreach (LabelValueDefinition definition in definitions)
         {
             ArgumentNullException.ThrowIfNull(definition);
@@ -53,7 +53,7 @@ public static class LabelPolicyValidator
                 throw new ArgumentException("Custom labels must have at least one localized definition.", nameof(definitions));
             }
 
-            HashSet<string> languages = new(StringComparer.OrdinalIgnoreCase);
+            HashSet<string> languages = [with(StringComparer.OrdinalIgnoreCase)];
             foreach (LabelValueDefinitionStrings locale in definition.Locales)
             {
                 ArgumentNullException.ThrowIfNull(locale);

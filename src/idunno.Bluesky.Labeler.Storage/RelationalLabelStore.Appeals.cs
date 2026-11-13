@@ -356,7 +356,7 @@ internal abstract partial class RelationalLabelStore
         }
 
         List<ModerationAppealData> appeals = [];
-        HashSet<string> challengedValues = new(StringComparer.Ordinal);
+        HashSet<string> challengedValues = [with(StringComparer.Ordinal)];
         DateTimeOffset now = DateTimeOffset.FromUnixTimeMilliseconds(
             await DatabaseTimeAsync(connection, transaction, token).ConfigureAwait(false));
         foreach (long id in request.AppealIds)

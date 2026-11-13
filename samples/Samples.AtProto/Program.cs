@@ -158,7 +158,7 @@ public sealed class Program
     {
         Console.WriteLine($"Server DID   : {serverDescription.Did}");
 
-        if (serverDescription.AvailableUserDomains.Any())
+        if (serverDescription.AvailableUserDomains.Count != 0)
         {
             Console.WriteLine($"User Domains : ");
             foreach (var userDomain in serverDescription.AvailableUserDomains)

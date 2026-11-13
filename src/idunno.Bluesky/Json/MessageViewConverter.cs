@@ -14,7 +14,12 @@ internal sealed class MessageViewConverter : JsonConverter<MessageView>
 {
     public override MessageView? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
+#if NET11_0_OR_GREATER
+        MessageViewData? data = JsonSerializer.Deserialize(ref reader, options.GetTypeInfo<MessageViewData>());
+
+#else
         MessageViewData? data = (MessageViewData?)JsonSerializer.Deserialize(ref reader, options.GetTypeInfo(typeof(MessageViewData)));
+#endif
         if (data is null)
         {
             return null;
@@ -38,7 +43,12 @@ internal sealed class MessageViewConverter : JsonConverter<MessageView>
             }
         }
 
+
+#if NET11_0_OR_GREATER
+        JsonSerializer.Serialize(writer, data, options.GetTypeInfo<MessageViewData>());
+#else
         JsonSerializer.Serialize(writer, data, options.GetTypeInfo(typeof(MessageViewData)));
+#endif
     }
 
     internal sealed record MessageViewData(

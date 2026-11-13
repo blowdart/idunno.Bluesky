@@ -32,36 +32,37 @@ jobs:
     name: Build and Test
     runs-on: ubuntu-latest
     environment: cibuild
-    services:
-      labeler-postgresql:
-        image: postgres:17
-        env:
-          POSTGRES_USER: labeler_test
-          POSTGRES_PASSWORD: labeler-disposable-ci
-          POSTGRES_DB: labeler_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U labeler_test -d labeler_test"
-          --health-interval 5s --health-timeout 5s --health-retries 20
-      labeler-mysql:
-        image: mysql:8.4
-        env:
-          MYSQL_ROOT_PASSWORD: labeler-disposable-ci
-          MYSQL_ROOT_HOST: "%"
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd "mysql -h 127.0.0.1 -u root -plabeler-disposable-ci -e 'SELECT 1'"
-          --health-interval 5s --health-timeout 5s --health-retries 30
-    env:
-      LABELER_TEST_POSTGRESQL_CONNECTION: "Host=127.0.0.1;Port=5432;Database=labeler_test;Username=labeler_test;Password=labeler-disposable-ci;Pooling=false;GSS Encryption Mode=Disable"
-      LABELER_TEST_MYSQL_CONNECTION: "Server=127.0.0.1;Port=3306;User ID=root;Password=labeler-disposable-ci;Pooling=false"
     permissions:
       contents: read
       issues: read
       pull-requests: write
       checks: write
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: botsdk_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: botsdk-ci-only
+        ports:
+          - 5432/tcp
+        options: >-
+          --cpus=2 --memory=4g --memory-swap=4g
+          --tmpfs /var/lib/postgresql/data:rw,size=2g
+          --health-cmd "pg_isready --host=127.0.0.1 --username=postgres --dbname=botsdk_test"
+          --health-interval 5s --health-timeout 5s --health-retries 24
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_HOST: '%'
+          MYSQL_ROOT_PASSWORD: botsdk-ci-only
+        ports:
+          - 3306/tcp
+        options: >-
+          --cpus=2 --memory=4g --memory-swap=4g
+          --tmpfs /var/lib/mysql:rw,size=2g
+          --health-cmd "mysql --protocol=TCP --host=127.0.0.1 --user=root --password=botsdk-ci-only --execute='SELECT 1'"
+          --health-interval 5s --health-timeout 5s --health-retries 24
     steps:
     - name: 'Harden Runner'
       uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
@@ -75,12 +76,13 @@ jobs:
         persist-credentials: false
  
     - name: 'Setup .NET SDK'
-      uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+      uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
       with:
         dotnet-version: | 
           8.0.x
           9.0.x
           10.0.x
+          11.0.x
 
     - name: 'Setup Node'
       uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -91,9 +93,24 @@ jobs:
     - name: 'Report SDK versions'
       run : dotnet --info
 
+    - name: 'Verify database container limits'
+      env:
+        POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+        MYSQL_CONTAINER: ${{ job.services.mysql.id }}
+      shell: bash
+      run: |
+        for container in "${POSTGRES_CONTAINER}" "${MYSQL_CONTAINER}"; do
+          limits="$(docker inspect --format '{{.HostConfig.NanoCpus}} {{.HostConfig.Memory}} {{.HostConfig.MemorySwap}}' "${container}")"
+          echo "${container}: ${limits}"
+          if [[ "${limits}" != "2000000000 4294967296 4294967296" ]]; then
+            echo "::error::Database container resource limits differ from the configured limits."
+            exit 1
+          fi
+        done
+
     - name: 'Build'
       id: build
-      run: dotnet build --configuration Debug
+      run: dotnet build --configuration Debug '-bl:build.{}.binlog'
 
     - name: Upload Build Artifacts
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -104,6 +121,7 @@ jobs:
           src/**/idunno.*.dll
           src/**/idunno.*.deps.json
           src/**/idunno.*.xml
+          build.*.binlog
         retention-days: 5
 
     - name: 'Test frontend'
@@ -112,8 +130,40 @@ jobs:
 
     - name: 'Test'
       id: test
+      env:
+        LABELER_TEST_POSTGRESQL_CONNECTION: "Host=127.0.0.1;Port=${{ job.services.postgres.ports['5432'] }};Database=botsdk_test;Username=postgres;Password=botsdk-ci-only;GSS Encryption Mode=Disable"
+        LABELER_TEST_MYSQL_CONNECTION: "Server=127.0.0.1;Port=${{ job.services.mysql.ports['3306'] }};User ID=root;Password=botsdk-ci-only"
+        BOTSDK_TEST_POSTGRESQL_CONNECTION: "Host=127.0.0.1;Port=${{ job.services.postgres.ports['5432'] }};Database=botsdk_test;Username=postgres;Password=botsdk-ci-only"
+        BOTSDK_TEST_MYSQL_CONNECTION: "Server=127.0.0.1;Port=${{ job.services.mysql.ports['3306'] }};User ID=root;Password=botsdk-ci-only"
       shell: bash
-      run: dotnet test --no-build --no-restore --max-parallel-test-modules 4 --max-threads 4 --results-directory "${TEST_RESULTS}" --coverlet --report-xunit-junit --filter-not-class '*AllocationBudgetTests'
+      run: >-
+        dotnet test --no-build --no-restore '-bl:test.{}.binlog'
+        --max-parallel-test-modules 4 --max-threads 4
+        --results-directory "${TEST_RESULTS}" --coverlet --report-xunit-junit
+        --filter-not-class '*AllocationBudgetTests'
+        'idunno.Bluesky.BotSdk.Test.RelationalProviderTests'
+        'idunno.Bluesky.BotSdk.Test.ActionStorageTests'
+
+    - name: 'Test database providers'
+      if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+      env:
+        BOTSDK_TEST_POSTGRESQL_CONNECTION: Host=127.0.0.1;Port=${{ job.services.postgres.ports['5432'] }};Database=botsdk_test;Username=postgres;Password=botsdk-ci-only
+        BOTSDK_TEST_MYSQL_CONNECTION: Server=127.0.0.1;Port=${{ job.services.mysql.ports['3306'] }};User ID=root;Password=botsdk-ci-only
+      shell: bash
+      run: |
+        status=0
+        for framework in net8.0 net9.0 net10.0; do
+          # Each framework must run at least the current 29 cases for each of the three providers.
+          if dotnet "test/idunno.Bluesky.BotSdk.Test/bin/Debug/${framework}/idunno.Bluesky.BotSdk.Test.dll" \
+            --filter-class idunno.Bluesky.BotSdk.Test.RelationalProviderTests idunno.Bluesky.BotSdk.Test.ActionStorageTests \
+            --fail-skips on --minimum-expected-tests 87 --max-threads 4 \
+            --results-directory "${TEST_RESULTS}" --coverlet --report-xunit-junit; then
+            echo "${framework}: all database provider tests passed"
+          else
+            status=1
+          fi
+        done
+        exit "${status}"
 
     - name: 'Allocation budgets'
       id: allocations
@@ -169,6 +219,7 @@ jobs:
           ${{ env.TEST_RESULTS }}/*.junit.xml
           ${{ env.TEST_RESULTS }}/coverage.cobertura.*.xml
           ${{ env.TEST_RESULTS }}/allocation-diagnostics/
+          test.*.binlog
         retention-days: 5
 
     - name: 'Generate Full Code Coverage Reports'
@@ -214,12 +265,13 @@ jobs:
         persist-credentials: false
 
     - name: 'Setup .NET SDK'
-      uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+      uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
       with:
         dotnet-version: | 
           8.0.x
           9.0.x
           10.0.x
+          11.0.x
 
     - name: 'Cache NuGet packages'
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

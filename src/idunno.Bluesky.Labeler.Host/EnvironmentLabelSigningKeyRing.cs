@@ -13,7 +13,7 @@ namespace idunno.Bluesky.Labeler.Host;
 /// <summary>Loads separately configured private keys into memory and persists only their public selection.</summary>
 internal sealed class EnvironmentLabelSigningKeyRing : ILabelSigningKeyRing, IDisposable
 {
-    private readonly Dictionary<string, LabelSigningKey> _keys = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, LabelSigningKey> _keys = [with(StringComparer.Ordinal)];
     private readonly SemaphoreSlim _gate = new(1, 1);
     private ILabelSigningKeySelectionStore? _selectionStore;
     private ILabelMaintenanceStore? _maintenance;

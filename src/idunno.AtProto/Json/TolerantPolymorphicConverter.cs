@@ -913,7 +913,7 @@ internal sealed class TolerantPolymorphicConverter(
         {
             if (element.ValueKind == JsonValueKind.Object)
             {
-                HashSet<string> propertyNames = new(StringComparer.Ordinal);
+                HashSet<string> propertyNames = [with(StringComparer.Ordinal)];
                 foreach (JsonProperty property in element.EnumerateObject())
                 {
                     if (!propertyNames.Add(property.Name))
@@ -938,9 +938,9 @@ internal sealed class TolerantPolymorphicConverter(
         private sealed class NormalizationState
         {
             // Check aliases against the comparer behaviors supported by extension-data dictionaries.
-            private readonly HashSet<string> _propertyNames = new(StringComparer.Ordinal);
-            private readonly HashSet<string> _culturePropertyNames = new(StringComparer.CurrentCultureIgnoreCase);
-            private readonly HashSet<string> _invariantPropertyNames = new(StringComparer.InvariantCultureIgnoreCase);
+            private readonly HashSet<string> _propertyNames = [with(StringComparer.Ordinal)];
+            private readonly HashSet<string> _culturePropertyNames = [with(StringComparer.CurrentCultureIgnoreCase)];
+            private readonly HashSet<string> _invariantPropertyNames = [with(StringComparer.InvariantCultureIgnoreCase)];
             private long _nextName;
 
             internal NormalizationState(JsonElement element)
@@ -948,7 +948,7 @@ internal sealed class TolerantPolymorphicConverter(
                 CollectPropertyNames(element);
             }
 
-            internal Dictionary<string, RenamedProperty> RenamedNames { get; } = new(StringComparer.Ordinal);
+            internal Dictionary<string, RenamedProperty> RenamedNames { get; } = [with(StringComparer.Ordinal)];
 
             internal void ReserveContractNames(JsonTypeInfo info)
             {
@@ -1014,7 +1014,7 @@ internal sealed class TolerantPolymorphicConverter(
 
         private sealed class ExtensionDataSnapshot
         {
-            private readonly Dictionary<string, object?> _entries = new(StringComparer.Ordinal);
+            private readonly Dictionary<string, object?> _entries = [with(StringComparer.Ordinal)];
             private bool _captured;
 
             internal bool IsComplete { get; set; }
@@ -1209,9 +1209,12 @@ internal sealed class TolerantPolymorphicConverter(
                     bool isDiscriminator = polymorphicContract is not null &&
                         reader.ValueTextEquals(polymorphicContract.TypeDiscriminatorPropertyName);
                     bool isValues = reader.ValueTextEquals("$values");
+#pragma warning disable CA1307
+                    // StartsWith character only checks don't work with Culture parameters.
                     bool dollarName = reader.HasValueSequence || reader.ValueIsEscaped
                         ? reader.GetString()!.StartsWith('$')
                         : reader.ValueSpan.StartsWith("$"u8);
+#pragma warning restore CA1307
                     bool knownReferenceMetadata = isValues || PreservesReferences(underlyingOptions) &&
                         (reader.ValueTextEquals("$id") || reader.ValueTextEquals("$ref") || reader.ValueTextEquals("$values"));
                     reader.Read();
@@ -1259,9 +1262,13 @@ internal sealed class TolerantPolymorphicConverter(
                         reader.ValueTextEquals(polymorphicContract.TypeDiscriminatorPropertyName);
                     bool knownReferenceMetadata = PreservesReferences(underlyingOptions) &&
                         (reader.ValueTextEquals("$id") || reader.ValueTextEquals("$ref"));
+
+                    #pragma warning disable CA1307
+                    // StartsWith character only checks don't work with Culture parameters.
                     bool dollarName = reader.HasValueSequence || reader.ValueIsEscaped
                         ? reader.GetString()!.StartsWith('$')
                         : reader.ValueSpan.StartsWith("$"u8);
+                    #pragma warning restore CA1307
                     if (dollarName && !isDiscriminator && !knownReferenceMetadata &&
                         (polymorphicContract is not null || PreservesReferences(underlyingOptions)))
                     {
@@ -1340,9 +1347,13 @@ internal sealed class TolerantPolymorphicConverter(
                     }
                 }
 
+                #pragma warning disable CA1307
+                // StartsWith character only checks don't work with Culture parameters.
                 bool dollarName = reader.HasValueSequence || reader.ValueIsEscaped
                     ? reader.GetString()!.StartsWith('$')
                     : reader.ValueSpan.StartsWith("$"u8);
+                #pragma warning restore CA1307
+
                 // Preserve protocol metadata, but normalize unrecognized dollar-prefixed fields
                 // even on reference-tracked objects that do not declare polymorphism.
                 bool knownReferenceMetadata = PreservesReferences(underlyingOptions) &&
@@ -1506,7 +1517,7 @@ internal sealed class TolerantPolymorphicConverter(
             Justification = "Ignored member names are queried only when normalizing a payload; source-generated public contracts preserve their declared members, including JsonIgnore attributes.")]
         private HashSet<string> GetIgnoredPropertyNames(JsonTypeInfo info)
         {
-            HashSet<string> names = new(StringComparer.Ordinal);
+            HashSet<string> names = [with(StringComparer.Ordinal)];
             // Ignored members are omitted from the JSON contract, but their names must not be
             // mistaken for extension data when normalization rewrites the containing object.
             foreach (PropertyInfo property in info.Type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
@@ -1562,7 +1573,10 @@ internal sealed class TolerantPolymorphicConverter(
                     bool isDiscriminator = polymorphicContract is not null &&
                         property.Name == polymorphicContract.TypeDiscriminatorPropertyName;
                     bool isValues = property.NameEquals("$values");
+                    #pragma warning disable CA1307
+                    // StartsWith character only checks don't work with Culture parameters.
                     bool dollarName = property.Name.StartsWith('$');
+                    #pragma warning restore CA1307
                     bool knownReferenceMetadata = isValues || PreservesReferences(underlyingOptions) &&
                         property.Name is "$id" or "$ref" or "$values";
                     if (dollarName && !isDiscriminator && !knownReferenceMetadata)
@@ -1619,8 +1633,11 @@ internal sealed class TolerantPolymorphicConverter(
                         property.Name == dictionaryPolymorphism.TypeDiscriminatorPropertyName;
                     bool knownReferenceMetadata = PreservesReferences(underlyingOptions) &&
                         property.Name is "$id" or "$ref";
+                    #pragma warning disable CA1307
+                    // StartsWith character only checks don't work with Culture parameters.
                     bool unknownMetadata = (dictionaryPolymorphism is not null || PreservesReferences(underlyingOptions)) &&
                         property.Name.StartsWith('$') && !isDiscriminator && !knownReferenceMetadata;
+                    #pragma warning restore CA1307
                     if (unknownMetadata)
                     {
                         // Dictionary entry names are keys; removing dollar-prefixed metadata here
@@ -1693,11 +1710,14 @@ internal sealed class TolerantPolymorphicConverter(
                         ? StringComparer.OrdinalIgnoreCase
                         : StringComparer.Ordinal);
 
+                #pragma warning disable CA1307
+                // StartsWith character only checks don't work with Culture parameters.
                 bool unknownMetadata = (polymorphism is not null || PreservesReferences(underlyingOptions)) &&
                     property.Name.StartsWith('$') &&
                     property.Name != polymorphism?.TypeDiscriminatorPropertyName &&
                     contract is null && !ignoredProperty &&
                     !(PreservesReferences(underlyingOptions) && property.Name is "$id" or "$ref" or "$values");
+                #pragma warning restore CA1307
 
                 // Keep ordinary fields untouched; only unknown protocol metadata needs an alias so
                 // System.Text.Json will accept and route it to extension data.

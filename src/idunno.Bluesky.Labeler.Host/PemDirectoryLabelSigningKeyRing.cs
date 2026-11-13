@@ -32,7 +32,7 @@ internal sealed class PemDirectoryLabelSigningKeyRing : ILabelSigningKeyRing, ID
             throw new DirectoryNotFoundException("The mounted label-signing key directory does not exist.");
         }
 
-        Dictionary<string, LabelSigningKey> keys = new(StringComparer.Ordinal);
+        Dictionary<string, LabelSigningKey> keys = [with(StringComparer.Ordinal)];
         try
         {
             foreach (string path in Directory.EnumerateFiles(keyDirectory, "*.pem", SearchOption.TopDirectoryOnly))

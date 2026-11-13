@@ -1,5 +1,5 @@
 ARG LABELER_BASE
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:11.0 AS build
 ARG SOURCE_REVISION_ID
 ARG PUBLIC_RELEASE=false
 ENV DOTNET_PROCESSOR_COUNT=2

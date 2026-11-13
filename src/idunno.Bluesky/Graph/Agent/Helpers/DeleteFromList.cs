@@ -142,7 +142,7 @@ public partial class BlueskyAgent
         CancellationToken cancellationToken)
     {
         string? cursor = null;
-        HashSet<string> seenCursors = new(StringComparer.Ordinal);
+        HashSet<string> seenCursors = [with(StringComparer.Ordinal)];
         int pagesRead = 0;
         AtProtoHttpResult<ListViewWithItems> listEntriesResult;
 

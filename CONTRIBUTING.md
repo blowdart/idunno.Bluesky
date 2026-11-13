@@ -7,7 +7,7 @@ These are just guidelines, not rules, so feel free to use your own judgement, an
 
 ## Building locally
 
-You will need, at a minimum, a [.NET SDK 10](https://dotnet.microsoft.com/en-us/download/dotnet/10.0) installed.
+You will need [.NET SDK 11.0.100](https://dotnet.microsoft.com/en-us/download/dotnet/11.0) or a compatible later .NET 11 SDK, as specified in `global.json`.
 
 If you want to use Visual Studio you will need [Visual Studio 2026](https://visualstudio.microsoft.com/downloads/) with the
 ASP.NET and web development workload installed. Visual Studio 2026 community edition will work just fine.
@@ -100,6 +100,17 @@ goat lex breaking
 The second command compares against published schemas and requires network access. If namespace resolution fails or a schema has not been published, there is no compatibility result for that schema.
 
 Changes to published schemas must follow AT Protocol's evolution rules. Breaking changes require a new NSID. Include the validation results and any compatibility implications in your pull request.
+### Database provider tests
+
+CI provisions disposable PostgreSQL 17 and MySQL 8.4 services for the Bot SDK provider tests. Each service is limited to
+two CPUs, 4 GiB of memory with no additional swap, and a 2 GiB tmpfs data directory. CI runs the shared provider cases
+separately on .NET 8, 9, and 10, treats skipped cases as failures, and requires at least the current 87 cases per framework.
+The normal test step excludes these cases so they are not run twice.
+
+To run them locally, set `BOTSDK_TEST_POSTGRESQL_CONNECTION` and `BOTSDK_TEST_MYSQL_CONNECTION` to disposable databases.
+The PostgreSQL account must be able to create and drop schemas; the MySQL account must be able to create and drop databases.
+Never point these tests at a production database. Without these variables, local runs explicitly skip the corresponding
+provider cases; SQLite cases need no server.
 
 ### Dependencies Upgrades
 

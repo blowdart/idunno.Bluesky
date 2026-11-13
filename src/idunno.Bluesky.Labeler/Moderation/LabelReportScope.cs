@@ -39,7 +39,7 @@ public sealed class LabelReportScope
         {
             ArgumentOutOfRangeException.ThrowIfGreaterThan(subjectCollections.Count, 1000);
             Nsid[] collections = [.. subjectCollections];
-            HashSet<string> unique = new(StringComparer.Ordinal);
+            HashSet<string> unique = [with(StringComparer.Ordinal)];
             foreach (Nsid? collection in collections)
             {
                 ArgumentNullException.ThrowIfNull(collection);
@@ -83,7 +83,7 @@ public sealed class LabelReportScope
     {
         ArgumentOutOfRangeException.ThrowIfGreaterThan(source.Count, 1000);
         string[] values = new string[source.Count];
-        HashSet<string> unique = new(StringComparer.Ordinal);
+        HashSet<string> unique = [with(StringComparer.Ordinal)];
         int index = 0;
         foreach (string value in source)
         {

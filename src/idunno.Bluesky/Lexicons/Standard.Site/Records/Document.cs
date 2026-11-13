@@ -276,7 +276,10 @@ public record Document<T> : AtProtoRecord where T : class
         ArgumentNullException.ThrowIfNull(title);
 
         string convertedSite = site.ToString();
+        #pragma warning disable CA1307
+        // EndsWith character only checks don't work with Culture parameters.
         convertedSite = convertedSite.EndsWith('/') ? convertedSite.Substring(0, convertedSite.Length - 1) : convertedSite;
+        #pragma warning restore CA1307
 
         Site = convertedSite;
         Title = title;
@@ -337,7 +340,10 @@ public record Document<T> : AtProtoRecord where T : class
         ArgumentNullException.ThrowIfNull(title);
 
         string convertedSite = site.ToString();
+#pragma warning disable CA1307
+        // EndsWith character only checks don't work with Culture parameters.
         convertedSite = convertedSite.EndsWith('/') ? convertedSite.Substring(0, convertedSite.Length - 1) : convertedSite;
+#pragma warning restore CA1307
 
         Site = convertedSite;
         Title = title;
@@ -392,7 +398,10 @@ public record Document<T> : AtProtoRecord where T : class
                 throw new ArgumentException("Site must be an Uri or AtUri", nameof(Site));
             }
 
+#pragma warning disable CA1307
+// EndsWith character only checks don't work with Culture parameters.
             if (value.EndsWith('/'))
+#pragma warning restore CA1307
             {
                 throw new ArgumentException("Site cannot end in a trailing slash", nameof(Site));
             }
@@ -412,7 +421,10 @@ public record Document<T> : AtProtoRecord where T : class
 
         set
         {
+#pragma warning disable CA1307
+// StartsWith character only checks don't work with Culture parameters.
             if (value is not null && !value.StartsWith('/'))
+#pragma warning restore CA1307
             {
                 throw new ArgumentException("Path must start with a leading slash");
             }

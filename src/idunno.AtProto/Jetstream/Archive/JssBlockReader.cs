@@ -75,7 +75,7 @@ internal static class JssBlockReader
         int rkeyPos = checked(didPos + (int)didSize);
         int revPos = checked(rkeyPos + (int)rkeySize);
         int payloadPos = checked(revPos + (int)revSize);
-        List<JssRow> rows = new(count);
+        List<JssRow> rows = [with(count)];
         for (int i = 0; i < count; i++)
         {
             long seq = BinaryPrimitives.ReadInt64LittleEndian(data[(seqsPos + i * 8)..]);

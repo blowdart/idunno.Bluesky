@@ -25,10 +25,10 @@ internal sealed partial class SubjectPreviewService
         JsonObject record,
         CancellationToken token)
     {
-        HashSet<string> warnings = new(StringComparer.Ordinal);
-        HashSet<string> mediaLabels = new(StringComparer.Ordinal);
-        HashSet<string> currentLabels = new(StringComparer.Ordinal);
-        HashSet<string> accountLabels = new(StringComparer.Ordinal);
+        HashSet<string> warnings = [with(StringComparer.Ordinal)];
+        HashSet<string> mediaLabels = [with(StringComparer.Ordinal)];
+        HashSet<string> currentLabels = [with(StringComparer.Ordinal)];
+        HashSet<string> accountLabels = [with(StringComparer.Ordinal)];
         if (record["labels"] is JsonObject selfLabels &&
             Text(selfLabels, "$type") == "com.atproto.label.defs#selfLabels" &&
             selfLabels["values"] is JsonArray values)
@@ -55,7 +55,7 @@ internal sealed partial class SubjectPreviewService
         try
         {
             string? cursor = null;
-            HashSet<string> cursors = new(StringComparer.Ordinal);
+            HashSet<string> cursors = [with(StringComparer.Ordinal)];
             for (int page = 0; page < 4; page++)
             {
                 AtProtoHttpResult<PagedReadOnlyCollection<Label>> response;

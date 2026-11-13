@@ -216,7 +216,7 @@ internal sealed class BlueskyActionRemote(
         CancellationToken cancellationToken)
     {
         string? cursor = null;
-        HashSet<string> cursors = new(StringComparer.Ordinal);
+        HashSet<string> cursors = [with(StringComparer.Ordinal)];
         do
         {
             AtProtoHttpResult<PagedViewReadOnlyCollection<BookmarkView>> result = await session.Agent.GetBookmarks(
@@ -261,7 +261,7 @@ internal sealed class BlueskyActionRemote(
             throw new InvalidOperationException("Author-list actions require a list owned by the bot account.");
         }
         string? cursor = null;
-        HashSet<string> cursors = new(StringComparer.Ordinal);
+        HashSet<string> cursors = [with(StringComparer.Ordinal)];
         do
         {
             AtProtoHttpResult<ListViewWithItems> result = await session.Agent.GetList(

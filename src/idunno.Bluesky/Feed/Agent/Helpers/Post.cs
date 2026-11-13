@@ -403,7 +403,7 @@ public partial class BlueskyAgent
         {
             IList<Facet> extractedFacets = await FacetExtractor.ExtractFacets(text, cancellationToken: cancellationToken).ConfigureAwait(false);
 
-            if (extractedFacets.Any())
+            if (extractedFacets.Count != 0)
             {
                 post.Facets = extractedFacets;
             }
@@ -502,7 +502,7 @@ public partial class BlueskyAgent
         if (extractFacets)
         {
             IList<Facet> extractedFacets = await FacetExtractor.ExtractFacets(text, cancellationToken: cancellationToken).ConfigureAwait(false);
-            if (extractedFacets.Any())
+            if (extractedFacets.Count != 0)
             {
                 post.Facets = extractedFacets;
             }
@@ -600,7 +600,7 @@ public partial class BlueskyAgent
         {
             IList<Facet> extractedFacets = await FacetExtractor.ExtractFacets(text, cancellationToken: cancellationToken).ConfigureAwait(false);
 
-            if (extractedFacets.Any())
+            if (extractedFacets.Count != 0)
             {
                 post.Facets = extractedFacets;
             }
@@ -676,7 +676,7 @@ public partial class BlueskyAgent
         if (extractFacets && !string.IsNullOrEmpty(text))
         {
             IList<Facet> extractedFacets = await FacetExtractor.ExtractFacets(text, cancellationToken: cancellationToken).ConfigureAwait(false);
-            if (extractedFacets.Any())
+            if (extractedFacets.Count != 0)
             {
                 post.Facets = extractedFacets;
             }

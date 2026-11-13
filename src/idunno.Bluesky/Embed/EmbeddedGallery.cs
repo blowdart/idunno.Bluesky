@@ -95,7 +95,7 @@ public record EmbeddedGallery : EmbeddedMediaBase, IValidatableObject, IRecordVa
             throw new ArgumentException($"Items collection cannot contain more than {Maximum.GalleryItems} items.", nameof(items));
         }
 
-        List<GalleryImage> galleryItems = new(items.Count);
+        List<GalleryImage> galleryItems = [with(items.Count)];
 
         foreach (EmbeddedImage? item in items)
         {

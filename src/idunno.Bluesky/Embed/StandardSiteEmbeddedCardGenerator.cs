@@ -119,7 +119,7 @@ public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbedde
             return result;
         }
 
-        Dictionary<string, string> siteStandardLinks = new(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, string> siteStandardLinks = [with(StringComparer.OrdinalIgnoreCase)];
 
         foreach (Match linkElement in s_LinkElementRegex().Matches(pageContent))
         {

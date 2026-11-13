@@ -164,9 +164,9 @@ public sealed class IndexModel : PageModel
     /// <summary>Finds unpublished drafts in sequence order without treating old published versions as drafts.</summary>
     private async Task LoadDraftAsync()
     {
-        Dictionary<string, (long Sequence, ModerationPolicyDefinitionView Definition)> drafts = new(StringComparer.Ordinal);
-        HashSet<string> published = new(StringComparer.Ordinal);
-        HashSet<string> deleted = new(StringComparer.Ordinal);
+        Dictionary<string, (long Sequence, ModerationPolicyDefinitionView Definition)> drafts = [with(StringComparer.Ordinal)];
+        HashSet<string> published = [with(StringComparer.Ordinal)];
+        HashSet<string> deleted = [with(StringComparer.Ordinal)];
         long after = 0;
         while (true)
         {
