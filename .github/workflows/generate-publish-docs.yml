@@ -49,9 +49,6 @@ jobs:
     - name: 'Restore .NET tools'
       run: dotnet tool restore
 
-    - name: 'Restore .NET tools'
-      run: dotnet tool restore
-
     - name: 'Setup Node'
       uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
       with:

@@ -1408,6 +1408,7 @@ public partial class ModerationTests
             identity: identity,
             declarationJson: declaration,
             remoteEnabled: true);
+        await fixture.Clock.PolicyVerificationRegistrations.Reader.ReadAsync(token);
         await VerifyPolicyAsync(fixture);
         LabelAdministrationCaller administrator = (await fixture.Services.GetRequiredService<ILabelAdministrationStore>()
             .AuthenticateLocalAsync("uid:0", token)).Result!;
