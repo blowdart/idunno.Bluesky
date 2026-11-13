@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:11.0 AS build
 ARG SOURCE_REVISION_ID
 ARG TARGETARCH
 ARG PUBLIC_RELEASE=false
