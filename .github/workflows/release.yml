@@ -154,7 +154,7 @@ jobs:
         find src -path '*/obj/sbom/*/bom.spdx.json' -print0 | xargs -0 python3 -m check_jsonschema --schemafile "${RUNNER_TEMP}/sbom-tools/spdx-schema.json"
 
     - name: 'Build'
-      uses: ./.github/actions/build
+      uses: $/.github/actions/build
       with:
         configuration: Release
         arguments: --property:PublicRelease=true
@@ -184,7 +184,7 @@ jobs:
         }
 
     - name: 'Test'
-      uses: ./.github/actions/test
+      uses: $/.github/actions/test
       with:
         configuration: Release
         arguments: --property:PublicRelease=true

@@ -118,7 +118,7 @@ jobs:
 
     - name: 'Build'
       id: build
-      uses: ./.github/actions/build
+      uses: $/.github/actions/build
       with:
         configuration: Debug
         arguments: -bl:build.{}.binlog
@@ -137,7 +137,7 @@ jobs:
 
     - name: 'Test'
       id: test
-      uses: ./.github/actions/test
+      uses: $/.github/actions/test
       env:
         LABELER_TEST_POSTGRESQL_CONNECTION: "Host=127.0.0.1;Port=${{ job.services.postgres.ports['5432'] }};Database=botsdk_test;Username=postgres;Password=botsdk-ci-only;GSS Encryption Mode=Disable"
         LABELER_TEST_MYSQL_CONNECTION: "Server=127.0.0.1;Port=${{ job.services.mysql.ports['3306'] }};User ID=root;Password=botsdk-ci-only"
