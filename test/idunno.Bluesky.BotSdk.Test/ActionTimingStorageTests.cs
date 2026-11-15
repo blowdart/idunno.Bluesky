@@ -7,16 +7,13 @@ using Xunit;
 
 namespace idunno.Bluesky.BotSdk.Test;
 
-public sealed partial class RelationalProviderTests
+public abstract partial class RelationalProviderTests
 {
     /// <summary>Uses database time for enqueue and preserves it through retry and provider recreation before one terminal observation.</summary>
-    /// <param name="provider">The provider under test.</param>
-    [Theory]
-    [InlineData("Sqlite")]
-    [MySqlData]
-    [PostgreSqlData]
-    public async Task DurableTimingSurvivesRetryAndRestart(string provider)
+    [Fact]
+    public async Task DurableTimingSurvivesRetryAndRestart()
     {
+        string provider = RequireProvider();
         await using Store store = await Store.CreateAsync(provider);
         BotAction work = TestRecords.Work() with { EnqueuedAt = TestRecords.Start.AddDays(-1) };
         await store.Database.HandleAsync(sequence: 11, actions: [work], malformedReason: null, cancellationToken: CancellationToken.None);
@@ -71,13 +68,10 @@ public sealed partial class RelationalProviderTests
     }
 
     /// <summary>Distinguishes an empty queue, future retry backlog, and an eligible retry using the database clock.</summary>
-    /// <param name="provider">The provider under test.</param>
-    [Theory]
-    [InlineData("Sqlite")]
-    [MySqlData]
-    [PostgreSqlData]
-    public async Task QueueAgesDistinguishFutureAndEligibleRetries(string provider)
+    [Fact]
+    public async Task QueueAgesDistinguishFutureAndEligibleRetries()
     {
+        string provider = RequireProvider();
         await using Store store = await Store.CreateAsync(provider);
         IBotDatabaseDiagnostics diagnostics = (IBotDatabaseDiagnostics)store.Database;
         BotOperationalSnapshot empty = await diagnostics.GetOperationalSnapshotAsync(CancellationToken.None);
@@ -110,13 +104,10 @@ public sealed partial class RelationalProviderTests
     }
 
     /// <summary>Leaves pre-migration enqueue time unknown without fabricating age or terminal latency.</summary>
-    /// <param name="provider">The provider under test.</param>
-    [Theory]
-    [InlineData("Sqlite")]
-    [MySqlData]
-    [PostgreSqlData]
-    public async Task EnqueueMigrationKeepsOldRowsUnknown(string provider)
+    [Fact]
+    public async Task EnqueueMigrationKeepsOldRowsUnknown()
     {
+        string provider = RequireProvider();
         await using Store store = await Store.CreateAsync(provider);
         BotAction work = TestRecords.Work();
         await store.Database.HandleAsync(sequence: 11, actions: [work], malformedReason: null, cancellationToken: CancellationToken.None);
@@ -154,13 +145,10 @@ public sealed partial class RelationalProviderTests
     }
 
     /// <summary>Omits observations for rejected writes, lost ownership, and negative database clock intervals.</summary>
-    /// <param name="provider">The provider under test.</param>
-    [Theory]
-    [InlineData("Sqlite")]
-    [MySqlData]
-    [PostgreSqlData]
-    public async Task FailedOrSkewedCompletionDoesNotPublishTiming(string provider)
+    [Fact]
+    public async Task FailedOrSkewedCompletionDoesNotPublishTiming()
     {
+        string provider = RequireProvider();
         await using Store store = await Store.CreateAsync(provider);
         BotAction work = TestRecords.Work();
         await store.Database.HandleAsync(sequence: 11, actions: [work], malformedReason: null, cancellationToken: CancellationToken.None);

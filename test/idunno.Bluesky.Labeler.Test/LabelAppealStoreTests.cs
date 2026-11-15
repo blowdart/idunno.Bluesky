@@ -12,19 +12,99 @@ using Microsoft.Data.Sqlite;
 
 namespace idunno.Bluesky.Labeler.Test;
 
-public class LabelAppealStoreTests
+/// <summary>
+/// Shared helpers for the <see cref="LabelAppealStore"/> test classes.
+/// </summary>
+public abstract class LabelAppealStoreTestBase
 {
-    private static readonly Did s_owner = new(TargetResolutionHandler.SubjectDid);
-    private static readonly LabelReportSubject s_account = LabelReportSubject.Account(s_owner);
-    private const string AppealReason = "com.atproto.moderation.defs#reasonAppeal";
-    private const string LegacyAppealReason = "tools.ozone.report.defs#reasonAppeal";
+    private protected static readonly Did s_owner = new(TargetResolutionHandler.SubjectDid);
 
-    [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task CaptureUsesCurrentSignedTimeAndRetainsSeparateReportsAcrossRestart(string engine)
+    private protected static readonly LabelReportSubject s_account = LabelReportSubject.Account(s_owner);
+
+    private protected const string AppealReason = "com.atproto.moderation.defs#reasonAppeal";
+
+    private protected const string LegacyAppealReason = "tools.ozone.report.defs#reasonAppeal";
+
+
+    /// <summary>Initializes the real provider's shared administration and independently verified policy gate.</summary>
+    private protected static async Task<(LabelAdministrationCaller Caller, LabelPolicyState Policy)> ActivateAsync(StoreFixture fixture)
     {
+        LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
+        LabelPolicyState policy = await LabelPolicyStoreTests.ActivateAsync(
+            (ILabelPolicyStore)fixture.Store, caller, TestContext.Current.CancellationToken);
+        return (caller, policy);
+    }
+
+
+    /// <summary>Creates independent owner authentication for each distinct standard report submission.</summary>
+    private protected static async Task<LabelModerationReport> SubmitAsync(
+        ILabelStore store,
+        LabelPolicyState policy,
+        string tokenId,
+        LabelReportSubject subject,
+        string reason = AppealReason)
+    {
+        ModerationReportAuthenticationResult authentication = await ReportTestAuthentication.CreateAsync(s_owner, policy.DatabaseTime, tokenId);
+        return Success(await ((ILabelReportStore)store).SubmitReportAsync(
+            authentication, new(subject, reason), policy.Revision, TestContext.Current.CancellationToken));
+    }
+
+
+    /// <summary>Creates production shared issuance with a fixed clock and provider-backed moderator authority.</summary>
+    private protected static LabelIssuanceService Service(
+        StoreFixture fixture,
+        LabelAdministrationCaller caller,
+        LabelPolicyState policy,
+        LabelSigningKey key,
+        HttpClient http) => new(
+            issuer: StoreFixture.s_issuer,
+            signingKey: key,
+            store: fixture.Store,
+            authorizer: new LabelTeamAuthorizer((ILabelAdministrationStore)fixture.Store, caller),
+            policyProvider: new TestLabelIssuancePolicyProvider(policy.Policy!.Issuance),
+            httpClient: http,
+            timeProvider: fixture.DatabaseClock!);
+
+    /// <summary>Specifies appeal resolution independently of the current provider observations.</summary>
+    private protected static LabelCaseDecision Decision(
+        LabelModerationCase moderationCase,
+        IReadOnlyCollection<LabelCaseLabelAction> actions,
+        string operation,
+        IReadOnlyCollection<long>? appeals,
+        LabelAppealStatus? outcome) => new(
+            operationId: operation,
+            caseId: moderationCase.Id,
+            expectedRevision: moderationCase.Revision,
+            policyVersion: "v1",
+            reason: "Explicit moderator review.",
+            actions: actions,
+            appealIds: appeals,
+            appealOutcome: outcome,
+            handleOtherReports: true);
+
+    /// <summary>Preserves classified provider diagnostics when an expected operation fails.</summary>
+    private protected static T Success<T>(LabelServiceResult<T> result) where T : class
+    {
+        Assert.True(result.Succeeded, result.Error?.Message);
+        return result.Result;
+    }
+}
+
+/// <summary>
+/// Engine-parameterised tests; one derived class per engine lets xUnit run the engines in parallel.
+/// </summary>
+public abstract class LabelAppealStoreTests : LabelAppealStoreTestBase
+{
+    /// <summary>
+    /// Gets the storage engine exercised by the inherited tests.
+    /// </summary>
+    protected abstract string Engine { get; }
+
+
+    [Fact]
+    public async Task CaptureUsesCurrentSignedTimeAndRetainsSeparateReportsAcrossRestart()
+    {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         (LabelAdministrationCaller caller, LabelPolicyState policy) = await ActivateAsync(fixture);
@@ -63,12 +143,11 @@ public class LabelAppealStoreTests
         Assert.Equal(6, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
     }
 
-    [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task RecordAppealsCaptureOnlyTheExactCurrentCidAndAccountRemainsSeparate(string engine)
+
+    [Fact]
+    public async Task RecordAppealsCaptureOnlyTheExactCurrentCidAndAccountRemainsSeparate()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         (LabelAdministrationCaller caller, LabelPolicyState policy) = await ActivateAsync(fixture);
@@ -97,18 +176,14 @@ public class LabelAppealStoreTests
         Assert.Equal(3, appeals.Select(appeal => appeal.CaseId).Distinct().Count());
     }
 
+
     [Theory]
-    [InlineData("sqlite", 0)]
-    [InlineData("sqlite", 1)]
-    [InlineData("sqlite", 2)]
-    [InlineData("postgresql", 0)]
-    [InlineData("postgresql", 1)]
-    [InlineData("postgresql", 2)]
-    [InlineData("mysql", 0)]
-    [InlineData("mysql", 1)]
-    [InlineData("mysql", 2)]
-    public async Task PinnedAppealsCaptureAndWithdrawUriWideLabelsWithoutIncludingOtherCids(string engine, int intake)
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task PinnedAppealsCaptureAndWithdrawUriWideLabelsWithoutIncludingOtherCids(int intake)
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         (LabelAdministrationCaller caller, LabelPolicyState policy) = await ActivateAsync(fixture);
@@ -178,18 +253,14 @@ public class LabelAppealStoreTests
         Assert.Equal(LabelAppealStatus.Withdrawn, Success(await ((ILabelAppealStore)fixture.NewStore()).GetAppealAsync(caller, appeal.Id, token)).Status);
     }
 
+
     [Theory]
-    [InlineData("sqlite", LabelAppealStatus.Upheld)]
-    [InlineData("sqlite", LabelAppealStatus.Withdrawn)]
-    [InlineData("sqlite", LabelAppealStatus.Replaced)]
-    [InlineData("postgresql", LabelAppealStatus.Upheld)]
-    [InlineData("postgresql", LabelAppealStatus.Withdrawn)]
-    [InlineData("postgresql", LabelAppealStatus.Replaced)]
-    [InlineData("mysql", LabelAppealStatus.Upheld)]
-    [InlineData("mysql", LabelAppealStatus.Withdrawn)]
-    [InlineData("mysql", LabelAppealStatus.Replaced)]
-    public async Task ExplicitOutcomesUseSharedAtomicIssuanceAndRecoverOriginalProvenance(string engine, LabelAppealStatus outcome)
+    [InlineData(LabelAppealStatus.Upheld)]
+    [InlineData(LabelAppealStatus.Withdrawn)]
+    [InlineData(LabelAppealStatus.Replaced)]
+    public async Task ExplicitOutcomesUseSharedAtomicIssuanceAndRecoverOriginalProvenance(LabelAppealStatus outcome)
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         (LabelAdministrationCaller caller, LabelPolicyState policy) = await ActivateAsync(fixture);
@@ -238,24 +309,16 @@ public class LabelAppealStoreTests
             replay.Labels.Select(label => label.Label!.SignedLabel.GetJsonBytes()));
     }
 
+
     [Theory]
-    [InlineData("sqlite", LabelAppealStatus.Upheld, false)]
-    [InlineData("sqlite", LabelAppealStatus.Withdrawn, false)]
-    [InlineData("sqlite", LabelAppealStatus.Upheld, true)]
-    [InlineData("sqlite", LabelAppealStatus.Withdrawn, true)]
-    [InlineData("postgresql", LabelAppealStatus.Upheld, false)]
-    [InlineData("postgresql", LabelAppealStatus.Withdrawn, false)]
-    [InlineData("postgresql", LabelAppealStatus.Upheld, true)]
-    [InlineData("postgresql", LabelAppealStatus.Withdrawn, true)]
-    [InlineData("mysql", LabelAppealStatus.Upheld, false)]
-    [InlineData("mysql", LabelAppealStatus.Withdrawn, false)]
-    [InlineData("mysql", LabelAppealStatus.Upheld, true)]
-    [InlineData("mysql", LabelAppealStatus.Withdrawn, true)]
-    public async Task UriOnlyAppealReviewPreservesSignedScopeAndOtherCurrentChallenges(
-        string engine,
-        LabelAppealStatus outcome,
+    [InlineData(LabelAppealStatus.Upheld, false)]
+    [InlineData(LabelAppealStatus.Withdrawn, false)]
+    [InlineData(LabelAppealStatus.Upheld, true)]
+    [InlineData(LabelAppealStatus.Withdrawn, true)]
+    public async Task UriOnlyAppealReviewPreservesSignedScopeAndOtherCurrentChallenges(LabelAppealStatus outcome,
         bool superseded)
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         (LabelAdministrationCaller caller, LabelPolicyState policy) = await ActivateAsync(fixture);
@@ -386,12 +449,11 @@ public class LabelAppealStoreTests
         }
     }
 
-    [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task UriOnlyAppealsWithdrawPinnedLabelsWithoutChangingReportIdentity(string engine)
+
+    [Fact]
+    public async Task UriOnlyAppealsWithdrawPinnedLabelsWithoutChangingReportIdentity()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         (LabelAdministrationCaller caller, LabelPolicyState policy) = await ActivateAsync(fixture);
@@ -434,12 +496,11 @@ public class LabelAppealStoreTests
         Assert.Null(Success(await ((ILabelAppealStore)fixture.NewStore()).GetAppealAsync(caller, appeal.Id, token)).Subject.Cid);
     }
 
-    [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task ChangedOutcomesRequireSupersededReviewAndOtherPendingAppealsKeepCaseOpen(string engine)
+
+    [Fact]
+    public async Task ChangedOutcomesRequireSupersededReviewAndOtherPendingAppealsKeepCaseOpen()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         (LabelAdministrationCaller caller, LabelPolicyState policy) = await ActivateAsync(fixture);
@@ -471,12 +532,11 @@ public class LabelAppealStoreTests
         Assert.Equal(2, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
     }
 
-    [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task DuplicateCapturedValuesAcrossAppealPagesRetainOnlyCurrentOutcomes(string engine)
+
+    [Fact]
+    public async Task DuplicateCapturedValuesAcrossAppealPagesRetainOnlyCurrentOutcomes()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         (LabelAdministrationCaller caller, LabelPolicyState policy) = await ActivateAsync(fixture);
@@ -484,7 +544,9 @@ public class LabelAppealStoreTests
         using HttpClient http = new(new TargetResolutionHandler());
         LabelIssuanceService service = Service(fixture, caller, policy, key, http);
         LabelModerationReport? report = null;
-        for (int index = 0; index < 130; index++)
+        const int appealCount = 6;
+        fixture.UsePageSizes(scan: 4);
+        for (int index = 0; index < appealCount; index++)
         {
             await fixture.Store.AppendAsync(
                 operationId: $"duplicate-value-{index}",
@@ -499,7 +561,7 @@ public class LabelAppealStoreTests
         ILabelAppealStore appeals = (ILabelAppealStore)fixture.Store;
         List<LabelAppeal> pending = [.. Success(await appeals.GetAppealsAsync(caller, cancellationToken: token))];
         pending.AddRange(Success(await appeals.GetAppealsAsync(caller: caller, afterId: pending[^1].Id, cancellationToken: token)));
-        Assert.Equal(130, pending.Count);
+        Assert.Equal(appealCount, pending.Count);
         LabelModerationCase current = Success(await ((ILabelModerationStore)fixture.Store).GetCaseAsync(caller, report!.CaseId, token));
         Success(await service.ExecuteCaseDecisionAsync(
             caller,
@@ -508,18 +570,17 @@ public class LabelAppealStoreTests
         ILabelAppealStore restarted = (ILabelAppealStore)fixture.NewStore();
         List<LabelAppeal> retained = [.. Success(await restarted.GetAppealsAsync(caller, cancellationToken: token))];
         retained.AddRange(Success(await restarted.GetAppealsAsync(caller: caller, afterId: retained[^1].Id, cancellationToken: token)));
-        Assert.Equal(129, retained.Count(appeal => appeal.Status == LabelAppealStatus.Superseded));
+        Assert.Equal(appealCount - 1, retained.Count(appeal => appeal.Status == LabelAppealStatus.Superseded));
         Assert.Equal(LabelAppealStatus.Upheld, retained[^1].Status);
         Assert.Equal(pending.Select(appeal => Assert.Single(appeal.Challenges).Sequence),
             retained.Select(appeal => Assert.Single(appeal.Challenges).Sequence));
     }
 
-    [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task IntakeFaultsRollbackReportAppealAndReplayTogetherAndRecoverLostAcknowledgement(string engine)
+
+    [Fact]
+    public async Task IntakeFaultsRollbackReportAppealAndReplayTogetherAndRecoverLostAcknowledgement()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         (LabelAdministrationCaller caller, LabelPolicyState policy) = await ActivateAsync(fixture);
@@ -546,18 +607,14 @@ public class LabelAppealStoreTests
             (await reports.SubmitReportAsync(authentication, new(s_account, AppealReason), policy.Revision, token)).Error!.Code);
     }
 
+
     [Theory]
-    [InlineData("sqlite", 0)]
-    [InlineData("sqlite", 1)]
-    [InlineData("sqlite", 2)]
-    [InlineData("postgresql", 0)]
-    [InlineData("postgresql", 1)]
-    [InlineData("postgresql", 2)]
-    [InlineData("mysql", 0)]
-    [InlineData("mysql", 1)]
-    [InlineData("mysql", 2)]
-    public async Task AppealDecisionsSupersedeOnlyFullyObsoleteCapturesAndRetainEvidence(string engine, int removals)
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task AppealDecisionsSupersedeOnlyFullyObsoleteCapturesAndRetainEvidence(int removals)
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         (LabelAdministrationCaller caller, LabelPolicyState policy) = await ActivateAsync(fixture);
@@ -618,12 +675,11 @@ public class LabelAppealStoreTests
         Assert.Equal(3 + removals, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
     }
 
-    [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task ViewerReadsAreLiveAuthorizedAndSuccessfulInspectionDoesNotAppendAudit(string engine)
+
+    [Fact]
+    public async Task ViewerReadsAreLiveAuthorizedAndSuccessfulInspectionDoesNotAppendAudit()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         (LabelAdministrationCaller caller, LabelPolicyState policy) = await ActivateAsync(fixture);
@@ -669,12 +725,11 @@ public class LabelAppealStoreTests
         Assert.Equal(LabelServiceErrorCode.Unauthorized, (await policies.GetPolicyOperationAsync(viewer, "publish", token)).Error!.Code);
     }
 
-    [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task InternalReviewsNeedNoExternalReportAndStableRetryCannotRecaptureNewerLabels(string engine)
+
+    [Fact]
+    public async Task InternalReviewsNeedNoExternalReportAndStableRetryCannotRecaptureNewerLabels()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         (LabelAdministrationCaller caller, LabelPolicyState policy) = await ActivateAsync(fixture);
@@ -708,12 +763,11 @@ public class LabelAppealStoreTests
         Assert.Single(Success(await ((ILabelReportStore)fixture.Store).GetReportsAsync(caller, cancellationToken: token)));
     }
 
-    [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task NewerRecordCidCannotBeUpheldOrWithdrawnThroughAnOlderCapturedAppeal(string engine)
+
+    [Fact]
+    public async Task NewerRecordCidCannotBeUpheldOrWithdrawnThroughAnOlderCapturedAppeal()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         (LabelAdministrationCaller caller, LabelPolicyState policy) = await ActivateAsync(fixture);
@@ -746,15 +800,13 @@ public class LabelAppealStoreTests
         Assert.Equal(2, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
     }
 
+
     [Theory]
-    [InlineData("sqlite", false)]
-    [InlineData("sqlite", true)]
-    [InlineData("postgresql", false)]
-    [InlineData("postgresql", true)]
-    [InlineData("mysql", false)]
-    [InlineData("mysql", true)]
-    public async Task ResolutionFaultsKeepLabelAppealCaseReceiptAndAuditAtomic(string engine, bool afterCommit)
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ResolutionFaultsKeepLabelAppealCaseReceiptAndAuditAtomic(bool afterCommit)
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         (LabelAdministrationCaller caller, LabelPolicyState policy) = await ActivateAsync(fixture);
@@ -817,17 +869,18 @@ public class LabelAppealStoreTests
         }
     }
 
-    [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task CaptureBoundRejectsTheWholeReportInsteadOfTruncatingChallenges(string engine)
+
+    [Fact]
+    public async Task CaptureBoundRejectsTheWholeReportInsteadOfTruncatingChallenges()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        const int captureLimit = 10;
+        fixture.UsePageSizes(capture: captureLimit);
         CancellationToken token = TestContext.Current.CancellationToken;
         (LabelAdministrationCaller caller, LabelPolicyState policy) = await ActivateAsync(fixture);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
-        SignedLabelSnapshot[] history = [.. Enumerable.Range(0, 1001).Select(index => new SignedLabelSnapshot(
+        SignedLabelSnapshot[] history = [.. Enumerable.Range(0, captureLimit + 1).Select(index => new SignedLabelSnapshot(
             key.CreateLabel(
                 source: StoreFixture.s_issuer,
                 uri: s_account.Subject,
@@ -835,14 +888,14 @@ public class LabelAppealStoreTests
                 creationTimestamp: policy.DatabaseTime.AddHours(-1))))];
         await fixture.Store.AppendAsync(
             operationId: "history-first",
-            labels: [.. history.Take(1000)],
+            labels: [.. history.Take(captureLimit)],
             cancellationToken: token);
         LabelModerationReport accepted = await SubmitAsync(fixture.Store, policy, "at-capture-limit", s_account);
         LabelAppeal original = Assert.Single(Success(await ((ILabelAppealStore)fixture.Store).GetAppealsAsync(caller, cancellationToken: token)));
-        Assert.Equal(1000, original.Challenges.Count);
+        Assert.Equal(captureLimit, original.Challenges.Count);
         await fixture.Store.AppendAsync(
             operationId: "history-last",
-            labels: [history[1000]],
+            labels: [history[captureLimit]],
             cancellationToken: token);
         ModerationReportAuthenticationResult authentication = await ReportTestAuthentication.CreateAsync(s_owner, policy.DatabaseTime, "bounded-appeal");
         LabelServiceResult<LabelModerationReport> result = await ((ILabelReportStore)fixture.Store).SubmitReportAsync(
@@ -857,7 +910,7 @@ public class LabelAppealStoreTests
             authentication, new(s_account, AppealReason), policy.Revision, token);
         Assert.Equal(LabelServiceErrorCode.PolicyUnavailable, retry.Error!.Code);
         Assert.Contains("too many labels for automatic appeal capture", retry.Error.Message, StringComparison.Ordinal);
-        Assert.Equal(1001, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
+        Assert.Equal(captureLimit + 1, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
 
         SignedLabelSnapshot selected = new(key.CreateLabel(
             source: StoreFixture.s_issuer,
@@ -902,65 +955,32 @@ public class LabelAppealStoreTests
         Assert.Equal(LabelAppealStatus.Upheld, Success(await restarted.GetAppealAsync(caller, selectedAppeal.Id, token)).Status);
         Assert.Equal(LabelAppealStatus.Pending, Success(await restarted.GetAppealAsync(caller, original.Id, token)).Status);
     }
-
-    /// <summary>Initializes the real provider's shared administration and independently verified policy gate.</summary>
-    private static async Task<(LabelAdministrationCaller Caller, LabelPolicyState Policy)> ActivateAsync(StoreFixture fixture)
-    {
-        LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
-        LabelPolicyState policy = await LabelPolicyStoreTests.ActivateAsync(
-            (ILabelPolicyStore)fixture.Store, caller, TestContext.Current.CancellationToken);
-        return (caller, policy);
-    }
-
-    /// <summary>Creates independent owner authentication for each distinct standard report submission.</summary>
-    private static async Task<LabelModerationReport> SubmitAsync(
-        ILabelStore store,
-        LabelPolicyState policy,
-        string tokenId,
-        LabelReportSubject subject,
-        string reason = AppealReason)
-    {
-        ModerationReportAuthenticationResult authentication = await ReportTestAuthentication.CreateAsync(s_owner, policy.DatabaseTime, tokenId);
-        return Success(await ((ILabelReportStore)store).SubmitReportAsync(
-            authentication, new(subject, reason), policy.Revision, TestContext.Current.CancellationToken));
-    }
-
-    /// <summary>Creates production shared issuance with a fixed clock and provider-backed moderator authority.</summary>
-    private static LabelIssuanceService Service(
-        StoreFixture fixture,
-        LabelAdministrationCaller caller,
-        LabelPolicyState policy,
-        LabelSigningKey key,
-        HttpClient http) => new(
-            issuer: StoreFixture.s_issuer,
-            signingKey: key,
-            store: fixture.Store,
-            authorizer: new LabelTeamAuthorizer((ILabelAdministrationStore)fixture.Store, caller),
-            policyProvider: new TestLabelIssuancePolicyProvider(policy.Policy!.Issuance),
-            httpClient: http,
-            timeProvider: fixture.DatabaseClock!);
-
-    /// <summary>Specifies appeal resolution independently of the current provider observations.</summary>
-    private static LabelCaseDecision Decision(
-        LabelModerationCase moderationCase,
-        IReadOnlyCollection<LabelCaseLabelAction> actions,
-        string operation,
-        IReadOnlyCollection<long>? appeals,
-        LabelAppealStatus? outcome) => new(
-            operationId: operation,
-            caseId: moderationCase.Id,
-            expectedRevision: moderationCase.Revision,
-            policyVersion: "v1",
-            reason: "Explicit moderator review.",
-            actions: actions,
-            appealIds: appeals,
-            appealOutcome: outcome,
-            handleOtherReports: true);
-
-    /// <summary>Preserves classified provider diagnostics when an expected operation fails.</summary>
-    private static T Success<T>(LabelServiceResult<T> result) where T : class
-    {
-        Assert.True(result.Succeeded, result.Error?.Message);
-        return result.Result;
-    }
 }
+
+/// <summary>
+/// Runs <see cref="LabelAppealStoreTests"/> against sqlite.
+/// </summary>
+public sealed class LabelAppealStoreSqliteTests : LabelAppealStoreTests
+{
+    /// <inheritdoc />
+    protected override string Engine => "sqlite";
+}
+
+/// <summary>
+/// Runs <see cref="LabelAppealStoreTests"/> against postgresql.
+/// </summary>
+public sealed class LabelAppealStorePostgreSqlTests : LabelAppealStoreTests
+{
+    /// <inheritdoc />
+    protected override string Engine => "postgresql";
+}
+
+/// <summary>
+/// Runs <see cref="LabelAppealStoreTests"/> against mysql.
+/// </summary>
+public sealed class LabelAppealStoreMySqlTests : LabelAppealStoreTests
+{
+    /// <inheritdoc />
+    protected override string Engine => "mysql";
+}
+

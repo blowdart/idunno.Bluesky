@@ -90,6 +90,14 @@ jobs:
         node-version: '22.x'
         package-manager-cache: false
 
+    - name: 'Cache NuGet packages'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-build-${{ hashFiles('global.json', 'nuget.config', 'Directory.Packages.props', 'Directory.Build.props', '**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-build-
+
     - name: 'Report SDK versions'
       run : dotnet --info
 
@@ -141,8 +149,12 @@ jobs:
         --max-parallel-test-modules 4 --max-threads 4
         --results-directory "${TEST_RESULTS}" --coverlet --report-xunit-junit
         --filter-not-class '*AllocationBudgetTests'
-        'idunno.Bluesky.BotSdk.Test.RelationalProviderTests'
-        'idunno.Bluesky.BotSdk.Test.ActionStorageTests'
+        'idunno.Bluesky.BotSdk.Test.RelationalProviderSqliteTests'
+        'idunno.Bluesky.BotSdk.Test.RelationalProviderMySqlTests'
+        'idunno.Bluesky.BotSdk.Test.RelationalProviderPostgresTests'
+        'idunno.Bluesky.BotSdk.Test.ActionStorageSqliteTests'
+        'idunno.Bluesky.BotSdk.Test.ActionStorageMySqlTests'
+        'idunno.Bluesky.BotSdk.Test.ActionStoragePostgresTests'
 
     - name: 'Test database providers'
       if: ${{ !cancelled() && steps.build.outcome == 'success' }}
@@ -155,7 +167,7 @@ jobs:
         for framework in net8.0 net9.0 net10.0; do
           # Each framework must run at least the current 29 cases for each of the three providers.
           if dotnet "test/idunno.Bluesky.BotSdk.Test/bin/Debug/${framework}/idunno.Bluesky.BotSdk.Test.dll" \
-            --filter-class idunno.Bluesky.BotSdk.Test.RelationalProviderTests idunno.Bluesky.BotSdk.Test.ActionStorageTests \
+            --filter-class idunno.Bluesky.BotSdk.Test.RelationalProviderSqliteTests idunno.Bluesky.BotSdk.Test.RelationalProviderMySqlTests idunno.Bluesky.BotSdk.Test.RelationalProviderPostgresTests idunno.Bluesky.BotSdk.Test.ActionStorageSqliteTests idunno.Bluesky.BotSdk.Test.ActionStorageMySqlTests idunno.Bluesky.BotSdk.Test.ActionStoragePostgresTests \
             --fail-skips on --minimum-expected-tests 87 --max-threads 4 \
             --results-directory "${TEST_RESULTS}" --coverlet --report-xunit-junit; then
             echo "${framework}: all database provider tests passed"
@@ -246,6 +258,56 @@ jobs:
           ${{ env.COVERAGE_REPORT }}
           ${{ env.TEST_RESULTS }}/coverage.cobertura.*.xml
         retention-days: 5
+
+  format:
+    name: Format verification
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+    - name: 'Harden Runner'
+      uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+      with:
+        egress-policy: audit
+
+    - name: 'Checkout'
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        fetch-depth: 0 # avoid shallow clone so nbgv can do its work.
+        persist-credentials: false
+
+    - name: 'Setup .NET SDK'
+      uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+      with:
+        dotnet-version: | 
+          8.0.x
+          9.0.x
+          10.0.x
+          11.0.x
+
+    - name: 'Setup Node'
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version: '22.x'
+        package-manager-cache: false
+
+    - name: 'Cache NuGet packages'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-build-${{ hashFiles('global.json', 'nuget.config', 'Directory.Packages.props', 'Directory.Build.props', '**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-build-
+
+    - name: 'Restore'
+      run: dotnet restore idunno.Bluesky.slnx
+
+    # Runs in parallel with the build and test job, which is the pre-commit gate's sequential equivalent.
+    - name: 'Verify style'
+      run: dotnet format style idunno.Bluesky.slnx --no-restore --severity info --verify-no-changes
+
+    - name: 'Verify analyzers'
+      run: dotnet format analyzers idunno.Bluesky.slnx --no-restore --severity info --verify-no-changes
 
   trimming:
     name: Trimming and AOT

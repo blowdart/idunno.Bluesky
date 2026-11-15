@@ -35,6 +35,21 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
     /// <summary>Gets or sets the internal test clock replacing database-time samples across this store instance.</summary>
     /// <remarks><para>Production leaves this unset and always executes the provider's database clock query.</para></remarks>
     internal TimeProvider? DatabaseClock { get; set; }
+    /// <summary>Gets or sets the number of rows read per page by the report, appeal and case-assignment scans.</summary>
+    /// <remarks><para>Production keeps the default. Tests lower it to cross a page boundary without seeding a full page.</para></remarks>
+    internal int ScanPageSize { get; set; } = 128;
+    /// <summary>Gets or sets the number of rows read per page by projection and mute-subject backfills.</summary>
+    /// <remarks><para>Production keeps the default. Tests lower it to cross a page boundary without seeding a full page.</para></remarks>
+    internal int BackfillPageSize { get; set; } = 100;
+    /// <summary>Gets or sets the number of events a filtered query scans per chunk.</summary>
+    /// <remarks><para>Production keeps the default. Tests lower it to cross a chunk boundary without seeding a full chunk.</para></remarks>
+    internal int QueryChunkSize { get; set; } = 1000;
+    /// <summary>Gets or sets the number of history rows a withdrawal or retirement batch inspects.</summary>
+    /// <remarks><para>Production keeps the default. Tests lower it to span several batches without seeding a full batch.</para></remarks>
+    internal int HistoryPageSize { get; set; } = 250;
+    /// <summary>Gets or sets the maximum number of distinct label values an appeal capture accepts.</summary>
+    /// <remarks><para>Production keeps the default. Tests lower it to reach the bound without seeding a thousand labels.</para></remarks>
+    internal int CaptureLimit { get; set; } = 1000;
     /// <summary>Gets the stable provider tag used in safe logs and metrics.</summary>
     protected abstract string Provider { get; }
     /// <summary>Gets the row-lock clause, or empty text when the transaction itself holds the SQLite writer lock.</summary>
@@ -1661,7 +1676,7 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
     /// <summary>Scans bounded sequence chunks and applies ordinal filters without relying on database collations.</summary>
     /// <remarks><para>The continuation tracks the last scanned event, not just the last match, so sparse
     /// filters can advance without skipping matching events or exposing labels beyond the captured tip.</para></remarks>
-    private static async Task<LabelPage> PageAsync(
+    private async Task<LabelPage> PageAsync(
         DbConnection connection,
         DbTransaction transaction,
         LabelStoreState state,
@@ -1677,7 +1692,7 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
         long scanned = after;
         while (scanned < through && labels.Count < limit)
         {
-            int scanLimit = patterns.Length == 0 && source is null ? limit - labels.Count : 1000;
+            int scanLimit = patterns.Length == 0 && source is null ? limit - labels.Count : QueryChunkSize;
             DbCommand command = Command(
                 connection: connection,
                 transaction: transaction,

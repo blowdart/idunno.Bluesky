@@ -36,7 +36,8 @@ public class LabelDeletedPostTests
             creationTimestamp: policy.DatabaseTime.AddHours(-1), cid: s_post.Cid));
         await fixture.Store.AppendAsync(operationId: "manual", labels: [original], cancellationToken: token);
         List<LabelModerationReport> accepted = [];
-        for (int index = 0; index < 130; index++)
+        fixture.UsePageSizes(scan: 4);
+        for (int index = 0; index < 6; index++)
         {
             accepted.Add(await SubmitAsync(fixture, policy, s_post, "ordinary-" + index));
         }
@@ -94,7 +95,7 @@ public class LabelDeletedPostTests
 
         Assert.Empty(Success(await ((ILabelDeletedPostStore)restarted).ReadDeletedPostBatchAsync(token)).Entries);
         Assert.Equal(2, Success(await ((ILabelTableStore)restarted).ReadNavigationCountsAsync(caller, token)).Reports);
-        Assert.Equal(133, Success(await ((ILabelSearchStore)restarted).SearchAsync(caller, "Post deleted", 1, token)).Total);
+        Assert.Equal(accepted.Count + 2, Success(await ((ILabelSearchStore)restarted).SearchAsync(caller, "Post deleted", 1, token)).Total);
     }
 
     [Theory]

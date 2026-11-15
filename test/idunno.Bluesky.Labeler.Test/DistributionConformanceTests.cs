@@ -277,47 +277,48 @@ public class DistributionConformanceTests
             uri: Subject,
             value: "spam",
             creationTimestamp: s_instant));
-        await fixture.Store.AppendAsync("batch", [.. Enumerable.Repeat(signed, 1000)], cancellationToken: token);
+        const int scanBudget = 10;
+        await fixture.Store.AppendAsync("batch", [.. Enumerable.Repeat(signed, scanBudget)], cancellationToken: token);
         await fixture.Store.AppendAsync("replacement", [signed], cancellationToken: token);
         LabelStoreState state = await fixture.PublishThroughAsync();
         LabelDistributionPage first = await fixture.Store.ReadDistributionAsync(
             streamId: state.StreamId,
             after: 0,
-            through: 1001,
+            through: scanBudget + 1,
             uriPatterns: ["*"],
             sources: [],
             limit: 1,
-            scanLimit: 1000,
+            scanLimit: scanBudget,
             cancellationToken: token);
         Assert.Empty(first.Labels);
-        Assert.Equal(1000, first.ScannedThrough);
+        Assert.Equal(scanBudget, first.ScannedThrough);
         LabelDistributionPage last = await fixture.Store.ReadDistributionAsync(
             streamId: state.StreamId,
             after: first.ScannedThrough,
-            through: 1001,
+            through: scanBudget + 1,
             uriPatterns: ["*"],
             sources: [],
             limit: 1,
-            scanLimit: 1000,
+            scanLimit: scanBudget,
             cancellationToken: token);
-        Assert.Equal(1001, Assert.Single(last.Labels).Sequence);
-        await fixture.ExecuteAsync("DELETE FROM label_distribution WHERE seq=1001");
+        Assert.Equal(scanBudget + 1, Assert.Single(last.Labels).Sequence);
+        await fixture.ExecuteAsync($"DELETE FROM label_distribution WHERE seq={scanBudget + 1}");
         await Assert.ThrowsAsync<InvalidDataException>(() => fixture.Store.ReadDistributionAsync(
             streamId: state.StreamId,
-            after: 1000,
-            through: 1001,
+            after: scanBudget,
+            through: scanBudget + 1,
             uriPatterns: ["*"],
             sources: [],
             cancellationToken: token));
         await fixture.Store.InitializeAsync(StoreFixture.s_issuer, token);
         LabelDistributionPage repaired = await fixture.Store.ReadDistributionAsync(
             streamId: state.StreamId,
-            after: 1000,
-            through: 1001,
+            after: scanBudget,
+            through: scanBudget + 1,
             uriPatterns: ["*"],
             sources: [],
             cancellationToken: token);
-        Assert.Equal(1001, Assert.Single(repaired.Labels).Sequence);
+        Assert.Equal(scanBudget + 1, Assert.Single(repaired.Labels).Sequence);
     }
 
     [Theory(Timeout = 120_000)]

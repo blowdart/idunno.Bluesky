@@ -48,20 +48,18 @@ Tests use the new MTP runner. If you attempt to `dotnet test --nologo` it will r
 
 ### Full local validation
 
-Run `pwsh -File ./test.ps1` from the repository root with Docker running Linux containers. This runs the
-non-incremental Debug solution build and all test projects and frameworks. The script creates disposable PostgreSQL 17
+Run `pwsh -File ./test.ps1` from the repository root with Docker running Linux containers. This runs a fast
+incremental Debug solution build without analyzers, then all test projects on net10.0 only. Pass `-AllFrameworks` to
+test every framework, or `-Full` for the clean, analyzer-enabled build on every framework that matches CI; use `-Full` before committing. The script creates disposable PostgreSQL 17
 and MySQL 8.4 containers with random credentials, temporary storage and loopback-only ports; verifies database access
-from the test runner; and removes only its own containers in `finally`. Logs, a uniquely named clean-build binary log,
-and separate build, test and total timings are retained under `.artifacts/test-runs/`. Existing database connection
+from the test runner; and removes only its own containers in `finally`. Logs, a uniquely named build binary log,
+JUnit results, and separate build, test and total timings are retained under `.artifacts/test-runs/`. Existing database connection
 environment variables are restored afterward.
 
-The build explicitly uses at most four MSBuild workers, disables shared compilation and concurrent compiler
-work, and limits .NET processes to two reported processors. Each disposable database is capped at two CPUs,
+The build uses default MSBuild parallelism and shared compilation, and the tests use default parallelism.
+PostgreSQL is capped at two CPUs and MySQL at six,
 4 GiB of memory with no additional swap, and a 2 GiB tmpfs data directory. Container limits and OOM status
 are retained with the diagnostics. These limits do not apply to existing or production containers.
-For separate local builds, use `-m:4 -nr:false --disable-build-servers -p:UseSharedCompilation=false
--p:ConcurrentBuild=false` and set `DOTNET_PROCESSOR_COUNT=2` in that build process; the environment setting
-alone does not limit MSBuild workers.
 
 Before every commit, also run both informational checks from the repository root after `test.ps1`:
 
@@ -103,7 +101,7 @@ Changes to published schemas must follow AT Protocol's evolution rules. Breaking
 ### Database provider tests
 
 CI provisions disposable PostgreSQL 17 and MySQL 8.4 services for the Bot SDK provider tests. Each service is limited to
-two CPUs, 4 GiB of memory with no additional swap, and a 2 GiB tmpfs data directory. CI runs the shared provider cases
+two (PostgreSQL) or six (MySQL) CPUs, 4 GiB of memory with no additional swap, and a 2 GiB tmpfs data directory. CI runs the shared provider cases
 separately on .NET 8, 9, and 10, treats skipped cases as failures, and requires at least the current 87 cases per framework.
 The normal test step excludes these cases so they are not run twice.
 

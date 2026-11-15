@@ -12,18 +12,92 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace idunno.Bluesky.Labeler.Test;
 
-public class LabelModerationStoreTests
+/// <summary>
+/// Shared helpers for the <see cref="LabelModerationStore"/> test classes.
+/// </summary>
+public abstract class LabelModerationStoreTestBase
 {
-    private static readonly Did s_administrator = new("did:plc:administrator");
-    private static readonly Did s_member = new("did:plc:moderator");
-    private static readonly LabelReportSubject s_subject = LabelReportSubject.Account(new("did:plc:subject"));
+    private protected static readonly Did s_administrator = new("did:plc:administrator");
 
-    [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task LegacyCaseConstraintUpgradePreservesCaseAndReferencedHistory(string engine)
+    private protected static readonly Did s_member = new("did:plc:moderator");
+
+    private protected static readonly LabelReportSubject s_subject = LabelReportSubject.Account(new("did:plc:subject"));
+
+
+    /// <summary>Requires an explicit successful result so failures retain their diagnostic message.</summary>
+    private protected static T Success<T>(LabelServiceResult<T> result) where T : class
     {
+        Assert.True(result.Succeeded, result.Error?.Message);
+        return result.Result!;
+    }
+
+
+    /// <summary>Bootstraps the initial OS binding through the shared provider boundary.</summary>
+    private protected static async Task<LabelAdministrationCaller> BootstrapAsync(StoreFixture fixture)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        ILabelAdministrationStore team = (ILabelAdministrationStore)fixture.Store;
+        Success(await team.BootstrapAsync(s_administrator, "uid:0", "bootstrap", token));
+        return Success(await team.AuthenticateLocalAsync("uid:0", token));
+    }
+
+
+    /// <summary>Creates independently authenticated member evidence for role and revocation coverage.</summary>
+    private protected static async Task<LabelAdministrationCaller> EnrollAsync(
+        ILabelAdministrationStore team,
+        LabelAdministrationCaller administrator,
+        LabelTeamRole role,
+        CancellationToken token)
+    {
+        Success(await team.ChangeTeamAsync(
+            administrator,
+            new(
+                operationId: "enroll", action: LabelTeamAction.Enroll, target: s_member,
+                reason: "Enroll test member.", role: role),
+            token));
+        Success(await team.ChangeTeamAsync(
+            administrator,
+            new(
+                operationId: "bind", action: LabelTeamAction.BindLocal, target: s_member,
+                reason: "Bind test identity.", credential: "uid:1"),
+            token));
+        return Success(await team.AuthenticateLocalAsync("uid:1", token));
+    }
+
+    /// <summary>Creates stable exact-subject open intent.</summary>
+    private protected static LabelCaseChange Open(string operationId) => new(
+        operationId: operationId, subject: s_subject, action: LabelCaseAction.Open, reason: "Review this subject.");
+
+    /// <summary>Uses a returned snapshot's exact subject and revision for optimistic edits.</summary>
+    private protected static LabelCaseChange Change(
+        LabelModerationCase snapshot,
+        string operationId,
+        LabelCaseAction action,
+        Did? assignee = null) => new(
+            operationId: operationId,
+            subject: snapshot.Subject,
+            action: action,
+            reason: "Review this subject.",
+            caseId: snapshot.Id,
+            expectedRevision: snapshot.Revision,
+            assignee: assignee);
+}
+
+/// <summary>
+/// Engine-parameterised tests; one derived class per engine lets xUnit run the engines in parallel.
+/// </summary>
+public abstract class LabelModerationStoreTests : LabelModerationStoreTestBase
+{
+    /// <summary>
+    /// Gets the storage engine exercised by the inherited tests.
+    /// </summary>
+    protected abstract string Engine { get; }
+
+
+    [Fact]
+    public async Task LegacyCaseConstraintUpgradePreservesCaseAndReferencedHistory()
+    {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
@@ -90,15 +164,13 @@ public class LabelModerationStoreTests
         Assert.Equal(LabelCaseStatus.Escalated, Success(await upgraded.GetCaseAsync(administrator, opened.Id, token)).Status);
     }
 
+
     [Theory]
-    [InlineData("sqlite", false)]
-    [InlineData("sqlite", true)]
-    [InlineData("postgresql", false)]
-    [InlineData("postgresql", true)]
-    [InlineData("mysql", false)]
-    [InlineData("mysql", true)]
-    public async Task EscalationPreservesAssignmentAndSurvivesRestartWithoutResolvingWork(string engine, bool assigned)
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task EscalationPreservesAssignmentAndSurvivesRestartWithoutResolvingWork(bool assigned)
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
@@ -139,18 +211,14 @@ public class LabelModerationStoreTests
         Assert.Equal(0, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
     }
 
+
     [Theory]
-    [InlineData("sqlite", LabelCaseAction.StartReview)]
-    [InlineData("sqlite", LabelCaseAction.Note)]
-    [InlineData("sqlite", LabelCaseAction.Resolve)]
-    [InlineData("postgresql", LabelCaseAction.StartReview)]
-    [InlineData("postgresql", LabelCaseAction.Note)]
-    [InlineData("postgresql", LabelCaseAction.Resolve)]
-    [InlineData("mysql", LabelCaseAction.StartReview)]
-    [InlineData("mysql", LabelCaseAction.Note)]
-    [InlineData("mysql", LabelCaseAction.Resolve)]
-    public async Task CaseActionsClaimUnassignedWorkAtomicallyWithoutReplacingAssignments(string engine, LabelCaseAction action)
+    [InlineData(LabelCaseAction.StartReview)]
+    [InlineData(LabelCaseAction.Note)]
+    [InlineData(LabelCaseAction.Resolve)]
+    public async Task CaseActionsClaimUnassignedWorkAtomicallyWithoutReplacingAssignments(LabelCaseAction action)
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
@@ -177,12 +245,11 @@ public class LabelModerationStoreTests
         Assert.Equal(s_member, Success(await restarted.GetCaseAsync(administrator, opened.Id, token)).Assignee);
     }
 
-    [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task RetirementClosesNewCaseWorkButPreservesRecoveryInspectionAndNonLabelCompletion(string engine)
+
+    [Fact]
+    public async Task RetirementClosesNewCaseWorkButPreservesRecoveryInspectionAndNonLabelCompletion()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
@@ -214,12 +281,11 @@ public class LabelModerationStoreTests
         Assert.Equal(0, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
     }
 
-    [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task RegistrationUsesTheSameProviderAndCasesSurviveRecreation(string engine)
+
+    [Fact]
+    public async Task RegistrationUsesTheSameProviderAndCasesSurviveRecreation()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         ILabelModerationStore store = fixture.Services.GetRequiredService<ILabelModerationStore>();
@@ -241,12 +307,11 @@ public class LabelModerationStoreTests
         Assert.Equal("Review this subject.", recovered.Reason);
     }
 
-    [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task ConcurrentOpenOperationsShareOneUnresolvedExactSubject(string engine)
+
+    [Fact]
+    public async Task ConcurrentOpenOperationsShareOneUnresolvedExactSubject()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
@@ -269,12 +334,11 @@ public class LabelModerationStoreTests
         Assert.Equal(2, Success(await first.GetCaseHistoryAsync(administrator, results[0].Case.Id, cancellationToken: token)).Count);
     }
 
-    [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task RecordVersionsAccountsAndProfileRecordsDoNotShareCases(string engine)
+
+    [Fact]
+    public async Task RecordVersionsAccountsAndProfileRecordsDoNotShareCases()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
@@ -309,12 +373,11 @@ public class LabelModerationStoreTests
         Assert.Equal(secondCid, cases[2].Subject.Cid);
     }
 
-    [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task RevisionsTransitionsAndReopeningProtectConcurrentReview(string engine)
+
+    [Fact]
+    public async Task RevisionsTransitionsAndReopeningProtectConcurrentReview()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
@@ -342,48 +405,11 @@ public class LabelModerationStoreTests
         Assert.Equal(0, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
     }
 
-    [Theory]
-    [InlineData("sqlite", LabelTeamRole.Viewer, false)]
-    [InlineData("sqlite", LabelTeamRole.Moderator, true)]
-    [InlineData("postgresql", LabelTeamRole.Viewer, false)]
-    [InlineData("postgresql", LabelTeamRole.Moderator, true)]
-    [InlineData("mysql", LabelTeamRole.Viewer, false)]
-    [InlineData("mysql", LabelTeamRole.Administrator, true)]
-    public async Task ReadsMutationsAndRecoveryEnforceLiveRoles(string engine, LabelTeamRole role, bool mayModerate)
-    {
-        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
-        CancellationToken token = TestContext.Current.CancellationToken;
-        LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
-        ILabelAdministrationStore team = (ILabelAdministrationStore)fixture.Store;
-        ILabelModerationStore store = (ILabelModerationStore)fixture.Store;
-        LabelModerationCase created = Success(await store.ChangeCaseAsync(administrator, Open("open"), token)).Case;
-        LabelAdministrationCaller member = await EnrollAsync(team, administrator, role, token);
-        Assert.True((await store.GetCaseAsync(member, created.Id, token)).Succeeded);
-        Assert.True((await store.GetCaseOperationAsync(member, "open", token)).Succeeded);
-        Assert.Equal(mayModerate, (await store.ChangeCaseAsync(
-            member, Change(created, "member-note", LabelCaseAction.Note), token)).Succeeded);
-        Success(await team.ChangeTeamAsync(
-            administrator,
-            new(
-                operationId: "suspend", action: LabelTeamAction.Suspend, target: s_member,
-                reason: "Revoke moderation authority."),
-            token));
-        Assert.Equal(LabelServiceErrorCode.Unauthorized, (await store.GetCaseAsync(member, created.Id, token)).Error!.Code);
-        Assert.Equal(LabelServiceErrorCode.Unauthorized, (await store.GetCaseOperationAsync(member, "open", token)).Error!.Code);
-        Assert.Equal(LabelServiceErrorCode.Unauthorized, (await store.GetCasesAsync(member, cancellationToken: token)).Error!.Code);
-        Assert.Equal(LabelServiceErrorCode.Unauthorized, (await store.GetCaseHistoryAsync(member, created.Id, cancellationToken: token)).Error!.Code);
-        Assert.Equal(LabelServiceErrorCode.Unauthorized, (await store.ChangeCaseAsync(member, Open("revoked"), token)).Error!.Code);
-        Assert.Contains(
-            Success(await team.GetAdministrationAuditAsync(administrator, cancellationToken: token)),
-            receipt => receipt.Action == "moderation-case" && receipt.Actor == s_member && !receipt.Succeeded);
-    }
 
-    [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task AssignmentRequiresLiveEligibleMembersButRetainsHistoricalProvenance(string engine)
+    [Fact]
+    public async Task AssignmentRequiresLiveEligibleMembersButRetainsHistoricalProvenance()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
@@ -420,12 +446,11 @@ public class LabelModerationStoreTests
         Assert.Equal(s_administrator, released.Assignee);
     }
 
-    [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task SoleModeratorAssignmentReconcilesBatchesAtomicallyAndPreservesResolvedCasesAndReceipts(string engine)
+
+    [Fact]
+    public async Task SoleModeratorAssignmentReconcilesBatchesAtomicallyAndPreservesResolvedCasesAndReceipts()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
@@ -433,7 +458,8 @@ public class LabelModerationStoreTests
         ILabelModerationStore store = (ILabelModerationStore)fixture.Store;
         await EnrollAsync(team, administrator, LabelTeamRole.Moderator, token);
         List<LabelCaseReceipt> opened = [];
-        for (int index = 0; index < 130; index++)
+        fixture.UsePageSizes(scan: 4);
+        for (int index = 0; index < 6; index++)
         {
             string suffix = index.ToString(System.Globalization.CultureInfo.InvariantCulture);
             opened.Add(Success(await store.ChangeCaseAsync(
@@ -485,12 +511,11 @@ public class LabelModerationStoreTests
         Assert.Equal(s_administrator, Success(await restarted.GetCaseAsync(administrator, last.Id, token)).Assignee);
     }
 
-    [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task RetryReturnsOriginalSnapshotAndChangedIntentConflicts(string engine)
+
+    [Fact]
+    public async Task RetryReturnsOriginalSnapshotAndChangedIntentConflicts()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
@@ -507,12 +532,11 @@ public class LabelModerationStoreTests
         Assert.Equal(2, Success(await store.GetCaseHistoryAsync(administrator, original.Case.Id, cancellationToken: token)).Count);
     }
 
-    [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task CaseAuditAndReceiptsRollbackTogetherAndUnknownAcknowledgementsRecover(string engine)
+
+    [Fact]
+    public async Task CaseAuditAndReceiptsRollbackTogetherAndUnknownAcknowledgementsRecover()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
@@ -535,12 +559,11 @@ public class LabelModerationStoreTests
         Assert.Single(Success(await store.GetCaseHistoryAsync(administrator, recovered.Case.Id, cancellationToken: token)));
     }
 
-    [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task CaseAndHistoryPagesAreBoundedAndSuccessfulReadsDoNotExtendAudit(string engine)
+
+    [Fact]
+    public async Task CaseAndHistoryPagesAreBoundedAndSuccessfulReadsDoNotExtendAudit()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
@@ -565,12 +588,11 @@ public class LabelModerationStoreTests
         Assert.Equal(count, Success(await team.GetAdministrationAuditAsync(administrator, cancellationToken: token)).Count);
     }
 
-    [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task SchemaEightUpgradePreservesIssuerTeamAndStreamState(string engine)
+
+    [Fact]
+    public async Task SchemaEightUpgradePreservesIssuerTeamAndStreamState()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
@@ -618,60 +640,75 @@ public class LabelModerationStoreTests
         Assert.Equal(original.GetJsonBytes(), Assert.Single(appeal.Challenges).SignedLabel.GetJsonBytes());
         Assert.Equal(before, await restarted.GetStateAsync(token));
     }
-
-    /// <summary>Requires an explicit successful result so failures retain their diagnostic message.</summary>
-    private static T Success<T>(LabelServiceResult<T> result) where T : class
-    {
-        Assert.True(result.Succeeded, result.Error?.Message);
-        return result.Result!;
-    }
-
-    /// <summary>Bootstraps the initial OS binding through the shared provider boundary.</summary>
-    private static async Task<LabelAdministrationCaller> BootstrapAsync(StoreFixture fixture)
-    {
-        CancellationToken token = TestContext.Current.CancellationToken;
-        ILabelAdministrationStore team = (ILabelAdministrationStore)fixture.Store;
-        Success(await team.BootstrapAsync(s_administrator, "uid:0", "bootstrap", token));
-        return Success(await team.AuthenticateLocalAsync("uid:0", token));
-    }
-
-    /// <summary>Creates independently authenticated member evidence for role and revocation coverage.</summary>
-    private static async Task<LabelAdministrationCaller> EnrollAsync(
-        ILabelAdministrationStore team,
-        LabelAdministrationCaller administrator,
-        LabelTeamRole role,
-        CancellationToken token)
-    {
-        Success(await team.ChangeTeamAsync(
-            administrator,
-            new(
-                operationId: "enroll", action: LabelTeamAction.Enroll, target: s_member,
-                reason: "Enroll test member.", role: role),
-            token));
-        Success(await team.ChangeTeamAsync(
-            administrator,
-            new(
-                operationId: "bind", action: LabelTeamAction.BindLocal, target: s_member,
-                reason: "Bind test identity.", credential: "uid:1"),
-            token));
-        return Success(await team.AuthenticateLocalAsync("uid:1", token));
-    }
-
-    /// <summary>Creates stable exact-subject open intent.</summary>
-    private static LabelCaseChange Open(string operationId) => new(
-        operationId: operationId, subject: s_subject, action: LabelCaseAction.Open, reason: "Review this subject.");
-
-    /// <summary>Uses a returned snapshot's exact subject and revision for optimistic edits.</summary>
-    private static LabelCaseChange Change(
-        LabelModerationCase snapshot,
-        string operationId,
-        LabelCaseAction action,
-        Did? assignee = null) => new(
-            operationId: operationId,
-            subject: snapshot.Subject,
-            action: action,
-            reason: "Review this subject.",
-            caseId: snapshot.Id,
-            expectedRevision: snapshot.Revision,
-            assignee: assignee);
 }
+
+/// <summary>
+/// Runs <see cref="LabelModerationStoreTests"/> against sqlite.
+/// </summary>
+public sealed class LabelModerationStoreSqliteTests : LabelModerationStoreTests
+{
+    /// <inheritdoc />
+    protected override string Engine => "sqlite";
+}
+
+/// <summary>
+/// Runs <see cref="LabelModerationStoreTests"/> against postgresql.
+/// </summary>
+public sealed class LabelModerationStorePostgreSqlTests : LabelModerationStoreTests
+{
+    /// <inheritdoc />
+    protected override string Engine => "postgresql";
+}
+
+/// <summary>
+/// Runs <see cref="LabelModerationStoreTests"/> against mysql.
+/// </summary>
+public sealed class LabelModerationStoreMySqlTests : LabelModerationStoreTests
+{
+    /// <inheritdoc />
+    protected override string Engine => "mysql";
+}
+
+/// <summary>
+/// Tests of <see cref="LabelModerationStoreTestBase"/> that are independent of, or enumerate every, storage engine.
+/// </summary>
+public sealed class LabelModerationStoreOtherTests : LabelModerationStoreTestBase
+{
+
+    [Theory]
+    [InlineData("sqlite", LabelTeamRole.Viewer, false)]
+    [InlineData("sqlite", LabelTeamRole.Moderator, true)]
+    [InlineData("postgresql", LabelTeamRole.Viewer, false)]
+    [InlineData("postgresql", LabelTeamRole.Moderator, true)]
+    [InlineData("mysql", LabelTeamRole.Viewer, false)]
+    [InlineData("mysql", LabelTeamRole.Administrator, true)]
+    public async Task ReadsMutationsAndRecoveryEnforceLiveRoles(string engine, LabelTeamRole role, bool mayModerate)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
+        ILabelAdministrationStore team = (ILabelAdministrationStore)fixture.Store;
+        ILabelModerationStore store = (ILabelModerationStore)fixture.Store;
+        LabelModerationCase created = Success(await store.ChangeCaseAsync(administrator, Open("open"), token)).Case;
+        LabelAdministrationCaller member = await EnrollAsync(team, administrator, role, token);
+        Assert.True((await store.GetCaseAsync(member, created.Id, token)).Succeeded);
+        Assert.True((await store.GetCaseOperationAsync(member, "open", token)).Succeeded);
+        Assert.Equal(mayModerate, (await store.ChangeCaseAsync(
+            member, Change(created, "member-note", LabelCaseAction.Note), token)).Succeeded);
+        Success(await team.ChangeTeamAsync(
+            administrator,
+            new(
+                operationId: "suspend", action: LabelTeamAction.Suspend, target: s_member,
+                reason: "Revoke moderation authority."),
+            token));
+        Assert.Equal(LabelServiceErrorCode.Unauthorized, (await store.GetCaseAsync(member, created.Id, token)).Error!.Code);
+        Assert.Equal(LabelServiceErrorCode.Unauthorized, (await store.GetCaseOperationAsync(member, "open", token)).Error!.Code);
+        Assert.Equal(LabelServiceErrorCode.Unauthorized, (await store.GetCasesAsync(member, cancellationToken: token)).Error!.Code);
+        Assert.Equal(LabelServiceErrorCode.Unauthorized, (await store.GetCaseHistoryAsync(member, created.Id, cancellationToken: token)).Error!.Code);
+        Assert.Equal(LabelServiceErrorCode.Unauthorized, (await store.ChangeCaseAsync(member, Open("revoked"), token)).Error!.Code);
+        Assert.Contains(
+            Success(await team.GetAdministrationAuditAsync(administrator, cancellationToken: token)),
+            receipt => receipt.Action == "moderation-case" && receipt.Actor == s_member && !receipt.Succeeded);
+    }
+}
+

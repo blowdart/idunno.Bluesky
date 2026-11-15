@@ -23,20 +23,25 @@ using Microsoft.Extensions.Logging.Testing;
 
 namespace idunno.Bluesky.AspNet.Labeler.Integration.Test;
 
-public partial class ModerationTests
+/// <summary>Shared constants, request builders and server construction for the moderation integration test classes, which are separate classes so xUnit runs them in parallel.</summary>
+public abstract partial class ModerationTestBase
 {
-    private static readonly Did s_administrator = new("did:plc:administration-actor");
-    private static readonly Did s_reporter = new("did:plc:reporter");
-    private const string Cid = "bafyreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku";
-    private const string Declaration = """
+    protected static readonly Did s_administrator = new("did:plc:administration-actor");
+    protected static readonly Did s_reporter = new("did:plc:reporter");
+    protected const string Cid = "bafyreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku";
+    protected const string Declaration = """
         {"$type":"app.bsky.labeler.service","createdAt":"2026-01-01T00:00:00Z",
          "policies":{"labelValues":["spam"],"labelValueDefinitions":[]},"subjectTypes":["account","record"]}
         """;
-    private const string Report = """
+    protected const string Report = """
         {"reasonType":"tools.ozone.report.defs#reasonMisleadingSpam","reason":"Please review.",
          "subject":{"$type":"com.atproto.admin.defs#repoRef","did":"did:plc:subject"}}
         """;
+}
 
+/// <summary>Core moderation workflow, publication and administration tests.</summary>
+public class ModerationTests : ModerationTestBase
+{
     [Theory]
     [InlineData("")]
     [InlineData("v2")]
@@ -1624,9 +1629,12 @@ public partial class ModerationTests
         using JsonDocument error = JsonDocument.Parse(await rejected.Content.ReadAsByteArrayAsync(token));
         Assert.Equal("InvalidCursor", error.RootElement.GetProperty("error").GetString());
     }
+}
 
+public abstract partial class ModerationTestBase
+{
     /// <summary>Builds a method-bound authenticated request without placing confidential filters in URLs.</summary>
-    private static HttpRequestMessage AdministrativeRequest(
+    private protected static HttpRequestMessage AdministrativeRequest(
         LabelSigningKey key,
         DateTimeOffset now,
         string method,
@@ -1646,7 +1654,7 @@ public partial class ModerationTests
     }
 
     /// <summary>Builds an explicitly enabled reporter host with a retained publication intent but no standing PDS credentials.</summary>
-    private static async Task<TestServerBuilder> CreateAsync(
+    private protected static async Task<TestServerBuilder> CreateAsync(
         LabelSigningKey key,
         HttpClient identity,
         LabelerModerationOptions? options = null,
@@ -1707,7 +1715,7 @@ public partial class ModerationTests
     }
 
     /// <summary>Completes the retained publication intent before exercising an actionable report path.</summary>
-    private static async Task VerifyPolicyAsync(TestServerBuilder fixture)
+    private protected static async Task VerifyPolicyAsync(TestServerBuilder fixture)
     {
         LabelServiceResult<LabelPolicyState> result = await fixture.Services.GetRequiredService<LabelPolicyService>()
             .GetVerifiedStateAsync(cancellationToken: TestContext.Current.CancellationToken);
@@ -1715,7 +1723,7 @@ public partial class ModerationTests
     }
 
     /// <summary>Creates an exact-method reporter assertion over the test account's repository key.</summary>
-    private static HttpRequestMessage ReportRequest(LabelSigningKey key, DateTimeOffset now, string body = Report, bool legacy = false)
+    protected static HttpRequestMessage ReportRequest(LabelSigningKey key, DateTimeOffset now, string body = Report, bool legacy = false)
     {
         HttpRequestMessage request = new(HttpMethod.Post, "/xrpc/com.atproto.moderation.createReport")
         {
@@ -1729,7 +1737,7 @@ public partial class ModerationTests
     }
 
     /// <summary>Supplies a deterministic labeler identity lookup for publication rendering.</summary>
-    private sealed class PublicationHandles(Handle handle) : IDidHandleResolver
+    private protected sealed class PublicationHandles(Handle handle) : IDidHandleResolver
     {
         /// <inheritdoc/>
         public ValueTask<Handle> ResolveHandleAsync(Did did, CancellationToken cancellationToken = default)
@@ -1751,7 +1759,7 @@ public partial class ModerationTests
     }
 
     /// <summary>Serves exact DID documents, declaration records, and the record used by the Ozone appeal test.</summary>
-    private sealed class DeclarationHandler(string publicKey) : HttpMessageHandler
+    private protected sealed class DeclarationHandler(string publicKey) : HttpMessageHandler
     {
         internal string Declaration { get; set; } = ModerationTests.Declaration;
         internal int DeclarationReads { get; private set; }

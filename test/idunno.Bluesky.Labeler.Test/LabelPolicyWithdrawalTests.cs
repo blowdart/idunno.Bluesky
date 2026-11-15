@@ -16,22 +16,82 @@ using Microsoft.Data.Sqlite;
 
 namespace idunno.Bluesky.Labeler.Test;
 
-public class LabelPolicyWithdrawalTests
+/// <summary>
+/// Shared helpers for the <see cref="LabelPolicyWithdrawal"/> test classes.
+/// </summary>
+public abstract class LabelPolicyWithdrawalTestBase
 {
-    private static readonly Cid s_cid = new(TargetResolutionHandler.RecordCid);
-    private const string ReducedDeclaration = """
+    private protected static readonly Cid s_cid = new(TargetResolutionHandler.RecordCid);
+
+
+    /// <summary>Saves and selects a policy that retains scam but withdraws spam without changing account/record permissions.</summary>
+    private protected static async Task<LabelPolicyState> BeginAsync(
+        ILabelPolicyStore policies,
+        LabelAdministrationCaller caller,
+        LabelPolicyState active,
+        CancellationToken token)
+    {
+        using JsonDocument declaration = JsonDocument.Parse(ReducedDeclaration);
+        LabelPolicyDefinition reduced = new(
+            version: "v2",
+            declaration: declaration.RootElement,
+            allowAccounts: true,
+            allowRecords: true,
+            rules: "Retire spam.");
+        Success(await policies.SavePolicyAsync(
+            caller: caller,
+            operationId: "draft-reduced",
+            policy: reduced,
+            reason: "Retire spam.",
+            cancellationToken: token));
+        return Success(await policies.BeginPolicyPublicationAsync(
+            caller: caller,
+            operationId: "publish-reduced",
+            version: "v2",
+            expectedRevision: active.Revision,
+            previousCid: s_cid,
+            reason: "Authorize withdrawal and publication.",
+            cancellationToken: token));
+    }
+
+
+    /// <summary>Signs only exact candidate slots using the provider's frozen superseding timestamp.</summary>
+    private protected static SignedLabelSnapshot[] Sign(LabelPolicyWithdrawalBatch batch, LabelSigningKey key) =>
+        [.. batch.Labels.Select((entry, index) => new SignedLabelSnapshot(key.CreateNegation(
+            source: StoreFixture.s_issuer,
+            uri: entry.SignedLabel.Label.Uri,
+            value: entry.SignedLabel.Label.Value,
+            creationTimestamp: batch.CreatedAt.AddTicks(index),
+            cid: entry.SignedLabel.Label.Cid)))];
+
+    /// <summary>Requires a classified provider success before inspecting its payload.</summary>
+    private protected static T Success<T>(LabelServiceResult<T> result) where T : class
+    {
+        Assert.True(result.Succeeded, result.Error?.Message);
+        return result.Result!;
+    }
+
+    private protected const string ReducedDeclaration = """
         {"$type":"app.bsky.labeler.service","createdAt":"2026-01-01T00:00:00Z","subjectTypes":["account","record"],"policies":{"labelValues":["scam"]}}
         """;
+}
+
+/// <summary>
+/// Engine-parameterised tests; one derived class per engine lets xUnit run the engines in parallel.
+/// </summary>
+public abstract class LabelPolicyWithdrawalTests : LabelPolicyWithdrawalTestBase
+{
+    /// <summary>
+    /// Gets the storage engine exercised by the inherited tests.
+    /// </summary>
+    protected abstract string Engine { get; }
 
     [Theory]
-    [InlineData("sqlite", false)]
-    [InlineData("sqlite", true)]
-    [InlineData("postgresql", false)]
-    [InlineData("postgresql", true)]
-    [InlineData("mysql", false)]
-    [InlineData("mysql", true)]
-    public async Task WithdrawalActivityAndProgressUseDatabaseTimeAndSurviveRestart(string engine, bool legacy)
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task WithdrawalActivityAndProgressUseDatabaseTimeAndSurviveRestart(bool legacy)
     {
+        string engine = Engine;
         CancellationToken token = TestContext.Current.CancellationToken;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
@@ -102,20 +162,22 @@ public class LabelPolicyWithdrawalTests
         Assert.Equal(complete.Withdrawal.LastProgressAt, retained.Withdrawal.LastProgressAt);
     }
 
-    [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task RemovedValuesAreNegatedInBoundedRestartedBatchesBeforePublication(string engine)
+
+    [Fact]
+    public async Task RemovedValuesAreNegatedInBoundedRestartedBatchesBeforePublication()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        const int bulk = 25;
+        const int pageSize = 10;
+        fixture.UsePageSizes(history: pageSize);
         CancellationToken token = TestContext.Current.CancellationToken;
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
         ILabelPolicyStore policies = (ILabelPolicyStore)fixture.Store;
         LabelPolicyState active = await LabelPolicyStoreTests.ActivateAsync(policies, caller, token);
         DateTimeOffset now = fixture.DatabaseClock!.GetUtcNow();
-        List<SignedLabelSnapshot> history = [.. Enumerable.Range(0, 501).Select(index => new SignedLabelSnapshot(key.CreateLabel(
+        List<SignedLabelSnapshot> history = [.. Enumerable.Range(0, bulk).Select(index => new SignedLabelSnapshot(key.CreateLabel(
             source: StoreFixture.s_issuer,
             uri: $"did:plc:subject{index}",
             value: "spam",
@@ -184,9 +246,9 @@ public class LabelPolicyWithdrawalTests
         {
             ILabelPolicyWithdrawalStore restarted = (ILabelPolicyWithdrawalStore)fixture.NewStore();
             LabelPolicyWithdrawalBatch batch = Success(await restarted.ReadPolicyWithdrawalBatchAsync(token));
-            Assert.InRange(batch.Labels.Count, 0, 250);
-            Assert.InRange(batch.ScannedThrough - current.Withdrawal.ScannedThrough, 0, 250);
-            Assert.InRange(batch.NegatedThrough - current.Withdrawal.NegatedThrough, 0, 250);
+            Assert.InRange(batch.Labels.Count, 0, pageSize);
+            Assert.InRange(batch.ScannedThrough - current.Withdrawal.ScannedThrough, 0, pageSize);
+            Assert.InRange(batch.NegatedThrough - current.Withdrawal.NegatedThrough, 0, pageSize);
             SignedLabelSnapshot[] negations = Sign(batch, key);
             signedCount += negations.Length;
             current = Success(await restarted.CommitPolicyWithdrawalBatchAsync(
@@ -201,7 +263,7 @@ public class LabelPolicyWithdrawalTests
                 cancellationToken: token)).Error!.Code);
             Assert.True(++batches < 10);
         }
-        Assert.Equal(503, signedCount);
+        Assert.Equal(bulk + 2, signedCount);
         Assert.Equal(LabelPolicyPhase.Withdrawing, current.Phase);
         Assert.Equal(history.Count + signedCount, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
         stream = await fixture.PublishThroughAsync();
@@ -235,7 +297,7 @@ public class LabelPolicyWithdrawalTests
         }
         Assert.False(Assert.Single(distributed, item => item.SignedLabel.Label.Value == "scam").SignedLabel.Label.IsNegationLabel);
         StoredLabel[] generated = [.. distributed.Where(item => item.Sequence > history.Count)];
-        Assert.Equal(503, generated.Length);
+        Assert.Equal(bulk + 2, generated.Length);
         Assert.All(generated, item =>
         {
             Assert.True(item.SignedLabel.Label.IsNegationLabel);
@@ -266,15 +328,13 @@ public class LabelPolicyWithdrawalTests
         Assert.Null(unchanged.Withdrawal);
     }
 
+
     [Theory]
-    [InlineData("sqlite", false)]
-    [InlineData("sqlite", true)]
-    [InlineData("postgresql", false)]
-    [InlineData("postgresql", true)]
-    [InlineData("mysql", false)]
-    [InlineData("mysql", true)]
-    public async Task WithdrawalAuthorizationIsRecheckedAtCommitAndCanBeResumedAfterRestart(string engine, bool expire)
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task WithdrawalAuthorizationIsRecheckedAtCommitAndCanBeResumedAfterRestart(bool expire)
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
@@ -348,15 +408,13 @@ public class LabelPolicyWithdrawalTests
         Assert.Equal(2, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
     }
 
+
     [Theory]
-    [InlineData("sqlite", false)]
-    [InlineData("sqlite", true)]
-    [InlineData("postgresql", false)]
-    [InlineData("postgresql", true)]
-    [InlineData("mysql", false)]
-    [InlineData("mysql", true)]
-    public async Task WithdrawalBatchAndCheckpointAreAtomicAcrossLostAcknowledgements(string engine, bool afterCommit)
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task WithdrawalBatchAndCheckpointAreAtomicAcrossLostAcknowledgements(bool afterCommit)
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
@@ -420,15 +478,13 @@ public class LabelPolicyWithdrawalTests
             cancellationToken: token)).Error!.Code);
     }
 
+
     [Theory]
-    [InlineData("sqlite", false)]
-    [InlineData("sqlite", true)]
-    [InlineData("postgresql", false)]
-    [InlineData("postgresql", true)]
-    [InlineData("mysql", false)]
-    [InlineData("mysql", true)]
-    public async Task WithdrawalHandlesExactTimestampCapacityAndRejectsExhaustionWithoutProgress(string engine, bool exhausted)
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task WithdrawalHandlesExactTimestampCapacityAndRejectsExhaustionWithoutProgress(bool exhausted)
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
@@ -476,19 +532,20 @@ public class LabelPolicyWithdrawalTests
         Assert.Equal(2, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
     }
 
-    [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task ReplacementAfterAbandonmentCompletesOnlyTheRemainingWithdrawals(string engine)
+
+    [Fact]
+    public async Task ReplacementAfterAbandonmentCompletesOnlyTheRemainingWithdrawals()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        const int pageSize = 10;
+        fixture.UsePageSizes(history: pageSize);
         CancellationToken token = TestContext.Current.CancellationToken;
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
         ILabelPolicyStore policies = (ILabelPolicyStore)fixture.Store;
         LabelPolicyState active = await LabelPolicyStoreTests.ActivateAsync(policies, caller, token);
-        await fixture.Store.AppendAsync("originals", [.. Enumerable.Range(0, 251).Select(index => new SignedLabelSnapshot(key.CreateLabel(
+        await fixture.Store.AppendAsync("originals", [.. Enumerable.Range(0, pageSize + 1).Select(index => new SignedLabelSnapshot(key.CreateLabel(
             source: StoreFixture.s_issuer,
             uri: $"did:plc:subject{index}",
             value: "spam",
@@ -509,8 +566,8 @@ public class LabelPolicyWithdrawalTests
                 signingPublicKey: key.ExportPublicKeyMultibase(),
                 cancellationToken: token));
         }
-        Assert.Equal(250, partial.Withdrawal!.NegatedThrough);
-        Assert.Equal(501, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
+        Assert.Equal(pageSize, partial.Withdrawal!.NegatedThrough);
+        Assert.Equal((2 * pageSize) + 1, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
         LabelPolicyState abandoned = Success(await policies.AbandonPolicyPublicationAsync(
             caller: caller,
             operationId: "abandon-partial",
@@ -554,16 +611,15 @@ public class LabelPolicyWithdrawalTests
             Assert.True(++batches < 10);
         }
         Assert.Equal(1, additional);
-        Assert.Equal(502, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
+        Assert.Equal((2 * pageSize) + 2, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
         Assert.Equal(LabelPolicyPhase.Publishing, current.Phase);
     }
 
-    [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task MissingDistributionMetadataStopsCleanupUntilStorageInitializationRepairsIt(string engine)
+
+    [Fact]
+    public async Task MissingDistributionMetadataStopsCleanupUntilStorageInitializationRepairsIt()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
@@ -597,15 +653,13 @@ public class LabelPolicyWithdrawalTests
         Assert.Single(Success(await withdrawals.ReadPolicyWithdrawalBatchAsync(token)).Labels);
     }
 
+
     [Theory]
-    [InlineData("sqlite", false)]
-    [InlineData("sqlite", true)]
-    [InlineData("postgresql", false)]
-    [InlineData("postgresql", true)]
-    [InlineData("mysql", false)]
-    [InlineData("mysql", true)]
-    public async Task CleanupSkipsRetainedValuesAndHandlesRemovedValuesWithNoLiveApplications(string engine, bool remove)
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CleanupSkipsRetainedValuesAndHandlesRemovedValuesWithNoLiveApplications(bool remove)
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
@@ -656,50 +710,32 @@ public class LabelPolicyWithdrawalTests
         Assert.Equal(LabelPolicyPhase.Publishing, selected.Phase);
         Assert.Equal(1, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
     }
-
-    /// <summary>Saves and selects a policy that retains scam but withdraws spam without changing account/record permissions.</summary>
-    private static async Task<LabelPolicyState> BeginAsync(
-        ILabelPolicyStore policies,
-        LabelAdministrationCaller caller,
-        LabelPolicyState active,
-        CancellationToken token)
-    {
-        using JsonDocument declaration = JsonDocument.Parse(ReducedDeclaration);
-        LabelPolicyDefinition reduced = new(
-            version: "v2",
-            declaration: declaration.RootElement,
-            allowAccounts: true,
-            allowRecords: true,
-            rules: "Retire spam.");
-        Success(await policies.SavePolicyAsync(
-            caller: caller,
-            operationId: "draft-reduced",
-            policy: reduced,
-            reason: "Retire spam.",
-            cancellationToken: token));
-        return Success(await policies.BeginPolicyPublicationAsync(
-            caller: caller,
-            operationId: "publish-reduced",
-            version: "v2",
-            expectedRevision: active.Revision,
-            previousCid: s_cid,
-            reason: "Authorize withdrawal and publication.",
-            cancellationToken: token));
-    }
-
-    /// <summary>Signs only exact candidate slots using the provider's frozen superseding timestamp.</summary>
-    private static SignedLabelSnapshot[] Sign(LabelPolicyWithdrawalBatch batch, LabelSigningKey key) =>
-        [.. batch.Labels.Select((entry, index) => new SignedLabelSnapshot(key.CreateNegation(
-            source: StoreFixture.s_issuer,
-            uri: entry.SignedLabel.Label.Uri,
-            value: entry.SignedLabel.Label.Value,
-            creationTimestamp: batch.CreatedAt.AddTicks(index),
-            cid: entry.SignedLabel.Label.Cid)))];
-
-    /// <summary>Requires a classified provider success before inspecting its payload.</summary>
-    private static T Success<T>(LabelServiceResult<T> result) where T : class
-    {
-        Assert.True(result.Succeeded, result.Error?.Message);
-        return result.Result!;
-    }
 }
+
+/// <summary>
+/// Runs <see cref="LabelPolicyWithdrawalTests"/> against sqlite.
+/// </summary>
+public sealed class LabelPolicyWithdrawalSqliteTests : LabelPolicyWithdrawalTests
+{
+    /// <inheritdoc />
+    protected override string Engine => "sqlite";
+}
+
+/// <summary>
+/// Runs <see cref="LabelPolicyWithdrawalTests"/> against postgresql.
+/// </summary>
+public sealed class LabelPolicyWithdrawalPostgreSqlTests : LabelPolicyWithdrawalTests
+{
+    /// <inheritdoc />
+    protected override string Engine => "postgresql";
+}
+
+/// <summary>
+/// Runs <see cref="LabelPolicyWithdrawalTests"/> against mysql.
+/// </summary>
+public sealed class LabelPolicyWithdrawalMySqlTests : LabelPolicyWithdrawalTests
+{
+    /// <inheritdoc />
+    protected override string Engine => "mysql";
+}
+

@@ -116,16 +116,37 @@ public sealed class ProviderBudgetDataAttribute : DataAttribute
 }
 
 /// <summary>Checks shared durability and lease guarantees across PostgreSQL, SQLite, and MySQL.</summary>
-public sealed partial class RelationalProviderTests
+public abstract partial class RelationalProviderTests
 {
-    /// <summary>Verifies troubleshooting queries and their result columns against initialized storage with one queued action.</summary>
-    /// <param name="provider">The provider under test.</param>
-    [Theory]
-    [InlineData("Sqlite")]
-    [MySqlData]
-    [PostgreSqlData]
-    public async Task TroubleshootingQueriesMatchStoredState(string provider)
+    /// <summary>Gets the storage provider exercised by the inherited tests; one derived class per provider lets xUnit run the providers in parallel.</summary>
+    protected abstract string Provider { get; }
+
+    /// <summary>Skips the current test when the provider needs a disposable server that is not configured, and returns the provider name.</summary>
+    /// <returns>The provider under test.</returns>
+    private protected string RequireProvider()
     {
+        string? variable = Provider switch
+        {
+            "MySql" => "BOTSDK_TEST_MYSQL_CONNECTION",
+            "Postgres" => "BOTSDK_TEST_POSTGRESQL_CONNECTION",
+            _ => null
+        };
+
+        if (variable is not null)
+        {
+            Assert.SkipWhen(
+                string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(variable)),
+                $"Set {variable} to a disposable {Provider} server to run provider tests.");
+        }
+
+        return Provider;
+    }
+
+    /// <summary>Verifies troubleshooting queries and their result columns against initialized storage with one queued action.</summary>
+    [Fact]
+    public async Task TroubleshootingQueriesMatchStoredState()
+    {
+        string provider = RequireProvider();
         await using Store store = await Store.CreateAsync(provider);
         BotAction work = TestRecords.Work();
         await store.Database.HandleAsync(
@@ -198,13 +219,10 @@ public sealed partial class RelationalProviderTests
     }
 
     /// <summary>Reports durable action states and verifies connectivity without mutating state.</summary>
-    /// <param name="provider">The provider under test.</param>
-    [Theory]
-    [InlineData("Sqlite")]
-    [MySqlData]
-    [PostgreSqlData]
-    public async Task ReadsOperationalSnapshot(string provider)
+    [Fact]
+    public async Task ReadsOperationalSnapshot()
     {
+        string provider = RequireProvider();
         await using Store store = await Store.CreateAsync(provider);
         IBotDatabaseDiagnostics diagnostics = Assert.IsType<IBotDatabaseDiagnostics>(store.Database, exactMatch: false);
         await diagnostics.CheckConnectionAsync(CancellationToken.None);
@@ -249,13 +267,10 @@ public sealed partial class RelationalProviderTests
     }
 
     /// <summary>Preserves complete replies, JSON, credentials, and progress across provider recreation and safe pruning.</summary>
-    /// <param name="provider">The provider under test.</param>
-    [Theory]
-    [InlineData("Sqlite")]
-    [MySqlData]
-    [PostgreSqlData]
-    public async Task RestoresAndDeduplicates(string provider)
+    [Fact]
+    public async Task RestoresAndDeduplicates()
     {
+        string provider = RequireProvider();
         await using Store store = await Store.CreateAsync(provider);
         BotAction work = TestRecords.Work();
         Assert.True(await store.Database.HandleAsync(11, [work], null, CancellationToken.None) > 0);
@@ -284,13 +299,10 @@ public sealed partial class RelationalProviderTests
     }
 
     /// <summary>Rolls back enqueue failures and coalesced progress when checkpoints are ahead of durable handling.</summary>
-    /// <param name="provider">The provider under test.</param>
-    [Theory]
-    [InlineData("Sqlite")]
-    [MySqlData]
-    [PostgreSqlData]
-    public async Task RollsBackAndPreservesCheckpoints(string provider)
+    [Fact]
+    public async Task RollsBackAndPreservesCheckpoints()
     {
+        string provider = RequireProvider();
         await using Store store = await Store.CreateAsync(provider);
         BotAction work = TestRecords.Work();
         await AssertInvalidActionFailsAsync(provider, () =>
@@ -338,13 +350,10 @@ public sealed partial class RelationalProviderTests
     }
 
     /// <summary>Fences competing owners, preserves renewal readiness, and prevents stale release and writes.</summary>
-    /// <param name="provider">The provider under test.</param>
-    [Theory]
-    [InlineData("Sqlite")]
-    [MySqlData]
-    [PostgreSqlData]
-    public async Task FencesOwners(string provider)
+    [Fact]
+    public async Task FencesOwners()
     {
+        string provider = RequireProvider();
         await using Store store = await Store.CreateAsync(provider);
         Assert.NotNull(await store.Database.AcquireOrRenewAsync(CancellationToken.None));
         await store.SetReadyAsync();
@@ -370,13 +379,10 @@ public sealed partial class RelationalProviderTests
     }
 
     /// <summary>Serializes concurrent first-owner acquisition and prevents two active leases.</summary>
-    /// <param name="provider">The provider under test.</param>
-    [Theory]
-    [InlineData("Sqlite")]
-    [MySqlData]
-    [PostgreSqlData]
-    public async Task SerializesCompetingAcquisition(string provider)
+    [Fact]
+    public async Task SerializesCompetingAcquisition()
     {
+        string provider = RequireProvider();
         await using Store store = await Store.CreateAsync(provider);
         await store.SqlAsync("DELETE FROM bot_ownership");
         IDatabaseProvider first = store.NewProvider();
@@ -388,13 +394,10 @@ public sealed partial class RelationalProviderTests
     }
 
     /// <summary>Preserves original filters, queued uncertain work, and explicit data-loss audits during lookback.</summary>
-    /// <param name="provider">The provider under test.</param>
-    [Theory]
-    [InlineData("Sqlite")]
-    [MySqlData]
-    [PostgreSqlData]
-    public async Task PreservesLookbackAndAudits(string provider)
+    [Fact]
+    public async Task PreservesLookbackAndAudits()
     {
+        string provider = RequireProvider();
         await using Store store = await Store.CreateAsync(provider);
         BotAction work = TestRecords.Work();
         await store.Database.HandleAsync(11, [work], null, CancellationToken.None);
@@ -429,13 +432,10 @@ public sealed partial class RelationalProviderTests
     }
 
     /// <summary>Retains pending, uncertain, and uncovered terminal rows and respects retry deadlines.</summary>
-    /// <param name="provider">The provider under test.</param>
-    [Theory]
-    [InlineData("Sqlite")]
-    [MySqlData]
-    [PostgreSqlData]
-    public async Task RetainsUnsafeWorkAndRetries(string provider)
+    [Fact]
+    public async Task RetainsUnsafeWorkAndRetries()
     {
+        string provider = RequireProvider();
         await using Store store = await Store.CreateAsync(provider);
         BotAction work = TestRecords.Work();
         await store.Database.HandleAsync(11, [work], null, CancellationToken.None);
@@ -457,13 +457,10 @@ public sealed partial class RelationalProviderTests
     }
 
     /// <summary>Marks root deletions without admitting a new write or changing uncertain records.</summary>
-    /// <param name="provider">The provider under test.</param>
-    [Theory]
-    [InlineData("Sqlite")]
-    [MySqlData]
-    [PostgreSqlData]
-    public async Task HonorsDeletion(string provider)
+    [Fact]
+    public async Task HonorsDeletion()
     {
+        string provider = RequireProvider();
         await using Store store = await Store.CreateAsync(provider);
         BotAction work = TestRecords.Work();
         await store.Database.HandleAsync(11, [work], null, CancellationToken.None);
@@ -478,13 +475,10 @@ public sealed partial class RelationalProviderTests
     }
 
     /// <summary>Rejects replay state when the bot identity, mode, or Jetstream service changes.</summary>
-    /// <param name="provider">The provider under test.</param>
-    [Theory]
-    [InlineData("Sqlite")]
-    [MySqlData]
-    [PostgreSqlData]
-    public async Task BindsReplayStateToConfiguration(string provider)
+    [Fact]
+    public async Task BindsReplayStateToConfiguration()
     {
+        string provider = RequireProvider();
         await using Store store = await Store.CreateAsync(provider);
         store.Options.DeveloperMode = false;
         await Assert.ThrowsAsync<InvalidOperationException>(() => store.Database.LoadStateAsync(CancellationToken.None));
@@ -499,29 +493,23 @@ public sealed partial class RelationalProviderTests
     }
 
     /// <summary>Persists hourly, daily, request, session, spacing, and monotonic cooldown limits.</summary>
-    /// <param name="provider">The provider under test.</param>
     /// <param name="budget">The budget to exhaust.</param>
     [Theory]
-    [InlineData("Sqlite", "hour")]
-    [InlineData("Sqlite", "day")]
-    [InlineData("Sqlite", "requests")]
-    [InlineData("Sqlite", "sessions-day")]
-    [InlineData("Sqlite", "sessions-five-minutes")]
-    [ProviderBudgetData("Postgres")]
-    [ProviderBudgetData("MySql")]
-    public async Task PersistsRateBudgets(string provider, string budget)
+    [InlineData("hour")]
+    [InlineData("day")]
+    [InlineData("requests")]
+    [InlineData("sessions-day")]
+    [InlineData("sessions-five-minutes")]
+    public async Task PersistsRateBudgets(string budget)
     {
-        await CheckBudgetAsync(provider, budget);
+        await CheckBudgetAsync(RequireProvider(), budget);
     }
 
     /// <summary>Rejects requests exceeding an empty write budget without persisting a reservation.</summary>
-    /// <param name="provider">The provider under test.</param>
-    [Theory]
-    [InlineData("Sqlite")]
-    [MySqlData]
-    [PostgreSqlData]
-    public async Task RejectsRequestExceedingEmptyWriteBudget(string provider)
+    [Fact]
+    public async Task RejectsRequestExceedingEmptyWriteBudget()
     {
+        string provider = RequireProvider();
         foreach (bool hourly in new[] { true, false })
         {
             await using Store store = await Store.CreateAsync(provider);
@@ -805,4 +793,25 @@ public sealed partial class RelationalProviderTests
             }
         }
     }
+}
+
+/// <summary>Runs <see cref="RelationalProviderTests"/> against Sqlite.</summary>
+public sealed class RelationalProviderSqliteTests : RelationalProviderTests
+{
+    /// <inheritdoc />
+    protected override string Provider => "Sqlite";
+}
+
+/// <summary>Runs <see cref="RelationalProviderTests"/> against MySql.</summary>
+public sealed class RelationalProviderMySqlTests : RelationalProviderTests
+{
+    /// <inheritdoc />
+    protected override string Provider => "MySql";
+}
+
+/// <summary>Runs <see cref="RelationalProviderTests"/> against Postgres.</summary>
+public sealed class RelationalProviderPostgresTests : RelationalProviderTests
+{
+    /// <inheritdoc />
+    protected override string Provider => "Postgres";
 }

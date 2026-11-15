@@ -16,7 +16,8 @@ using Microsoft.Extensions.Options;
 
 namespace idunno.Bluesky.AspNet.Labeler.Integration.Test;
 
-public partial class ModerationTests
+/// <summary>Ozone thread and profile panel tests.</summary>
+public class ModerationOzonePanelsTests : ModerationTestBase
 {
     [Theory]
     [InlineData("false", false, 1)]

@@ -14,7 +14,8 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace idunno.Bluesky.AspNet.Labeler.Integration.Test;
 
-public partial class ModerationTests
+/// <summary>Ozone subject-status filter tests.</summary>
+public class ModerationOzoneFiltersTests : ModerationTestBase
 {
     [Theory]
     [InlineData("", 5)]

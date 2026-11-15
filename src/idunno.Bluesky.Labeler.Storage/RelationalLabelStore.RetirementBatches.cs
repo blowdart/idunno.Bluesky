@@ -198,14 +198,15 @@ internal abstract partial class RelationalLabelStore
         bool scanning = data.ScannedThrough < state.RetirementUpperBound;
         long after = scanning ? data.ScannedThrough : state.RetirementThrough;
         string sql = scanning
-            ? "SELECT seq,signed_json,payload,format_version FROM label_entries WHERE seq>@after AND seq<=@upper ORDER BY seq LIMIT 250"
-            : "SELECT e.seq,e.signed_json,e.payload,e.format_version FROM label_retirement_slots s JOIN label_entries e ON e.seq=s.seq WHERE s.seq>@after AND s.seq<=@upper ORDER BY s.seq LIMIT 250";
+            ? "SELECT seq,signed_json,payload,format_version FROM label_entries WHERE seq>@after AND seq<=@upper             ORDER BY seq LIMIT @pageSize"
+                        : "SELECT e.seq,e.signed_json,e.payload,e.format_version FROM label_retirement_slots s JOIN label_entries e ON e.seq=s.seq WHERE s.seq>@after AND s.seq<=@upper ORDER BY s.seq LIMIT @pageSize";
         DbCommand command = Command(
             connection: connection,
             transaction: transaction,
             sql: sql,
             ("@after", after),
-            ("@upper", state.RetirementUpperBound));
+                        ("@upper", state.RetirementUpperBound),
+                        ("@pageSize", HistoryPageSize));
         List<StoredLabel> rows = [];
         await using (command.ConfigureAwait(false))
         {
@@ -217,7 +218,7 @@ internal abstract partial class RelationalLabelStore
             }
         }
 
-        long through = rows.Count < 250 ? state.RetirementUpperBound : rows[^1].Sequence;
+        long through = rows.Count < HistoryPageSize ? state.RetirementUpperBound : rows[^1].Sequence;
         DateTimeOffset now = DateTimeOffset.FromUnixTimeMilliseconds(
             await DatabaseTimeAsync(connection, transaction, token).ConfigureAwait(false));
         DateTimeOffset created = data.CreatedAt > now ? data.CreatedAt : now;

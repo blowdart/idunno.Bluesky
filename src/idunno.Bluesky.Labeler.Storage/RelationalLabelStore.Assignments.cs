@@ -46,7 +46,8 @@ internal abstract partial class RelationalLabelStore
                 connection: connection,
                 transaction: transaction,
                 sql: "SELECT payload FROM label_cases WHERE status<>@resolved AND " +
-                    "(assignee_key IS NULL OR assignee_key<>@assignee) ORDER BY case_id LIMIT 128",
+                    "(assignee_key IS NULL OR assignee_key<>@assignee) ORDER BY case_id LIMIT " +
+                    ScanPageSize.ToString(CultureInfo.InvariantCulture),
                 ("@resolved", (int)LabelCaseStatus.Resolved),
                 ("@assignee", s_strictUtf8.GetBytes(sole)));
             await using (command.ConfigureAwait(false))

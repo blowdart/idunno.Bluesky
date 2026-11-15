@@ -333,12 +333,14 @@ public partial class XenonTestHostTests
     public void PublicOriginNormalizesHttpsOrigins(string value) =>
         Assert.Equal("https://test.example/", TestProgram.ReadPublicOrigin(value).AbsoluteUri);
 
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    [InlineData(true, true)]
-    public async Task SeededHostPreservesStateAndFiltersHostsBeforeMetadata(bool trusted, bool legacyPolicy)
+    /// <summary>
+    /// Runs the full seeded-host scenario. Each combination is invoked from its own test class
+    /// (see <c>XenonSeededHostTests.cs</c>) because xUnit runs the tests inside one class serially
+    /// and only runs separate classes in parallel; the scenario is by far the slowest test in the project.
+    /// </summary>
+    /// <param name="trusted">Whether loopback is configured as a trusted proxy.</param>
+    /// <param name="legacyPolicy">Whether the host starts from the original policy declaration.</param>
+    internal static async Task RunSeededHostScenarioAsync(bool trusted, bool legacyPolicy)
     {
         CancellationToken token = TestContext.Current.CancellationToken;
         string directory = Path.Combine(Path.GetTempPath(), "xenon_harness_" + Guid.NewGuid().ToString("N"));

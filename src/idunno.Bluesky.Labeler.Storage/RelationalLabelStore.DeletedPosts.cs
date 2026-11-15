@@ -106,7 +106,8 @@ internal abstract partial class RelationalLabelStore
                 List<ModerationReportData> reports = [];
                 DbCommand command = Command(
                     connection: connection, transaction: transaction,
-                    sql: "SELECT payload FROM label_reports WHERE case_id=@case AND report_id>@after ORDER BY report_id LIMIT 128",
+                    sql: "SELECT payload FROM label_reports WHERE case_id=@case AND report_id>@after ORDER BY report_id LIMIT " +
+                        ScanPageSize.ToString(CultureInfo.InvariantCulture),
                     ("@case", current.Id), ("@after", after));
                 await using (command.ConfigureAwait(false))
                 {
@@ -131,7 +132,7 @@ internal abstract partial class RelationalLabelStore
                     await UpdateReportSearchTextAsync(connection, transaction, handled, cancellationToken).ConfigureAwait(false);
                 }
 
-                if (reports.Count < 128)
+                if (reports.Count < ScanPageSize)
                 {
                     break;
                 }
@@ -144,7 +145,8 @@ internal abstract partial class RelationalLabelStore
                 List<ModerationAppealData> appeals = [];
                 DbCommand command = Command(
                     connection: connection, transaction: transaction,
-                    sql: "SELECT payload FROM label_appeals WHERE case_id=@case AND status=0 ORDER BY appeal_id LIMIT 128",
+                    sql: "SELECT payload FROM label_appeals WHERE case_id=@case AND status=0 ORDER BY appeal_id LIMIT " +
+                        ScanPageSize.ToString(CultureInfo.InvariantCulture),
                     ("@case", current.Id));
                 await using (command.ConfigureAwait(false))
                 {
@@ -172,7 +174,7 @@ internal abstract partial class RelationalLabelStore
                         token: cancellationToken).ConfigureAwait(false);
                 }
 
-                if (appeals.Count < 128)
+                if (appeals.Count < ScanPageSize)
                 {
                     break;
                 }
