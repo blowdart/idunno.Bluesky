@@ -385,16 +385,21 @@ public sealed class ReplayProgressTests
         BotReplayProgress observations = new();
         ReplayProgress progress = new(time, NullLogger.Instance, observations);
         using Barrier start = new(5);
-        Task writer = Task.Run(() =>
-        {
-            for (int sequence = 1; sequence <= 1000; sequence++)
+        // Barrier participants block their threads, so each runs on a dedicated thread; pool tasks could starve each other.
+        Task writer = Task.Factory.StartNew(
+            () =>
             {
-                start.SignalAndWait(TestContext.Current.CancellationToken);
-                time.SetUtcNow(TestRecords.Start.AddTicks(sequence));
-                progress.Observe(sequence, TestRecords.Start.AddSeconds(sequence));
-            }
-        }, TestContext.Current.CancellationToken);
-        Task[] readers = [.. Enumerable.Range(0, 4).Select(_ => Task.Run(() =>
+                for (int sequence = 1; sequence <= 1000; sequence++)
+                {
+                    start.SignalAndWait(TestContext.Current.CancellationToken);
+                    time.SetUtcNow(TestRecords.Start.AddTicks(sequence));
+                    progress.Observe(sequence, TestRecords.Start.AddSeconds(sequence));
+                }
+            },
+            TestContext.Current.CancellationToken,
+            TaskCreationOptions.LongRunning,
+            TaskScheduler.Default);
+        Task[] readers = [.. Enumerable.Range(0, 4).Select(_ => Task.Factory.StartNew(() =>
         {
             try
             {
@@ -416,7 +421,7 @@ public sealed class ReplayProgressTests
             {
                 start.RemoveParticipant();
             }
-        }, TestContext.Current.CancellationToken))];
+        }, TestContext.Current.CancellationToken, TaskCreationOptions.LongRunning, TaskScheduler.Default))];
 
         await Task.WhenAll(readers.Append(writer));
         Assert.Equal(1000, observations.Snapshot.Sequence);

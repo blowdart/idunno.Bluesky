@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Data.Common;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -122,7 +123,7 @@ internal abstract partial class RelationalLabelStore
     }
 
     /// <summary>Captures every currently active exact-version label before any report or workflow mutation.</summary>
-    private static async Task<LabelServiceResult<StoredLabel[]>> ReadAppealChallengesAsync(
+    private async Task<LabelServiceResult<StoredLabel[]>> ReadAppealChallengesAsync(
         DbConnection connection,
         DbTransaction transaction,
         LabelStoreState state,
@@ -141,7 +142,7 @@ internal abstract partial class RelationalLabelStore
             appealLabelValue: appealLabelValue).ConfigureAwait(false);
 
     /// <summary>Captures bounded active label values, optionally retaining other record versions for manual review.</summary>
-    private static async Task<LabelServiceResult<StoredLabel[]>> ReadTargetLabelsAsync(
+    private async Task<LabelServiceResult<StoredLabel[]>> ReadTargetLabelsAsync(
         DbConnection connection,
         DbTransaction transaction,
         LabelStoreState state,
@@ -157,7 +158,7 @@ internal abstract partial class RelationalLabelStore
             connection: connection,
             transaction: transaction,
             sql: "SELECT DISTINCT value FROM label_subject_index WHERE subject_hash=@hash AND subject_key=@key" +
-                (appealLabelValue is null ? "" : " AND value=@value") + " LIMIT 1001",
+                (appealLabelValue is null ? "" : " AND value=@value") + " LIMIT " + (CaptureLimit + 1).ToString(CultureInfo.InvariantCulture),
             ("@hash", SHA256.HashData(key)),
             ("@key", key),
             ("@value", appealLabelValue));
@@ -173,7 +174,7 @@ internal abstract partial class RelationalLabelStore
             }
         }
 
-        if (values.Count > 1000)
+        if (values.Count > CaptureLimit)
         {
             return CaseFailure<StoredLabel[]>(LabelServiceErrorCode.PolicyUnavailable, "This account or content has too many labels for automatic appeal capture. An administrator must review it separately.");
         }
@@ -417,7 +418,7 @@ internal abstract partial class RelationalLabelStore
     }
 
     /// <summary>Closes only fully obsolete exact-target appeals under the decision transaction, retaining original evidence.</summary>
-    private static async Task<IReadOnlyList<ModerationAppealData>> SupersedeObsoleteAppealsAsync(
+    private async Task<IReadOnlyList<ModerationAppealData>> SupersedeObsoleteAppealsAsync(
         DbConnection connection,
         DbTransaction transaction,
         LabelStoreState state,
@@ -438,7 +439,8 @@ internal abstract partial class RelationalLabelStore
                 connection: connection,
                 transaction: transaction,
                 sql: "SELECT a.payload FROM label_appeals a JOIN label_cases c ON c.case_id=a.case_id " +
-                    "WHERE c.subject_hash=@subject AND a.status=0 AND a.appeal_id>@after ORDER BY a.appeal_id LIMIT 128",
+                    "WHERE c.subject_hash=@subject AND a.status=0 AND a.appeal_id>@after ORDER BY a.appeal_id LIMIT " +
+                    ScanPageSize.ToString(CultureInfo.InvariantCulture),
                 ("@subject", SHA256.HashData(CaseSubjectKey(subject))),
                 ("@after", after));
             await using (command.ConfigureAwait(false))
@@ -508,7 +510,7 @@ internal abstract partial class RelationalLabelStore
                 superseded.Add(resolved);
             }
 
-            if (page.Count < 128)
+            if (page.Count < ScanPageSize)
             {
                 return superseded;
             }

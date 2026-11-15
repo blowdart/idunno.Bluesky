@@ -13,7 +13,8 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace idunno.Bluesky.AspNet.Labeler.Integration.Test;
 
-public partial class ModerationTests
+/// <summary>Record-resolution tests for moderation reports.</summary>
+public class ModerationRecordResolutionTests : ModerationTestBase
 {
     private const string ResolutionRecordUri = "at://did:plc:reporter/app.bsky.feed.post/3loqo3h6jbb2g";
     private const string ResolutionReport = """

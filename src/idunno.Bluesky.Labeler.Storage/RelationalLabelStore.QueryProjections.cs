@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Data.Common;
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text.Json;
 
@@ -28,7 +29,7 @@ internal abstract partial class RelationalLabelStore
                     connection: connection,
                     transaction: transaction,
                     sql: $"SELECT t.{id},t.payload FROM {source} t WHERE t.{id}>@after AND " +
-                        $"NOT EXISTS(SELECT 1 FROM {projection} q WHERE q.{id}=t.{id}) ORDER BY t.{id} LIMIT 100",
+                        $"NOT EXISTS(SELECT 1 FROM {projection} q WHERE q.{id}=t.{id}) ORDER BY t.{id} LIMIT {BackfillPageSize.ToString(CultureInfo.InvariantCulture)}",
                     ("@after", after));
                 await using (command.ConfigureAwait(false))
                 {
@@ -80,7 +81,7 @@ internal abstract partial class RelationalLabelStore
                     }
                     after = number;
                 }
-                if (rows.Count < 100)
+                if (rows.Count < BackfillPageSize)
                 {
                     break;
                 }

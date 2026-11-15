@@ -141,10 +141,11 @@ internal abstract partial class RelationalLabelStore : ILabelPolicyWithdrawalSto
                     WHERE newer.slot_hash=d.slot_hash AND newer.slot_key=d.slot_key AND newer.seq>d.seq
                 ) THEN 1 ELSE 0 END
                 FROM label_entries e LEFT JOIN label_distribution d ON d.seq=e.seq
-                WHERE e.seq>@after AND e.seq<=@upper ORDER BY e.seq LIMIT 250
+                WHERE e.seq>@after AND e.seq<=@upper ORDER BY e.seq LIMIT @pageSize
                 """,
             ("@after", after),
-            ("@upper", withdrawal.UpperBound));
+            ("@upper", withdrawal.UpperBound),
+            ("@pageSize", HistoryPageSize));
         long now = await DatabaseTimeAsync(connection, transaction, token).ConfigureAwait(false);
         int inspected = 0;
         await using (command.ConfigureAwait(false))
@@ -177,7 +178,7 @@ internal abstract partial class RelationalLabelStore : ILabelPolicyWithdrawalSto
                 }
             }
         }
-        if (inspected < 250)
+        if (inspected < HistoryPageSize)
         {
             through = withdrawal.UpperBound;
         }

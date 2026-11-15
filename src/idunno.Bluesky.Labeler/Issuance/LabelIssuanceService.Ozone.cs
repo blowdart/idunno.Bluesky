@@ -8,8 +8,27 @@ namespace idunno.Bluesky.Labeler.Issuance;
 
 public sealed partial class LabelIssuanceService
 {
-    /// <summary>Prepares an entire Ozone label batch without committing individual labels or resolving reports implicitly.</summary>
+    /// <summary>
+    /// Prepares an entire Ozone label batch without committing individual labels or resolving reports implicitly.
+    /// A policy-unavailable failure, such as a revision change from a concurrent verification between preparation and
+    /// commit, is retried once against the current policy; nothing is committed on failure, so the retry is safe.
+    /// </summary>
     internal async Task<LabelServiceResult<LabelOzoneEvent>> ExecuteOzoneEventAsync(
+        LabelAdministrationCaller caller,
+        LabelOzoneEventRequest request,
+        CancellationToken token)
+    {
+        LabelServiceResult<LabelOzoneEvent> result = await ExecuteOzoneEventOnceAsync(caller, request, token).ConfigureAwait(false);
+        if (!result.Succeeded && result.Error.Code == LabelServiceErrorCode.PolicyUnavailable)
+        {
+            result = await ExecuteOzoneEventOnceAsync(caller, request, token).ConfigureAwait(false);
+        }
+
+        return result;
+    }
+
+    /// <summary>Prepares and commits an Ozone label batch against a single observed policy revision.</summary>
+    private async Task<LabelServiceResult<LabelOzoneEvent>> ExecuteOzoneEventOnceAsync(
         LabelAdministrationCaller caller,
         LabelOzoneEventRequest request,
         CancellationToken token)

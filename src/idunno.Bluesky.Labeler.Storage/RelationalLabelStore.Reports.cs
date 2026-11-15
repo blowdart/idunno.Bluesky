@@ -385,7 +385,7 @@ internal abstract partial class RelationalLabelStore
     }
 
     /// <summary>Persists report content, replay protection and bounded appeal evidence while verification is unavailable.</summary>
-    private static async Task<LabelServiceResult<LabelReportIntakeReceipt>> QueuePendingReportAsync(
+    private async Task<LabelServiceResult<LabelReportIntakeReceipt>> QueuePendingReportAsync(
         DbConnection connection,
         DbTransaction transaction,
         ModerationReportAuthenticationResult authentication,

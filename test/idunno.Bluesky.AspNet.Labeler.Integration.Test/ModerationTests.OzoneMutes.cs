@@ -11,7 +11,8 @@ using idunno.Bluesky.Labeler.Moderation;
 
 namespace idunno.Bluesky.AspNet.Labeler.Integration.Test;
 
-public partial class ModerationTests
+/// <summary>Ozone subject and reporter mute tests.</summary>
+public class ModerationOzoneMutesTests : ModerationTestBase
 {
     [Theory]
     [InlineData("", 0)]

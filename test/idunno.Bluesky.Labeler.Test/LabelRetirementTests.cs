@@ -11,14 +11,60 @@ using Microsoft.Data.Sqlite;
 
 namespace idunno.Bluesky.Labeler.Test;
 
-public class LabelRetirementTests
+/// <summary>
+/// Shared helpers for the <see cref="LabelRetirement"/> test classes.
+/// </summary>
+public abstract class LabelRetirementTestBase
 {
-    [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task PublicationOnlyWaitingDoesNotManufactureRetirementProgressOrAudit(string engine)
+
+    /// <summary>Exposes one fixture-owned key without secret-store I/O during failure-injection tests.</summary>
+    private protected sealed class RetirementKeyRing(LabelSigningKey key) : ILabelSigningKeyRing
     {
+        public string ActiveKeyId => "active";
+        public LabelSigningKey GetSigningKey(string keyId) => keyId == ActiveKeyId ? key : throw new KeyNotFoundException();
+        public string GetPublicKeyMultibase(string keyId) => GetSigningKey(keyId).ExportPublicKeyMultibase();
+        public Task ActivateAsync(string keyId, CancellationToken cancellationToken = default)
+        {
+            GetSigningKey(keyId);
+            return Task.CompletedTask;
+        }
+    }
+
+
+    /// <summary>Obtains and explicitly consumes a server-issued challenge for one immutable intent.</summary>
+    private protected static async Task<LabelRetirementView> ConfirmAsync(
+        ILabelRetirementStore store,
+        LabelAdministrationCaller caller,
+        LabelRetirementCommand command,
+        CancellationToken token)
+    {
+        LabelRetirementView preview = Success(await store.InspectRetirementAsync(caller, command, token));
+        return Success(await store.ExecuteRetirementAsync(caller, command with { Confirmation = preview.Confirmation }, token));
+    }
+
+
+    /// <summary>Retains the provider diagnostic when an expected successful result fails.</summary>
+    private protected static T Success<T>(LabelServiceResult<T> result) where T : class
+    {
+        Assert.True(result.Succeeded, result.Error?.Message + result.Error?.Exception);
+        return result.Result;
+    }
+}
+
+/// <summary>
+/// Engine-parameterised tests; one derived class per engine lets xUnit run the engines in parallel.
+/// </summary>
+public abstract class LabelRetirementTests : LabelRetirementTestBase
+{
+    /// <summary>
+    /// Gets the storage engine exercised by the inherited tests.
+    /// </summary>
+    protected abstract string Engine { get; }
+
+    [Fact]
+    public async Task PublicationOnlyWaitingDoesNotManufactureRetirementProgressOrAudit()
+    {
+        string engine = Engine;
         CancellationToken token = TestContext.Current.CancellationToken;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
@@ -80,21 +126,15 @@ public class LabelRetirementTests
         Assert.Equal(completed with { Hosts = null }, Success(await retirement.InspectRetirementAsync(caller, null, token)) with { Hosts = null });
     }
 
+
     [Theory]
-    [InlineData("sqlite", false, false)]
-    [InlineData("sqlite", true, false)]
-    [InlineData("sqlite", false, true)]
-    [InlineData("sqlite", true, true)]
-    [InlineData("postgresql", false, false)]
-    [InlineData("postgresql", true, false)]
-    [InlineData("postgresql", false, true)]
-    [InlineData("postgresql", true, true)]
-    [InlineData("mysql", false, false)]
-    [InlineData("mysql", true, false)]
-    [InlineData("mysql", false, true)]
-    [InlineData("mysql", true, true)]
-    public async Task TiedPositiveObservationsRetainLongestLifetimeRegardlessOfInsertionOrder(string engine, bool reverse, bool unlimited)
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task TiedPositiveObservationsRetainLongestLifetimeRegardlessOfInsertionOrder(bool reverse, bool unlimited)
     {
+        string engine = Engine;
         CancellationToken token = TestContext.Current.CancellationToken;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
@@ -139,27 +179,17 @@ public class LabelRetirementTests
         Assert.Equal(view.IssuedThrough, view.PublishedThrough);
     }
 
+
     [Theory]
-    [InlineData("sqlite", "read", false)]
-    [InlineData("sqlite", "commit", false)]
-    [InlineData("sqlite", "publication", false)]
-    [InlineData("postgresql", "read", false)]
-    [InlineData("postgresql", "commit", false)]
-    [InlineData("postgresql", "publication", false)]
-    [InlineData("mysql", "read", false)]
-    [InlineData("mysql", "commit", false)]
-    [InlineData("mysql", "publication", false)]
-    [InlineData("sqlite", "read", true)]
-    [InlineData("sqlite", "commit", true)]
-    [InlineData("sqlite", "publication", true)]
-    [InlineData("postgresql", "read", true)]
-    [InlineData("postgresql", "commit", true)]
-    [InlineData("postgresql", "publication", true)]
-    [InlineData("mysql", "read", true)]
-    [InlineData("mysql", "commit", true)]
-    [InlineData("mysql", "publication", true)]
-    public async Task FailedWorkerEpochRecoversPauseAcrossUncertainProgressButNotAdministratorResume(string engine, string failure, bool signing)
+    [InlineData("read", false)]
+    [InlineData("commit", false)]
+    [InlineData("publication", false)]
+    [InlineData("read", true)]
+    [InlineData("commit", true)]
+    [InlineData("publication", true)]
+    public async Task FailedWorkerEpochRecoversPauseAcrossUncertainProgressButNotAdministratorResume(string failure, bool signing)
     {
+        string engine = Engine;
         CancellationToken token = TestContext.Current.CancellationToken;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
@@ -229,28 +259,13 @@ public class LabelRetirementTests
         Assert.Equal(LabelServiceErrorCode.StaleDecision, (await restarted.ReadRetirementBatchAsync(token, checkpoint)).Error!.Code);
     }
 
-    /// <summary>Exposes one fixture-owned key without secret-store I/O during failure-injection tests.</summary>
-    private sealed class RetirementKeyRing(LabelSigningKey key) : ILabelSigningKeyRing
-    {
-        public string ActiveKeyId => "active";
-        public LabelSigningKey GetSigningKey(string keyId) => keyId == ActiveKeyId ? key : throw new KeyNotFoundException();
-        public string GetPublicKeyMultibase(string keyId) => GetSigningKey(keyId).ExportPublicKeyMultibase();
-        public Task ActivateAsync(string keyId, CancellationToken cancellationToken = default)
-        {
-            GetSigningKey(keyId);
-            return Task.CompletedTask;
-        }
-    }
 
     [Theory]
-    [InlineData("sqlite", 0)]
-    [InlineData("sqlite", 1)]
-    [InlineData("postgresql", 0)]
-    [InlineData("postgresql", 1)]
-    [InlineData("mysql", 0)]
-    [InlineData("mysql", 1)]
-    public async Task ExhaustedTimestampPreparationPausesBeforeReturningFailure(string engine, int ticksBeforeMaximum)
+    [InlineData(0)]
+    [InlineData(1)]
+    public async Task ExhaustedTimestampPreparationPausesBeforeReturningFailure(int ticksBeforeMaximum)
     {
+        string engine = Engine;
         CancellationToken token = TestContext.Current.CancellationToken;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
@@ -275,12 +290,11 @@ public class LabelRetirementTests
         Assert.Null(Success(await restarted.ReadRetirementBatchAsync(token)).OperationId);
     }
 
-    [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task VersionElevenMigrationPreservesLegacyRetirementAndRequiresExplicitAdoption(string engine)
+
+    [Fact]
+    public async Task VersionElevenMigrationPreservesLegacyRetirementAndRequiresExplicitAdoption()
     {
+        string engine = Engine;
         CancellationToken token = TestContext.Current.CancellationToken;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
@@ -308,15 +322,13 @@ public class LabelRetirementTests
         Assert.Equal("adopt-legacy", resumed.OperationId);
     }
 
+
     [Theory]
-    [InlineData("sqlite", false)]
-    [InlineData("sqlite", true)]
-    [InlineData("postgresql", false)]
-    [InlineData("postgresql", true)]
-    [InlineData("mysql", false)]
-    [InlineData("mysql", true)]
-    public async Task TransitionRecoveryDistinguishesRollbackFromLostAcknowledgement(string engine, bool afterCommit)
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task TransitionRecoveryDistinguishesRollbackFromLostAcknowledgement(bool afterCommit)
     {
+        string engine = Engine;
         CancellationToken token = TestContext.Current.CancellationToken;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
@@ -339,12 +351,11 @@ public class LabelRetirementTests
             caller, cancellationToken: token)), receipt => receipt.Action == "beginRetirement");
     }
 
-    [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task ExpiredWorkerAuthorityPausesDurablyUntilExplicitResume(string engine)
+
+    [Fact]
+    public async Task ExpiredWorkerAuthorityPausesDurablyUntilExplicitResume()
     {
+        string engine = Engine;
         CancellationToken token = TestContext.Current.CancellationToken;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         LabelAdministrationCaller administrator = await LabelPolicyStoreTests.BootstrapAsync(fixture);
@@ -384,12 +395,11 @@ public class LabelRetirementTests
         Assert.NotNull(Success(await restarted.ReadRetirementBatchAsync(token)).OperationId);
     }
 
-    [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task ConfirmationIsActionBoundExpiresAndRecoversCommittedIntent(string engine)
+
+    [Fact]
+    public async Task ConfirmationIsActionBoundExpiresAndRecoversCommittedIntent()
     {
+        string engine = Engine;
         CancellationToken token = TestContext.Current.CancellationToken;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
@@ -414,18 +424,19 @@ public class LabelRetirementTests
         Assert.Null(inspected.Confirmation);
     }
 
-    [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task HistoryScanningIsBoundedRestartedTimestampOrderedAndExactlyOnce(string engine)
+
+    [Fact]
+    public async Task HistoryScanningIsBoundedRestartedTimestampOrderedAndExactlyOnce()
     {
+        string engine = Engine;
+        const int bulk = 25;
         CancellationToken token = TestContext.Current.CancellationToken;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        fixture.UsePageSizes(history: 10);
         LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         DateTimeOffset now = fixture.DatabaseClock!.GetUtcNow();
-        List<SignedLabelSnapshot> history = [.. Enumerable.Range(0, 501).Select(index => new SignedLabelSnapshot(key.CreateLabel(
+        List<SignedLabelSnapshot> history = [.. Enumerable.Range(0, bulk).Select(index => new SignedLabelSnapshot(key.CreateLabel(
             source: StoreFixture.s_issuer,
             uri: $"did:plc:retirement{index}",
             value: "spam",
@@ -472,7 +483,7 @@ public class LabelRetirementTests
         {
             ILabelRetirementStore retirement = (ILabelRetirementStore)fixture.NewStore();
             LabelRetirementBatch batch = Success(await retirement.ReadRetirementBatchAsync(token));
-            Assert.InRange(batch.Labels.Count, 0, 250);
+            Assert.InRange(batch.Labels.Count, 0, 10);
             List<SignedLabelSnapshot> negations = batch.Scanning ? [] : [.. batch.Labels.Select((label, index) => new SignedLabelSnapshot(key.CreateNegation(
                 source: label.SignedLabel.Label.Source,
                 uri: label.SignedLabel.Label.Uri,
@@ -494,7 +505,7 @@ public class LabelRetirementTests
         }
         while (state.Phase == "Retiring");
         Assert.Equal("Distributing", state.Phase);
-        Assert.Equal(history.Count + 501, state.IssuedThrough);
+        Assert.Equal(history.Count + bulk, state.IssuedThrough);
         Assert.Equal(history.Count, state.NegatedThrough);
         LabelStoreState stream = await fixture.NewStore().GetStateAsync(token);
         Assert.Equal(stream.IssuedThrough, stream.PublishedThrough);
@@ -506,7 +517,7 @@ public class LabelRetirementTests
             sources: [],
             limit: 250,
             cancellationToken: token);
-        Assert.Equal(250, distribution.Labels.Count);
+        Assert.Equal(bulk, distribution.Labels.Count);
         ILabelRetirementStore completed = (ILabelRetirementStore)fixture.NewStore();
         LabelRetirementCommand retry = resume with { VerifiedSigningPublicKey = null };
         Assert.Equal(resumed, Success(await completed.RecoverRetirementAsync(caller, retry, token)).Receipt);
@@ -520,12 +531,11 @@ public class LabelRetirementTests
         });
     }
 
-    [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task GraceUsesDatabaseTimeAndDestructiveActionsHaveSeparateConfirmations(string engine)
+
+    [Fact]
+    public async Task GraceUsesDatabaseTimeAndDestructiveActionsHaveSeparateConfirmations()
     {
+        string engine = Engine;
         CancellationToken token = TestContext.Current.CancellationToken;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
@@ -591,22 +601,32 @@ public class LabelRetirementTests
         Assert.Equal("Purged", state.Phase);
         Assert.NotEmpty(Success(await ((ILabelAdministrationStore)fixture.Store).GetAdministrationAuditAsync(caller, cancellationToken: token)));
     }
-
-    /// <summary>Obtains and explicitly consumes a server-issued challenge for one immutable intent.</summary>
-    private static async Task<LabelRetirementView> ConfirmAsync(
-        ILabelRetirementStore store,
-        LabelAdministrationCaller caller,
-        LabelRetirementCommand command,
-        CancellationToken token)
-    {
-        LabelRetirementView preview = Success(await store.InspectRetirementAsync(caller, command, token));
-        return Success(await store.ExecuteRetirementAsync(caller, command with { Confirmation = preview.Confirmation }, token));
-    }
-
-    /// <summary>Retains the provider diagnostic when an expected successful result fails.</summary>
-    private static T Success<T>(LabelServiceResult<T> result) where T : class
-    {
-        Assert.True(result.Succeeded, result.Error?.Message + result.Error?.Exception);
-        return result.Result;
-    }
 }
+
+/// <summary>
+/// Runs <see cref="LabelRetirementTests"/> against sqlite.
+/// </summary>
+public sealed class LabelRetirementSqliteTests : LabelRetirementTests
+{
+    /// <inheritdoc />
+    protected override string Engine => "sqlite";
+}
+
+/// <summary>
+/// Runs <see cref="LabelRetirementTests"/> against postgresql.
+/// </summary>
+public sealed class LabelRetirementPostgreSqlTests : LabelRetirementTests
+{
+    /// <inheritdoc />
+    protected override string Engine => "postgresql";
+}
+
+/// <summary>
+/// Runs <see cref="LabelRetirementTests"/> against mysql.
+/// </summary>
+public sealed class LabelRetirementMySqlTests : LabelRetirementTests
+{
+    /// <inheritdoc />
+    protected override string Engine => "mysql";
+}
+

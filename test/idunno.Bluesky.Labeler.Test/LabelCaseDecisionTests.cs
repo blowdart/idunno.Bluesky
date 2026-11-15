@@ -124,7 +124,9 @@ public partial class LabelCaseDecisionTests
         LabelReportSubject target = LabelReportSubject.Record(uri, new(TargetResolutionHandler.RecordCid));
         LabelReportSubject otherVersion = LabelReportSubject.Record(uri, new("bafyreif2pall7yry6b3sh5rttgeczzmhnnemy6rtbwwsvxeceebzxtpfwu"));
         List<LabelModerationReport> accepted = [];
-        for (int index = 0; index < 130; index++)
+        const int matchingReports = 6;
+        fixture.UsePageSizes(scan: 4);
+        for (int index = 0; index < matchingReports; index++)
         {
             accepted.Add(await SubmitAsync(target, "matching-" + index));
         }
@@ -182,10 +184,10 @@ public partial class LabelCaseDecisionTests
         ILabelTableStore tables = (ILabelTableStore)fixture.NewStore();
         foreach ((LabelCaseWorkflow workflow, int expected) in new[]
         {
-            (LabelCaseWorkflow.Unresolved, acrossVersions ? 2 : handleOthers ? 4 : 133),
-            (LabelCaseWorkflow.InReview, handleMatching ? 0 : 129),
-            (LabelCaseWorkflow.Resolved, acrossVersions ? 132 : handleOthers ? 130 : 1),
-            (LabelCaseWorkflow.All, 134)
+            (LabelCaseWorkflow.Unresolved, acrossVersions ? 2 : handleOthers ? 4 : matchingReports + 3),
+            (LabelCaseWorkflow.InReview, handleMatching ? 0 : matchingReports - 1),
+            (LabelCaseWorkflow.Resolved, acrossVersions ? matchingReports + 2 : handleOthers ? matchingReports : 1),
+            (LabelCaseWorkflow.All, matchingReports + 4)
         })
         {
             LabelTablePage workflowPage = Success(await tables.ReadTableAsync(
@@ -196,7 +198,7 @@ public partial class LabelCaseDecisionTests
             Assert.Equal(Math.Max(1, (expected + 15) / 16), workflowPage.Page);
         }
         LabelNavigationCounts counts = Success(await tables.ReadNavigationCountsAsync(caller, token));
-        int remaining = acrossVersions ? 2 : handleOthers ? 4 : 133;
+        int remaining = acrossVersions ? 2 : handleOthers ? 4 : matchingReports + 3;
         Assert.Equal(remaining, counts.Reports);
         Assert.Equal(acrossVersions ? 2 : handleOthers ? 4 : 5, counts.Cases);
         LabelTablePage sorted = Success(await tables.ReadTableAsync(

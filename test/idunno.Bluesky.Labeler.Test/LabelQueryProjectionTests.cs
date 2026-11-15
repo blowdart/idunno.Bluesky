@@ -187,7 +187,9 @@ public class LabelQueryProjectionTests
         LabelPolicyState policy = await LabelPolicyStoreTests.ActivateAsync((ILabelPolicyStore)fixture.Store, caller, token);
         LabelReportSubject subject = LabelReportSubject.Record(new("at://did:plc:projection/app.bsky.feed.post/record"));
         long caseId = 0;
-        for (int index = 0; index < 101; index++)
+        const int reportCount = 37;
+        fixture.UsePageSizes(backfill: 4);
+        for (int index = 0; index < reportCount; index++)
         {
             ModerationReportAuthenticationResult authentication = await ReportTestAuthentication.CreateAsync(
                 new("did:plc:reporter"), policy.DatabaseTime, "projection-" + index);
@@ -241,10 +243,10 @@ public class LabelQueryProjectionTests
             activity.Entries.Select(entry => (entry.Report?.Id, entry.Event?.Sequence, entry.Report?.CreatedAt, entry.Event?.CreatedAt)),
             restoredActivity.Entries.Select(entry => (entry.Report?.Id, entry.Event?.Sequence, entry.Report?.CreatedAt, entry.Event?.CreatedAt)));
         LabelTablePage clamped = Success(await tables.ReadTableAsync(caller, query with { Page = long.MaxValue }, token));
-        Assert.Equal(7, clamped.Page);
+        Assert.Equal(3, clamped.Page);
         Assert.Equal(5, clamped.Reports!.Count);
         LabelTablePage cases = Success(await tables.ReadTableAsync(caller, new(LabelTableKind.Cases), token));
-        Assert.Equal(101, Assert.Single(cases.AuthorSummaries!).Reports);
+        Assert.Equal(reportCount, Assert.Single(cases.AuthorSummaries!).Reports);
         await using DbConnection connection = fixture.Connection();
         await connection.OpenAsync(token);
         await using (DbCommand index = connection.CreateCommand())
@@ -269,7 +271,7 @@ public class LabelQueryProjectionTests
             Assert.Equal(0, Convert.ToInt32(reader.GetValue(2), CultureInfo.InvariantCulture));
             rows++;
         }
-        Assert.Equal(101, rows);
+        Assert.Equal(reportCount, rows);
     }
 
     [Theory]

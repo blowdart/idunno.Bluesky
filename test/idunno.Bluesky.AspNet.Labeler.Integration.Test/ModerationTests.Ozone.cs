@@ -15,7 +15,8 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace idunno.Bluesky.AspNet.Labeler.Integration.Test;
 
-public partial class ModerationTests
+/// <summary>Ozone escalation, acknowledgment, preference and status-filter tests. Split from the event tests so xUnit runs both halves in parallel.</summary>
+public class ModerationOzoneTests : ModerationTestBase
 {
     [Theory]
     [InlineData(false, false, false)]
@@ -562,7 +563,11 @@ public partial class ModerationTests
         using JsonDocument error = JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         Assert.Equal("InvalidRequest", error.RootElement.GetProperty("error").GetString());
     }
+}
 
+/// <summary>Ozone label, event, report-resolution and history tests.</summary>
+public class ModerationOzoneEventsTests : ModerationTestBase
+{
     [Theory]
     [InlineData(false, false)]
     [InlineData(true, false)]
@@ -1160,9 +1165,12 @@ public partial class ModerationTests
             events.RootElement.GetProperty("events").EnumerateArray(),
             entry => entry.GetProperty("event").TryGetProperty("comment", out JsonElement comment) && comment.GetString() == "Ozone moderation event.");
     }
+}
 
+public abstract partial class ModerationTestBase
+{
     /// <summary>Sends one Ozone method with a fresh exact-method assertion over the isolated test identity.</summary>
-    private static async Task<HttpResponseMessage> SendOzoneAsync(
+    private protected static async Task<HttpResponseMessage> SendOzoneAsync(
         TestServerBuilder fixture,
         LabelSigningKey key,
         string method,
@@ -1189,5 +1197,5 @@ public partial class ModerationTests
 
     /// <summary>Extracts the unchanged antiforgery field from the preferences form.</summary>
     [System.Text.RegularExpressions.GeneratedRegex("name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"")]
-    private static partial System.Text.RegularExpressions.Regex PreferencesAntiforgeryRegex();
+    protected static partial System.Text.RegularExpressions.Regex PreferencesAntiforgeryRegex();
 }

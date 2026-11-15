@@ -45,6 +45,69 @@ public partial class LabelCaseDecisionTests
     [InlineData("sqlite")]
     [InlineData("postgresql")]
     [InlineData("mysql")]
+    public async Task OzoneEventRetriesOnceWhenPolicyRevisionChangesDuringPreparation(string engine)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient http = new(new TargetResolutionHandler());
+        LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
+        ILabelPolicyStore policies = (ILabelPolicyStore)fixture.Store;
+        LabelPolicyState active = await LabelPolicyStoreTests.ActivateAsync(policies, caller, token);
+        RevisionBumpingAuthorizer authorizer = new(
+            inner: new LabelTeamAuthorizer((ILabelAdministrationStore)fixture.Store, caller),
+            bump: async () =>
+            {
+                using JsonDocument declaration = JsonDocument.Parse(active.Policy!.DeclarationJson);
+                Success(await policies.ObservePolicyAsync(
+                    expectedRevision: active.Revision,
+                    verificationStartedAt: active.DatabaseTime,
+                    observedCid: new(TargetResolutionHandler.RecordCid),
+                    declaration: declaration.RootElement,
+                    cancellationToken: token));
+            });
+        LabelIssuanceService service = new(
+            issuer: StoreFixture.s_issuer,
+            signingKey: key,
+            store: fixture.Store,
+            authorizer: authorizer,
+            policyProvider: new TestLabelIssuancePolicyProvider(active.Policy!.Issuance),
+            httpClient: http,
+            timeProvider: fixture.DatabaseClock!);
+
+        LabelOzoneEvent committed = Success(await service.ExecuteOzoneEventAsync(caller, OzoneRequest(s_subject, []), token));
+
+        Assert.NotNull(committed);
+        Assert.True(authorizer.Bumped);
+        Assert.Equal(active.Revision + 1, (await policies.ReadPolicyStateAsync(token))!.Revision);
+        Assert.Equal(2, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
+    }
+
+    /// <summary>Changes the policy revision once, during the first authorization, to simulate concurrent verification.</summary>
+    private sealed class RevisionBumpingAuthorizer(ILabelIssuanceAuthorizer inner, Func<Task> bump) : ILabelIssuanceAuthorizer
+    {
+        /// <summary>Gets a value indicating whether the revision change has been applied.</summary>
+        public bool Bumped { get; private set; }
+
+        /// <inheritdoc/>
+        public async Task<LabelServiceResult<LabelAuthorizationGrant>> AuthorizeAsync(
+            LabelAuthorizationRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            if (!Bumped)
+            {
+                Bumped = true;
+                await bump().ConfigureAwait(false);
+            }
+
+            return await inner.AuthorizeAsync(request, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
     public async Task OzoneNegationDoesNotRequireFreshIssuancePolicy(string engine)
     {
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);

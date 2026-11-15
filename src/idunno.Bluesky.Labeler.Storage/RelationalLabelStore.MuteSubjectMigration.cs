@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Data.Common;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 
@@ -105,7 +106,7 @@ internal abstract partial class RelationalLabelStore
     }
 
     /// <summary>Resumes missing mute projections in primary-key order with bounded memory and no network lookups.</summary>
-    private static async Task BackfillMuteSubjectsAsync(
+    private async Task BackfillMuteSubjectsAsync(
         DbConnection connection,
         DbTransaction? transaction,
         string table,
@@ -120,7 +121,7 @@ internal abstract partial class RelationalLabelStore
                 connection: connection,
                 transaction: transaction,
                 sql: $"SELECT {idColumn},payload FROM {table} WHERE {idColumn}>@after AND " +
-                    $"(mute_subject_hash IS NULL OR mute_subject_key IS NULL) ORDER BY {idColumn} LIMIT 100",
+                    $"(mute_subject_hash IS NULL OR mute_subject_key IS NULL) ORDER BY {idColumn} LIMIT {BackfillPageSize.ToString(CultureInfo.InvariantCulture)}",
                 ("@after", after));
             await using (command.ConfigureAwait(false))
             {
@@ -143,7 +144,7 @@ internal abstract partial class RelationalLabelStore
                     ("@hash", SHA256.HashData(key)), ("@key", key), ("@id", id)).ConfigureAwait(false);
                 after = id;
             }
-            if (page.Count < 100)
+            if (page.Count < BackfillPageSize)
             {
                 break;
             }

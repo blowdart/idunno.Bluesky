@@ -15,16 +15,13 @@ using Xunit;
 
 namespace idunno.Bluesky.BotSdk.Test;
 
-public sealed partial class RelationalProviderTests
+public abstract partial class RelationalProviderTests
 {
     /// <summary>Records a dry-run outcome without making a remote call, including reads.</summary>
-    /// <param name="provider">The provider under test.</param>
-    [Theory]
-    [InlineData("Sqlite")]
-    [MySqlData]
-    [PostgreSqlData]
-    public async Task DeveloperModeNeverPosts(string provider)
+    [Fact]
+    public async Task DeveloperModeNeverPosts()
     {
+        string provider = RequireProvider();
         await using Store store = await Store.CreateAsync(provider);
         BotAction work = TestRecords.Work();
         await store.Database.HandleAsync(11, [work], null, CancellationToken.None);
@@ -45,13 +42,10 @@ public sealed partial class RelationalProviderTests
     }
 
     /// <summary>Reconciles an accepted reply after losing its response without creating a duplicate.</summary>
-    /// <param name="provider">The provider under test.</param>
-    [Theory]
-    [InlineData("Sqlite")]
-    [MySqlData]
-    [PostgreSqlData]
-    public async Task ReconcilesUnknownWriteOutcome(string provider)
+    [Fact]
+    public async Task ReconcilesUnknownWriteOutcome()
     {
+        string provider = RequireProvider();
         await using Store store = await Store.CreateAsync(provider);
         store.Options.DeveloperMode = false;
         BotAction work = TestRecords.Work();
@@ -81,13 +75,10 @@ public sealed partial class RelationalProviderTests
     }
 
     /// <summary>Retries a confirmed missing uncertain reply with its original key, timestamp, and content.</summary>
-    /// <param name="provider">The provider under test.</param>
-    [Theory]
-    [InlineData("Sqlite")]
-    [MySqlData]
-    [PostgreSqlData]
-    public async Task RetriesMissingUncertainRecordWithSameKey(string provider)
+    [Fact]
+    public async Task RetriesMissingUncertainRecordWithSameKey()
     {
+        string provider = RequireProvider();
         await using Store store = await Store.CreateAsync(provider);
         store.Options.DeveloperMode = false;
         BotAction work = TestRecords.Work();
@@ -110,13 +101,10 @@ public sealed partial class RelationalProviderTests
     }
 
     /// <summary>Reconciles uncertain sends before honoring a later source deletion.</summary>
-    /// <param name="provider">The provider under test.</param>
-    [Theory]
-    [InlineData("Sqlite")]
-    [MySqlData]
-    [PostgreSqlData]
-    public async Task ReconcilesBeforeApplyingDeletion(string provider)
+    [Fact]
+    public async Task ReconcilesBeforeApplyingDeletion()
     {
+        string provider = RequireProvider();
         await using Store store = await Store.CreateAsync(provider);
         store.Options.DeveloperMode = false;
         BotAction work = TestRecords.Work();
@@ -142,13 +130,10 @@ public sealed partial class RelationalProviderTests
     }
 
     /// <summary>Prevents writes to a thread after its root post has been deleted.</summary>
-    /// <param name="provider">The provider under test.</param>
-    [Theory]
-    [InlineData("Sqlite")]
-    [MySqlData]
-    [PostgreSqlData]
-    public async Task DoesNotReplyToDeletedRoot(string provider)
+    [Fact]
+    public async Task DoesNotReplyToDeletedRoot()
     {
+        string provider = RequireProvider();
         await using Store store = await Store.CreateAsync(provider);
         store.Options.DeveloperMode = false;
         StrongReference root = new(
@@ -186,13 +171,10 @@ public sealed partial class RelationalProviderTests
     }
 
     /// <summary>Records confirmed reply restrictions as terminal outcomes without attempting a write.</summary>
-    /// <param name="provider">The provider under test.</param>
-    [Theory]
-    [InlineData("Sqlite")]
-    [MySqlData]
-    [PostgreSqlData]
-    public async Task DoesNotBypassReplyRestrictions(string provider)
+    [Fact]
+    public async Task DoesNotBypassReplyRestrictions()
     {
+        string provider = RequireProvider();
         await using Store store = await Store.CreateAsync(provider);
         store.Options.DeveloperMode = false;
         BotAction work = TestRecords.Work();
@@ -212,13 +194,10 @@ public sealed partial class RelationalProviderTests
     }
 
     /// <summary>Leaves an uncertain action untouched when its fixed key contains a different record.</summary>
-    /// <param name="provider">The provider under test.</param>
-    [Theory]
-    [InlineData("Sqlite")]
-    [MySqlData]
-    [PostgreSqlData]
-    public async Task DoesNotOverwriteMismatchedReply(string provider)
+    [Fact]
+    public async Task DoesNotOverwriteMismatchedReply()
     {
+        string provider = RequireProvider();
         await using Store store = await Store.CreateAsync(provider);
         store.Options.DeveloperMode = false;
         BotAction work = TestRecords.Work();

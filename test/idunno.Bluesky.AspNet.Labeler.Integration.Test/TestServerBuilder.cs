@@ -224,6 +224,13 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
         using CancellationTokenSource publicationWatchdog = new(TimeSpan.FromSeconds(30));
         await fixture.Host.InitialPublication.WaitAsync(publicationWatchdog.Token);
         await fixture.Clock.WaitForTimerAsync(options?.PollInterval ?? TimeSpan.FromSeconds(1));
+        if (fixture._app.Services.GetServices<Microsoft.Extensions.Hosting.IHostedService>().OfType<PolicyVerificationWorker>().Any())
+        {
+            // The worker's first pass re-verifies any already verified policy. Wait until it has parked on its interval
+            // so a delayed first pass cannot change the policy revision in the middle of a test.
+            await fixture.Clock.PolicyVerificationRegistrations.Reader.WaitToReadAsync(publicationWatchdog.Token);
+        }
+
         if (network)
         {
             fixture.Address = new Uri(fixture._app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.Single());

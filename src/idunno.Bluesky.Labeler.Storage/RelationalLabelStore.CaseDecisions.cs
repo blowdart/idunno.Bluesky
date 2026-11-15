@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Data.Common;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 
@@ -284,7 +285,7 @@ internal abstract partial class RelationalLabelStore
                 (request.HandleReportsAcrossRecordVersions
                     ? "c.subject_key>=@subject AND c.subject_key<@end"
                     : "c.subject_hash=@subject") +
-                " AND r.report_id>@after ORDER BY r.report_id LIMIT 128";
+                " AND r.report_id>@after ORDER BY r.report_id LIMIT " + ScanPageSize.ToString(CultureInfo.InvariantCulture);
             DbCommand command = request.HandleReportsAcrossRecordVersions
                 ? Command(
                     connection: connection,
@@ -345,7 +346,7 @@ internal abstract partial class RelationalLabelStore
                 }
             }
 
-            if (page.Count < 128)
+            if (page.Count < ScanPageSize)
             {
                 break;
             }

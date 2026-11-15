@@ -21,26 +21,125 @@ using Microsoft.Extensions.Time.Testing;
 
 namespace idunno.Bluesky.Labeler.Test;
 
-public class ProviderConformanceTests
+/// <summary>
+/// Shared helpers for the <see cref="ProviderConformance"/> test classes.
+/// </summary>
+public abstract class ProviderConformanceTestBase
 {
-    private static readonly DateTimeOffset s_instant = new(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
+    private protected static readonly DateTimeOffset s_instant = new(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
 
-    private static SignedLabelSnapshot Sign(LabelSigningKey key, string subject = "did:plc:subject", bool negation = false) =>
+
+    /// <summary>Changes the caller-owned batch immediately after its first read, without relying on task timing.</summary>
+    private protected sealed class MutatingReplacementBatch(StoredLabel initial, StoredLabel replacement) : IReadOnlyList<StoredLabel>
+    {
+        internal StoredLabel Current { get; private set; } = initial;
+
+        public int Count => 1;
+
+        public StoredLabel this[int index]
+        {
+            get
+            {
+                ArgumentOutOfRangeException.ThrowIfNotEqual(index, 0);
+                StoredLabel current = Current;
+                Current = replacement;
+                return current;
+            }
+        }
+
+        public IEnumerator<StoredLabel> GetEnumerator()
+        {
+            yield return this[0];
+        }
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+
+    private protected static async Task<ILabelMaintenanceStore> BeginResigningAsync(
+        StoreFixture fixture,
+        string operationId,
+        LabelSigningKey replacementKey)
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        ILabelMaintenanceStore maintenance = fixture.Services.GetRequiredService<ILabelMaintenanceStore>();
+        Guid host = Guid.NewGuid();
+        await maintenance.RegisterHostAsync(host, cancellationToken);
+        await maintenance.BeginRotationAsync(
+            operationId: operationId,
+            previousKeyId: "active",
+            replacementKeyId: "replacement",
+            replacementPublicKey: replacementKey.ExportPublicKeyMultibase(),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        await maintenance.AcknowledgeHostDrainedAsync(
+            operationId: operationId,
+            instanceId: host,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        await maintenance.CaptureRotationBoundaryAsync(
+            operationId: operationId,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        await maintenance.VerifyRotationKeyPublicationAsync(
+            operationId: operationId,
+            replacementPublicKey: replacementKey.ExportPublicKeyMultibase(),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        return maintenance;
+    }
+
+
+    private protected static async Task InjectTransientFailureAsync(string engine, DbConnection connection,
+        DbTransaction? transaction, CancellationToken token)
+    {
+        if (engine == "sqlite")
+        {
+            throw new SqliteException("Injected commit-boundary failure.", 5);
+        }
+
+        using DbCommand command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = engine == "postgresql"
+            ? "DO $$ BEGIN RAISE EXCEPTION 'Injected commit-boundary failure' USING ERRCODE = '40001'; END $$"
+            : "SIGNAL SQLSTATE '40001' SET MYSQL_ERRNO = 1213, MESSAGE_TEXT = 'Injected commit-boundary failure'";
+        await command.ExecuteNonQueryAsync(token);
+        throw new InvalidOperationException("The database did not inject the expected transient failure.");
+    }
+
+
+    private protected static string FindRoot()
+    {
+        DirectoryInfo? directory = new(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "idunno.Bluesky.slnx")))
+        {
+            directory = directory.Parent;
+        }
+
+        return directory?.FullName ?? throw new InvalidOperationException("Repository root not found.");
+    }
+
+    private protected static SignedLabelSnapshot Sign(LabelSigningKey key, string subject = "did:plc:subject", bool negation = false) =>
         new(negation ? key.CreateNegation(StoreFixture.s_issuer, subject, "spam", s_instant)
             : key.CreateLabel(StoreFixture.s_issuer, subject, "spam", s_instant));
 
-    private static DidDocument Document(LabelSigningKey key) => JsonSerializer.Deserialize<DidDocument>(
+    private protected static DidDocument Document(LabelSigningKey key) => JsonSerializer.Deserialize<DidDocument>(
         $$"""
         {"id":"did:plc:label-issuer","verificationMethod":[{"id":"did:plc:label-issuer#atproto_label",
         "type":"Multikey","controller":"did:plc:label-issuer","publicKeyMultibase":"{{key.ExportPublicKeyMultibase()}}"}]}
         """, AtProtoJsonSerializerOptions.Default)!;
+}
 
-    [Theory(Timeout = 120_000)]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task PreservesSignedRepresentationAcrossPublicationAndRestart(string engine)
+/// <summary>
+/// Engine-parameterised tests; one derived class per engine lets xUnit run the engines in parallel.
+/// </summary>
+public abstract class ProviderConformanceTests : ProviderConformanceTestBase
+{
+    /// <summary>
+    /// Gets the storage engine exercised by the inherited tests.
+    /// </summary>
+    protected abstract string Engine { get; }
+
+    [Fact(Timeout = 120_000)]
+    public async Task PreservesSignedRepresentationAcrossPublicationAndRestart()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         foreach (LabelSigningCurve curve in new[] { LabelSigningCurve.P256, LabelSigningCurve.Secp256k1 })
         {
@@ -72,12 +171,11 @@ public class ProviderConformanceTests
         }
     }
 
-    [Theory(Timeout = 120_000)]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task ReplacesRetainedLabelSignaturesWithoutChangingFieldsOrSequences(string engine)
+
+    [Fact(Timeout = 120_000)]
+    public async Task ReplacesRetainedLabelSignaturesWithoutChangingFieldsOrSequences()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
         using LabelSigningKey originalKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
         using LabelSigningKey replacementKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
@@ -126,12 +224,11 @@ public class ProviderConformanceTests
         Assert.Equal(before.PublishedThrough, after.PublishedThrough);
     }
 
-    [Theory(Timeout = 120_000)]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task KeylessHostsMustDrainButOnlySignersMustActivate(string engine)
+
+    [Fact(Timeout = 120_000)]
+    public async Task KeylessHostsMustDrainButOnlySignersMustActivate()
     {
+        string engine = Engine;
         CancellationToken token = TestContext.Current.CancellationToken;
         await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
         ILabelMaintenanceStore maintenance = fixture.Services.GetRequiredService<ILabelMaintenanceStore>();
@@ -168,12 +265,11 @@ public class ProviderConformanceTests
         Assert.False(Assert.Single(completed.Hosts, host => host.InstanceId == replica).KeyActivated);
     }
 
-    [Theory(Timeout = 120_000)]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task UpgradesLegacyHostRolesConservativelyAndRepeatably(string engine)
+
+    [Fact(Timeout = 120_000)]
+    public async Task UpgradesLegacyHostRolesConservativelyAndRepeatably()
     {
+        string engine = Engine;
         CancellationToken token = TestContext.Current.CancellationToken;
         await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
         ILabelMaintenanceStore maintenance = fixture.Services.GetRequiredService<ILabelMaintenanceStore>();
@@ -194,12 +290,11 @@ public class ProviderConformanceTests
         Assert.False(upgraded.AllHostsDrained);
     }
 
-    [Theory(Timeout = 120_000)]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task CoordinatesResumableKeyRotationAcrossHostsAndRestart(string engine)
+
+    [Fact(Timeout = 120_000)]
+    public async Task CoordinatesResumableKeyRotationAcrossHostsAndRestart()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
         using LabelSigningKey originalKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
         using LabelSigningKey replacementKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
@@ -331,12 +426,11 @@ public class ProviderConformanceTests
         Assert.Equal("spam", resigned.SignedLabel.Label.Value);
     }
 
-    [Theory(Timeout = 120_000)]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task RefusesRotationWithoutARegisteredHost(string engine)
+
+    [Fact(Timeout = 120_000)]
+    public async Task RefusesRotationWithoutARegisteredHost()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
         using LabelSigningKey replacementKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
         ILabelMaintenanceStore maintenance = fixture.Services.GetRequiredService<ILabelMaintenanceStore>();
@@ -352,12 +446,11 @@ public class ProviderConformanceTests
         Assert.Equal(LabelMaintenancePhase.None, state.Phase);
     }
 
-    [Theory(Timeout = 120_000)]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task SignatureReplacementUsesTheValidatedSnapshotWhenCallerChangesTheBatch(string engine)
+
+    [Fact(Timeout = 120_000)]
+    public async Task SignatureReplacementUsesTheValidatedSnapshotWhenCallerChangesTheBatch()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
         using LabelSigningKey originalKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
         using LabelSigningKey replacementKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
@@ -391,67 +484,11 @@ public class ProviderConformanceTests
         Assert.Equal(unpublished.GetJsonBytes(), pending.SignedLabel.GetJsonBytes());
     }
 
-    /// <summary>Changes the caller-owned batch immediately after its first read, without relying on task timing.</summary>
-    private sealed class MutatingReplacementBatch(StoredLabel initial, StoredLabel replacement) : IReadOnlyList<StoredLabel>
+
+    [Fact(Timeout = 120_000)]
+    public async Task ResignsPublishedHistoryInResumableBatches()
     {
-        internal StoredLabel Current { get; private set; } = initial;
-
-        public int Count => 1;
-
-        public StoredLabel this[int index]
-        {
-            get
-            {
-                ArgumentOutOfRangeException.ThrowIfNotEqual(index, 0);
-                StoredLabel current = Current;
-                Current = replacement;
-                return current;
-            }
-        }
-
-        public IEnumerator<StoredLabel> GetEnumerator()
-        {
-            yield return this[0];
-        }
-
-        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-    }
-
-    private static async Task<ILabelMaintenanceStore> BeginResigningAsync(
-        StoreFixture fixture,
-        string operationId,
-        LabelSigningKey replacementKey)
-    {
-        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
-        ILabelMaintenanceStore maintenance = fixture.Services.GetRequiredService<ILabelMaintenanceStore>();
-        Guid host = Guid.NewGuid();
-        await maintenance.RegisterHostAsync(host, cancellationToken);
-        await maintenance.BeginRotationAsync(
-            operationId: operationId,
-            previousKeyId: "active",
-            replacementKeyId: "replacement",
-            replacementPublicKey: replacementKey.ExportPublicKeyMultibase(),
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-        await maintenance.AcknowledgeHostDrainedAsync(
-            operationId: operationId,
-            instanceId: host,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-        await maintenance.CaptureRotationBoundaryAsync(
-            operationId: operationId,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-        await maintenance.VerifyRotationKeyPublicationAsync(
-            operationId: operationId,
-            replacementPublicKey: replacementKey.ExportPublicKeyMultibase(),
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-        return maintenance;
-    }
-
-    [Theory(Timeout = 120_000)]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task ResignsPublishedHistoryInResumableBatches(string engine)
-    {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
         using LabelSigningKey originalKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
         using LabelSigningKey replacementKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
@@ -513,12 +550,11 @@ public class ProviderConformanceTests
         }
     }
 
-    [Theory(Timeout = 120_000)]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task RollsBackWholeBatchAndRejectsConflictingIdentity(string engine)
+
+    [Fact(Timeout = 120_000)]
+    public async Task RollsBackWholeBatchAndRejectsConflictingIdentity()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         SignedLabelSnapshot valid = Sign(key);
@@ -533,15 +569,13 @@ public class ProviderConformanceTests
         Assert.Equal(1, (await fixture.Store.GetStateAsync(TestContext.Current.CancellationToken)).IssuedThrough);
     }
 
+
     [Theory(Timeout = 120_000)]
-    [InlineData("sqlite", false)]
-    [InlineData("postgresql", false)]
-    [InlineData("mysql", false)]
-    [InlineData("sqlite", true)]
-    [InlineData("postgresql", true)]
-    [InlineData("mysql", true)]
-    public async Task RecoversCommitBoundaryFailuresWithoutDuplicatingWrites(string engine, bool loseAcknowledgement)
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RecoversCommitBoundaryFailuresWithoutDuplicatingWrites(bool loseAcknowledgement)
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         SignedLabelSnapshot[] batch = [Sign(key), Sign(key, "did:plc:two")];
@@ -629,15 +663,13 @@ public class ProviderConformanceTests
         }
     }
 
+
     [Theory(Timeout = 120_000)]
-    [InlineData("sqlite", 1)]
-    [InlineData("postgresql", 1)]
-    [InlineData("mysql", 1)]
-    [InlineData("sqlite", 100)]
-    [InlineData("postgresql", 100)]
-    [InlineData("mysql", 100)]
-    public async Task DrainsUnfilteredQueryAndReplayInRequestedPageSizes(string engine, int limit)
+    [InlineData(1)]
+    [InlineData(100)]
+    public async Task DrainsUnfilteredQueryAndReplayInRequestedPageSizes(int limit)
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         SignedLabelSnapshot signed = Sign(key);
@@ -674,29 +706,11 @@ public class ProviderConformanceTests
             TestContext.Current.CancellationToken)).Labels);
     }
 
-    private static async Task InjectTransientFailureAsync(string engine, DbConnection connection,
-        DbTransaction? transaction, CancellationToken token)
-    {
-        if (engine == "sqlite")
-        {
-            throw new SqliteException("Injected commit-boundary failure.", 5);
-        }
 
-        using DbCommand command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = engine == "postgresql"
-            ? "DO $$ BEGIN RAISE EXCEPTION 'Injected commit-boundary failure' USING ERRCODE = '40001'; END $$"
-            : "SIGNAL SQLSTATE '40001' SET MYSQL_ERRNO = 1213, MESSAGE_TEXT = 'Injected commit-boundary failure'";
-        await command.ExecuteNonQueryAsync(token);
-        throw new InvalidOperationException("The database did not inject the expected transient failure.");
-    }
-
-    [Theory(Timeout = 120_000)]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task SerializesConcurrentWritersAndDuplicateReceipts(string engine)
+    [Fact(Timeout = 120_000)]
+    public async Task SerializesConcurrentWritersAndDuplicateReceipts()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         SignedLabelSnapshot signed = Sign(key);
@@ -728,12 +742,11 @@ public class ProviderConformanceTests
             (await fixture.Store.ReplayAsync(published.StreamId, 0, 6, cancellationToken: TestContext.Current.CancellationToken)).Labels.Select(label => label.Sequence));
     }
 
-    [Theory(Timeout = 120_000)]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task KeepsStablePagesAndReplayTipsAcrossConcurrentPublication(string engine)
+
+    [Fact(Timeout = 120_000)]
+    public async Task KeepsStablePagesAndReplayTipsAcrossConcurrentPublication()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         await fixture.Store.AppendAsync("initial", [Sign(key, "did:plc:one"), Sign(key, "did:plc:two"), Sign(key, "did:plc:three")], cancellationToken: TestContext.Current.CancellationToken);
@@ -756,12 +769,11 @@ public class ProviderConformanceTests
         await Assert.ThrowsAsync<InvalidDataException>(() => fixture.Store.ReplayAsync(first.StreamId, 0, 5, cancellationToken: TestContext.Current.CancellationToken));
     }
 
-    [Theory(Timeout = 120_000)]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task RecoversRetirementAndBoundedPurgeWithoutReusingSequences(string engine)
+
+    [Fact(Timeout = 120_000)]
+    public async Task RecoversRetirementAndBoundedPurgeWithoutReusingSequences()
     {
+        string engine = Engine;
         FakeTimeProvider databaseClock = new(s_instant);
         await using StoreFixture fixture = await StoreFixture.CreateAsync(engine, databaseClock: databaseClock);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
@@ -804,12 +816,11 @@ public class ProviderConformanceTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => restarted.AppendAsync("never-reopen", [Sign(key)], cancellationToken: TestContext.Current.CancellationToken));
     }
 
-    [Theory(Timeout = 120_000)]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task PurgesRemainingCheckpointReceiptsAfterAllLabelsAreRemoved(string engine)
+
+    [Fact(Timeout = 120_000)]
+    public async Task PurgesRemainingCheckpointReceiptsAfterAllLabelsAreRemoved()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         await fixture.Store.AppendAsync("initial", [Sign(key)], cancellationToken: TestContext.Current.CancellationToken);
@@ -832,12 +843,11 @@ public class ProviderConformanceTests
         Assert.Null(await fixture.Store.GetReceiptAsync("checkpoint", TestContext.Current.CancellationToken));
     }
 
-    [Theory(Timeout = 120_000)]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task InitializesFromScriptAndRecoversPartialSchemaButRejectsFutureVersions(string engine)
+
+    [Fact(Timeout = 120_000)]
+    public async Task InitializesFromScriptAndRecoversPartialSchemaButRejectsFutureVersions()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateAsync(engine, initialize: false);
         string package = engine switch { "sqlite" => "SQLite", "mysql" => "MySQL", _ => "PostgreSQL" };
         string root = FindRoot();
@@ -857,12 +867,11 @@ public class ProviderConformanceTests
         await Assert.ThrowsAsync<InvalidDataException>(() => fixture.Store.GetStateAsync(TestContext.Current.CancellationToken));
     }
 
-    [Theory(Timeout = 120_000)]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task RecordsOfficialMetricsAndSafeGeneratedLogs(string engine)
+
+    [Fact(Timeout = 120_000)]
+    public async Task RecordsOfficialMetricsAndSafeGeneratedLogs()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
         using MetricCollector<long> labels = new(fixture.MeterFactory, "idunno.Bluesky.Labeler.Persistence", "idunno.bluesky.labeler.labels");
         using MetricCollector<long> operations = new(fixture.MeterFactory, "idunno.Bluesky.Labeler.Persistence", "idunno.bluesky.labeler.operations");
@@ -898,12 +907,11 @@ public class ProviderConformanceTests
         });
     }
 
-    [Theory(Timeout = 120_000)]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task SerializesConcurrentInitializationAndRejectsUnboundUse(string engine)
+
+    [Fact(Timeout = 120_000)]
+    public async Task SerializesConcurrentInitializationAndRejectsUnboundUse()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateAsync(engine, initialize: false);
         string package = engine switch { "sqlite" => "SQLite", "mysql" => "MySQL", _ => "PostgreSQL" };
         await fixture.ExecuteAsync(await File.ReadAllTextAsync(
@@ -917,12 +925,11 @@ public class ProviderConformanceTests
         Assert.Equal(0, states[0].Revision);
     }
 
-    [Theory(Timeout = 120_000)]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task RejectsInvalidInputsAndCancellationWithoutMutation(string engine)
+
+    [Fact(Timeout = 120_000)]
+    public async Task RejectsInvalidInputsAndCancellationWithoutMutation()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         SignedLabelSnapshot signed = Sign(key);
@@ -943,12 +950,11 @@ public class ProviderConformanceTests
         Assert.Equal(before, await fixture.Store.GetStateAsync(TestContext.Current.CancellationToken));
     }
 
-    [Theory(Timeout = 120_000)]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task RejectsSequenceOverflowAndCorruptStoredRepresentations(string engine)
+
+    [Fact(Timeout = 120_000)]
+    public async Task RejectsSequenceOverflowAndCorruptStoredRepresentations()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         SignedLabelSnapshot signed = Sign(key);
@@ -964,12 +970,11 @@ public class ProviderConformanceTests
         await Assert.ThrowsAsync<InvalidDataException>(() => fixture.Store.QueryAsync([], cancellationToken: TestContext.Current.CancellationToken));
     }
 
-    [Theory(Timeout = 120_000)]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task ResumesInterruptedSchemaCreationAndEmptyRetirement(string engine)
+
+    [Fact(Timeout = 120_000)]
+    public async Task ResumesInterruptedSchemaCreationAndEmptyRetirement()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateAsync(engine, initialize: false);
         string package = engine switch { "sqlite" => "SQLite", "mysql" => "MySQL", _ => "PostgreSQL" };
         string schema = await File.ReadAllTextAsync(
@@ -984,26 +989,61 @@ public class ProviderConformanceTests
         Assert.Equal(state, await fixture.NewStore().GetStateAsync(TestContext.Current.CancellationToken));
     }
 
-    [Theory(Timeout = 120_000)]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task ScansSparseFiltersAcrossChunksWithoutExposingPendingLabels(string engine)
+
+    [Fact(Timeout = 120_000)]
+    public async Task ScansSparseFiltersAcrossChunksWithoutExposingPendingLabels()
     {
+        string engine = Engine;
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        const int chunk = 10;
+        fixture.UsePageSizes(queryChunk: chunk);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         SignedLabelSnapshot unmatched = Sign(key);
-        await fixture.Store.AppendAsync("chunk", [.. Enumerable.Repeat(unmatched, 1000)], cancellationToken: TestContext.Current.CancellationToken);
+        await fixture.Store.AppendAsync("chunk", [.. Enumerable.Repeat(unmatched, chunk)], cancellationToken: TestContext.Current.CancellationToken);
         await fixture.Store.AppendAsync("match", [Sign(key, "did:plc:target")], cancellationToken: TestContext.Current.CancellationToken);
-        await fixture.PublishThroughAsync(1000);
+        await fixture.PublishThroughAsync(chunk);
         Assert.Empty((await fixture.Store.QueryAsync(["did:plc:target"], cancellationToken: TestContext.Current.CancellationToken)).Labels);
         await fixture.PublishThroughAsync();
         LabelPage page = await fixture.NewStore().QueryAsync(["did:plc:target"], limit: 1, cancellationToken: TestContext.Current.CancellationToken);
-        Assert.Equal(1001, Assert.Single(page.Labels).Sequence);
+        Assert.Equal(chunk + 1, Assert.Single(page.Labels).Sequence);
         Assert.Null(page.Cursor);
-        LabelPage replay = await fixture.Store.ReplayAsync(page.StreamId, 999, 1001, limit: 1, cancellationToken: TestContext.Current.CancellationToken);
-        Assert.Equal(1000, Assert.Single(replay.Labels).Sequence);
+        LabelPage replay = await fixture.Store.ReplayAsync(page.StreamId, chunk - 1, chunk + 1, limit: 1, cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Equal(chunk, Assert.Single(replay.Labels).Sequence);
     }
+}
+
+/// <summary>
+/// Runs <see cref="ProviderConformanceTests"/> against sqlite.
+/// </summary>
+public sealed class ProviderConformanceSqliteTests : ProviderConformanceTests
+{
+    /// <inheritdoc />
+    protected override string Engine => "sqlite";
+}
+
+/// <summary>
+/// Runs <see cref="ProviderConformanceTests"/> against postgresql.
+/// </summary>
+public sealed class ProviderConformancePostgreSqlTests : ProviderConformanceTests
+{
+    /// <inheritdoc />
+    protected override string Engine => "postgresql";
+}
+
+/// <summary>
+/// Runs <see cref="ProviderConformanceTests"/> against mysql.
+/// </summary>
+public sealed class ProviderConformanceMySqlTests : ProviderConformanceTests
+{
+    /// <inheritdoc />
+    protected override string Engine => "mysql";
+}
+
+/// <summary>
+/// Tests of <see cref="ProviderConformanceTestBase"/> that are independent of, or enumerate every, storage engine.
+/// </summary>
+public sealed class ProviderConformanceOtherTests : ProviderConformanceTestBase
+{
 
     [Theory]
     [InlineData(LabelSigningCurve.P256)]
@@ -1021,6 +1061,7 @@ public class ProviderConformanceTests
         Assert.Equal(signed.GetCanonicalUnsignedBytes(), snapshot.GetCanonicalUnsignedBytes());
         Assert.Throws<InvalidDataException>(() => new SignedLabelSnapshot(new Label(1, StoreFixture.s_issuer, "did:plc:subject", null, "spam", false, s_instant, null)));
     }
+
 
     [Theory(Timeout = 120_000)]
     [InlineData("label_schema")]
@@ -1068,6 +1109,7 @@ public class ProviderConformanceTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Store.InitializeAsync(StoreFixture.s_issuer, TestContext.Current.CancellationToken));
     }
 
+
     [Theory]
     [InlineData("Data Source=:memory:")]
     [InlineData("Data Source=file:labels.db")]
@@ -1079,6 +1121,7 @@ public class ProviderConformanceTests
         Assert.Empty(services);
     }
 
+
     [Fact]
     public void RegistersLazilyAndRejectsMultipleProviders()
     {
@@ -1087,15 +1130,5 @@ public class ProviderConformanceTests
         Assert.Throws<InvalidOperationException>(() => services.AddPostgreSqlLabelStorage("Host=127.0.0.1"));
         Assert.Throws<InvalidOperationException>(() => services.AddMySqlLabelStorage("Server=127.0.0.1"));
     }
-
-    private static string FindRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "idunno.Bluesky.slnx")))
-        {
-            directory = directory.Parent;
-        }
-
-        return directory?.FullName ?? throw new InvalidOperationException("Repository root not found.");
-    }
 }
+

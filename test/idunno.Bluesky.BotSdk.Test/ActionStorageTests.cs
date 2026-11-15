@@ -50,16 +50,37 @@ public sealed class ActionPostgresDataAttribute : DataAttribute
 }
 
 /// <summary>Checks generalized action identity, atomicity, migration, and recovery across storage providers.</summary>
-public sealed class ActionStorageTests
+public abstract class ActionStorageTests
 {
-    /// <summary>Marks existing and newly enqueued deleted targets without broadening reply-root suppression.</summary>
-    /// <param name="provider">The provider under test.</param>
-    [Theory]
-    [InlineData("Sqlite")]
-    [MySqlData]
-    [ActionPostgresData]
-    public async Task SameEventDeletionMarksNewActions(string provider)
+    /// <summary>Gets the storage provider exercised by the inherited tests; one derived class per provider lets xUnit run the providers in parallel.</summary>
+    protected abstract string Provider { get; }
+
+    /// <summary>Skips the current test when the provider needs a disposable server that is not configured, and returns the provider name.</summary>
+    /// <returns>The provider under test.</returns>
+    private protected string RequireProvider()
     {
+        string? variable = Provider switch
+        {
+            "MySql" => "BOTSDK_TEST_MYSQL_CONNECTION",
+            "Postgres" => "BOTSDK_TEST_POSTGRESQL_CONNECTION",
+            _ => null
+        };
+
+        if (variable is not null)
+        {
+            Assert.SkipWhen(
+                string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(variable)),
+                $"Set {variable} to a disposable {Provider} server to run provider tests.");
+        }
+
+        return Provider;
+    }
+
+    /// <summary>Marks existing and newly enqueued deleted targets without broadening reply-root suppression.</summary>
+    [Fact]
+    public async Task SameEventDeletionMarksNewActions()
+    {
+        string provider = RequireProvider();
         await using Store store = await Store.CreateAsync(provider);
         await VerifySameEventDeletionAsync(store.Database, store.MakeRetriesDueAsync);
     }
@@ -109,13 +130,10 @@ public sealed class ActionStorageTests
     }
 
     /// <summary>Preserves arbitrary custom JSON and applies root deletion only to replies.</summary>
-    /// <param name="provider">The provider under test.</param>
-    [Theory]
-    [InlineData("Sqlite")]
-    [MySqlData]
-    [ActionPostgresData]
-    public async Task CustomPayloadsDoNotInheritReplyDeletionSemantics(string provider)
+    [Fact]
+    public async Task CustomPayloadsDoNotInheritReplyDeletionSemantics()
     {
+        string provider = RequireProvider();
         await using Store store = await Store.CreateAsync(provider);
         BotAction reply = TestRecords.Work();
         string[] payloads =
@@ -147,13 +165,10 @@ public sealed class ActionStorageTests
     }
 
     /// <summary>Removes legacy record-key indexes and preserves separate actions sharing a remote membership.</summary>
-    /// <param name="provider">The provider under test.</param>
-    [Theory]
-    [InlineData("Sqlite")]
-    [MySqlData]
-    [ActionPostgresData]
-    public async Task SharesRemoteKeysWithoutSharingRowMutations(string provider)
+    [Fact]
+    public async Task SharesRemoteKeysWithoutSharingRowMutations()
     {
+        string provider = RequireProvider();
         await using Store store = await Store.CreateAsync(provider);
         BotAction first = Action(
             "list-item",
@@ -220,13 +235,10 @@ public sealed class ActionStorageTests
     }
 
     /// <summary>Restores complete actions and changes only the addressed kind and key.</summary>
-    /// <param name="provider">The provider under test.</param>
-    [Theory]
-    [InlineData("Sqlite")]
-    [MySqlData]
-    [ActionPostgresData]
-    public async Task StoresAndUpdatesIndependentIdentities(string provider)
+    [Fact]
+    public async Task StoresAndUpdatesIndependentIdentities()
     {
+        string provider = RequireProvider();
         await using Store store = await Store.CreateAsync(provider);
         BotAction reply = Action(
             "reply",
@@ -330,13 +342,10 @@ public sealed class ActionStorageTests
     }
 
     /// <summary>Rolls back earlier inserts, deletion flags, audits, and progress when a later action fails.</summary>
-    /// <param name="provider">The provider under test.</param>
-    [Theory]
-    [InlineData("Sqlite")]
-    [MySqlData]
-    [ActionPostgresData]
-    public async Task RollsBackCompleteBatch(string provider)
+    [Fact]
+    public async Task RollsBackCompleteBatch()
     {
+        string provider = RequireProvider();
         await using Store store = await Store.CreateAsync(provider);
         BotAction original = Action(
             "reply",
@@ -387,13 +396,10 @@ public sealed class ActionStorageTests
     }
 
     /// <summary>Rejects invalid new action metadata without advancing progress or retaining earlier inserts.</summary>
-    /// <param name="provider">The provider under test.</param>
-    [Theory]
-    [InlineData("Sqlite")]
-    [MySqlData]
-    [ActionPostgresData]
-    public async Task ValidatesNewActionsAtomically(string provider)
+    [Fact]
+    public async Task ValidatesNewActionsAtomically()
     {
+        string provider = RequireProvider();
         await using Store store = await Store.CreateAsync(provider);
         BotAction first = Action(
             "reply",
@@ -433,13 +439,10 @@ public sealed class ActionStorageTests
     }
 
     /// <summary>Migrates queued legacy replies in place and permits other actions on their source afterward.</summary>
-    /// <param name="provider">The provider under test.</param>
-    [Theory]
-    [InlineData("Sqlite")]
-    [MySqlData]
-    [ActionPostgresData]
-    public async Task MigratesQueuedLegacyReplies(string provider)
+    [Fact]
+    public async Task MigratesQueuedLegacyReplies()
     {
+        string provider = RequireProvider();
         await using Store store = await Store.CreateAsync(
             provider,
             legacy: true);
@@ -486,49 +489,7 @@ public sealed class ActionStorageTests
             next.ActionKind);
     }
 
-    /// <summary>Preserves enqueue timestamps while SQLite rebuilds composite action tables with obsolete unique record-key indexes.</summary>
-    /// <param name="knownEnqueue"><see langword="true"/> to retain an existing enqueue timestamp; otherwise, <see langword="false"/> for an older schema.</param>
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task SqliteCompositeRebuildPreservesEnqueueKnowledge(bool knownEnqueue)
-    {
-        await using Store store = await Store.CreateAsync("Sqlite");
-        BotAction action = Action("reply", "default", "fixed");
-        await store.Database.HandleAsync(
-            sequence: 11,
-            actions: [action],
-            malformedReason: null,
-            cancellationToken: CancellationToken.None);
-        BotAction original = Assert.IsType<BotAction>(await store.Database.NextWorkAsync(CancellationToken.None));
-        Assert.NotNull(original.EnqueuedAt);
-        if (!knownEnqueue)
-        {
-            await store.SqlAsync("ALTER TABLE reply_work DROP COLUMN enqueued_at");
-        }
-
-        await store.AddLegacyRecordKeyIndexAsync();
-        await store.Database.InitializeAsync(CancellationToken.None);
-        await store.Database.InitializeAsync(CancellationToken.None);
-        BotAction migrated = Assert.IsType<BotAction>(await store.Database.NextWorkAsync(CancellationToken.None));
-        Assert.Equal(knownEnqueue ? original.EnqueuedAt : null, migrated.EnqueuedAt);
-        BotOperationalSnapshot snapshot = await ((IBotDatabaseDiagnostics)store.Database).GetOperationalSnapshotAsync(CancellationToken.None);
-        Assert.Equal(knownEnqueue ? 0 : 1, snapshot.UnfinishedActionsWithUnknownEnqueueTime);
-    }
-
-    /// <summary>Preserves known enqueue timestamps while SQLite rebuilds a legacy source-only primary key.</summary>
-    [Fact]
-    public async Task SqliteLegacyPrimaryKeyRebuildPreservesKnownEnqueue()
-    {
-        await using Store store = await Store.CreateAsync(
-            provider: "Sqlite",
-            legacy: true,
-            legacyEnqueueKnown: true);
-        BotAction migrated = Assert.IsType<BotAction>(await store.Database.NextWorkAsync(CancellationToken.None));
-        Assert.Equal(DateTimeOffset.UnixEpoch.AddSeconds(1), migrated.EnqueuedAt);
-    }
-
-    private static BotAction Action(
+    private protected static BotAction Action(
         string kind,
         string key,
         string recordKey) => new(
@@ -542,7 +503,7 @@ public sealed class ActionStorageTests
             ActionKind: kind,
             ActionKey: key);
 
-    private sealed class Store : IAsyncDisposable
+    private protected sealed class Store : IAsyncDisposable
     {
         private readonly string _provider;
         private readonly string _name = "action_test_" + Guid.NewGuid().ToString("N");
@@ -790,4 +751,67 @@ public sealed class ActionStorageTests
             }
         }
     }
+}
+
+/// <summary>Runs <see cref="ActionStorageTests"/> against Sqlite.</summary>
+public sealed class ActionStorageSqliteTests : ActionStorageTests
+{
+    /// <inheritdoc />
+    protected override string Provider => "Sqlite";
+
+    /// <summary>Preserves enqueue timestamps while SQLite rebuilds composite action tables with obsolete unique record-key indexes.</summary>
+    /// <param name="knownEnqueue"><see langword="true"/> to retain an existing enqueue timestamp; otherwise, <see langword="false"/> for an older schema.</param>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task SqliteCompositeRebuildPreservesEnqueueKnowledge(bool knownEnqueue)
+    {
+        await using Store store = await Store.CreateAsync("Sqlite");
+        BotAction action = Action("reply", "default", "fixed");
+        await store.Database.HandleAsync(
+            sequence: 11,
+            actions: [action],
+            malformedReason: null,
+            cancellationToken: CancellationToken.None);
+        BotAction original = Assert.IsType<BotAction>(await store.Database.NextWorkAsync(CancellationToken.None));
+        Assert.NotNull(original.EnqueuedAt);
+        if (!knownEnqueue)
+        {
+            await store.SqlAsync("ALTER TABLE reply_work DROP COLUMN enqueued_at");
+        }
+
+        await store.AddLegacyRecordKeyIndexAsync();
+        await store.Database.InitializeAsync(CancellationToken.None);
+        await store.Database.InitializeAsync(CancellationToken.None);
+        BotAction migrated = Assert.IsType<BotAction>(await store.Database.NextWorkAsync(CancellationToken.None));
+        Assert.Equal(knownEnqueue ? original.EnqueuedAt : null, migrated.EnqueuedAt);
+        BotOperationalSnapshot snapshot = await ((IBotDatabaseDiagnostics)store.Database).GetOperationalSnapshotAsync(CancellationToken.None);
+        Assert.Equal(knownEnqueue ? 0 : 1, snapshot.UnfinishedActionsWithUnknownEnqueueTime);
+    }
+
+    /// <summary>Preserves known enqueue timestamps while SQLite rebuilds a legacy source-only primary key.</summary>
+    [Fact]
+    public async Task SqliteLegacyPrimaryKeyRebuildPreservesKnownEnqueue()
+    {
+        await using Store store = await Store.CreateAsync(
+            provider: "Sqlite",
+            legacy: true,
+            legacyEnqueueKnown: true);
+        BotAction migrated = Assert.IsType<BotAction>(await store.Database.NextWorkAsync(CancellationToken.None));
+        Assert.Equal(DateTimeOffset.UnixEpoch.AddSeconds(1), migrated.EnqueuedAt);
+    }
+}
+
+/// <summary>Runs <see cref="ActionStorageTests"/> against MySql.</summary>
+public sealed class ActionStorageMySqlTests : ActionStorageTests
+{
+    /// <inheritdoc />
+    protected override string Provider => "MySql";
+}
+
+/// <summary>Runs <see cref="ActionStorageTests"/> against Postgres.</summary>
+public sealed class ActionStoragePostgresTests : ActionStorageTests
+{
+    /// <inheritdoc />
+    protected override string Provider => "Postgres";
 }

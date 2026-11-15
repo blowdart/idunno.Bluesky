@@ -50,13 +50,15 @@ public class ExpiredEntrySweepThrottleTests
         using Barrier barrier = new(32);
         bool[] claims = new bool[32];
 
-        await Task.WhenAll(Enumerable.Range(0, 32).Select(index => Task.Run(
+        await Task.WhenAll(Enumerable.Range(0, 32).Select(index => Task.Factory.StartNew(
             () =>
             {
                 barrier.SignalAndWait(TestContext.Current.CancellationToken);
                 claims[index] = throttle.TryClaimSweep();
             },
-            TestContext.Current.CancellationToken)));
+            TestContext.Current.CancellationToken,
+            TaskCreationOptions.LongRunning,
+            TaskScheduler.Default)));
 
         Assert.Equal(1, claims.Count(claimed => claimed));
     }

@@ -25,6 +25,11 @@ internal sealed class StoreFixture : IAsyncDisposable
     private readonly string _database = "label_test_" + Guid.NewGuid().ToString("N");
     private readonly List<ServiceProvider> _providers = [];
     private string _admin = string.Empty;
+    private int? _scanPageSize;
+    private int? _backfillPageSize;
+    private int? _queryChunkSize;
+    private int? _historyPageSize;
+    private int? _captureLimit;
     internal string Engine { get; }
     internal string ConnectionString { get; private set; } = string.Empty;
     internal ILabelStore Store { get; private set; } = null!;
@@ -141,7 +146,53 @@ internal sealed class StoreFixture : IAsyncDisposable
                 break;
         }
 
+        ApplyPageSizes(store);
         return store;
+    }
+
+    /// <summary>Lowers the scan and backfill page sizes for this store and every store later created by <see cref="NewStore"/>.</summary>
+    /// <remarks><para>Lets a test cross a page boundary with a few rows instead of seeding a production-sized page.</para></remarks>
+    internal void UsePageSizes(
+        int? scan = null,
+        int? backfill = null,
+        int? queryChunk = null,
+        int? history = null,
+        int? capture = null)
+    {
+        _captureLimit = capture;
+        _scanPageSize = scan;
+        _backfillPageSize = backfill;
+        _queryChunkSize = queryChunk;
+        _historyPageSize = history;
+        ApplyPageSizes(Store);
+    }
+
+    private void ApplyPageSizes(ILabelStore store)
+    {
+        switch (store)
+        {
+            case SqliteLabelStore sqlite:
+                sqlite.ScanPageSize = _scanPageSize ?? sqlite.ScanPageSize;
+                sqlite.BackfillPageSize = _backfillPageSize ?? sqlite.BackfillPageSize;
+                sqlite.QueryChunkSize = _queryChunkSize ?? sqlite.QueryChunkSize;
+                sqlite.HistoryPageSize = _historyPageSize ?? sqlite.HistoryPageSize;
+                sqlite.CaptureLimit = _captureLimit ?? sqlite.CaptureLimit;
+                break;
+            case PostgreSqlLabelStore postgresql:
+                postgresql.ScanPageSize = _scanPageSize ?? postgresql.ScanPageSize;
+                postgresql.BackfillPageSize = _backfillPageSize ?? postgresql.BackfillPageSize;
+                postgresql.QueryChunkSize = _queryChunkSize ?? postgresql.QueryChunkSize;
+                postgresql.HistoryPageSize = _historyPageSize ?? postgresql.HistoryPageSize;
+                postgresql.CaptureLimit = _captureLimit ?? postgresql.CaptureLimit;
+                break;
+            case MySqlLabelStore mysql:
+                mysql.ScanPageSize = _scanPageSize ?? mysql.ScanPageSize;
+                mysql.BackfillPageSize = _backfillPageSize ?? mysql.BackfillPageSize;
+                mysql.QueryChunkSize = _queryChunkSize ?? mysql.QueryChunkSize;
+                mysql.HistoryPageSize = _historyPageSize ?? mysql.HistoryPageSize;
+                mysql.CaptureLimit = _captureLimit ?? mysql.CaptureLimit;
+                break;
+        }
     }
 
     internal IMeterFactory MeterFactory => Services.GetRequiredService<IMeterFactory>();

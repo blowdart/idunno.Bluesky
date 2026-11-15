@@ -121,7 +121,9 @@ public class LabelMuteStoreTests
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
         LabelPolicyState policy = await LabelPolicyStoreTests.ActivateAsync((ILabelPolicyStore)fixture.Store, caller, token);
-        for (int index = 0; index < 101; index++)
+        const int reportCount = 6;
+        fixture.UsePageSizes(backfill: 4);
+        for (int index = 0; index < reportCount; index++)
         {
             ModerationReportAuthenticationResult authentication = await ReportTestAuthentication.CreateAsync(
                 s_reporter, policy.DatabaseTime, "batch-" + index);
@@ -170,11 +172,11 @@ public class LabelMuteStoreTests
                 Assert.Equal(SHA256.HashData(key), Assert.IsType<byte[]>(reader.GetValue(0)));
                 rows++;
             }
-            Assert.Equal(101, rows);
+            Assert.Equal(reportCount, rows);
         }
         LabelNavigationCounts counts = Success(await ((ILabelTableStore)restarted).ReadNavigationCountsAsync(caller, token));
-        Assert.Equal(101, counts.Cases);
-        Assert.Equal(101, counts.Reports);
+        Assert.Equal(reportCount, counts.Cases);
+        Assert.Equal(reportCount, counts.Reports);
         await Assert.ThrowsAnyAsync<DbException>(() => fixture.ExecuteAsync("UPDATE label_reports SET mute_subject_key=NULL WHERE report_id=1"));
     }
 

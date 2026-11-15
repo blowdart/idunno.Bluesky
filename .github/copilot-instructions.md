@@ -57,24 +57,27 @@ Report new findings, previously missed findings, and older findings that remain 
 
 Before **every full test run**, provision fresh, disposable PostgreSQL 17 and MySQL 8.4 Docker containers. Do not start the suite with missing database configuration and rediscover the same prerequisite failures.
 
-Use `pwsh -File ./test.ps1` for the full local gate. It runs the required clean Debug build, provisions the databases,
-verifies authenticated access from the runner, runs every test project/framework, records timings/logs and cleans up.
+Use `pwsh -File ./test.ps1` for the local gate. By default it runs a fast incremental Debug build without analyzers
+(shared compilation on), provisions the databases, verifies authenticated access from the runner, runs every test
+project on net10.0 only with default test parallelism (`-AllFrameworks` runs every framework), records timings/logs and cleans up. Use `pwsh -File ./test.ps1 -Full`
+for the clean, analyzer-enabled build on every framework that matches CI; run it before committing, because the fast build does not run
+the code, documentation or spelling analyzers.
 
 * Set `LABELER_TEST_POSTGRESQL_CONNECTION` and `LABELER_TEST_MYSQL_CONNECTION` in the test process to administrative connections on those disposable servers. The labeler fixtures create and drop their own databases; never point them at a live labeler database or reuse production containers, credentials, or volumes.
 * Use unique test-container names, generated temporary passwords, disposable storage, and loopback-only published ports. Verify authenticated database connections through the published ports from the test runner before launching the full suite; a running container or an in-container readiness probe alone is insufficient.
-* Bound **both** module and xUnit collection concurrency: `dotnet test --max-parallel-test-modules 4 --max-threads 4`. Labeler fixtures use bounded pools keyed by unique per-test databases and clear only their own pool before dropping the database. Do not disable pooling, clear all pools, change machine-wide TCP settings or weaken fixture isolation to work around resource exhaustion.
+* Do not set `DOTNET_PROCESSOR_COUNT` or throttle `dotnet test` concurrency locally; the default module and xUnit parallelism is used. Labeler fixtures use bounded pools keyed by unique per-test databases and clear only their own pool before dropping the database. Do not disable pooling, clear all pools, change machine-wide TCP settings or weaken fixture isolation to work around resource exhaustion.
 * Record the elapsed time and preserve the complete test log and database diagnostics. In a `finally` block, remove only the containers and disposable storage created for that run, including when tests fail. Do not report the commit gate as passed unless every required test passes.
 
 These database prerequisites also apply to targeted runs that include PostgreSQL or MySQL labeler conformance tests.
 
 Before *every* commit, run all of these from the repository root and require every step to be clean:
 
-1. `dotnet build idunno.Bluesky.slnx -c Debug --no-incremental` — must report 0 warnings and 0 errors.
-2. `dotnet test` — every test in every test project must pass.
+1. `dotnet build idunno.Bluesky.slnx -c Debug --no-incremental` — must report 0 warnings and 0 errors. This is the only step that restores and builds.
+2. `dotnet test --no-build --no-restore` — every test in every test project must pass.
 3. `dotnet format style idunno.Bluesky.slnx --no-restore --severity info --verify-no-changes` — must exit 0 with no outstanding style diagnostics.
 4. `dotnet format analyzers idunno.Bluesky.slnx --no-restore --severity info --verify-no-changes` — must exit 0 with no outstanding analyzer diagnostics.
 
-`test.ps1` covers the build and full-suite steps; run both `dotnet format` checks separately afterward.
+`test.ps1` covers the build and full-suite steps; run both `dotnet format` checks separately afterward. `dotnet format` has no `--no-build` option, so `--no-restore` is as far as it can skip.
 Run the checks sequentially, not in parallel with each other or other build/test commands: concurrent workspace
 loading can contend over generated files and produce misleading diagnostics. `--verify-no-changes` must remain
 enabled so verification does not edit files. If workspace-loading warnings appear, rerun the affected check with
