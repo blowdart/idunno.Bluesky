@@ -32,6 +32,7 @@ jobs:
     - name: Checkout source
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
+        fetch-depth: 0 # avoid shallow clone so nbgv can do its work inside the image build.
         persist-credentials: false
 
     - name: Install Cosign
