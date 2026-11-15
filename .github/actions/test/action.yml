@@ -1,6 +1,7 @@
 name: 'Test'
 description: >-
-  Runs the front end tests, every .NET test project, and then the database provider tests
+  Runs the front end tests (not in Release, which does not build the samples), every .NET test project,
+  and then the database provider tests
   with skips treated as failures. The calling job must provide the database services and set
   the LABELER_TEST_* and BOTSDK_TEST_* connection variables on the step that uses this action.
 
@@ -29,6 +30,7 @@ runs:
   using: composite
   steps:
   - name: 'Test frontend'
+    if: inputs.configuration != 'Release'
     shell: bash
     working-directory: samples/Samples.ReactBff/ClientApp
     env:
