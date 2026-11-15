@@ -8,7 +8,7 @@ MySQL 8.4 servers with temporary storage, verifies authenticated access from the
 test project and framework with the default test parallelism, and removes only this run's containers in finally.
 Logs, the build binary log, JUnit results, and elapsed times are retained under the ignored .artifacts/test-runs directory.
 The build uses default MSBuild parallelism and shared compilation. By default it is incremental and skips analyzers;
-pass -Full for the clean, analyzer-enabled Debug build that matches CI. PostgreSQL is limited to two CPUs and MySQL to six,
+pass -Full for the clean, analyzer-enabled Debug build that matches CI. PostgreSQL is limited to two CPUs and MySQL to six (both capped at the Docker engine's CPU count),
 4 GiB of memory without additional swap, and a 2 GiB temporary data filesystem.
 
 .PARAMETER Full
@@ -90,13 +90,18 @@ try
     $env:MYSQL_ROOT_PASSWORD = $password
     $postgres = "idunno-tests-$suffix-pg"
     $mysql = "idunno-tests-$suffix-mysql"
+    # Docker rejects a --cpus value above the engine's CPU count, so cap the limits to what the engine exposes.
+    $engineCpus = [int](& docker info --format '{{.NCPU}}')
+    if ($LASTEXITCODE -ne 0 -or $engineCpus -lt 1) { $engineCpus = 1 }
+    $postgresCpus = [Math]::Min(2, $engineCpus)
+    $mysqlCpus = [Math]::Min(6, $engineCpus)
     & docker run --detach --name $postgres --env POSTGRES_PASSWORD --publish '127.0.0.1::5432' `
-        --cpus=2 --memory=4g --memory-swap=4g `
+        "--cpus=$postgresCpus" --memory=4g --memory-swap=4g `
         --tmpfs '/var/lib/postgresql/data:rw,size=2147483648' postgres:17 | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'Disposable PostgreSQL startup failed.' }
     $containers.Add($postgres)
     & docker run --detach --name $mysql --env MYSQL_ROOT_PASSWORD --env 'MYSQL_ROOT_HOST=%' `
-        --publish '127.0.0.1::3306' --cpus=6 --memory=4g --memory-swap=4g `
+        --publish '127.0.0.1::3306' "--cpus=$mysqlCpus" --memory=4g --memory-swap=4g `
         --tmpfs '/var/lib/mysql:rw,size=2147483648' mysql:8.4 `
         --max-connections=200 --innodb-redo-log-capacity=536870912 | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'Disposable MySQL startup failed.' }

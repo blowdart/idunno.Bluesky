@@ -149,8 +149,12 @@ jobs:
         --max-parallel-test-modules 4 --max-threads 4
         --results-directory "${TEST_RESULTS}" --coverlet --report-xunit-junit
         --filter-not-class '*AllocationBudgetTests'
-        'idunno.Bluesky.BotSdk.Test.RelationalProviderTests'
-        'idunno.Bluesky.BotSdk.Test.ActionStorageTests'
+        'idunno.Bluesky.BotSdk.Test.RelationalProviderSqliteTests'
+        'idunno.Bluesky.BotSdk.Test.RelationalProviderMySqlTests'
+        'idunno.Bluesky.BotSdk.Test.RelationalProviderPostgresTests'
+        'idunno.Bluesky.BotSdk.Test.ActionStorageSqliteTests'
+        'idunno.Bluesky.BotSdk.Test.ActionStorageMySqlTests'
+        'idunno.Bluesky.BotSdk.Test.ActionStoragePostgresTests'
 
     - name: 'Test database providers'
       if: ${{ !cancelled() && steps.build.outcome == 'success' }}
