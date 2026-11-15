@@ -442,7 +442,7 @@
     </Project>
     <Project Path="samples/Samples.AspNetProgressiveAuthentication/Samples.AspNetProgressiveAuthentication.csproj">
       <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="true" />
+      <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="samples/Samples.AspNetTunnelAuthentication/Samples.AspNetTunnelAuthentication.csproj">
       <Build Solution="CodeQL|*" Project="false" />
@@ -450,11 +450,11 @@
     </Project>
     <Project Path="samples/Samples.BlazorAuthentication/Samples.BlazorAuthentication.csproj">
       <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="true" />
+      <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="samples/Samples.ReactBff/Samples.ReactBff.csproj">
       <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="true" />
+      <Build Solution="Release|*" Project="false" />
     </Project>
   </Folder>
   <Folder Name="/samples/Windows/">
@@ -468,12 +468,15 @@
     <File Path="test/Directory.Build.props" />
     <Project Path="test/Samples.AspNetProgressiveAuthentication.Test/Samples.AspNetProgressiveAuthentication.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="test/Samples.BlazorAuthentication.Test/Samples.BlazorAuthentication.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="test/Samples.ReactBff.Test/Samples.ReactBff.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="test/Samples.WinUIOAuth.Test/Samples.WinUIOAuth.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
