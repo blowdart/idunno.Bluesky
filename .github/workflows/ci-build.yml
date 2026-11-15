@@ -163,7 +163,7 @@ jobs:
         for framework in net8.0 net9.0 net10.0; do
           # Each framework must run at least the current 29 cases for each of the three providers.
           if dotnet "test/idunno.Bluesky.BotSdk.Test/bin/Debug/${framework}/idunno.Bluesky.BotSdk.Test.dll" \
-            --filter-class idunno.Bluesky.BotSdk.Test.RelationalProviderTests idunno.Bluesky.BotSdk.Test.ActionStorageTests \
+            --filter-class idunno.Bluesky.BotSdk.Test.RelationalProviderSqliteTests idunno.Bluesky.BotSdk.Test.RelationalProviderMySqlTests idunno.Bluesky.BotSdk.Test.RelationalProviderPostgresTests idunno.Bluesky.BotSdk.Test.ActionStorageSqliteTests idunno.Bluesky.BotSdk.Test.ActionStorageMySqlTests idunno.Bluesky.BotSdk.Test.ActionStoragePostgresTests \
             --fail-skips on --minimum-expected-tests 87 --max-threads 4 \
             --results-directory "${TEST_RESULTS}" --coverlet --report-xunit-junit; then
             echo "${framework}: all database provider tests passed"
