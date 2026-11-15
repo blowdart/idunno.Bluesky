@@ -1,0 +1,74 @@
+name: 'Test'
+description: >-
+  Runs the front end tests, every .NET test project, and then the database provider tests
+  with skips treated as failures. The calling job must provide the database services and set
+  the LABELER_TEST_* and BOTSDK_TEST_* connection variables on the step that uses this action.
+
+inputs:
+  configuration:
+    description: 'Configuration the solution was built with, Debug or Release.'
+    required: true
+  arguments:
+    description: 'Additional arguments passed to the solution wide dotnet test run, separated by spaces.'
+    required: false
+    default: ''
+  provider-arguments:
+    description: 'Additional arguments passed to each database provider test run, separated by spaces.'
+    required: false
+    default: ''
+  excluded-classes:
+    description: 'Extra test classes, separated by spaces, to exclude from the solution wide test run.'
+    required: false
+    default: ''
+  frontend-arguments:
+    description: 'Additional arguments passed to npm test, separated by spaces.'
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+  - name: 'Test frontend'
+    shell: bash
+    working-directory: samples/Samples.ReactBff/ClientApp
+    env:
+      FRONTEND_ARGUMENTS: ${{ inputs.frontend-arguments }}
+    run: npm test -- ${FRONTEND_ARGUMENTS}
+
+  # The provider classes are excluded here because the next step runs them against every framework with skips disallowed.
+  - name: 'Test'
+    shell: bash
+    env:
+      CONFIGURATION: ${{ inputs.configuration }}
+      ARGUMENTS: ${{ inputs.arguments }}
+      EXCLUDED_CLASSES: ${{ inputs.excluded-classes }}
+    run: |
+      set -f
+      dotnet test --no-build --no-restore --configuration "${CONFIGURATION}" ${ARGUMENTS} \
+        --filter-not-class ${EXCLUDED_CLASSES} \
+        idunno.Bluesky.BotSdk.Test.RelationalProviderSqliteTests \
+        idunno.Bluesky.BotSdk.Test.RelationalProviderMySqlTests \
+        idunno.Bluesky.BotSdk.Test.RelationalProviderPostgresTests \
+        idunno.Bluesky.BotSdk.Test.ActionStorageSqliteTests \
+        idunno.Bluesky.BotSdk.Test.ActionStorageMySqlTests \
+        idunno.Bluesky.BotSdk.Test.ActionStoragePostgresTests
+
+  - name: 'Test database providers'
+    if: ${{ !cancelled() }}
+    shell: bash
+    env:
+      CONFIGURATION: ${{ inputs.configuration }}
+      ARGUMENTS: ${{ inputs.provider-arguments }}
+    run: |
+      status=0
+      for framework in net8.0 net9.0 net10.0; do
+        # Each framework must run at least the current 29 cases for each of the three providers.
+        if dotnet "test/idunno.Bluesky.BotSdk.Test/bin/${CONFIGURATION}/${framework}/idunno.Bluesky.BotSdk.Test.dll" \
+          --filter-class idunno.Bluesky.BotSdk.Test.RelationalProviderSqliteTests idunno.Bluesky.BotSdk.Test.RelationalProviderMySqlTests idunno.Bluesky.BotSdk.Test.RelationalProviderPostgresTests idunno.Bluesky.BotSdk.Test.ActionStorageSqliteTests idunno.Bluesky.BotSdk.Test.ActionStorageMySqlTests idunno.Bluesky.BotSdk.Test.ActionStoragePostgresTests \
+          --fail-skips on --minimum-expected-tests 87 --max-threads 4 ${ARGUMENTS}; then
+          echo "${framework}: all database provider tests passed"
+        else
+          status=1
+        fi
+      done
+      exit "${status}"

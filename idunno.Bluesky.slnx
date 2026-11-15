@@ -31,6 +31,12 @@
     <File Path=".github/dependabot.yml" />
     <File Path=".github/pull_request_template.md" />
   </Folder>
+  <Folder Name="/.github/actions/build/">
+    <File Path=".github/actions/build/action.yml" />
+  </Folder>
+  <Folder Name="/.github/actions/test/">
+    <File Path=".github/actions/test/action.yml" />
+  </Folder>
   <Folder Name="/.github/ISSUE_TEMPLATE/">
     <File Path=".github/ISSUE_TEMPLATE/bug_report.md" />
     <File Path=".github/ISSUE_TEMPLATE/docs-issue.md" />

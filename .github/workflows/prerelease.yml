@@ -91,6 +91,8 @@ jobs:
     env:
       LABELER_TEST_POSTGRESQL_CONNECTION: "Host=127.0.0.1;Port=5432;Database=labeler_test;Username=labeler_test;Password=labeler-disposable-ci;Pooling=false;GSS Encryption Mode=Disable"
       LABELER_TEST_MYSQL_CONNECTION: "Server=127.0.0.1;Port=3306;User ID=root;Password=labeler-disposable-ci;Pooling=false"
+      BOTSDK_TEST_POSTGRESQL_CONNECTION: "Host=127.0.0.1;Port=5432;Database=labeler_test;Username=labeler_test;Password=labeler-disposable-ci;GSS Encryption Mode=Disable"
+      BOTSDK_TEST_MYSQL_CONNECTION: "Server=127.0.0.1;Port=3306;User ID=root;Password=labeler-disposable-ci"
     steps:
     - name: Harden Runner
       uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
@@ -147,14 +149,16 @@ jobs:
         find src -path '*/obj/sbom/*/bom.spdx.json' -print0 | xargs -0 python3 -m check_jsonschema --schemafile "${RUNNER_TEMP}/sbom-tools/spdx-schema.json"
 
     - name: 'Build'
-      run: dotnet build --configuration Release --property:PublicRelease=false
-
-    - name: 'Test frontend'
-      working-directory: samples/Samples.ReactBff/ClientApp
-      run: npm test
+      uses: ./.github/actions/build
+      with:
+        configuration: Release
+        arguments: --property:PublicRelease=false
 
     - name: 'Test'
-      run: dotnet test --no-build --no-restore --configuration Release --property:PublicRelease=false
+      uses: ./.github/actions/test
+      with:
+        configuration: Release
+        arguments: --property:PublicRelease=false
 
     - name: 'Pack release'
       run: dotnet pack --configuration Release --no-restore  --no-build --output ${BUILD_OUTPUT} --property:PublicRelease=false

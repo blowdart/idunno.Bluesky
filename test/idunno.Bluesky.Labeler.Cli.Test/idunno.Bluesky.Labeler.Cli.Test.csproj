@@ -6,8 +6,14 @@
     <PackageReference Include="Microsoft.Extensions.Diagnostics.Testing" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
   </ItemGroup>
-  <ItemGroup>
+  <!-- Release builds do not build samples, so the sample's tests are Debug-only. -->
+  <ItemGroup Condition="'$(Configuration)' == 'Release'">
+    <Compile Remove="LabelerAgentSampleTests.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(Configuration)' != 'Release'">
     <ProjectReference Include="..\..\samples\Samples.LabelerAgent\Samples.LabelerAgent.csproj" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\..\tools\Xenon.TestHost\Xenon.TestHost.csproj" />
     <ProjectReference Include="..\..\src\idunno.Bluesky.Labeler.Cli\idunno.Bluesky.Labeler.Cli.csproj" />
     <ProjectReference Include="..\..\src\idunno.Bluesky.Labeler.Host\idunno.Bluesky.Labeler.Host.csproj" />

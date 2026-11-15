@@ -1,0 +1,22 @@
+name: 'Build'
+description: 'Builds the solution. Roslyn code, documentation and spelling analyzers run as part of the build.'
+
+inputs:
+  configuration:
+    description: 'Build configuration, Debug or Release.'
+    required: true
+  arguments:
+    description: 'Additional arguments passed to dotnet build, separated by spaces.'
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+  - name: 'Build'
+    shell: bash
+    env:
+      CONFIGURATION: ${{ inputs.configuration }}
+      ARGUMENTS: ${{ inputs.arguments }}
+    # ARGUMENTS is intentionally unquoted so that it splits into separate arguments.
+    run: dotnet build --configuration "${CONFIGURATION}" ${ARGUMENTS}
