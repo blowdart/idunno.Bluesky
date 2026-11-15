@@ -118,7 +118,10 @@ jobs:
 
     - name: 'Build'
       id: build
-      run: dotnet build --configuration Debug '-bl:build.{}.binlog'
+      uses: $/.github/actions/build
+      with:
+        configuration: Debug
+        arguments: -bl:build.{}.binlog
 
     - name: Upload Build Artifacts
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -132,51 +135,20 @@ jobs:
           build.*.binlog
         retention-days: 5
 
-    - name: 'Test frontend'
-      working-directory: samples/Samples.ReactBff/ClientApp
-      run: npm test -- --reporter=default --reporter=github-actions --reporter=junit --outputFile.junit="${TEST_RESULTS}/react-bff.junit.xml"
-
     - name: 'Test'
       id: test
+      uses: $/.github/actions/test
       env:
         LABELER_TEST_POSTGRESQL_CONNECTION: "Host=127.0.0.1;Port=${{ job.services.postgres.ports['5432'] }};Database=botsdk_test;Username=postgres;Password=botsdk-ci-only;GSS Encryption Mode=Disable"
         LABELER_TEST_MYSQL_CONNECTION: "Server=127.0.0.1;Port=${{ job.services.mysql.ports['3306'] }};User ID=root;Password=botsdk-ci-only"
         BOTSDK_TEST_POSTGRESQL_CONNECTION: "Host=127.0.0.1;Port=${{ job.services.postgres.ports['5432'] }};Database=botsdk_test;Username=postgres;Password=botsdk-ci-only"
         BOTSDK_TEST_MYSQL_CONNECTION: "Server=127.0.0.1;Port=${{ job.services.mysql.ports['3306'] }};User ID=root;Password=botsdk-ci-only"
-      shell: bash
-      run: >-
-        dotnet test --no-build --no-restore '-bl:test.{}.binlog'
-        --max-parallel-test-modules 4 --max-threads 4
-        --results-directory "${TEST_RESULTS}" --coverlet --report-xunit-junit
-        --filter-not-class '*AllocationBudgetTests'
-        'idunno.Bluesky.BotSdk.Test.RelationalProviderSqliteTests'
-        'idunno.Bluesky.BotSdk.Test.RelationalProviderMySqlTests'
-        'idunno.Bluesky.BotSdk.Test.RelationalProviderPostgresTests'
-        'idunno.Bluesky.BotSdk.Test.ActionStorageSqliteTests'
-        'idunno.Bluesky.BotSdk.Test.ActionStorageMySqlTests'
-        'idunno.Bluesky.BotSdk.Test.ActionStoragePostgresTests'
-
-    - name: 'Test database providers'
-      if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-      env:
-        BOTSDK_TEST_POSTGRESQL_CONNECTION: Host=127.0.0.1;Port=${{ job.services.postgres.ports['5432'] }};Database=botsdk_test;Username=postgres;Password=botsdk-ci-only
-        BOTSDK_TEST_MYSQL_CONNECTION: Server=127.0.0.1;Port=${{ job.services.mysql.ports['3306'] }};User ID=root;Password=botsdk-ci-only
-      shell: bash
-      run: |
-        status=0
-        for framework in net8.0 net9.0 net10.0; do
-          # Each framework must run at least the current 29 cases for each of the three providers.
-          if dotnet "test/idunno.Bluesky.BotSdk.Test/bin/Debug/${framework}/idunno.Bluesky.BotSdk.Test.dll" \
-            --filter-class idunno.Bluesky.BotSdk.Test.RelationalProviderSqliteTests idunno.Bluesky.BotSdk.Test.RelationalProviderMySqlTests idunno.Bluesky.BotSdk.Test.RelationalProviderPostgresTests idunno.Bluesky.BotSdk.Test.ActionStorageSqliteTests idunno.Bluesky.BotSdk.Test.ActionStorageMySqlTests idunno.Bluesky.BotSdk.Test.ActionStoragePostgresTests \
-            --fail-skips on --minimum-expected-tests 87 --max-threads 4 \
-            --results-directory "${TEST_RESULTS}" --coverlet --report-xunit-junit; then
-            echo "${framework}: all database provider tests passed"
-          else
-            status=1
-          fi
-        done
-        exit "${status}"
-
+      with:
+        configuration: Debug
+        arguments: -bl:test.{}.binlog --max-parallel-test-modules 4 --max-threads 4 --results-directory ${{ env.TEST_RESULTS }} --coverlet --report-xunit-junit
+        provider-arguments: --results-directory ${{ env.TEST_RESULTS }} --coverlet --report-xunit-junit
+        excluded-classes: '*AllocationBudgetTests'
+        frontend-arguments: --reporter=default --reporter=github-actions --reporter=junit --outputFile.junit=${{ env.TEST_RESULTS }}/react-bff.junit.xml
     - name: 'Allocation budgets'
       id: allocations
       if: ${{ !cancelled() && steps.build.outcome == 'success' }}
