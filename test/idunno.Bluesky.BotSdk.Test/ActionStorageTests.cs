@@ -180,6 +180,7 @@ public abstract class ActionStorageTests
             [first],
             null,
             CancellationToken.None);
+        DateTimeOffset retryAt = (await store.InitialRetryTimeAsync()).AddHours(1);
         await store.AddLegacyRecordKeyIndexAsync();
         await store.Database.InitializeAsync(CancellationToken.None);
         await store.Database.InitializeAsync(CancellationToken.None);
@@ -260,6 +261,7 @@ public abstract class ActionStorageTests
             [reply, like, secondLike],
             null,
             CancellationToken.None));
+        DateTimeOffset retryAt = (await store.InitialRetryTimeAsync()).AddHours(1);
         Assert.Equal(
             0,
             await store.Database.HandleAsync(
@@ -702,6 +704,15 @@ public abstract class ActionStorageTests
             };
 
             return SqlAsync($"UPDATE reply_work SET next_retry = {deadline} WHERE status = 'pending'");
+        }
+
+        public async Task<DateTimeOffset> InitialRetryTimeAsync()
+        {
+            long microseconds = await ScalarAsync(_provider == "Postgres"
+                ? "SELECT CAST(EXTRACT(EPOCH FROM next_retry) * 1000000 AS BIGINT) FROM reply_work LIMIT 1"
+                : "SELECT next_retry FROM reply_work LIMIT 1");
+
+            return DateTimeOffset.UnixEpoch.AddTicks(checked(microseconds * 10));
         }
 
         public Task<long> CountAsync(string condition) =>
