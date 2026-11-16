@@ -1,0 +1,33 @@
+@page
+@model idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Downloads.IndexModel
+@{
+    ViewData["Title"] = "CLI Downloads";
+}
+<h1>CLI Downloads</h1>
+@if (Model.Downloads.Count == 0)
+{
+    <p>No administration CLI downloads are available in this deployment.</p>
+}
+else
+{
+    <p>Administration CLI builds matching this labeler's version. Windows executables are Authenticode signed. Linux executables are not signed; verify them with the checksums below or the GitHub release attestations. Linux archives do not preserve the executable bit, so run <code>chmod +x</code> after extracting.</p>
+    @foreach (IGrouping<string, idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Downloads.CliDownload> group in Model.Downloads.GroupBy(download => download.Os).OrderBy(group => group.Key))
+    {
+        <section class="panel">
+            <h2>@(group.Key switch { "win" => "Windows", "linux" => "Linux", _ => group.Key })</h2>
+            <ul>
+                @foreach (var download in group.OrderBy(download => download.Arch))
+                {
+                    <li>
+                        <a asp-area="Xenon" asp-page="/Downloads/Index" asp-page-handler="File" asp-route-name="@download.Name">@download.Name</a>
+                        (@download.Arch, @((download.Size / 1048576.0).ToString("0.0")) MiB)
+                        <dl>
+                            <dt>SHA-256</dt><dd><code>@download.Sha256</code></dd>
+                            <dt>SHA-512</dt><dd><code>@download.Sha512</code></dd>
+                        </dl>
+                    </li>
+                }
+            </ul>
+        </section>
+    }
+}

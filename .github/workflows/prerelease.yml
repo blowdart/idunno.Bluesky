@@ -177,6 +177,42 @@ jobs:
           Remove-Item $extracted -Force -Recurse
         }
 
+    - name: 'Publish labeler payload'
+      shell: pwsh
+      env:
+        INCLUDE_HOSTS: ${{ inputs.perform_publish_containers }}
+      run: |
+        # Published once here, so the version comes from the full clone. Sign signs the Windows binaries,
+        # zips the CLI and the container images are assembled from the signed result without recompiling.
+        $payload = Join-Path $env:RUNNER_TEMP 'labeler-payload'
+        $common = @('--configuration', 'Release', '--framework', 'net10.0',
+                    '--property:PublicRelease=false', "--property:BuildCommitId=$env:GITHUB_SHA")
+        foreach ($rid in 'win-x64', 'win-arm64', 'linux-x64', 'linux-arm64') {
+          dotnet publish src/idunno.Bluesky.Labeler.Cli/idunno.Bluesky.Labeler.Cli.csproj @common `
+            --runtime $rid --self-contained true --output (Join-Path $payload "cli/$rid") `
+            --property:PublishTrimmed=true --property:PublishSingleFile=true
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        }
+        if ($env:INCLUDE_HOSTS -eq 'true') {
+          $hosts = @{ postgresql = 'idunno.Bluesky.Labeler.Host.PostgreSQL'; mysql = 'idunno.Bluesky.Labeler.Host.MySQL' }
+          foreach ($name in $hosts.Keys) {
+            dotnet publish "src/$($hosts[$name])/$($hosts[$name]).csproj" @common `
+              --output (Join-Path $payload "hosts/$name") --property:UseAppHost=false
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+        }
+        $version = (dotnet msbuild src/idunno.Bluesky.Labeler.Cli/idunno.Bluesky.Labeler.Cli.csproj -t:GetBuildVersion -getProperty:NuGetPackageVersion --property:PublicRelease=false --no-restore | ConvertFrom-Json).Properties.NuGetPackageVersion
+        if ([string]::IsNullOrWhiteSpace($version)) { throw 'Nerdbank.GitVersioning returned an empty version.' }
+        Set-Content -Path (Join-Path $payload 'version.txt') -Value $version -NoNewline -Encoding utf8NoBOM
+        "LABELER_PAYLOAD=$payload" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+    - name: 'Upload unsigned labeler payload'
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: labeler-payload
+        path: ${{ env.LABELER_PAYLOAD }}/*
+        retention-days: 7
+
     - name: 'List artifact directory'
       shell: pwsh
       run: >
@@ -192,8 +228,8 @@ jobs:
 
   publish-labeler-images:
     name: Publish signed prerelease labeler images
-    needs: build
-    if: ${{ inputs.perform_publish_containers }}
+    needs: sign
+    if: ${{ inputs.perform_sign && inputs.perform_publish_containers }}
     uses: $/.github/workflows/publish-labeler-images.yml
     with:
       prerelease: true
@@ -250,6 +286,43 @@ jobs:
       run: >
         dotnet tool run sign code trusted-signing *.nupkg --base-directory ${env:BUILD_OUTPUT} -tse "${{ secrets.AZURE_TRUSTEDSIGNING_ENDPOINT }}" -tsa "${{ secrets.AZURE_TRUSTEDSIGNING_ACCOUNT }}" -tscp "${{ secrets.AZURE_TRUSTEDSIGNING_CERTIFICATEPROFILE }}"
 
+    - name: 'Gather unsigned labeler payload'
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+      with:
+        name: labeler-payload
+        path: ${{ runner.temp }}/labeler-payload
+
+    - name: 'Sign labeler CLI Windows binaries'
+      shell: pwsh
+      run: >
+        dotnet tool run sign code trusted-signing **/*.exe --base-directory "${{ runner.temp }}/labeler-payload/cli" -tse "${{ secrets.AZURE_TRUSTEDSIGNING_ENDPOINT }}" -tsa "${{ secrets.AZURE_TRUSTEDSIGNING_ACCOUNT }}" -tscp "${{ secrets.AZURE_TRUSTEDSIGNING_CERTIFICATEPROFILE }}"
+
+    - name: 'Create labeler CLI downloads'
+      shell: pwsh
+      run: |
+        $payload = Join-Path $env:RUNNER_TEMP 'labeler-payload'
+        $downloads = Join-Path $payload 'downloads'
+        New-Item -ItemType Directory -Force -Path $downloads | Out-Null
+        $version = (Get-Content (Join-Path $payload 'version.txt') -Raw).Trim()
+        $entries = foreach ($rid in 'win-x64', 'win-arm64', 'linux-x64', 'linux-arm64') {
+          $name = "idunno.Bluesky.Labeler.Cli-$rid.zip"
+          $zip = Join-Path $downloads $name
+          Compress-Archive -Path (Join-Path $payload "cli/$rid/*") -DestinationPath $zip -Force
+          $os, $arch = $rid -split '-', 2
+          [ordered]@{
+            name    = $name
+            rid     = $rid
+            os      = $os
+            arch    = $arch
+            size    = (Get-Item $zip).Length
+            sha256  = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+            sha512  = (Get-FileHash $zip -Algorithm SHA512).Hash.ToLowerInvariant()
+            version = $version
+          }
+        }
+        ConvertTo-Json -InputObject @($entries) -Depth 4 | Set-Content -Path (Join-Path $downloads 'cli-downloads.json') -Encoding utf8NoBOM
+        Copy-Item (Join-Path $downloads '*') -Destination $env:BUILD_OUTPUT
+
     - name: Expand signed nupkg for attestation
       shell: pwsh
       run: | 
@@ -279,6 +352,8 @@ jobs:
           $contentTypes=Join-Path "$($env:ATTESTATION_INPUT)/$($nupkg.Basename)" -ChildPath "[Content_Types].xml"
           Remove-Item -LiteralPath $contentTypes -Force
         }
+        Get-ChildItem -Path $env:BUILD_OUTPUT -File -Force | Where-Object { $_.Extension -eq '.zip' -or $_.Name -eq 'cli-downloads.json' } |
+          Copy-Item -Destination $env:ATTESTATION_INPUT
 
     - name: 'List attestation artifacts'
       shell: pwsh
@@ -289,6 +364,13 @@ jobs:
       uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
       with:
         subject-path: ${{env.ATTESTATION_INPUT}}
+
+    - name: Upload signed labeler payload
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: labeler-payload-signed
+        path: ${{ runner.temp }}/labeler-payload/*
+        retention-days: 7
 
     - name: Upload signed nupkgs to artifacts
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -354,10 +436,10 @@ jobs:
     - name: Setup MyGet and GitHub Packages as NuGet Sources
       shell: pwsh
       run: |
-        dotnet new nugetconfig
-        dotnet nuget remove source nuget
         dotnet nuget add source https://nuget.pkg.github.com/blowdart/index.json --name github
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         dotnet nuget add source https://www.myget.org/F/blowdart/api/v3/index.json --name myget
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
     - name: Publish NuGet packages to GitHub packages
       shell: pwsh

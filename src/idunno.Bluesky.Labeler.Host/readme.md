@@ -95,12 +95,23 @@ or safe withdrawal. Remote administration remains independently opt-in.
 
 Build the container from the repository root:
 
+The images copy a pre-published payload and do not compile. Publish it, then build with the payload directory as the build context
+(the Linux CLI directories must be named for the architecture you build):
+
 ```powershell
-docker build --build-arg SOURCE_REVISION_ID=$(git rev-parse HEAD) --file src\idunno.Bluesky.Labeler.Host\Dockerfile --tag idunno-bluesky-labeler-base .
-docker build --build-arg LABELER_BASE=idunno-bluesky-labeler-base --build-arg SOURCE_REVISION_ID=$(git rev-parse HEAD) --file src\idunno.Bluesky.Labeler.Host.PostgreSQL\Dockerfile --tag idunno-bluesky-labeler-postgresql .
+$payload = "$env:TEMP\labeler-payload"
+dotnet publish src\idunno.Bluesky.Labeler.Cli -c Release -f net10.0 -r linux-x64 --self-contained -p:PublishTrimmed=true -p:PublishSingleFile=true -o "$payload\cli\linux-x64"
+dotnet publish src\idunno.Bluesky.Labeler.Host.PostgreSQL -c Release -f net10.0 -p:UseAppHost=false -o "$payload\hosts\postgresql"
+dotnet publish src\idunno.Bluesky.Labeler.Host.MySQL -c Release -f net10.0 -p:UseAppHost=false -o "$payload\hosts\mysql"
+New-Item -ItemType Directory -Force "$payload\downloads" | Out-Null
+docker build --platform linux/amd64 --file src\idunno.Bluesky.Labeler.Host\Dockerfile --tag idunno-bluesky-labeler-base $payload
+docker build --platform linux/amd64 --build-arg LABELER_BASE=idunno-bluesky-labeler-base --file src\idunno.Bluesky.Labeler.Host.PostgreSQL\Dockerfile --tag idunno-bluesky-labeler-postgresql $payload
 ```
 
-Use the MySQL project's Dockerfile for MySQL. The base image has no inherited health check;
+Use the MySQL project's Dockerfile and the `idunno-bluesky-labeler-mysql` tag for MySQL. Release images are built from the signed payload
+produced by the release workflows, and carry the version and commit that payload was built from.
+
+The base image has no inherited health check;
 custom derived images must provide their own readiness probe. Stable and independently optional
 prerelease publications sign all three images with keyless Cosign, attest their digests and OCI
 subjects, and verify anonymous access. Prerelease publication never moves stable or latest tags.

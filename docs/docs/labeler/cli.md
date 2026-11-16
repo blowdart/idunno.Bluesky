@@ -13,6 +13,11 @@ extracting it to a trusted directory on your `PATH`. Keep configuration, keys,
 database files and backups outside that directory. See
 [release installation and updates](deployment.md#safe-updates-and-rollback).
 The executable bundles its runtime and does not require a separate .NET installation.
+Both release and prerelease workflows attach the ZIPs for win-x64, win-arm64, linux-x64 and
+linux-arm64. Windows executables are Authenticode signed; Linux executables are covered by build
+attestations and the published SHA-256/SHA-512 checksums. ZIP archives do not preserve the Unix
+execute bit, so run `chmod +x` on the extracted Linux executable.
+The same ZIPs are available to signed-in moderators from the **CLI Downloads** page in the Xenon UI.
 The canonical host image includes the matching Linux executable in
 `/opt/labeler-cli`, with `labeler-admin` available on `PATH`:
 

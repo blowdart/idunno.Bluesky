@@ -1,0 +1,113 @@
+name: Clean up labeler prerelease images
+
+on:
+  schedule:
+  - cron: '17 4 * * 0'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: List what would be deleted without deleting anything.
+        type: boolean
+        default: true
+      retention_days:
+        description: Delete prerelease image versions older than this many days.
+        type: number
+        default: 90
+
+permissions: {}
+
+concurrency:
+  group: cleanup-labeler-prerelease-images
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    name: Delete expired prerelease labeler images
+    if: ${{ github.repository == 'blowdart/idunno.Bluesky' }}
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+      with:
+        egress-policy: audit
+
+    - name: Delete expired prerelease image versions
+      shell: bash
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
+        RETENTION_DAYS: ${{ github.event_name == 'workflow_dispatch' && inputs.retention_days || '90' }}
+      run: |
+        set -euo pipefail
+        [[ "${RETENTION_DAYS}" =~ ^[0-9]+$ ]] && [ "${RETENTION_DAYS}" -ge 7 ]
+        owner="${GITHUB_REPOSITORY_OWNER}"
+        cutoff="$(date -u -d "-${RETENTION_DAYS} days" +%Y-%m-%dT%H:%M:%SZ)"
+        pattern='^v[0-9]+\.[0-9]+\.[0-9]+-prerelease-[0-9]+-[0-9]+-[0-9a-f]{12}$'
+        registry_token="$(printf '%s' "${GH_TOKEN}" | base64 -w0)"
+        : > "${RUNNER_TEMP}/delete.tsv"
+        for variant in base postgresql mysql; do
+          package="idunno-bluesky-labeler-${variant}"
+          versions="${RUNNER_TEMP}/${variant}.versions.json"
+          gh api --paginate "/users/${owner}/packages/container/${package}/versions?per_page=100" | jq -s 'add // []' > "${versions}"
+
+          # A version is expired only when every one of its tags is a prerelease tag and it is older than the cutoff.
+          expired="$(jq -r --arg cutoff "${cutoff}" --arg pattern "${pattern}" '
+            [.[] | select(.created_at < $cutoff)
+                 | select((.metadata.container.tags | length) > 0 and all(.metadata.container.tags[]; test($pattern)))
+                 | .name] | .[]' "${versions}")"
+
+          # Everything reachable from a retained tagged index (child manifests, attestations) must survive.
+          protected="${RUNNER_TEMP}/${variant}.protected.txt"
+          : > "${protected}"
+          jq -r --arg cutoff "${cutoff}" --arg pattern "${pattern}" '
+            .[] | select((.metadata.container.tags | length) > 0)
+                | select(((.created_at < $cutoff) and all(.metadata.container.tags[]; test($pattern))) | not)
+                | .name' "${versions}" | while read -r digest; do
+            echo "${digest}" >> "${protected}"
+            curl -fsSL -H "Authorization: Bearer ${registry_token}" \
+              -H 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json' \
+              "https://ghcr.io/v2/${owner}/${package}/manifests/${digest}" \
+              | jq -r '.manifests[]?.digest' >> "${protected}"
+          done
+
+
+          for digest in ${expired}; do
+            printf '%s\t%s\t%s\n' "${package}" "${digest}" "expired prerelease tag" >> "${RUNNER_TEMP}/delete.tsv"
+            hex="${digest#sha256:}"
+            jq -r --arg prefix "sha256-${hex}" '.[] | select(any(.metadata.container.tags[]?; startswith($prefix))) | .name' "${versions}" \
+              | while read -r signature; do printf '%s\t%s\t%s\n' "${package}" "${signature}" "cosign artifact of ${digest}" >> "${RUNNER_TEMP}/delete.tsv"; done
+          done
+
+          # Untagged versions are old children or attestations; delete them only when no retained index references them.
+          jq -r --arg cutoff "${cutoff}" '.[] | select(.created_at < $cutoff and ((.metadata.container.tags | length) == 0)) | .name' "${versions}" \
+            | while read -r digest; do
+              if ! grep -qxF "${digest}" "${protected}"; then
+                printf '%s\t%s\t%s\n' "${package}" "${digest}" "untagged and unreferenced" >> "${RUNNER_TEMP}/delete.tsv"
+              fi
+            done
+        done
+
+        sort -u "${RUNNER_TEMP}/delete.tsv" -o "${RUNNER_TEMP}/delete.tsv"
+        count="$(wc -l < "${RUNNER_TEMP}/delete.tsv")"
+        {
+          echo "Cutoff: ${cutoff} (retention ${RETENTION_DAYS} days). Dry run: ${DRY_RUN}. Candidates: ${count}."
+          echo '```'
+          cat "${RUNNER_TEMP}/delete.tsv"
+          echo '```'
+        } >> "${GITHUB_STEP_SUMMARY}"
+
+        # Refuse to delete a large share of all versions in a single run.
+        total="$(cat "${RUNNER_TEMP}"/*.versions.json | jq -s 'map(length) | add')"
+        if [ "${count}" -gt 0 ] && [ $(( count * 100 / total )) -gt 80 ]; then
+          echo "Refusing to delete ${count} of ${total} versions in one run." >&2
+          exit 1
+        fi
+        [ "${DRY_RUN}" = true ] && exit 0
+
+        while IFS=$'\t' read -r package digest reason; do
+          id="$(jq -r --arg digest "${digest}" '.[] | select(.name == $digest) | .id' "${RUNNER_TEMP}/${package#idunno-bluesky-labeler-}.versions.json")"
+          echo "Deleting ${package} ${digest} (${reason})"
+          gh api --method DELETE "/users/${owner}/packages/container/${package}/versions/${id}"
+        done < "${RUNNER_TEMP}/delete.tsv"

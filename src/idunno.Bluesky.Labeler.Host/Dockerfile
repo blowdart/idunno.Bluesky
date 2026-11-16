@@ -1,36 +1,32 @@
-FROM mcr.microsoft.com/dotnet/sdk:11.0 AS build
-ARG SOURCE_REVISION_ID
 ARG TARGETARCH
-ARG PUBLIC_RELEASE=false
-ENV DOTNET_PROCESSOR_COUNT=2
-WORKDIR /src
-COPY . .
-RUN test -n "$SOURCE_REVISION_ID" && case "$TARGETARCH" in \
-        amd64) cli_rid=linux-x64 ;; \
-        arm64) cli_rid=linux-arm64 ;; \
-        *) echo "Unsupported CLI architecture: $TARGETARCH" >&2; exit 1 ;; \
-    esac && \
-    dotnet publish src/idunno.Bluesky.Labeler.Cli/idunno.Bluesky.Labeler.Cli.csproj \
-    --configuration Release \
-    --framework net10.0 \
-    --runtime "$cli_rid" \
-    --self-contained true \
-    --output /cli-out \
-    -m:4 -nr:false --disable-build-servers \
-    --property:UseSharedCompilation=false \
-    --property:ConcurrentBuild=false \
-    --property:PublicRelease="$PUBLIC_RELEASE" \
-    -bl:/tmp/cli-publish.binlog \
-    --property:BuildCommitId="$SOURCE_REVISION_ID" && \
-    ln -s idunno.Bluesky.Labeler.Cli /cli-out/labeler-admin
+
+FROM scratch AS cli-amd64
+COPY cli/linux-x64/ /
+
+FROM scratch AS cli-arm64
+COPY cli/linux-arm64/ /
+
+FROM cli-${TARGETARCH} AS cli
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
+ARG IMAGE_SOURCE=https://github.com/blowdart/idunno.Bluesky
+ARG IMAGE_REVISION
+ARG IMAGE_VERSION
+ARG IMAGE_CREATED
+LABEL org.opencontainers.image.source="${IMAGE_SOURCE}" \
+      org.opencontainers.image.description="Base image for idunno.Bluesky labeler hosts. Contains the labeler administration CLI (labeler-admin) and the signed CLI downloads. Database specific images build on it." \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.revision="${IMAGE_REVISION}" \
+      org.opencontainers.image.version="${IMAGE_VERSION}" \
+      org.opencontainers.image.created="${IMAGE_CREATED}"
 WORKDIR /app
 ENV ASPNETCORE_HTTP_PORTS=8080 \
     Labeler__LocalAdministrationEndpoint=/run/labeler/admin.sock \
     PATH="/opt/labeler-cli:${PATH}"
 RUN mkdir -p /data /run/labeler /run/labeler-keys && chown 1654:1654 /data /run/labeler && chmod 0700 /run/labeler
-COPY --from=build /cli-out /opt/labeler-cli/
+COPY --from=cli --chmod=755 / /opt/labeler-cli/
+RUN ln -s idunno.Bluesky.Labeler.Cli /opt/labeler-cli/labeler-admin
+COPY downloads/ /opt/labeler-downloads/
 USER 1654
 EXPOSE 8080
 HEALTHCHECK NONE

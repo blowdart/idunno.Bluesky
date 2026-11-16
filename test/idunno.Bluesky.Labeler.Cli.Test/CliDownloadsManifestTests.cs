@@ -1,0 +1,60 @@
+// Copyright (c) Barry Dorrans. All rights reserved.
+// Licensed under the MIT License.
+
+using idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Downloads;
+
+namespace idunno.Bluesky.Labeler.Cli.Test;
+
+/// <summary>Covers the CLI downloads manifest reader used by the Xenon CLI Downloads page.</summary>
+public class CliDownloadsManifestTests
+{
+    [Fact]
+    public void ManifestEntriesAreReadAndUnsafeEntriesAreSkipped()
+    {
+        string directory = Directory.CreateTempSubdirectory().FullName;
+        try
+        {
+            File.WriteAllText(Path.Combine(directory, IndexModel.ManifestFileName), """
+                [
+                  { "name": "cli-linux-x64.zip", "rid": "linux-x64", "os": "linux", "arch": "x64", "size": 10, "sha256": "a", "sha512": "b", "version": "1.0.0" },
+                  { "name": "../escape.zip", "os": "linux", "arch": "x64", "size": 1, "sha256": "a", "sha512": "b" },
+                  { "name": "tool.exe", "os": "win", "arch": "x64", "size": 1, "sha256": "a", "sha512": "b" },
+                  { "name": "missing-hash.zip", "os": "win", "arch": "x64" }
+                ]
+                """);
+
+            List<CliDownload> downloads = IndexModel.ReadManifest(directory);
+
+            CliDownload download = Assert.Single(downloads);
+            Assert.Equal("cli-linux-x64.zip", download.Name);
+            Assert.Equal("1.0.0", download.Version);
+            Assert.Equal(10, download.Size);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("not json")]
+    [InlineData("{}")]
+    public void MissingOrInvalidManifestsProduceNoDownloads(string? content)
+    {
+        string directory = Directory.CreateTempSubdirectory().FullName;
+        try
+        {
+            if (content is not null)
+            {
+                File.WriteAllText(Path.Combine(directory, IndexModel.ManifestFileName), content);
+            }
+
+            Assert.Empty(IndexModel.ReadManifest(directory));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+}

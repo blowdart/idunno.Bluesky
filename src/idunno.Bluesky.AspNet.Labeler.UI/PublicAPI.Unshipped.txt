@@ -113,3 +113,7 @@ idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Team.IndexModel.OnPostChangeA
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Team.IndexModel.OnPostEnrollAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
 Microsoft.Extensions.DependencyInjection.LabelerUIExtensions
 static Microsoft.Extensions.DependencyInjection.LabelerUIExtensions.AddLabelerUI(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Downloads.IndexModel
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Downloads.IndexModel.IndexModel(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Downloads.IndexModel.OnGet() -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Downloads.IndexModel.OnGetFile(string? name) -> Microsoft.AspNetCore.Mvc.IActionResult!
