@@ -15,9 +15,10 @@ public sealed class IndexModel(IConfiguration configuration) : PageModel
 {
     internal const string ManifestFileName = "cli-downloads.json";
 
-    private readonly string _directory = configuration["Labeler:CliDownloadsDirectory"] is { Length: > 0 } configured
-        ? configured
-        : "/opt/labeler-downloads";
+    private readonly string _directory = Path.GetFullPath(
+        configuration["Labeler:CliDownloadsDirectory"] is { Length: > 0 } configured
+            ? configured
+            : "/opt/labeler-downloads");
 
     /// <summary>Gets the downloads described by the build manifest, or an empty list when the image carries none.</summary>
     internal IReadOnlyList<CliDownload> Downloads { get; private set; } = [];
