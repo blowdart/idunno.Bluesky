@@ -348,9 +348,10 @@ visibility to **public** in the package settings. GitHub Actions verifies anonym
 the pushed image before uploading its digest; it does not attempt to change package visibility
 through an unsupported API.
 
-The manual prerelease workflow independently offers `Sign NuGet packages`, `Publish Prerelease` (NuGet)
+The manual prerelease workflow offers `Sign NuGet packages and the labeler payload`, `Publish Prerelease` (NuGet)
 and `Publish signed prerelease container images`. Container publication does not require NuGet
-publication or NuGet signing: it builds the checked-out source and always signs all three images.
+publication, but it does require the signing option: the images are assembled from the signed payload
+and always sign all three images.
 Prerelease tags are `vMAJOR.MINOR.PATCH-prerelease-<run-id>-<attempt>-<short-sha>`.
 They never move stable version or `latest` tags. Stable tags remain exactly `vMAJOR.MINOR.PATCH`.
 

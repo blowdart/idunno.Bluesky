@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       perform_sign:
-        description: 'Sign NuGet packages'
+        description: 'Sign NuGet packages and the labeler payload (required for container images)'
         type: boolean
         required: true
         default: true
@@ -13,7 +13,7 @@ on:
         required: true
         default: true
       perform_publish_containers:
-        description: 'Publish signed prerelease container images'
+        description: 'Publish signed prerelease container images (requires signing)'
         type: boolean
         required: true
         default: false

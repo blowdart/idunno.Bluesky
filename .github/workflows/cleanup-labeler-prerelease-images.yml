@@ -37,7 +37,7 @@ jobs:
       shell: bash
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
+        DRY_RUN: ${{ github.event_name != 'workflow_dispatch' || inputs.dry_run }}
         RETENTION_DAYS: ${{ github.event_name == 'workflow_dispatch' && inputs.retention_days || '90' }}
       run: |
         set -euo pipefail
