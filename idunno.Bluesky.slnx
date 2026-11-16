@@ -55,6 +55,7 @@
     <File Path=".github/workflows/actions-security-analysis.yml" />
     <File Path=".github/workflows/benchmarks.yml" />
     <File Path=".github/workflows/ci-build.yml" />
+    <File Path=".github/workflows/cleanup-labeler-prerelease-images.yml" />
     <File Path=".github/workflows/close-inactive-issues.yml" />
     <File Path=".github/workflows/codeql-analysis.yml" />
     <File Path=".github/workflows/dependency-review.yml" />

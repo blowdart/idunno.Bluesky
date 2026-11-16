@@ -64,11 +64,15 @@
 * Environment-backed signing keys by default, optional mounted PEM keys, database-backed active-key selection and coordinated rotation. Terminal retired labelers can use explicit keyless read-only distribution.
 * Website and native CLI OAuth metadata, trusted TLS-forwarding proxy configuration, SSRF-protected identity resolution and owner-only local administration sockets.
 * Database-persisted OAuth identities, refresh locks, single-use correlation state and origin-bound Data Protection keys/revocations in both PostgreSQL and MySQL canonical hosts; built-in readiness probes, crawler-exclusion `robots.txt`, and the matching Linux CLI.
-* Optional prerelease publication of all three images independent of NuGet signing/publication, with distinct run/commit-qualified tags, mandatory keyless Cosign signatures, provenance/SBOMs, GitHub attestations and anonymous verification.
+* Optional prerelease publication of all three images independent of NuGet publication (it requires the prerelease signing option, because images are built from the signed payload), with distinct run/commit-qualified tags, mandatory keyless Cosign signatures, provenance/SBOMs, GitHub attestations and anonymous verification.
 * Separate `Xenon.TestHost` for isolated browser and CLI testing, with persistent SQLite state, configurable HTTPS origins and explicit Debug-only fixture seeding for policies, teams, queues, appeals and media previews.
+
+* Container images are assembled from the signed payload published once by the Build and Sign jobs instead of recompiling in Docker, and are published for linux/amd64 and linux/arm64 with OCI source, description, licence, revision, version and creation metadata as labels and manifest-list annotations. The Dockerfiles now take the published payload as their build context.
+* Cleanup of expired prerelease labeler images, defaulting to a 90 day retention. Scheduled runs only report what would be deleted; deletion requires a manual run with `dry_run` set to false.
 
 #### idunno.Bluesky.Labeler.Cli
 
+* Signed CLI downloads for Windows x64/arm64 and Linux x64/arm64, attached to prereleases and releases with a checksum manifest.
 * Self-contained Windows x64, Linux x64 and Linux arm64 administration CLI, with protected local IPC or OAuth/PDS service-authenticated remote access and a dedicated command reference.
 * Label issuance and negation, team management, moderation counts, audit inspection, publication/lifecycle status and durable operation-receipt reads through the shared authorization boundary.
 * Policy draft inspection and saving, conditional publication, independent verification, cleanup resume, abandonment and recovery, with separate administrator and labeler-account authority.

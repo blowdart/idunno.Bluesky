@@ -111,6 +111,7 @@
                         {
                             <p class="account-role">@role</p>
                             <a asp-area="Xenon" asp-page="/Preferences"><span class="fa-icon fa-user-gear" aria-hidden="true"></span> Preferences</a>
+                            <a asp-area="Xenon" asp-page="/Downloads/Index"><span class="fa-icon fa-circle-user" aria-hidden="true"></span> CLI Downloads</a>
                         }
                         @if (role is LabelTeamRole.Moderator or LabelTeamRole.Administrator)
                         {

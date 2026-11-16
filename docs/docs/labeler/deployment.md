@@ -12,12 +12,21 @@ issuance policy. No database password, account credential or private key is bake
 All three projects target .NET 10. Build the provider-neutral base and then the desired variant
 from the repository root:
 
+The images copy a pre-published payload and do not compile. Publish it, then build with the payload directory as the build context
+(the Linux CLI directories must be named for the architecture you build):
+
 ```powershell
-docker build --build-arg SOURCE_REVISION_ID=$(git rev-parse HEAD) --file src\idunno.Bluesky.Labeler.Host\Dockerfile --tag idunno-bluesky-labeler-base .
-docker build --build-arg LABELER_BASE=idunno-bluesky-labeler-base --build-arg SOURCE_REVISION_ID=$(git rev-parse HEAD) --file src\idunno.Bluesky.Labeler.Host.PostgreSQL\Dockerfile --tag idunno-bluesky-labeler-postgresql .
+$payload = "$env:TEMP\labeler-payload"
+dotnet publish src\idunno.Bluesky.Labeler.Cli -c Release -f net10.0 -r linux-x64 --self-contained -p:PublishTrimmed=true -p:PublishSingleFile=true -o "$payload\cli\linux-x64"
+dotnet publish src\idunno.Bluesky.Labeler.Host.PostgreSQL -c Release -f net10.0 -p:UseAppHost=false -o "$payload\hosts\postgresql"
+dotnet publish src\idunno.Bluesky.Labeler.Host.MySQL -c Release -f net10.0 -p:UseAppHost=false -o "$payload\hosts\mysql"
+New-Item -ItemType Directory -Force "$payload\downloads" | Out-Null
+docker build --platform linux/amd64 --file src\idunno.Bluesky.Labeler.Host\Dockerfile --tag idunno-bluesky-labeler-base $payload
+docker build --platform linux/amd64 --build-arg LABELER_BASE=idunno-bluesky-labeler-base --file src\idunno.Bluesky.Labeler.Host.PostgreSQL\Dockerfile --tag idunno-bluesky-labeler-postgresql $payload
 ```
 
-Use the MySQL project's Dockerfile and the `idunno-bluesky-labeler-mysql` tag for MySQL.
+Use the MySQL project's Dockerfile and the `idunno-bluesky-labeler-mysql` tag for MySQL. Release images are built from the signed payload
+produced by the release workflows, and carry the version and commit that payload was built from.
 Release builds pin the base by digest rather than a mutable tag.
 The source revision is embedded in the Xenon UI footer as the build identifier.
 The image also includes the matching Linux CLI in `/opt/labeler-cli`, which is on
@@ -339,9 +348,10 @@ visibility to **public** in the package settings. GitHub Actions verifies anonym
 the pushed image before uploading its digest; it does not attempt to change package visibility
 through an unsupported API.
 
-The manual prerelease workflow independently offers `Sign NuGet packages`, `Publish Prerelease` (NuGet)
+The manual prerelease workflow offers `Sign NuGet packages and the labeler payload`, `Publish Prerelease` (NuGet)
 and `Publish signed prerelease container images`. Container publication does not require NuGet
-publication or NuGet signing: it builds the checked-out source and always signs all three images.
+publication, but it does require the signing option: the images are assembled from the signed payload
+and always sign all three images.
 Prerelease tags are `vMAJOR.MINOR.PATCH-prerelease-<run-id>-<attempt>-<short-sha>`.
 They never move stable version or `latest` tags. Stable tags remain exactly `vMAJOR.MINOR.PATCH`.
 

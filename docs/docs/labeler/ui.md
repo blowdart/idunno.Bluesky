@@ -731,6 +731,14 @@ changing labels or existing case workflow. Automatic audit entries show the
 labeler's identity and an Automatic caption; the original reporter is retained
 separately.
 
+## CLI downloads
+
+The **CLI Downloads** page, under the user menu, lists the labeler administration CLI builds that
+were packaged into the container image, with their SHA-256 and SHA-512 checksums. It reads
+`cli-downloads.json` from the directory named by the `Labeler:CliDownloadsDirectory`
+configuration value (default `/opt/labeler-downloads`) and serves only files listed in that
+manifest. The page is empty when the host is not running from the canonical image.
+
 ## Running the isolated manual-test host
 
 `tools/Xenon.TestHost` is a runnable development application, not an automated test
