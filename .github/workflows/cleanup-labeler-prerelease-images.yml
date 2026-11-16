@@ -73,18 +73,26 @@ jobs:
           done
 
 
+          # Untagged versions are deletable only when they are children of an expired prerelease index.
+          children="${RUNNER_TEMP}/${variant}.expired-children.txt"
+          : > "${children}"
+
           for digest in ${expired}; do
             printf '%s\t%s\t%s\n' "${package}" "${digest}" "expired prerelease tag" >> "${RUNNER_TEMP}/delete.tsv"
+            curl -fsSL -H "Authorization: Bearer ${registry_token}" \
+              -H 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json' \
+              "https://ghcr.io/v2/${owner}/${package}/manifests/${digest}" \
+              | jq -r '.manifests[]?.digest' >> "${children}"
             hex="${digest#sha256:}"
             jq -r --arg prefix "sha256-${hex}" '.[] | select(any(.metadata.container.tags[]?; startswith($prefix))) | .name' "${versions}" \
               | while read -r signature; do printf '%s\t%s\t%s\n' "${package}" "${signature}" "cosign artifact of ${digest}" >> "${RUNNER_TEMP}/delete.tsv"; done
           done
 
-          # Untagged versions are old children or attestations; delete them only when no retained index references them.
+          # Other untagged versions (for example signatures or attestations of retained images) are never deleted.
           jq -r --arg cutoff "${cutoff}" '.[] | select(.created_at < $cutoff and ((.metadata.container.tags | length) == 0)) | .name' "${versions}" \
             | while read -r digest; do
-              if ! grep -qxF "${digest}" "${protected}"; then
-                printf '%s\t%s\t%s\n' "${package}" "${digest}" "untagged and unreferenced" >> "${RUNNER_TEMP}/delete.tsv"
+              if grep -qxF "${digest}" "${children}" && ! grep -qxF "${digest}" "${protected}"; then
+                printf '%s\t%s\t%s\n' "${package}" "${digest}" "child of an expired prerelease index" >> "${RUNNER_TEMP}/delete.tsv"
               fi
             done
         done

@@ -202,7 +202,8 @@ jobs:
             --output (Join-Path $payload "hosts/$name") --property:UseAppHost=false
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         }
-        $version = (dotnet msbuild src/idunno.Bluesky.Labeler.Cli/idunno.Bluesky.Labeler.Cli.csproj -t:GetBuildVersion -getProperty:NuGetPackageVersion --property:PublicRelease=true --no-restore | ConvertFrom-Json).Properties.NuGetPackageVersion
+        $version = (dotnet msbuild src/idunno.Bluesky.Labeler.Cli/idunno.Bluesky.Labeler.Cli.csproj -t:GetBuildVersion -getProperty:NuGetPackageVersion --property:PublicRelease=true | Out-String).Trim()
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         if ([string]::IsNullOrWhiteSpace($version)) { throw 'Nerdbank.GitVersioning returned an empty version.' }
         Set-Content -Path (Join-Path $payload 'version.txt') -Value $version -NoNewline -Encoding utf8NoBOM
         "LABELER_PAYLOAD=$payload" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8

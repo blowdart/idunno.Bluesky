@@ -64,6 +64,11 @@ public sealed class IndexModel(IConfiguration configuration) : PageModel
 
             foreach (JsonElement entry in document.RootElement.EnumerateArray())
             {
+                if (entry.ValueKind is not JsonValueKind.Object)
+                {
+                    continue;
+                }
+
                 string? name = Text(entry, "name");
                 string? os = Text(entry, "os");
                 string? arch = Text(entry, "arch");
@@ -75,7 +80,7 @@ public sealed class IndexModel(IConfiguration configuration) : PageModel
                     continue;
                 }
 
-                long size = entry.TryGetProperty("size", out JsonElement sizeElement) && sizeElement.TryGetInt64(out long parsed) ? parsed : 0;
+                long size = entry.TryGetProperty("size", out JsonElement sizeElement) && sizeElement.ValueKind is JsonValueKind.Number && sizeElement.TryGetInt64(out long parsed) ? parsed : 0;
                 downloads.Add(new CliDownload(name, os, arch, Text(entry, "version") ?? string.Empty, size, sha256, sha512));
             }
         }

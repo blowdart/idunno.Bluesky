@@ -37,6 +37,26 @@ public class CliDownloadsManifestTests
     }
 
     [Theory]
+    [InlineData("""[null, 5, "text", { "name": "ok.zip", "os": "win", "arch": "x64", "size": 7, "sha256": "a", "sha512": "b" }]""", 7)]
+    [InlineData("""[{ "name": "ok.zip", "os": "win", "arch": "x64", "size": "big", "sha256": "a", "sha512": "b" }]""", 0)]
+    [InlineData("""[{ "name": "ok.zip", "os": "win", "arch": "x64", "size": null, "sha256": "a", "sha512": "b" }]""", 0)]
+    public void MalformedEntriesAndSizesDoNotThrow(string content, long expectedSize)
+    {
+        string directory = Directory.CreateTempSubdirectory().FullName;
+        try
+        {
+            File.WriteAllText(Path.Combine(directory, IndexModel.ManifestFileName), content);
+
+            CliDownload download = Assert.Single(IndexModel.ReadManifest(directory));
+            Assert.Equal(expectedSize, download.Size);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Theory]
     [InlineData(null)]
     [InlineData("not json")]
     [InlineData("{}")]
