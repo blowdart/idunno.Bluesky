@@ -25,9 +25,14 @@ internal sealed record CliCredentialCacheBinding(
     string RequestedScope,
     Uri Service);
 
+/// <summary>Describes a saved session without exposing its credentials.</summary>
+/// <param name="Binding">The account and authorization binding.</param>
+/// <param name="LabelerOrigins">The known labeler origins associated with the session.</param>
+internal sealed record CliCredentialCacheSummary(CliCredentialCacheBinding Binding, IReadOnlyList<string> LabelerOrigins);
+
 /// <summary>Persists opt-in OAuth credentials without widening their account or permission binding.</summary>
 /// <remarks>
-/// <para>Construct this only for an explicit remember-me request. Resolve the actor and PDS independently before constructing the binding.</para>
+/// <para>Create a new saved session only for an explicit remember-me request; existing saved sessions may be reused automatically. Resolve the actor and PDS independently before constructing the binding.</para>
 /// <para>Login with a loaded credential installs local state, not server authentication. Verify the authenticated account through the server before performing the requested operation.</para>
 /// </remarks>
 internal sealed class CliCredentialCache : IAsyncDisposable
@@ -39,6 +44,7 @@ internal sealed class CliCredentialCache : IAsyncDisposable
     private readonly string _directory;
     private readonly string _path;
     private readonly bool _allowUnencryptedStorage;
+    private readonly HashSet<string> _labelerOrigins = Enumerable.Empty<string>().ToHashSet(StringComparer.OrdinalIgnoreCase);
     [SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "Retains the gate to reject late refresh callbacks safely and allow idempotent cache disposal.")]
     private readonly SemaphoreSlim _operationGate = new(1, 1);
     private FileStream? _sessionLease;
@@ -49,10 +55,169 @@ internal sealed class CliCredentialCache : IAsyncDisposable
     /// <param name="binding">The independently resolved session binding.</param>
     /// <param name="directory">An optional cache directory, defaulting to the user's <c>.xenon</c> directory.</param>
     /// <param name="allowUnencryptedStorage"><see langword="true"/> after explicit informed consent to unencrypted storage; otherwise, <see langword="false"/>.</param>
+    /// <param name="labelerOrigin">The optional labeler origin associated with the current operation.</param>
     internal CliCredentialCache(
         CliCredentialCacheBinding binding,
         string? directory = null,
-        bool allowUnencryptedStorage = false)
+        bool allowUnencryptedStorage = false,
+        Uri? labelerOrigin = null)
+    {
+        ValidateBinding(binding);
+        _binding = binding;
+        _directory = Path.GetFullPath(directory ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".xenon"));
+        _path = GetCredentialPath(binding, _directory);
+        _allowUnencryptedStorage = allowUnencryptedStorage;
+        AssociateLabelerOrigin(labelerOrigin);
+    }
+
+    /// <summary>Retains an additional known origin until the session is next saved.</summary>
+    /// <param name="labelerOrigin">The optional origin associated with the current operation.</param>
+    internal void AssociateLabelerOrigin(Uri? labelerOrigin)
+    {
+        if (labelerOrigin is null)
+        {
+            return;
+        }
+        if (!Program.IsHttpsOrigin(labelerOrigin))
+        {
+            throw new ArgumentException("The labeler origin must be an HTTPS origin.", nameof(labelerOrigin));
+        }
+
+        string origin = CanonicalLabelerOrigin(labelerOrigin);
+        string? administrativeOrigin = GetAdministrativeOrigin(_binding);
+        if (administrativeOrigin is not null &&
+            !string.Equals(origin, administrativeOrigin, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("The labeler origin must match the administrator client origin.", nameof(labelerOrigin));
+        }
+
+        lock (_labelerOrigins)
+        {
+            _labelerOrigins.Add(origin);
+        }
+    }
+
+    /// <summary>Gets a value indicating whether this exact session has already been saved.</summary>
+    internal bool HasSavedSession
+    {
+        get
+        {
+            RejectLink(_directory);
+            RejectLink(_path);
+            return File.Exists(_path);
+        }
+    }
+
+    /// <summary>Finds saved account names for one client, optionally requiring an exact permission set, without leasing sessions.</summary>
+    /// <param name="clientMetadataId">The OAuth client identifier.</param>
+    /// <param name="requestedScope">An optional exact requested permission set, including its audience.</param>
+    /// <param name="directory">An optional private cache directory.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The distinct matching account names; callers must resolve their DID and PDS independently.</returns>
+    internal static async Task<IReadOnlyList<string>> FindAccountsAsync(
+        string clientMetadataId,
+        string? requestedScope,
+        string? directory = null,
+        CancellationToken cancellationToken = default)
+    {
+        IReadOnlyList<CliCredentialCacheSummary> saved = await ListAsync(directory, cancellationToken).ConfigureAwait(false);
+        return [.. saved
+            .Where(item => item.Binding.ClientMetadataId == clientMetadataId &&
+                (requestedScope is null || item.Binding.RequestedScope == requestedScope))
+            .Select(item => item.Binding.Account)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase)];
+    }
+
+    /// <summary>Lists validated saved-session bindings and known labeler origins without leasing or modifying the cache.</summary>
+    /// <param name="directory">An optional private cache directory.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The saved-session summaries, without tokens or private keys.</returns>
+    internal static async Task<IReadOnlyList<CliCredentialCacheSummary>> ListAsync(
+        string? directory = null,
+        CancellationToken cancellationToken = default)
+    {
+        string cacheDirectory = Path.GetFullPath(directory ??
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".xenon"));
+        RejectLink(cacheDirectory);
+        if (!Directory.Exists(cacheDirectory))
+        {
+            return [];
+        }
+
+        List<CliCredentialCacheSummary> saved = [];
+        foreach (string path in Directory.EnumerateFiles(cacheDirectory, "oauth-*.credential", SearchOption.TopDirectoryOnly))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            CliCredentialCacheEntry? entry = await ReadEntryAsync(path, cancellationToken).ConfigureAwait(false);
+            if (entry is null)
+            {
+                continue;
+            }
+
+            if (!string.Equals(Path.GetFileName(path), Path.GetFileName(GetCredentialPath(entry.Binding, cacheDirectory)), StringComparison.Ordinal))
+            {
+                throw new InvalidDataException("A credential cache envelope does not match its filename.");
+            }
+
+            HashSet<string> origins = (entry.LabelerOrigins ?? [])
+                .Select(NormalizeLabelerOrigin)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            string? administrativeOrigin = GetAdministrativeOrigin(entry.Binding);
+            if (administrativeOrigin is not null)
+            {
+                origins.Add(administrativeOrigin);
+            }
+
+            saved.Add(new(entry.Binding, [.. origins.Order(StringComparer.OrdinalIgnoreCase)]));
+        }
+
+        return [.. saved
+            .OrderBy(item => item.Binding.Account, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(item => item.Binding.Actor, StringComparer.Ordinal)
+            .ThenBy(item => item.Binding.ClientMetadataId, StringComparer.Ordinal)
+            .ThenBy(item => item.Binding.RequestedScope, StringComparer.Ordinal)
+            .ThenBy(item => item.Binding.Service.AbsoluteUri, StringComparer.Ordinal)];
+    }
+
+    /// <summary>Derives the labeler origin only for administrator sessions whose client is constrained to that origin.</summary>
+    private static string? GetAdministrativeOrigin(CliCredentialCacheBinding binding)
+    {
+        if (!binding.RequestedScope.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Any(scope => scope.StartsWith("rpc:dev.idunno.labeler.admin.", StringComparison.Ordinal)) ||
+            !Uri.TryCreate(binding.ClientMetadataId, UriKind.Absolute, out Uri? metadata) ||
+            metadata.Scheme != Uri.UriSchemeHttps)
+        {
+            return null;
+        }
+
+        Uri origin = new(metadata.GetLeftPart(UriPartial.Authority));
+        return Program.IsNativeClientMetadataUri(metadata, origin) ? CanonicalLabelerOrigin(origin) : null;
+    }
+
+    /// <summary>Validates an untrusted stored origin before displaying or retaining it.</summary>
+    private static string NormalizeLabelerOrigin(string value)
+    {
+        if (!Uri.TryCreate(value, UriKind.Absolute, out Uri? uri) || !Program.IsHttpsOrigin(uri))
+        {
+            throw new InvalidDataException("The credential cache contains an invalid labeler origin.");
+        }
+
+        return CanonicalLabelerOrigin(uri);
+    }
+
+    /// <summary>Normalizes an HTTPS origin to its IDN host and effective port for consistent comparison.</summary>
+    /// <param name="uri">The validated HTTPS origin.</param>
+    /// <returns>The canonical origin.</returns>
+    private static string CanonicalLabelerOrigin(Uri uri)
+    {
+        UriBuilder builder = new(uri) { Host = uri.IdnHost };
+        return builder.Uri.GetLeftPart(UriPartial.Authority);
+    }
+
+    /// <summary>Validates an account binding before using it to locate or reconstruct credentials.</summary>
+    private static void ValidateBinding(CliCredentialCacheBinding binding)
     {
         ArgumentNullException.ThrowIfNull(binding);
         ArgumentException.ThrowIfNullOrWhiteSpace(binding.Account);
@@ -66,12 +231,13 @@ internal sealed class CliCredentialCache : IAsyncDisposable
         {
             throw new ArgumentException("The resolved personal data server must use HTTPS.", nameof(binding));
         }
+    }
 
-        _binding = binding;
-        _directory = Path.GetFullPath(directory ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".xenon"));
+    /// <summary>Derives the canonical credential filename from every binding field.</summary>
+    private static string GetCredentialPath(CliCredentialCacheBinding binding, string directory)
+    {
         byte[] identity = JsonSerializer.SerializeToUtf8Bytes(binding, CliCredentialCacheJsonContext.Default.CliCredentialCacheBinding);
-        _path = Path.Combine(_directory, $"oauth-{Convert.ToHexString(SHA256.HashData(identity))}.credential");
-        _allowUnencryptedStorage = allowUnencryptedStorage;
+        return Path.Combine(directory, $"oauth-{Convert.ToHexString(SHA256.HashData(identity))}.credential");
     }
 
     /// <summary>Requests informed consent before saving unencrypted credentials on non-Windows platforms.</summary>
@@ -151,18 +317,46 @@ internal sealed class CliCredentialCache : IAsyncDisposable
         await _operationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         byte[]? plaintext = null;
         byte[]? persisted = null;
+        bool savedIncoming = true;
         string stagingPath = Path.Combine(_directory, $".oauth-{Guid.NewGuid():N}.pending");
         try
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
-            DPoPAccessCredentials? stored = await ReadAsync(cancellationToken).ConfigureAwait(false);
+            CliCredentialCacheEntry? storedEntry = await ReadBoundEntryAsync(cancellationToken).ConfigureAwait(false);
+            DPoPAccessCredentials? stored = storedEntry is null ? null : CreateCredentials(storedEntry);
+            HashSet<string> origins = (storedEntry?.LabelerOrigins ?? [])
+                .Select(NormalizeLabelerOrigin)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            bool addedOrigin = false;
+            lock (_labelerOrigins)
+            {
+                foreach (string origin in _labelerOrigins)
+                {
+                    addedOrigin |= origins.Add(origin);
+                }
+            }
             if (stored is not null && stored.ExpiresOn > snapshot.ExpiresOn)
             {
-                return false;
+                savedIncoming = false;
+                if (!addedOrigin)
+                {
+                    return false;
+                }
+
+                entry = storedEntry!;
             }
 
+            entry = entry with { LabelerOrigins = origins.Count == 0 ? null : [.. origins.Order(StringComparer.OrdinalIgnoreCase)] };
             plaintext = JsonSerializer.SerializeToUtf8Bytes(entry, CliCredentialCacheJsonContext.Default.CliCredentialCacheEntry);
+            if (plaintext.Length > MaximumFileLength)
+            {
+                throw new InvalidDataException("The credential cache file would exceed its maximum size.");
+            }
             persisted = OperatingSystem.IsWindows() ? CliCredentialProtection.Protect(plaintext) : plaintext;
+            if (persisted.Length > MaximumFileLength)
+            {
+                throw new InvalidDataException("The credential cache file would exceed its maximum size.");
+            }
             FileStream staging = OpenPrivateFile(stagingPath, System.IO.FileMode.CreateNew, FileShare.None);
             await using (ConfiguredAsyncDisposable stagingLifetime = staging.ConfigureAwait(false))
             {
@@ -176,6 +370,22 @@ internal sealed class CliCredentialCache : IAsyncDisposable
         }
         finally
         {
+            // The trimmer dropped the nested finally in this async method, leaving the gate unreleased.
+            CompleteSave(plaintext, persisted, stagingPath);
+        }
+
+        return savedIncoming;
+    }
+
+    /// <summary>Clears sensitive buffers and removes staging data before releasing the credential-operation gate.</summary>
+    /// <param name="plaintext">The serialized credential buffer.</param>
+    /// <param name="persisted">The protected or explicitly unencrypted persistence buffer.</param>
+    /// <param name="stagingPath">The private staging file to remove.</param>
+    /// <remarks><para>Keep this synchronous to preserve semaphore release when trimming the asynchronous writer's cleanup.</para></remarks>
+    private void CompleteSave(byte[]? plaintext, byte[]? persisted, string stagingPath)
+    {
+        try
+        {
             if (plaintext is not null)
             {
                 CryptographicOperations.ZeroMemory(plaintext);
@@ -186,17 +396,12 @@ internal sealed class CliCredentialCache : IAsyncDisposable
                 CryptographicOperations.ZeroMemory(persisted);
             }
 
-            try
-            {
-                File.Delete(stagingPath);
-            }
-            finally
-            {
-                _operationGate.Release();
-            }
+            File.Delete(stagingPath);
         }
-
-        return true;
+        finally
+        {
+            _operationGate.Release();
+        }
     }
 
     /// <summary>Acquires the account session lease before restoring or creating credentials.</summary>
@@ -318,12 +523,15 @@ internal sealed class CliCredentialCache : IAsyncDisposable
     }
 
     /// <summary>Checks the effective OAuth session against all independent binding fields.</summary>
-    private bool Matches(DPoPAccessCredentials credentials) =>
-        credentials.Did.ToString().Equals(_binding.Actor, StringComparison.Ordinal) &&
+    private bool Matches(DPoPAccessCredentials credentials) => Matches(credentials, _binding);
+
+    /// <summary>Checks persisted credentials against the binding contained in their envelope.</summary>
+    private static bool Matches(DPoPAccessCredentials credentials, CliCredentialCacheBinding binding) =>
+        credentials.Did.ToString().Equals(binding.Actor, StringComparison.Ordinal) &&
         credentials.ExpiresOn != DateTimeOffset.MinValue &&
-        credentials.Service.AbsoluteUri.Equals(_binding.Service.AbsoluteUri, StringComparison.Ordinal) &&
-        string.Equals(credentials.OAuthClientId, _binding.ClientMetadataId, StringComparison.Ordinal) &&
-        string.Equals(credentials.RequestedScope, _binding.RequestedScope, StringComparison.Ordinal);
+        credentials.Service.AbsoluteUri.Equals(binding.Service.AbsoluteUri, StringComparison.Ordinal) &&
+        string.Equals(credentials.OAuthClientId, binding.ClientMetadataId, StringComparison.Ordinal) &&
+        string.Equals(credentials.RequestedScope, binding.RequestedScope, StringComparison.Ordinal);
 
     /// <summary>Reconstructs every persisted OAuth credential field without inferring missing metadata.</summary>
     private static DPoPAccessCredentials CreateCredentials(CliCredentialCacheEntry entry) => new(
@@ -341,13 +549,37 @@ internal sealed class CliCredentialCache : IAsyncDisposable
     /// <summary>Reads untrusted local data and reports corruption without exposing credential content.</summary>
     private async Task<DPoPAccessCredentials?> ReadAsync(CancellationToken cancellationToken)
     {
-        if (!File.Exists(_path))
+        CliCredentialCacheEntry? entry = await ReadBoundEntryAsync(cancellationToken).ConfigureAwait(false);
+        return entry is null ? null : CreateCredentials(entry);
+    }
+
+    /// <summary>Rejects a cache entry whose binding differs from the independently resolved session.</summary>
+    private async Task<CliCredentialCacheEntry?> ReadBoundEntryAsync(CancellationToken cancellationToken)
+    {
+        CliCredentialCacheEntry? entry = await ReadEntryAsync(_path, cancellationToken).ConfigureAwait(false);
+        if (entry is null)
         {
             return null;
         }
 
-        RejectLink(_path);
-        if (!OperatingSystem.IsWindows() && File.GetUnixFileMode(_path) != FileMode)
+        if (entry.Binding != _binding)
+        {
+            throw new InvalidDataException("The credential cache envelope does not match the resolved session.");
+        }
+
+        return entry;
+    }
+
+    /// <summary>Reads and validates one atomic cache snapshot without holding a session lease or exposing its secrets.</summary>
+    private static async Task<CliCredentialCacheEntry?> ReadEntryAsync(string path, CancellationToken cancellationToken)
+    {
+        RejectLink(path);
+        if (!File.Exists(path))
+        {
+            return null;
+        }
+
+        if (!OperatingSystem.IsWindows() && File.GetUnixFileMode(path) != FileMode)
         {
             throw new InvalidDataException("The credential cache file does not have owner-only read/write permissions.");
         }
@@ -356,7 +588,7 @@ internal sealed class CliCredentialCache : IAsyncDisposable
         byte[]? persisted = null;
         try
         {
-            FileStream input = new(_path, System.IO.FileMode.Open, FileAccess.Read, FileShare.Read);
+            FileStream input = new(path, System.IO.FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete);
             await using ConfiguredAsyncDisposable inputLifetime = input.ConfigureAwait(false);
             if (input.Length is <= 0 or > MaximumFileLength)
             {
@@ -367,18 +599,34 @@ internal sealed class CliCredentialCache : IAsyncDisposable
             await input.ReadExactlyAsync(persisted, cancellationToken).ConfigureAwait(false);
             plaintext = OperatingSystem.IsWindows() ? CliCredentialProtection.Unprotect(persisted) : persisted;
             CliCredentialCacheEntry? entry = JsonSerializer.Deserialize(plaintext, CliCredentialCacheJsonContext.Default.CliCredentialCacheEntry);
-            if (entry is null || entry.Version != 1 || entry.Binding != _binding)
+            if (entry is null || entry.Version != 1)
             {
                 throw new InvalidDataException("The credential cache envelope does not match the resolved session.");
             }
 
+            ValidateBinding(entry.Binding);
+            string? administrativeOrigin = GetAdministrativeOrigin(entry.Binding);
+            foreach (string? origin in entry.LabelerOrigins ?? [])
+            {
+                if (origin is null)
+                {
+                    throw new InvalidDataException("The credential cache contains an invalid labeler origin.");
+                }
+
+                string normalizedOrigin = NormalizeLabelerOrigin(origin);
+                if (administrativeOrigin is not null &&
+                    !string.Equals(normalizedOrigin, administrativeOrigin, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidDataException("A credential cache labeler origin does not match its administrator client.");
+                }
+            }
             DPoPAccessCredentials credential = CreateCredentials(entry);
-            if (!Matches(credential))
+            if (!Matches(credential, entry.Binding))
             {
                 throw new InvalidDataException("The credential cache does not match the resolved session.");
             }
 
-            return credential;
+            return entry;
         }
         catch (Exception exception) when (exception is JsonException or ArgumentException or CryptographicException or NotSupportedException)
         {
@@ -482,6 +730,7 @@ internal sealed class CredentialCacheSubscription(Action detach) : IDisposable
 /// <param name="DPoPProofKey">The private proof key.</param>
 /// <param name="DPoPNonce">The current proof nonce.</param>
 /// <param name="ClientSigningKeyId">The original client signing key identifier.</param>
+/// <param name="LabelerOrigins">The optional labeler origins associated with this session.</param>
 internal sealed record CliCredentialCacheEntry(
     int Version,
     CliCredentialCacheBinding Binding,
@@ -489,7 +738,8 @@ internal sealed record CliCredentialCacheEntry(
     string RefreshToken,
     string DPoPProofKey,
     string DPoPNonce,
-    string? ClientSigningKeyId)
+    string? ClientSigningKeyId,
+    string[]? LabelerOrigins = null)
 {
     /// <summary>Prevents credential snapshots from exposing secrets in diagnostics.</summary>
     /// <returns>A constant redacted representation.</returns>
@@ -497,6 +747,7 @@ internal sealed record CliCredentialCacheEntry(
 }
 
 /// <summary>Supplies generated metadata for the complete credential-cache format.</summary>
+[JsonSourceGenerationOptions(RespectNullableAnnotations = true, RespectRequiredConstructorParameters = true)]
 [JsonSerializable(typeof(CliCredentialCacheBinding))]
 [JsonSerializable(typeof(CliCredentialCacheEntry))]
 internal sealed partial class CliCredentialCacheJsonContext : JsonSerializerContext;

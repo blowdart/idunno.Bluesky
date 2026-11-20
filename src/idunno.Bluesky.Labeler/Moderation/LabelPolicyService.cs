@@ -17,11 +17,21 @@ namespace idunno.Bluesky.Labeler.Moderation;
 /// <summary>Independently verifies declarations and supplies commit-fenced Xenon issuance policies.</summary>
 /// <param name="issuer">The bound labeler DID.</param>
 /// <param name="store">The shared issuer policy store.</param>
-/// <param name="httpClient">The caller-owned hardened identity and repository client.</param>
+/// <param name="httpClient">The caller-owned <see cref="HttpClient"/> used for identity and repository requests.</param>
 /// <param name="loggerFactory">An optional logger factory.</param>
 /// <exception cref="ArgumentNullException">A required dependency is <see langword="null"/>.</exception>
-/// <remarks><para>No repository credentials are accepted or retained. The verification deadline begins
-/// before network resolution using the provider's clock. Failed refreshes never extend cached permission.</para></remarks>
+/// <remarks>
+/// <para>No repository credentials are accepted or retained. The verification deadline begins
+/// before network resolution using the provider's clock. Failed refreshes never extend cached permission.</para>
+/// <para><paramref name="httpClient"/> is used as supplied to resolve the issuer's public policy and PDS.
+/// Its handler must enforce SSRF protection at connection time; without it, DID documents can direct requests to
+/// loopback, link-local or private network addresses, including cloud metadata services. A client created by an
+/// <see cref="IHttpClientFactory"/> registered with
+/// <see cref="ServiceCollectionExtensions.AddAtProtoHttpClient(Microsoft.Extensions.DependencyInjection.IServiceCollection)"/> has the library's
+/// connection-time SSRF protections; custom handlers must provide equivalent protections.</para>
+/// <para>Disable automatic redirects on the handler. A handler that follows redirects can send a request to a
+/// disallowed destination before this service can inspect the response.</para>
+/// </remarks>
 public sealed class LabelPolicyService(
     Did issuer,
     ILabelPolicyStore store,

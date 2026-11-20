@@ -117,7 +117,8 @@ internal abstract partial class RelationalLabelStore
         {
             CreatedAt = DateTimeOffset.FromUnixTimeMilliseconds(
                 await DatabaseTimeAsync(connection, transaction, token).ConfigureAwait(false)),
-            ChangeDescription = succeeded ? changeDescription : null
+            ChangeDescription = succeeded ? changeDescription : null,
+            DenialRetentionSequence = action == "audit-export-started" ? administration.DenialRetentionSequence : 0
         };
         await ExecuteAsync(
             connection: connection,
@@ -131,8 +132,41 @@ internal abstract partial class RelationalLabelStore
             transaction: transaction,
             sequence: audit.Sequence,
             token: token).ConfigureAwait(false);
+        if (!succeeded && action is "invocation-denied" or "authenticate")
+        {
+            await RetainBoundaryDenialsAsync(connection, transaction, administration, token).ConfigureAwait(false);
+        }
         await SaveAdministrationAsync(connection, transaction, administration, token).ConfigureAwait(false);
         return audit.ToReceipt();
+    }
+
+    /// <summary>Retains the latest 256 boundary denials across all callers under the issuer transaction lock.</summary>
+    private async Task RetainBoundaryDenialsAsync(
+        DbConnection connection,
+        DbTransaction transaction,
+        AdministrationState administration,
+        CancellationToken token)
+    {
+        string filter = $"{TableJsonField("Action")} IN ('invocation-denied','authenticate') AND " +
+            TableJsonField("Succeeded") + (Provider == "sqlite" ? "=0" : "='false'");
+        object? oldestRemoved = await ScalarAsync(
+            connection: connection,
+            transaction: transaction,
+            sql: $"SELECT t.seq FROM label_admin_audit t WHERE {filter} ORDER BY t.seq DESC LIMIT 1 OFFSET 256",
+            token: token).ConfigureAwait(false);
+        if (oldestRemoved is null or DBNull)
+        {
+            return;
+        }
+
+        // Select the boundary separately so MySQL never deletes from a table read by its own subquery.
+        await ExecuteAsync(
+            connection: connection,
+            transaction: transaction,
+            sql: $"DELETE FROM label_admin_audit WHERE seq<=@through AND {filter.Replace("t.payload", "payload", StringComparison.Ordinal)}",
+            token: token,
+            ("@through", Integer(oldestRemoved))).ConfigureAwait(false);
+        administration.DenialRetentionSequence = administration.Sequence;
     }
 
     /// <summary>Reads a retained same-intent receipt before applying another mutation.</summary>

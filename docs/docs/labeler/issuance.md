@@ -23,8 +23,14 @@ is in `idunno.Bluesky.Labeler.Administration`; storage contracts are in
 `idunno.Bluesky.Labeler.Storage`.
 
 The host supplies an established signing key, separate from its repository key, and a configured
-`HttpClient`. The service borrows both; the host owns disposal. Registration doesn't generate a key,
-connect to a database, publish a declaration, migrate storage or start a worker.
+`HttpClient`. The service borrows both; the host owns disposal. The client is used as supplied to
+resolve target handles and PDS endpoints from DID documents. Its handler must check resolved IP
+addresses at connection time and reject loopback, link-local and private addresses, including cloud
+metadata endpoints. Register an `IHttpClientFactory` with
+`AddAtProtoHttpClient(IServiceCollection)` or provide equivalent checks in a custom handler.
+Disable automatic redirects; following one can send a request to an unchecked destination before
+the caller can inspect the response. Registration doesn't generate a key, connect to a database,
+publish a declaration, migrate storage or start a worker.
 
 An authorizer must return a grant or an explicit failure. There is no default allow-all authorizer.
 The service first checks admission, before looking up receipts or resolving targets, then checks the

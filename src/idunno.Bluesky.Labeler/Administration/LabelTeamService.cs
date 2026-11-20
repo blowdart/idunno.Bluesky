@@ -8,8 +8,18 @@ namespace idunno.Bluesky.Labeler.Administration;
 
 /// <summary>Verifies enrollment identities before applying provider-backed administrative changes.</summary>
 /// <param name="store">The issuer-bound administrative provider.</param>
-/// <param name="httpClient">The caller-owned, configured identity-resolution client.</param>
+/// <param name="httpClient">The caller-owned <see cref="HttpClient"/> used for identity resolution.</param>
 /// <exception cref="ArgumentNullException">A required dependency is <see langword="null"/>.</exception>
+/// <remarks>
+/// <para><paramref name="httpClient"/> is used as supplied to resolve caller-provided handles and DID identities.
+/// Its handler must enforce SSRF protection at connection time; otherwise a handle can direct requests to loopback,
+/// link-local or private network addresses, including cloud metadata services. A client created by an
+/// <see cref="IHttpClientFactory"/> registered with
+/// <see cref="ServiceCollectionExtensions.AddAtProtoHttpClient(Microsoft.Extensions.DependencyInjection.IServiceCollection)"/> has the library's
+/// connection-time SSRF protections; custom handlers must provide equivalent protections.</para>
+/// <para>Disable automatic redirects on the handler. A handler that follows redirects can send a request to a
+/// disallowed destination before this service can inspect the response.</para>
+/// </remarks>
 public sealed class LabelTeamService(ILabelAdministrationStore store, HttpClient httpClient)
 {
     private readonly ILabelAdministrationStore _store = store ?? throw new ArgumentNullException(nameof(store));

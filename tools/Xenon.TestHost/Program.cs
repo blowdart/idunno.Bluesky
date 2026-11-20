@@ -57,6 +57,7 @@ internal static class Program
         ArgumentOutOfRangeException.ThrowIfGreaterThan(port, 65535);
         builder.WebHost.ConfigureKestrel(server => server.Listen(System.Net.IPAddress.Loopback, port));
         AddHostFiltering(builder.Services, origin);
+        builder.Services.AddHsts(_ => { });
         AddPersistentAuthentication(builder.Services, database);
         builder.Services.AddSqliteLabelStorage(new SqliteConnectionStringBuilder { DataSource = database }.ToString());
         builder.Services.AddLabelerModeration(FixtureHandler.s_issuer, fixtures);
@@ -172,7 +173,7 @@ internal static class Program
     internal static void ConfigurePipeline(WebApplication app, Uri origin)
     {
         // Tunnel traffic must come from an explicitly trusted proxy; request headers never choose OAuth origins.
-        HostProgram.ConfigureForwardedHeaders(app);
+        HostProgram.ConfigureTransportSecurity(app, origin);
         app.UseHostFiltering();
         app.UseBlueskyOAuthClientMetadata(
             HostProgram.CreateNativeOAuthOptions(origin, new(FixtureHandler.s_issuer, "labeler_admin")),

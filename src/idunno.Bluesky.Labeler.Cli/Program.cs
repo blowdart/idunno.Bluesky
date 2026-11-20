@@ -68,10 +68,10 @@ internal static partial class Program
     internal static RootCommand CreateRootCommand()
     {
         RootCommand root = [with(
-            "Administer a standalone AT Protocol labeler. Remote OAuth credentials are temporary by default; use --remember-me on a remote command to opt into account- and permission-scoped saving. Windows uses current-user DPAPI; other platforms require separate consent to save credentials unencrypted.")];
+            "Administer a standalone AT Protocol labeler. New remote OAuth sessions are temporary by default; use --remember-me to save them. Saved sessions are reused automatically; --admin-handle can be omitted when exactly one saved account matches the labeler and command. Windows uses current-user DPAPI; other platforms require separate consent to save credentials unencrypted.")];
         root.Options.Add(new Option<bool>("--verbose")
         {
-            Description = "Include raw JSON responses instead of human-readable result details.",
+            Description = "Show authentication and request progress, and raw JSON responses instead of human-readable result details.",
             Recursive = true
         });
         root.Subcommands.Add(CreateTeamCommand());
@@ -81,13 +81,14 @@ internal static partial class Program
         root.Subcommands.Add(CreateAuditCommand());
         root.Subcommands.Add(CreateIssueCommand(negate: false));
         root.Subcommands.Add(CreateIssueCommand(negate: true));
-        root.Subcommands.Add(CreateEnrollCommand());
-        root.Subcommands.Add(CreateChangeTeamCommand());
+        root.Subcommands.Add(CreateEnrollCommand("enroll", hidden: true));
+        root.Subcommands.Add(CreateChangeTeamCommand(name: "change-team", legacy: true));
         root.Subcommands.Add(CreateRetirementCommand());
         root.Subcommands.Add(CreateRotationCommand());
         root.Subcommands.Add(CreateCliUpdateCommand());
         root.Subcommands.Add(CreateServiceUpdateCommand());
         root.Subcommands.Add(CreatePolicyCommand());
+        root.Subcommands.Add(CreateListCredentialsCommand());
         root.Subcommands.Add(CreateForgetMeCommand());
         return root;
     }
@@ -111,17 +112,32 @@ internal static partial class Program
         return command;
     }
 
-    /// <summary>Creates a team-inspection command.</summary>
+    /// <summary>Creates the team-management command group and retains the original direct inspection form.</summary>
     private static Command CreateTeamCommand()
     {
-        Command command = new("team", "Show the authorized labeler team.");
-        TransportOptions transport = AddTransportOptions(command);
+        Command command = new("team", "Inspect and manage labeler team members.");
+        // Share recursive options so transport selection works identically on either side of a subcommand.
+        TransportOptions transport = AddTransportOptions(command, recursive: true);
         command.SetAction((parseResult, cancellationToken) => ExecuteAsync(
             method: "getTeam",
             request: new(Method: "getTeam", Reason: "Administrative inspection."),
             transport: transport,
             parseResult: parseResult,
             cancellationToken: cancellationToken));
+
+        Command list = new("list", "Show the authorized labeler team.");
+        list.SetAction((parseResult, cancellationToken) => ExecuteAsync(
+            method: "getTeam",
+            request: new(Method: "getTeam", Reason: "Administrative inspection."),
+            transport: transport,
+            parseResult: parseResult,
+            cancellationToken: cancellationToken));
+        command.Subcommands.Add(list);
+        command.Subcommands.Add(CreateEnrollCommand(name: "add", sharedTransport: transport));
+        command.Subcommands.Add(CreateChangeTeamCommand(name: "update", sharedTransport: transport));
+        command.Subcommands.Add(CreateChangeTeamCommand(name: "enable", fixedAction: LabelTeamAction.Reinstate, sharedTransport: transport));
+        command.Subcommands.Add(CreateChangeTeamCommand(name: "disable", fixedAction: LabelTeamAction.Suspend, sharedTransport: transport));
+        command.Subcommands.Add(CreateChangeTeamCommand(name: "remove", fixedAction: LabelTeamAction.Remove, sharedTransport: transport));
         return command;
     }
 
@@ -233,7 +249,7 @@ internal static partial class Program
         TransportOptions transport = AddTransportOptions(command);
         Argument<string> target = new("target") { Description = "A DID/handle or record AT URI." };
         Argument<string> value = new("value") { Description = "The declared label value." };
-        Option<string> operationId = new("--operation-id") { Description = "A stable identifier for safe retries.", Required = true };
+        Option<string> operationId = new("--operation-id") { Description = "A stable identifier for safe retries; generated and displayed when omitted." };
         Option<string> reason = new("--reason") { Description = "The operator's audit reason.", Required = true };
         Option<string?> cid = new("--cid") { Description = "Optionally pin a record label to this CID." };
         Option<DateTimeOffset?> expiresAt = new("--expires-at") { Description = "An optional absolute expiry time (issue only)." };
@@ -253,13 +269,12 @@ internal static partial class Program
         {
             string? targetText = parseResult.GetValue(target);
             string? label = parseResult.GetValue(value);
-            string? operation = parseResult.GetValue(operationId);
+            string operation = await GetOrCreateOperationIdAsync(parseResult.GetValue(operationId), Console.Out).ConfigureAwait(false);
             string? auditReason = parseResult.GetValue(reason);
             string? cidText = parseResult.GetValue(cid);
             DateTimeOffset? expiry = negate ? null : parseResult.GetValue(expiresAt);
             if (targetText is null ||
                 label is null ||
-                operation is null ||
                 auditReason is null ||
                 !ValidateLabelTarget(targetText, cidText) ||
                 string.IsNullOrWhiteSpace(label) ||
@@ -292,14 +307,18 @@ internal static partial class Program
         return command;
     }
 
-    /// <summary>Creates a verified team-enrollment command.</summary>
-    private static Command CreateEnrollCommand()
+    /// <summary>Creates a verified team-enrollment command, including the hidden legacy spelling.</summary>
+    /// <param name="name">The command name.</param>
+    /// <param name="hidden"><see langword="true" /> to hide the command; otherwise, <see langword="false" />.</param>
+    /// <param name="sharedTransport">The inherited transport options, or <see langword="null" /> to create command-specific options.</param>
+    /// <returns>The enrollment command.</returns>
+    private static Command CreateEnrollCommand(string name, bool hidden = false, TransportOptions? sharedTransport = null)
     {
-        Command command = new("enroll", "Enroll a verified DID or handle in the labeler team.");
-        TransportOptions transport = AddTransportOptions(command);
+        Command command = new(name, "Add a verified DID or handle to the labeler team.") { Hidden = hidden };
+        TransportOptions transport = sharedTransport ?? AddTransportOptions(command);
         Argument<string> target = new("target") { Description = "The member DID or handle." };
         Option<string> role = new("--role") { Description = "Viewer, Moderator, or Administrator.", Required = true };
-        Option<string> operationId = new("--operation-id") { Description = "A stable identifier for safe retries.", Required = true };
+        Option<string> operationId = new("--operation-id") { Description = "A stable identifier for safe retries; generated and displayed when omitted." };
         Option<string> reason = new("--reason") { Description = "The operator's audit reason.", Required = true };
         Option<bool> yes = new("--yes") { Description = "Confirm without an interactive prompt." };
         command.Arguments.Add(target);
@@ -310,7 +329,7 @@ internal static partial class Program
         command.SetAction(async (parseResult, cancellationToken) =>
         {
             string? member = parseResult.GetValue(target);
-            string? operation = parseResult.GetValue(operationId);
+            string operation = await GetOrCreateOperationIdAsync(parseResult.GetValue(operationId), Console.Out).ConfigureAwait(false);
             string? auditReason = parseResult.GetValue(reason);
             if (member is null ||
                 string.IsNullOrWhiteSpace(operation) ||
@@ -342,47 +361,83 @@ internal static partial class Program
         return command;
     }
 
-    /// <summary>Creates a team role, membership, local-binding or ownership-transfer command.</summary>
-    private static Command CreateChangeTeamCommand()
+    /// <summary>Creates a team change command using either a fixed action or the operator's selected action.</summary>
+    /// <param name="name">The command name.</param>
+    /// <param name="fixedAction">The fixed team action, or <see langword="null" /> to select an action with an option.</param>
+    /// <param name="legacy"><see langword="true" /> to retain the hidden legacy command; otherwise, <see langword="false" />.</param>
+    /// <param name="sharedTransport">The inherited transport options, or <see langword="null" /> to create command-specific options.</param>
+    /// <returns>The team change command.</returns>
+    private static Command CreateChangeTeamCommand(
+        string name,
+        LabelTeamAction? fixedAction = null,
+        bool legacy = false,
+        TransportOptions? sharedTransport = null)
     {
-        Command command = new("change-team", "Change a member's role, status or local binding, or transfer ownership.");
-        TransportOptions transport = AddTransportOptions(command);
-        Argument<string> target = new("target") { Description = "The target member's DID." };
-        Option<string> action = new("--action")
+        string description = fixedAction switch
         {
-            Description = "SetRole, Suspend, Reinstate, Remove, BindLocal, RevokeLocal, or TransferOwnership (owner only).",
-            Required = true
+            LabelTeamAction.Reinstate => "Make an inactive member active; revoked local bindings are not restored.",
+            LabelTeamAction.Suspend => "Make a member inactive and revoke their local bindings.",
+            LabelTeamAction.Remove => "Remove a member and revoke their local bindings.",
+            _ => "Change a member's role, status or local binding, or transfer ownership."
+        };
+        Command command = new(name, description) { Hidden = legacy };
+        TransportOptions transport = sharedTransport ?? AddTransportOptions(command);
+        Argument<string> target = new("target") { Description = "The target member's DID." };
+        Option<string?> action = new("--action")
+        {
+            Description = legacy
+                ? "SetRole, Suspend, Reinstate, Remove, BindLocal, RevokeLocal, or TransferOwnership (owner only)."
+                : "SetRole (default), Suspend, Reinstate, Remove, BindLocal, RevokeLocal, or TransferOwnership (owner only).",
+            Required = legacy
         };
         Option<string?> role = new("--role") { Description = "The new role for SetRole." };
         Option<string?> credential = new("--credential") { Description = "The OS identity for BindLocal or RevokeLocal." };
-        Option<string> operationId = new("--operation-id") { Description = "A stable identifier for safe retries.", Required = true };
+        Option<string> operationId = new("--operation-id") { Description = "A stable identifier for safe retries; generated and displayed when omitted." };
         Option<string> reason = new("--reason") { Description = "The operator's audit reason.", Required = true };
         Option<bool> yes = new("--yes") { Description = "Confirm without an interactive prompt." };
         command.Arguments.Add(target);
-        command.Options.Add(action);
-        command.Options.Add(role);
-        command.Options.Add(credential);
+        if (fixedAction is null)
+        {
+            command.Options.Add(action);
+            command.Options.Add(role);
+            command.Options.Add(credential);
+        }
         command.Options.Add(operationId);
         command.Options.Add(reason);
         command.Options.Add(yes);
         command.SetAction(async (parseResult, cancellationToken) =>
         {
             string? member = parseResult.GetValue(target);
-            string? operation = parseResult.GetValue(operationId);
+            string operation = await GetOrCreateOperationIdAsync(parseResult.GetValue(operationId), Console.Out).ConfigureAwait(false);
             string? auditReason = parseResult.GetValue(reason);
             if (member is null ||
                 string.IsNullOrWhiteSpace(operation) ||
                 string.IsNullOrWhiteSpace(auditReason) ||
-                !Did.TryParse(member, out Did? did) ||
-                !TryParseAction(parseResult.GetValue(action), out LabelTeamAction parsedAction))
+                !Did.TryParse(member, out Did? did) || did is null)
             {
-                await Console.Error.WriteLineAsync("✖   Supply a member DID, operation ID, audit reason, and supported team action.").ConfigureAwait(false);
+                await Console.Error.WriteLineAsync("✖   Supply a member DID, operation ID, and audit reason.").ConfigureAwait(false);
+                return 2;
+            }
+
+            string? actionText = fixedAction is null ? parseResult.GetValue(action) : null;
+            LabelTeamAction parsedAction;
+            if (fixedAction is not null)
+            {
+                parsedAction = fixedAction.Value;
+            }
+            else if (actionText is null && !legacy)
+            {
+                parsedAction = LabelTeamAction.SetRole;
+            }
+            else if (!TryParseAction(actionText, out parsedAction))
+            {
+                await Console.Error.WriteLineAsync("✖   Supply a supported team action.").ConfigureAwait(false);
                 return 2;
             }
 
             LabelTeamRole? parsedRole = null;
-            string? roleText = parseResult.GetValue(role);
-            string? credentialText = parseResult.GetValue(credential);
+            string? roleText = fixedAction is null ? parseResult.GetValue(role) : null;
+            string? credentialText = fixedAction is null ? parseResult.GetValue(credential) : null;
             if (!HasValidTeamChangeOptions(parsedAction, roleText is not null, credentialText is not null))
             {
                 await Console.Error.WriteLineAsync("✖   SetRole requires --role; BindLocal and RevokeLocal require --credential. These options are not valid for other actions.").ConfigureAwait(false);
@@ -400,9 +455,14 @@ internal static partial class Program
                 parsedRole = result;
             }
 
-            string prompt = parsedAction == LabelTeamAction.TransferOwnership
-                ? $"Transfer labeler ownership to '{did}'? You will remain an administrator, but only the new owner can transfer ownership back."
-                : $"{parsedAction} for '{did}'?";
+            string prompt = parsedAction switch
+            {
+                LabelTeamAction.TransferOwnership => $"Transfer labeler ownership to '{did}'? You will remain an administrator, but only the new owner can transfer ownership back.",
+                LabelTeamAction.Suspend => $"Disable '{did}' and revoke their local bindings?",
+                LabelTeamAction.Reinstate => $"Enable '{did}'? Revoked local bindings will not be restored.",
+                LabelTeamAction.Remove => $"Remove '{did}' and revoke their local bindings?",
+                _ => $"{parsedAction} for '{did}'?"
+            };
             if (!await ConfirmAsync(parseResult.GetValue(yes), prompt, cancellationToken).ConfigureAwait(false))
             {
                 return 2;
@@ -458,9 +518,16 @@ internal static partial class Program
     {
         Command command = new(name, description);
         TransportOptions transport = AddTransportOptions(command);
-        Option<string> operationId = new("--operation-id") { Description = "The operation identity recorded in the maintenance audit.", Required = true };
-        Option<string> reason = new("--reason") { Description = "The operator's audit reason.", Required = true };
         bool preview = method == "prepareRetirement";
+        bool requiresExistingOperation = !preview && RequiresRetirementConfirmation(method);
+        Option<string> operationId = new("--operation-id")
+        {
+            Description = requiresExistingOperation
+                ? "The operation ID from the matching preflight."
+                : "The operation identity recorded in the maintenance audit; generated and displayed when omitted.",
+            Required = requiresExistingOperation
+        };
+        Option<string> reason = new("--reason") { Description = "The operator's audit reason.", Required = true };
         Option<string> action = new("--action") { Description = "The exact administration method being previewed, such as beginRetirement.", Required = preview };
         Option<string?> confirmation = new("--confirmation") { Description = "The action-specific server challenge returned by preflight. --yes cannot replace it." };
         Option<string?> attestation = new("--attestation") { Description = "Availability evidence for completion, or external-removal evidence for key attestation." };
@@ -513,7 +580,10 @@ internal static partial class Program
 
         command.SetAction(async (parseResult, cancellationToken) =>
         {
-            string? operation = parseResult.GetValue(operationId);
+            string? suppliedOperation = parseResult.GetValue(operationId);
+            string? operation = requiresExistingOperation
+                ? suppliedOperation
+                : await GetOrCreateOperationIdAsync(suppliedOperation, Console.Out).ConfigureAwait(false);
             string? auditReason = parseResult.GetValue(reason);
             string intendedAction = preview ? parseResult.GetValue(action) ?? "" : method;
             int graceDays = preview || method is "beginGracePeriod" or "extendGracePeriod" ? parseResult.GetValue(days) : 0;
@@ -651,10 +721,13 @@ internal static partial class Program
     {
         Command command = new(name, description);
         TransportOptions transport = AddTransportOptions(command);
+        bool requiresExistingOperation = method != "beginRotation";
         Option<string> operationId = new("--operation-id")
         {
-            Description = "The stable rotation operation ID (use the same value when resuming).",
-            Required = true
+            Description = requiresExistingOperation
+                ? "The existing rotation operation ID."
+                : "The stable rotation operation ID; generated and displayed when omitted.",
+            Required = requiresExistingOperation
         };
         Option<string> reason = new("--reason") { Description = "The operator's audit reason.", Required = true };
         Option<string?> replacementKeyId = new("--replacement-key-id")
@@ -693,7 +766,10 @@ internal static partial class Program
         command.Options.Add(yes);
         command.SetAction(async (parseResult, cancellationToken) =>
         {
-            string? operation = parseResult.GetValue(operationId);
+            string? suppliedOperation = parseResult.GetValue(operationId);
+            string? operation = requiresExistingOperation
+                ? suppliedOperation
+                : await GetOrCreateOperationIdAsync(suppliedOperation, Console.Out).ConfigureAwait(false);
             string? auditReason = parseResult.GetValue(reason);
             string? keyId = includeReplacementKey ? parseResult.GetValue(replacementKeyId) : null;
             string? participantId = includeHost ? parseResult.GetValue(hostId) : null;
@@ -953,6 +1029,7 @@ internal static partial class Program
             options: oauthOptions,
             purpose: "Labeler-account identity authority to recover the saved PLC identity operation.",
             rememberMe: rememberMe,
+            labelerOrigin: labelerEndpoint,
             lifetime: signInLifetime,
             cancellationToken: cancellationToken).ConfigureAwait(false))
         {
@@ -1055,6 +1132,7 @@ internal static partial class Program
             options: oauthOptions,
             purpose: "Labeler-account identity authority to publish the label key and service in its PLC DID document.",
             rememberMe: rememberMe,
+            labelerOrigin: labelerEndpoint,
             lifetime: signInLifetime,
             cancellationToken: cancellationToken).ConfigureAwait(false))
         {
@@ -1119,14 +1197,19 @@ internal static partial class Program
         };
 
     /// <summary>Adds transport-selection and remote-authentication options to a command.</summary>
-    private static TransportOptions AddTransportOptions(Command command)
+    /// <param name="command">The command to which the options are added.</param>
+    /// <param name="recursive"><see langword="true" /> to make the options available to subcommands; otherwise, <see langword="false" />.</param>
+    /// <returns>The added transport options.</returns>
+    private static TransportOptions AddTransportOptions(Command command, bool recursive = false)
     {
-        Option<string?> localEndpoint = new("--local-endpoint") { Description = "Use the configured protected local pipe/socket." };
+        Option<string?> localEndpoint = new("--local-endpoint") { Description = "Use the configured protected local pipe/socket.", Recursive = recursive };
         Option<Uri?> adminUrl = CreateUriOption("--labeler-url", "The labeler's HTTPS origin, without a path, for remote administration.");
-        Option<string?> audienceText = new("--admin-service") { Description = "Override the administration DID#service reference discovered from native OAuth metadata." };
-        Option<string?> handle = new("--admin-handle") { Description = "The administrator's Bluesky handle, not the labeler account." };
-        Option<string?> clientId = new("--oauth-client-id") { Description = "The native OAuth metadata URL; defaults to <labeler-url>/native-client-metadata.json." };
+        adminUrl.Recursive = recursive;
+        Option<string?> audienceText = new("--admin-service") { Description = "Override the administration DID#service reference discovered from native OAuth metadata.", Recursive = recursive };
+        Option<string?> handle = new("--admin-handle") { Description = "The administrator's Bluesky handle, not the labeler account. Optional when exactly one saved account matches this labeler and command.", Recursive = recursive };
+        Option<string?> clientId = new("--oauth-client-id") { Description = "The native OAuth metadata URL; defaults to <labeler-url>/native-client-metadata.json.", Recursive = recursive };
         Option<bool> rememberMe = AddRememberMeOption(command);
+        rememberMe.Recursive = recursive;
         command.Options.Add(localEndpoint);
         command.Options.Add(adminUrl);
         command.Options.Add(audienceText);
@@ -1142,7 +1225,8 @@ internal static partial class Program
         TransportOptions transport,
         ParseResult parseResult,
         CancellationToken cancellationToken,
-        AdministrationWorkflow? workflow = null)
+        AdministrationWorkflow? workflow = null,
+        IReadOnlyList<string>? workflowMethods = null)
     {
         try
         {
@@ -1167,7 +1251,7 @@ internal static partial class Program
                     endpoint: localEndpoint,
                     command: command,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
-                return await WriteResponseAsync(localResponse, HttpStatusCode.OK).ConfigureAwait(false);
+                return await WriteResponseAsync(localResponse, HttpStatusCode.OK, cancellationToken).ConfigureAwait(false);
             }
 
             if (string.IsNullOrWhiteSpace(localEndpoint) && adminUrl is not null)
@@ -1181,7 +1265,8 @@ internal static partial class Program
                     clientId: parseResult.GetValue(transport.ClientId),
                     rememberMe: parseResult.GetValue(transport.RememberMe),
                     cancellationToken: cancellationToken,
-                    workflow: workflow).ConfigureAwait(false);
+                    workflow: workflow,
+                    workflowMethods: workflowMethods).ConfigureAwait(false);
             }
 
             await Console.Error.WriteLineAsync("✖   Select exactly one transport: --local-endpoint or --labeler-url.").ConfigureAwait(false);
@@ -1226,17 +1311,22 @@ internal static partial class Program
         string? clientId,
         bool rememberMe,
         CancellationToken cancellationToken,
-        AdministrationWorkflow? workflow = null)
+        AdministrationWorkflow? workflow = null,
+        IReadOnlyList<string>? workflowMethods = null)
     {
         if (!IsHttpsOrigin(adminUrl) ||
-            handleText is null ||
-            !Handle.TryParse(handleText, out Handle? handle) ||
             !Uri.TryCreate(clientId ?? new Uri(adminUrl, "/native-client-metadata.json").AbsoluteUri, UriKind.Absolute, out Uri? metadataUri) ||
             metadataUri is null ||
-            !IsNativeClientMetadataUri(metadataUri, adminUrl) ||
-            handle is null)
+            !IsNativeClientMetadataUri(metadataUri, adminUrl))
         {
-            await Console.Error.WriteLineAsync("✖   Remote mode requires --labeler-url with an HTTPS origin and --admin-handle. An explicit --oauth-client-id must share the labeler origin.").ConfigureAwait(false);
+            await Console.Error.WriteLineAsync("✖   Remote mode requires --labeler-url with an HTTPS origin. An explicit --oauth-client-id must share the labeler origin.").ConfigureAwait(false);
+            return 2;
+        }
+
+        OAuthMetadataDocument? metadata = await ReadOAuthMetadataAsync(metadataUri, cancellationToken).ConfigureAwait(false);
+        if (metadata is null)
+        {
+            await Console.Error.WriteLineAsync("✖   The labeler did not provide valid native OAuth metadata.").ConfigureAwait(false);
             return 2;
         }
 
@@ -1251,84 +1341,67 @@ internal static partial class Program
         }
         else
         {
-            audience = await DiscoverAdminServiceAsync(metadataUri, cancellationToken).ConfigureAwait(false);
-            if (audience is null)
+            if (!TryDiscoverAdminService(metadata.Scope, out audience) || audience is null)
             {
                 await Console.Error.WriteLineAsync("✖   OAuth metadata does not advertise one unambiguous labeler administration service. Supply --admin-service explicitly.").ConfigureAwait(false);
                 return 2;
             }
         }
 
-        CliSignInLifetime signInLifetime = new();
-        await using ConfiguredAsyncDisposable signInCleanup = signInLifetime.ConfigureAwait(false);
-        if (workflow is not null)
+        IReadOnlyList<string> requiredMethods = SelectRemoteRequiredMethods(
+            method: method,
+            hasWorkflow: workflow is not null,
+            workflowMethods: workflowMethods);
+        if (!TryCreateRemoteOAuthOptions(
+            clientId: metadataUri,
+            audience: audience,
+            requiredMethods: requiredMethods,
+            advertisedScope: metadata.Scope,
+            options: out OAuthOptions? oauthOptions) ||
+            oauthOptions is null)
         {
-            Dictionary<string, AtProtoAgent> methodAgents = [with(StringComparer.Ordinal)];
-            try
+            await Console.Error.WriteLineAsync("✖   OAuth metadata does not advertise every required labeler administration permission for the selected service.").ConfigureAwait(false);
+            return 2;
+        }
+
+        if (handleText is null)
+        {
+            IReadOnlyList<string> accounts = await CliCredentialCache.FindAccountsAsync(
+                clientMetadataId: oauthOptions.ClientId,
+                requestedScope: string.Join(" ", oauthOptions.Scopes),
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+            if (accounts.Count == 0)
             {
-                return await workflow(
-                    async (command, token) =>
-                    {
-                        if (!s_policyPublicationMethods.Contains(command.Method, StringComparer.Ordinal))
-                        {
-                            return new(
-                                """{"succeeded":false,"error":"InvalidRequest"}""",
-                                HttpStatusCode.BadRequest);
-                        }
-
-                        AtProtoAgent methodAgent;
-                        if (methodAgents.TryGetValue(command.Method, out AtProtoAgent? existingAgent))
-                        {
-                            methodAgent = existingAgent;
-                        }
-                        else
-                        {
-                            OAuthOptions methodOptions = CreateRemoteOAuthOptions(metadataUri, audience, command.Method);
-                            methodAgent = new(
-                                new Uri(DefaultPds),
-                                new AtProtoAgentOptions
-                                {
-                                    OAuthOptions = methodOptions,
-                                    HttpClientOptions = new(timeout: s_remoteRequestTimeout)
-                                });
-                            methodAgents.Add(command.Method, methodAgent);
-                            if (!await SignInAsync(
-                                agent: methodAgent,
-                                handle: handle,
-                                options: methodOptions,
-                                purpose: null,
-                                rememberMe: rememberMe,
-                                lifetime: signInLifetime,
-                                cancellationToken: token).ConfigureAwait(false))
-                            {
-                                throw new OAuthException("Administrator sign-in did not complete.");
-                            }
-                        }
-
-                        return await SendRemoteCommandAsync(
-                            agent: methodAgent,
-                            adminUrl: adminUrl,
-                            audience: audience,
-                            request: command,
-                            cancellationToken: token).ConfigureAwait(false);
-                    },
-                    cancellationToken).ConfigureAwait(false);
+                accounts = await CliCredentialCache.FindAccountsAsync(
+                    clientMetadataId: oauthOptions.ClientId,
+                    requestedScope: null,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
             }
-            finally
+
+            handleText = SelectRememberedAccount(accounts);
+            if (handleText is null)
             {
-                foreach (AtProtoAgent methodAgent in methodAgents.Values)
-                {
-                    methodAgent.Dispose();
-                }
+                await Console.Error.WriteLineAsync(accounts.Count == 0
+                    ? "✖   No saved account matches this labeler. Supply --admin-handle to sign in, adding --remember-me to save the session."
+                    : "✖   Multiple saved accounts match this labeler. Specify --admin-handle to choose one.").ConfigureAwait(false);
+                return 2;
             }
         }
 
-        OAuthOptions oauthOptions = CreateRemoteOAuthOptions(metadataUri, audience, method);
+        if (!Handle.TryParse(handleText, out Handle? handle) || handle is null)
+        {
+            await Console.Error.WriteLineAsync("✖   --admin-handle must be a valid handle.").ConfigureAwait(false);
+            return 2;
+        }
+
+        CliSignInLifetime signInLifetime = new();
+        await using ConfiguredAsyncDisposable signInCleanup = signInLifetime.ConfigureAwait(false);
         AtProtoAgentOptions options = new()
         {
             OAuthOptions = oauthOptions,
             HttpClientOptions = new(timeout: s_remoteRequestTimeout)
         };
+        // Share one grant across admin calls; each service token remains bound to its exact method.
         using AtProtoAgent agent = new(new Uri(DefaultPds), options);
         if (!await SignInAsync(
             agent: agent,
@@ -1336,28 +1409,85 @@ internal static partial class Program
             options: oauthOptions,
             purpose: null,
             rememberMe: rememberMe,
+            labelerOrigin: adminUrl,
             lifetime: signInLifetime,
             cancellationToken: cancellationToken).ConfigureAwait(false))
         {
             return 4;
         }
 
+        if (workflow is not null)
+        {
+            return await workflow(
+                async (command, token) =>
+                {
+                    if (!s_policyPublicationMethods.Contains(command.Method, StringComparer.Ordinal))
+                    {
+                        return new(
+                            """{"succeeded":false,"error":"InvalidRequest"}""",
+                            HttpStatusCode.BadRequest);
+                    }
+
+                    return await SendRemoteCommandAsync(
+                        agent: agent,
+                        adminUrl: adminUrl,
+                        audience: audience,
+                        request: command,
+                        cancellationToken: token).ConfigureAwait(false);
+                },
+                cancellationToken).ConfigureAwait(false);
+        }
+
         AdministrationReply reply = await SendRemoteCommandAsync(
             agent: agent, adminUrl: adminUrl, audience: audience, request: request, cancellationToken: cancellationToken).ConfigureAwait(false);
-        return await WriteResponseAsync(reply.Body, reply.StatusCode).ConfigureAwait(false);
+        return await WriteResponseAsync(reply.Body, reply.StatusCode, cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>Creates OAuth options bound to one remote administration method.</summary>
-    internal static OAuthOptions CreateRemoteOAuthOptions(Uri clientId, AtProtoServiceReference audience, string method)
+    /// <summary>Selects a saved account only when the matching client identifies exactly one account.</summary>
+    internal static string? SelectRememberedAccount(IReadOnlyList<string> accounts) => accounts.Count == 1 ? accounts[0] : null;
+
+    /// <summary>Creates one reusable OAuth grant from the labeler's advertised administration scopes.</summary>
+    /// <param name="clientId">The native OAuth client metadata identifier.</param>
+    /// <param name="audience">The exact administration service.</param>
+    /// <param name="requiredMethods">The administration methods required by the command or workflow.</param>
+    /// <param name="advertisedScope">The scope string from the native OAuth metadata document.</param>
+    /// <param name="options">When this method returns, contains the OAuth options. This parameter is treated as uninitialized.</param>
+    /// <returns><see langword="true" /> if metadata advertises every required method for the selected audience; otherwise, <see langword="false" />.</returns>
+    internal static bool TryCreateRemoteOAuthOptions(
+        Uri clientId,
+        AtProtoServiceReference audience,
+        IEnumerable<string> requiredMethods,
+        string? advertisedScope,
+        out OAuthOptions? options)
     {
-        string lxm = AdminMethodPrefix + method;
-        string encodedAudience = Uri.EscapeDataString(audience.ToString());
-        return new()
+        options = null;
+        if (!TryGetRemoteAdminScopes(advertisedScope, audience, out IReadOnlyList<string> adminScopes))
+        {
+            return false;
+        }
+
+        HashSet<string> methods = adminScopes
+            .Select(scope => scope["rpc:".Length..scope.IndexOf("?aud=", StringComparison.Ordinal)])
+            .ToHashSet(StringComparer.Ordinal);
+        if (requiredMethods.Any(method => !methods.Contains(AdminMethodPrefix + method)))
+        {
+            return false;
+        }
+
+        options = new()
         {
             ClientId = clientId.AbsoluteUri,
-            Scopes = ["atproto", $"rpc:{lxm}?aud={encodedAudience}"]
+            Scopes = ["atproto", .. adminScopes]
         };
+        return true;
     }
+
+    /// <summary>Selects only the permissions required by a workflow, retaining the full publication set by default.</summary>
+    internal static IReadOnlyList<string> SelectRemoteRequiredMethods(
+        string method,
+        bool hasWorkflow,
+        IReadOnlyList<string>? workflowMethods = null) =>
+        hasWorkflow ? workflowMethods ?? s_policyPublicationMethods : [method];
 
     /// <summary>Sends one independently method-bound request without coupling transport to console output.</summary>
     private static async Task<AdministrationReply> SendRemoteCommandAsync(
@@ -1368,7 +1498,7 @@ internal static partial class Program
         CancellationToken cancellationToken)
     {
         string lxm = AdminMethodPrefix + request.Method;
-        await Console.Error.WriteLineAsync("🔒  Requesting a method-bound service token from the authenticated PDS.").ConfigureAwait(false);
+        await WriteVerboseNoticeAsync("🔒  Requesting a method-bound service token from the authenticated PDS.").ConfigureAwait(false);
         AtProtoHttpResult<ServiceCredential> tokenResult = await agent.GetServiceAuth(
             service: agent.Service,
             audience: audience,
@@ -1392,7 +1522,7 @@ internal static partial class Program
             limit: request.Limit);
         using SocketsHttpHandler handler = new() { AllowAutoRedirect = false };
         using HttpClient httpClient = new(handler) { Timeout = s_remoteRequestTimeout };
-        await Console.Error.WriteLineAsync("➜   Calling the labeler administration endpoint.").ConfigureAwait(false);
+        await WriteVerboseNoticeAsync("➜   Calling the labeler administration endpoint.").ConfigureAwait(false);
         using HttpRequestMessage httpRequest = new(
             IsRemoteGetMethod(request.Method) ? HttpMethod.Get : HttpMethod.Post,
             requestUri);
@@ -1411,13 +1541,14 @@ internal static partial class Program
     }
 
     /// <summary>Writes the service's JSON result and maps authorization and availability failures to process exit codes.</summary>
-    private static Task<int> WriteResponseAsync(string body, HttpStatusCode statusCode) =>
+    private static Task<int> WriteResponseAsync(string body, HttpStatusCode statusCode, CancellationToken cancellationToken = default) =>
         WriteResponseAsync(
             body: body,
             statusCode: statusCode,
             output: Console.Out,
             diagnostics: Console.Error,
-            verbose: s_verboseOutput.Value);
+            verbose: s_verboseOutput.Value,
+            cancellationToken: cancellationToken);
 
     /// <summary>Keeps machine-readable output separate from human-readable confirmations and errors.</summary>
     internal static async Task<int> WriteResponseAsync(
@@ -1425,7 +1556,9 @@ internal static partial class Program
         HttpStatusCode statusCode,
         TextWriter output,
         TextWriter diagnostics,
-        bool verbose = false)
+        bool verbose = false,
+        Func<Did, CancellationToken, Task<Handle>>? resolveHandle = null,
+        CancellationToken cancellationToken = default)
     {
         if (verbose)
         {
@@ -1468,10 +1601,18 @@ internal static partial class Program
                     changed.ValueKind == JsonValueKind.False
                     ? "✔   Administration succeeded. No change was needed."
                     : "✔   Administration succeeded.";
-                await diagnostics.WriteLineAsync(message).ConfigureAwait(false);
+                if (verbose)
+                {
+                    await diagnostics.WriteLineAsync(message).ConfigureAwait(false);
+                }
                 if (!verbose)
                 {
-                    await WriteReadableResultAsync(response.RootElement, output, 0).ConfigureAwait(false);
+                    await WriteReadableResultAsync(
+                        element: response.RootElement,
+                        output: output,
+                        depth: 0,
+                        resolveHandle: resolveHandle,
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
                 }
                 return 0;
             }
@@ -1485,6 +1626,26 @@ internal static partial class Program
         await diagnostics.WriteLineAsync($"✖   Administration failed (HTTP {(int)statusCode}).").ConfigureAwait(false);
         return 5;
     }
+
+    /// <summary>Creates and displays a new operation ID when the caller did not supply one.</summary>
+    /// <param name="operationId">The supplied ID, or <see langword="null" /> to generate one.</param>
+    /// <param name="output">The output for displaying a generated ID before the request.</param>
+    /// <returns>The supplied or generated operation ID.</returns>
+    internal static async Task<string> GetOrCreateOperationIdAsync(string? operationId, TextWriter output)
+    {
+        if (operationId is not null)
+        {
+            return operationId;
+        }
+
+        string generated = Guid.NewGuid().ToString("N");
+        await output.WriteLineAsync($"🆔   Operation ID: {generated}").ConfigureAwait(false);
+        return generated;
+    }
+
+    /// <summary>Writes optional progress without hiding prompts, warnings, errors or command results.</summary>
+    private static Task WriteVerboseNoticeAsync(string message) =>
+        s_verboseOutput.Value ? Console.Error.WriteLineAsync(message) : Task.CompletedTask;
 
     /// <summary>Formats retained PLC outcomes without enabling raw response output by default.</summary>
     private static async Task WriteStructuredOutputAsync(string body)
@@ -1500,7 +1661,12 @@ internal static partial class Program
     }
 
     /// <summary>Shows inspection fields as indented text rather than hiding useful command results with their raw JSON.</summary>
-    internal static async Task WriteReadableResultAsync(JsonElement element, TextWriter output, int depth)
+    internal static async Task WriteReadableResultAsync(
+        JsonElement element,
+        TextWriter output,
+        int depth,
+        Func<Did, CancellationToken, Task<Handle>>? resolveHandle = null,
+        CancellationToken cancellationToken = default)
     {
         string indent = new(' ', depth * 2);
         if (element.ValueKind == JsonValueKind.Object)
@@ -1528,7 +1694,12 @@ internal static partial class Program
                 }
                 if (property.Name == "openCounts" && property.Value.ValueKind == JsonValueKind.Object)
                 {
-                    await WriteReadableResultAsync(property.Value, output, depth).ConfigureAwait(false);
+                    await WriteReadableResultAsync(
+                        element: property.Value,
+                        output: output,
+                        depth: depth,
+                        resolveHandle: resolveHandle,
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
                     continue;
                 }
                 string name = property.Name switch
@@ -1536,6 +1707,7 @@ internal static partial class Program
                     "issuedThrough" => "Labels issued",
                     "publishedThrough" => "Labels published",
                     "replayFloor" => "Label history",
+                    "did" => "DID",
                     _ => property.Name
                 };
                 if (name.Length > 0)
@@ -1545,7 +1717,26 @@ internal static partial class Program
                 if (property.Value.ValueKind is JsonValueKind.Object or JsonValueKind.Array)
                 {
                     await output.WriteLineAsync($"{indent}{ResultIcon(property.Name)}{name}:").ConfigureAwait(false);
-                    await WriteReadableResultAsync(property.Value, output, depth + 1).ConfigureAwait(false);
+                    if (property.Name == "members" && property.Value.ValueKind == JsonValueKind.Array)
+                    {
+                        await WriteTeamMembersAsync(
+                            members: property.Value,
+                            output: output,
+                            depth: depth + 1,
+                            resolveHandle: resolveHandle ?? ((did, token) => IdentityResolution.ResolveVerifiedHandleAsync(
+                                did: did,
+                                cancellationToken: token)),
+                            cancellationToken: cancellationToken).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        await WriteReadableResultAsync(
+                            element: property.Value,
+                            output: output,
+                            depth: depth + 1,
+                            resolveHandle: resolveHandle,
+                            cancellationToken: cancellationToken).ConfigureAwait(false);
+                    }
                 }
                 else
                 {
@@ -1565,7 +1756,12 @@ internal static partial class Program
             foreach (JsonElement item in element.EnumerateArray())
             {
                 await output.WriteLineAsync($"{indent}•   Item {++index}:").ConfigureAwait(false);
-                await WriteReadableResultAsync(item, output, depth + 1).ConfigureAwait(false);
+                await WriteReadableResultAsync(
+                    element: item,
+                    output: output,
+                    depth: depth + 1,
+                    resolveHandle: resolveHandle,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
             }
             if (index == 0)
             {
@@ -1578,6 +1774,78 @@ internal static partial class Program
         }
     }
 
+    /// <summary>Shows each team member's stable identity, verified handle, named role and membership status.</summary>
+    private static async Task WriteTeamMembersAsync(
+        JsonElement members,
+        TextWriter output,
+        int depth,
+        Func<Did, CancellationToken, Task<Handle>> resolveHandle,
+        CancellationToken cancellationToken)
+    {
+        string indent = new(' ', depth * 2);
+        foreach (JsonElement member in members.EnumerateArray())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            string didText = member.GetProperty("did").GetString() ?? string.Empty;
+            bool active = member.GetProperty("active").GetBoolean();
+            bool removed = member.GetProperty("removed").GetBoolean();
+            string heading = SanitizeConsoleText(didText);
+            if (!active || removed)
+            {
+                // Only trusted formatting emits ANSI controls; identity text is sanitized first.
+                heading = $"\u001b[9m{heading}\u001b[29m";
+            }
+
+            await output.WriteLineAsync($"{indent}🔗  DID: {heading}").ConfigureAwait(false);
+            string handleText = "Unavailable (invalid DID)";
+            if (Did.TryParse(didText, out Did? did) && did is not null)
+            {
+                try
+                {
+                    Handle handle = await resolveHandle(did, cancellationToken).ConfigureAwait(false);
+                    handleText = handle.IsValid ? $"@{handle}" : "Unavailable (no verified handle)";
+                }
+                catch (HttpRequestException)
+                {
+                    handleText = "Unavailable (lookup failed)";
+                }
+                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                {
+                    handleText = "Unavailable (lookup timed out)";
+                }
+            }
+
+            string roleText = ReadableValue(member.GetProperty("role"));
+            bool knownRole = TryParseRole(roleText, out LabelTeamRole parsedRole);
+            string role = knownRole ? parsedRole.ToString() : $"Unknown ({roleText})";
+            string roleIcon = (knownRole, parsedRole) switch
+            {
+                (true, LabelTeamRole.Viewer) => "👁️",
+                (true, LabelTeamRole.Moderator) => "⚖️",
+                (true, LabelTeamRole.Administrator) => "👑",
+                _ => "🛡️"
+            };
+            string status = (removed, active) switch
+            {
+                (true, _) => "🚫  Status: Removed",
+                (false, true) => "🟢  Status: Active",
+                _ => "⏸   Status: Inactive"
+            };
+            await output.WriteLineAsync($"{indent}  🪪  Handle: {SanitizeConsoleText(handleText)}").ConfigureAwait(false);
+            await output.WriteLineAsync($"{indent}  {roleIcon}  Role: {role}").ConfigureAwait(false);
+            await output.WriteLineAsync($"{indent}  {status}").ConfigureAwait(false);
+            if (member.TryGetProperty("notificationEmail", out JsonElement email))
+            {
+                await output.WriteLineAsync($"{indent}  📧  Notification email: {ReadableValue(email)}").ConfigureAwait(false);
+            }
+        }
+
+        if (members.GetArrayLength() == 0)
+        {
+            await output.WriteLineAsync($"{indent}ℹ   None").ConfigureAwait(false);
+        }
+    }
+
     /// <summary>Selects recognizable four-column prefixes, padding narrow symbols differently from two-column emoji.</summary>
     private static string ResultIcon(string name) => name switch
     {
@@ -1586,7 +1854,8 @@ internal static partial class Program
         "appeals" or "appeal" => "⚖   ",
         "members" or "team" or "actor" => "👤  ",
         "labels" or "label" or "value" => "🏷️  ",
-        "issuer" or "did" => "🪪  ",
+        "issuer" or "handle" => "🪪  ",
+        "did" => "🔗  ",
         "streamId" => "🌊  ",
         "issuedThrough" => "🏷️  ",
         "publishedThrough" => "📡  ",
@@ -1601,8 +1870,11 @@ internal static partial class Program
 
     /// <summary>Keeps primitive field values readable without preserving terminal-control sequences from remote strings.</summary>
     private static string ReadableValue(JsonElement value) =>
-        string.Concat((value.ValueKind == JsonValueKind.Null ? "(none)" : value.ToString())
-            .Select(character => char.IsControl(character) ? ' ' : character));
+        SanitizeConsoleText(value.ValueKind == JsonValueKind.Null ? "(none)" : value.ToString());
+
+    /// <summary>Removes terminal control characters from untrusted text before displaying it.</summary>
+    private static string SanitizeConsoleText(string value) =>
+        string.Concat(value.Select(character => char.IsControl(character) ? ' ' : character));
 
     /// <summary>Limits terminal diagnostics to short protocol error identifiers rather than untrusted server text.</summary>
     private static string SafeServiceError(string? error) =>
@@ -1726,8 +1998,8 @@ internal static partial class Program
         string.Equals(uri.IdnHost, adminOrigin.IdnHost, StringComparison.OrdinalIgnoreCase) &&
         uri.Port == adminOrigin.Port;
 
-    /// <summary>Discovers one administration service from the configured native OAuth metadata document.</summary>
-    private static async Task<AtProtoServiceReference?> DiscoverAdminServiceAsync(Uri metadataUri, CancellationToken cancellationToken)
+    /// <summary>Reads the configured native OAuth metadata document without following redirects or accepting oversized data.</summary>
+    private static async Task<OAuthMetadataDocument?> ReadOAuthMetadataAsync(Uri metadataUri, CancellationToken cancellationToken)
     {
         using SocketsHttpHandler handler = new() { AllowAutoRedirect = false };
         using HttpClient client = new(handler) { Timeout = TimeSpan.FromSeconds(15) };
@@ -1772,9 +2044,8 @@ internal static partial class Program
         }
 
         return metadata is not null &&
-            string.Equals(metadata.ClientId, metadataUri.AbsoluteUri, StringComparison.Ordinal) &&
-            TryDiscoverAdminService(metadata.Scope, out AtProtoServiceReference? audience)
-                ? audience
+            string.Equals(metadata.ClientId, metadataUri.AbsoluteUri, StringComparison.Ordinal)
+                ? metadata
                 : null;
     }
 
@@ -1796,21 +2067,13 @@ internal static partial class Program
                 continue;
             }
 
-            int audienceStart = value.IndexOf("?aud=", StringComparison.Ordinal);
-            if (audienceStart <= rpcPrefix.Length ||
-                value.IndexOf('&', audienceStart) >= 0 ||
-                value.IndexOf('?', audienceStart + 1) >= 0)
+            if (!TryParseAdminRpcScope(value, out _, out AtProtoServiceReference? candidate) ||
+                candidate is null)
             {
                 return false;
             }
 
-            string encodedAudience = value[(audienceStart + "?aud=".Length)..];
-            string decodedAudience = Uri.UnescapeDataString(encodedAudience);
-            if (TryParseServiceReference(decodedAudience, out AtProtoServiceReference? candidate) &&
-                candidate is not null)
-            {
-                candidates.Add(candidate.ToString());
-            }
+            candidates.Add(candidate.ToString());
         }
 
         if (candidates.Count != 1)
@@ -1819,6 +2082,72 @@ internal static partial class Program
         }
 
         return TryParseServiceReference(candidates.Single(), out audience) && audience is not null;
+    }
+
+    /// <summary>Selects every valid administration RPC scope advertised for one exact service.</summary>
+    private static bool TryGetRemoteAdminScopes(
+        string? advertisedScope,
+        AtProtoServiceReference audience,
+        out IReadOnlyList<string> scopes)
+    {
+        scopes = [];
+        if (string.IsNullOrWhiteSpace(advertisedScope))
+        {
+            return false;
+        }
+
+        const string rpcPrefix = "rpc:" + AdminMethodPrefix;
+        List<string> selected = [];
+        HashSet<string> seen = [with(StringComparer.Ordinal)];
+        foreach (string value in advertisedScope.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (!value.StartsWith(rpcPrefix, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (!TryParseAdminRpcScope(value, out _, out AtProtoServiceReference? scopeAudience) ||
+                scopeAudience is null)
+            {
+                return false;
+            }
+
+            if (scopeAudience.ToString() == audience.ToString() && seen.Add(value))
+            {
+                selected.Add(value);
+            }
+        }
+
+        if (selected.Count == 0)
+        {
+            return false;
+        }
+
+        scopes = [.. selected.Order(StringComparer.Ordinal)];
+        return true;
+    }
+
+    /// <summary>Parses one exact administration RPC method scope and its service audience.</summary>
+    private static bool TryParseAdminRpcScope(
+        string value,
+        out string method,
+        out AtProtoServiceReference? audience)
+    {
+        const string rpcPrefix = "rpc:" + AdminMethodPrefix;
+        method = string.Empty;
+        audience = null;
+        int audienceStart = value.IndexOf("?aud=", StringComparison.Ordinal);
+        if (!value.StartsWith(rpcPrefix, StringComparison.Ordinal) ||
+            audienceStart <= rpcPrefix.Length ||
+            value.IndexOf('&', audienceStart) >= 0 ||
+            value.IndexOf('?', audienceStart + 1) >= 0)
+        {
+            return false;
+        }
+
+        method = value[rpcPrefix.Length..audienceStart];
+        string decodedAudience = Uri.UnescapeDataString(value[(audienceStart + "?aud=".Length)..]);
+        return TryParseServiceReference(decodedAudience, out audience) && audience is not null;
     }
 
     private const int MaximumOAuthMetadataSize = 64 * 1024;

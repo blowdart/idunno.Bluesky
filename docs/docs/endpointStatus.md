@@ -36,7 +36,7 @@
 | | [app.bsky.feed.getFeed](https://endpoints.bsky.app/#bluesky-app/tag/appbskyfeed/GET/xrpc/app.bsky.feed.getFeed) | `BlueskyAgent.GetFeed()` | ✔ |
 | | [app.bsky.feed.getFeedGenerator](https://endpoints.bsky.app/#bluesky-app/tag/appbskyfeed/GET/xrpc/app.bsky.feed.getFeedGenerator) | `BlueskyAgent.GetFeedGenerator()` | ✔ |
 | | [app.bsky.feed.getFeedGenerators](https://endpoints.bsky.app/#bluesky-app/tag/appbskyfeed/GET/xrpc/app.bsky.feed.getFeedGenerators) | `BlueskyAgent.GetFeedGenerators()` | ✔ |
-| | [app.bsky.feed.getFeedSkeleton](https://endpoints.bsky.app/#bluesky-app/tag/appbskyfeed/GET/xrpc/app.bsky.feed.getFeedSkeleton) | N/A - not for clients | ❌ |
+| | [app.bsky.feed.getFeedSkeleton](https://github.com/bluesky-social/bsky/blob/fe2ebbed667cc71e7c5acb832e717201570d801b/lexicons/app/bsky/feed/getFeedSkeleton.json) | `BlueskyAgent.GetFeedSkeleton()` | ✔ |
 | | [app.bsky.feed.getLikes](https://endpoints.bsky.app/#bluesky-app/tag/appbskyfeed/GET/xrpc/app.bsky.feed.getLikes) | `BlueskyAgent.GetLikes()` | ✔ |
 | | [app.bsky.feed.getListFeed](https://endpoints.bsky.app/#bluesky-app/tag/appbskyfeed/GET/xrpc/app.bsky.feed.getListFeed) | `BlueskyAgent.GetListFeed()` | ✔ |
 | | [app.bsky.feed.getPostThread](https://endpoints.bsky.app/#bluesky-app/tag/appbskyfeed/GET/xrpc/app.bsky.feed.getPostThread) | `BlueskyAgent.GetPostThread()` | ✔ |
@@ -46,6 +46,7 @@
 | | [app.bsky.feed.getSuggestedFeeds](https://endpoints.bsky.app/#bluesky-app/tag/appbskyfeed/GET/xrpc/app.bsky.feed.getSuggestedFeeds) | `BlueskyAgent.GetSuggestedFeeds()` | ✔ |
 | | [app.bsky.feed.getTimeline](https://endpoints.bsky.app/#bluesky-app/tag/appbskyfeed/GET/xrpc/app.bsky.feed.getTimeline) | `BlueskyAgent.GetTimeline()` | ✔ |
 | | [app.bsky.feed.searchPosts](https://endpoints.bsky.app/#bluesky-app/tag/appbskyfeed/GET/xrpc/app.bsky.feed.searchPosts) | `BlueskyAgent.SearchPosts()` | ✔ |
+| | [app.bsky.feed.sendInteractions](https://github.com/bluesky-social/bsky/blob/fe2ebbed667cc71e7c5acb832e717201570d801b/lexicons/app/bsky/feed/sendInteractions.json) | `BlueskyAgent.SendInteractions()` | ✔ |
 | **Graph** | [app.bsky.graph.getActorStarterPacks](https://endpoints.bsky.app/#bluesky-app/tag/appbskygraph/GET/xrpc/app.bsky.graph.getActorStarterPacks) | `BlueskyAgent.GetActorStarterPacks()` | ✔ |
 | | [app.bsky.graph.getBlocks](https://endpoints.bsky.app/#bluesky-app/tag/appbskygraph/GET/xrpc/app.bsky.graph.getBlocks) | `BlueskyAgent.GetBlocks()` | ✔ |
 | | [app.bsky.graph.getFollowers](https://endpoints.bsky.app/#bluesky-app/tag/appbskygraph/GET/xrpc/app.bsky.graph.getFollowers) | `BlueskyAgent.GetFollowers()` | ✔ |
@@ -78,6 +79,7 @@
 | | [app.bsky.notifications.putPreferencesV2](https://endpoints.bsky.app/#bluesky-app/tag/appbskynotification/POST/xrpc/app.bsky.notification.putPreferencesV2) | `BlueskyAgent.SetNotificationPreferences()` | ✔ |
 | | [app.bsky.notification.updateSeen](https://endpoints.bsky.app/#bluesky-app/tag/appbskynotification/POST/xrpc/app.bsky.notification.updateSeen) | `BlueskyAgent.UpdateNotificationSeenAt()` | ✔ |
 | **Unspecced** | app.bsky.unspecced.getAgeAssuranceState | `BlueskyAgent.GetAgeAssuranceState()` | ✔ |
+| | [app.bsky.unspecced.getAtmosphereExploreArticleRecommendations](https://github.com/bluesky-social/bsky/blob/fe2ebbed667cc71e7c5acb832e717201570d801b/lexicons/app/bsky/unspecced/getAtmosphereExploreArticleRecommendations.json) | `BlueskyAgent.GetAtmosphereExploreArticleRecommendations()` | ✔ |
 | | [app.bsky.unspecced.getAtmosphereExploreTab](https://github.com/bluesky-social/atproto/blob/main/lexicons-overrides/app/bsky/unspecced/getAtmosphereExploreTab.json) | `BlueskyAgent.GetAtmosphereExploreTab()` | ✔ |
 | | app.bsky.unspecced.getConfig | | ❌ |
 | | app.bsky.unspecced.getPopularFeedGenerators | `BlueskyAgent.GetPopularFeedGenerators()` | ✔ |

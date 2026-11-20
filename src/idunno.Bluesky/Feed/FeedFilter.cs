@@ -31,5 +31,10 @@ public enum FeedFilter
     /// <summary>
     /// Include posts with video.
     /// </summary>
-    PostsWithVideo
+    PostsWithVideo,
+
+    /// <summary>
+    /// Include authored top-level posts and replies, but exclude reposts.
+    /// </summary>
+    PostsAndRepliesOnly
 }

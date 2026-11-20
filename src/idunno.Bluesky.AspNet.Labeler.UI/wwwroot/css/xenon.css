@@ -146,6 +146,23 @@ nav { display: flex; flex-wrap: wrap; gap: 1rem; }
 .theme-picker select { font-size: .75rem; }
 .panel { background: var(--surface); border: 1px solid var(--border); border-radius: .4rem; margin: 1rem 0; padding: 1.25rem; }
 .panel h2 { margin-top: 0; }
+.cli-downloads { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr)); gap: 1rem; align-items: start; }
+.cli-downloads > .panel { min-width: 0; margin: 0; }
+.cli-download-list { list-style: none; margin: 1rem 0 0; padding: 0; }
+.cli-download-list > li { border-top: 1px solid var(--separator); padding: 1rem 0; }
+.cli-download-list > li:last-child { padding-bottom: 0; }
+.cli-download-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .5rem; margin-bottom: .65rem; }
+.cli-download-heading h3 { margin: 0; font-size: 1.1rem; }
+.cli-download-heading > span { font-size: .875rem; }
+.cli-download-link { display: flex; align-items: baseline; gap: .5rem; overflow-wrap: anywhere; }
+.cli-download-link .fa-icon { flex-shrink: 0; }
+.cli-download-command { padding: .65rem; background: var(--background); border-radius: .25rem; font-size: .875rem; overflow-wrap: anywhere; }
+.cli-download-command code { font-family: "Google Sans Code", monospace; }
+.cli-download-checksums { margin-top: .85rem; font-size: .875rem; }
+.cli-download-checksums summary { cursor: pointer; color: var(--link); }
+.cli-download-checksums dt { font-weight: 600; margin-top: .75rem; }
+.cli-download-checksums dd { margin: .35rem 0 0; overflow-wrap: anywhere; }
+.cli-download-checksums code { font-family: "Google Sans Code", monospace; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; }
 .field { display: grid; gap: .35rem; margin: .8rem 0; }
 .grid > .field { min-width: 0; }

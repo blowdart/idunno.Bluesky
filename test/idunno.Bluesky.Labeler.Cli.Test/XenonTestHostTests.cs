@@ -576,6 +576,12 @@ public partial class XenonTestHostTests
             Assert.Equal("?ReturnUrl=%2FXenon", login.Query);
             using HttpResponseMessage loginPage = await client.GetAsync(login, token);
             Assert.Equal(HttpStatusCode.OK, loginPage.StatusCode);
+            string loginPolicy = Assert.Single(loginPage.Headers.GetValues("Content-Security-Policy"));
+            Assert.Contains("script-src 'self'", loginPolicy, StringComparison.Ordinal);
+            Assert.Contains("frame-ancestors 'none'", loginPolicy, StringComparison.Ordinal);
+            Assert.Contains("form-action 'self' https:", loginPolicy, StringComparison.Ordinal);
+            Assert.DoesNotContain("unsafe-inline", loginPolicy, StringComparison.Ordinal);
+            Assert.False(loginPage.Headers.Contains("Strict-Transport-Security"));
             string loginHtml = await loginPage.Content.ReadAsStringAsync(token);
             Assert.Contains("aria-label=\"Xenon home\"", loginHtml, StringComparison.Ordinal);
             Assert.Contains("id=\"theme-choice\"", loginHtml, StringComparison.Ordinal);
@@ -638,7 +644,9 @@ public partial class XenonTestHostTests
                 Assert.Contains("did:web:" + displayedHost, html, StringComparison.Ordinal);
                 Assembly uiAssembly = typeof(LabelerUIExtensions).Assembly;
                 string? version = uiAssembly.GetName().Version?.ToString(3);
-                string? build = uiAssembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+                string? build = uiAssembly.GetCustomAttributes<AssemblyMetadataAttribute>()
+                    .FirstOrDefault(attribute => attribute.Key == "BuildCommitId")?.Value
+                    ?? uiAssembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
                 Assert.Contains("<footer class=\"site-footer\">", html, StringComparison.Ordinal);
                 Assert.Contains("rel=\"icon\" type=\"image/svg+xml\" sizes=\"any\"", html, StringComparison.Ordinal);
                 Assert.Contains("aria-label=\"Xenon home\"", html, StringComparison.Ordinal);

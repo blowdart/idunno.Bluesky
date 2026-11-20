@@ -14,7 +14,7 @@ namespace idunno.Bluesky;
 public static partial class BlueskyServer
 {
     // See https://docs.bsky.app/blog/2025-protocol-roadmap-spring
-    private const string AppViewProxy = "did:web:api.bsky.app#bsky_appview";
+    internal const string AppViewProxy = "did:web:api.bsky.app#bsky_appview";
 
     /// <summary>
     /// Returns the entries in <paramref name="source"/> with any null entries removed, logging a warning for each batch of entries removed.

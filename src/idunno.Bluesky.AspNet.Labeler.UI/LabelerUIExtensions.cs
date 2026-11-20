@@ -47,7 +47,12 @@ public static class LabelerUIExtensions
             options.Conventions.AddAreaFolderApplicationModelConvention(
                 "Bluesky",
                 "/",
-                model => model.Filters.Add(new idunno.Bluesky.AspNet.Labeler.UI.AuthenticationLayoutFilter()));
+                model =>
+                {
+                    model.Filters.Add(new idunno.Bluesky.AspNet.Labeler.UI.AuthenticationLayoutFilter());
+                    model.Filters.Add(new idunno.Bluesky.AspNet.Labeler.UI.LabelerUiSecurityHeadersFilter(
+                        allowOAuthNavigation: model.ViewEnginePath == "/Login"));
+                });
             options.Conventions.AuthorizeAreaFolder("Xenon", "/");
             options.Conventions.AllowAnonymousToAreaPage("Xenon", "/Terms");
             options.Conventions.AllowAnonymousToAreaPage("Xenon", "/Privacy");
@@ -57,6 +62,8 @@ public static class LabelerUIExtensions
                 "/",
                 model =>
                 {
+                    model.Filters.Add(new idunno.Bluesky.AspNet.Labeler.UI.LabelerUiSecurityHeadersFilter(
+                        allowOAuthNavigation: model.ViewEnginePath == "/Policy/Index"));
                     if (model.ViewEnginePath is not ("/Terms" or "/Privacy" or "/Policy/ClientMetadata"))
                     {
                         model.Filters.Add(new ServiceFilterAttribute(typeof(idunno.Bluesky.AspNet.Labeler.UI.LabelerUiPageFilter)));

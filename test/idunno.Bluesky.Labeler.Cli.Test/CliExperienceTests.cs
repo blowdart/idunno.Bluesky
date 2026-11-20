@@ -15,6 +15,108 @@ namespace idunno.Bluesky.Labeler.Cli.Test;
 
 public class CliExperienceTests
 {
+    [Fact]
+    public void EveryCommandOptionAndArgumentHasHelpText()
+    {
+        List<string> missing = [];
+        void CheckCommand(Command command, string path)
+        {
+            if (string.IsNullOrWhiteSpace(command.Description))
+            {
+                missing.Add($"{path} (command)");
+            }
+
+            foreach (Option option in command.Options)
+            {
+                if (string.IsNullOrWhiteSpace(option.Description))
+                {
+                    missing.Add($"{path} {option.Name} (option)");
+                }
+            }
+
+            foreach (Argument argument in command.Arguments)
+            {
+                if (string.IsNullOrWhiteSpace(argument.Description))
+                {
+                    missing.Add($"{path} {argument.Name} (argument)");
+                }
+            }
+
+            foreach (Command subcommand in command.Subcommands)
+            {
+                CheckCommand(subcommand, $"{path} {subcommand.Name}");
+            }
+        }
+
+        CheckCommand(Program.CreateRootCommand(), "root");
+        Assert.True(missing.Count == 0, $"Missing descriptions: {string.Join(", ", missing)}");
+    }
+
+    [Theory]
+    [InlineData("status", "current policy", "verification state")]
+    [InlineData("version", "one retained policy", "version ID")]
+    [InlineData("versions", "list retained policy", "page")]
+    [InlineData("history", "administration", "verification events")]
+    [InlineData("operation", "recorded result", "operation ID")]
+    [InlineData("save", "unpublished", "JSON file")]
+    [InlineData("begin", "block reports", "no PDS write")]
+    [InlineData("publish", "conditional PDS write", "labeler-account")]
+    [InlineData("recover", "original operation ID", "conditionally write or verify")]
+    [InlineData("resume", "paused label withdrawal", "does not write to the PDS")]
+    [InlineData("verify", "update local state", "--check-only")]
+    [InlineData("abandon", "pending publication", "issuance remain blocked")]
+    public void PolicyCommandDescriptionsExplainTheirDistinctPurposes(string name, string purpose, string distinction)
+    {
+        Command command = Program.CreatePolicyCommand().Subcommands.Single(command => command.Name == name);
+
+        Assert.Contains(purpose, command.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(distinction, command.Description, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void PolicyCommandsDoNotReuseHelpDescriptions()
+    {
+        List<string?> descriptions = [.. Program.CreatePolicyCommand().Subcommands.Select(command => command.Description)];
+
+        Assert.Equal(descriptions.Count, descriptions.Distinct(StringComparer.Ordinal).Count());
+    }
+
+    [Fact]
+    public void PolicyVerifyHelpExplainsAuditReasonAndConfirmation()
+    {
+        Command verify = Program.CreatePolicyCommand().Subcommands.Single(command => command.Name == "verify");
+        string? reason = verify.Options.Single(option => option.Name == "--reason").Description;
+        string? yes = verify.Options.Single(option => option.Name == "--yes").Description;
+        string? checkOnly = verify.Options.Single(option => option.Name == "--check-only").Description;
+
+        Assert.Contains("audit reason", reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("confirmation prompt", yes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("authorization", yes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("without changing local verification state", checkOnly, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void PolicyVerificationConfirmationExplainsItsLocalEffect()
+    {
+        string prompt = Program.GetPolicyConfirmationPrompt("verify");
+
+        Assert.Contains("Verify the published policy", prompt, StringComparison.Ordinal);
+        Assert.Contains("local verification state", prompt, StringComparison.Ordinal);
+        Assert.Contains("without changing the published policy", prompt, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("begin")]
+    [InlineData("publish")]
+    [InlineData("recover")]
+    [InlineData("resume")]
+    public void PolicyPublicationConfirmationStillWarnsOfIrreversibleWithdrawals(string command)
+    {
+        string prompt = Program.GetPolicyConfirmationPrompt(command);
+
+        Assert.Contains("irreversible batched negation of removed label values", prompt, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData("forgetme")]
     [InlineData("status --rememberme")]
@@ -36,7 +138,8 @@ public class CliExperienceTests
             diagnostics: diagnostics,
             handle: new Handle("blowdart.me"),
             labelerPurpose: purpose,
-            rememberMe: rememberMe);
+            rememberMe: rememberMe,
+            verbose: true);
 
         string expected = "🔑  Xenon starting sign-in for blowdart.me." + Environment.NewLine;
         if (purpose is not null)
@@ -45,8 +148,25 @@ public class CliExperienceTests
         }
         expected += (rememberMe
             ? "💾  Credential persistence was requested with --remember-me."
-            : "ℹ   This sign-in is temporary. Use --remember-me to save credentials.") + Environment.NewLine;
+            : "ℹ   Reusing saved credentials when available; otherwise this sign-in is temporary. Use --remember-me to save a new session.") + Environment.NewLine;
         Assert.Equal(expected, diagnostics.ToString());
+    }
+
+    [Theory]
+    [InlineData(null, false)]
+    [InlineData(null, true)]
+    [InlineData("Labeler-account authority to publish the declaration.", false)]
+    [InlineData("Labeler-account authority to publish the declaration.", true)]
+    public async Task DefaultSignInNoticeShowsOnlyAccountPurposeWarnings(string? purpose, bool rememberMe)
+    {
+        using StringWriter diagnostics = new();
+        await Program.WriteSignInNoticeAsync(
+            diagnostics: diagnostics,
+            handle: new Handle("blowdart.me"),
+            labelerPurpose: purpose,
+            rememberMe: rememberMe);
+
+        Assert.Equal(purpose is null ? string.Empty : $"⚠   {purpose}{Environment.NewLine}", diagnostics.ToString());
     }
 
     [Theory]
@@ -131,6 +251,7 @@ public class CliExperienceTests
 
         Assert.Empty(root.Parse(["counts", "--local-endpoint", "idunno-labeler-admin"]).Errors);
         Assert.Empty(root.Parse(["counts", "--labeler-url", "https://labeler.example", "--admin-handle", "admin.example"]).Errors);
+        Assert.Empty(root.Parse(["counts", "--labeler-url", "https://labeler.example"]).Errors);
         Assert.Contains("unresolved cases, reports, and appeals", root.Subcommands.Single(command => command.Name == "counts").Description, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -158,12 +279,30 @@ public class CliExperienceTests
         Assert.Contains("temporary by default", description, StringComparison.Ordinal);
         Assert.Contains("DPAPI", description, StringComparison.Ordinal);
         Assert.Contains("unencrypted", description, StringComparison.Ordinal);
+        Assert.Contains("reused automatically", description, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(new string[0], null)]
+    [InlineData(new[] { "operator.example" }, "operator.example")]
+    [InlineData(new[] { "operator.example", "other.example" }, null)]
+    public void RememberedAccountSelectionRequiresOneUnambiguousMatch(string[] accounts, string? expected)
+    {
+        Assert.Equal(expected, Program.SelectRememberedAccount(accounts));
     }
 
     [Fact]
     public void ForgetMeIsAvailableAsARootCommand()
     {
         ParseResult parsed = Program.CreateRootCommand().Parse(["forget-me"]);
+
+        Assert.Empty(parsed.Errors);
+    }
+
+    [Fact]
+    public void ListCredentialsIsAvailableAsARootCommand()
+    {
+        ParseResult parsed = Program.CreateRootCommand().Parse(["list-credentials"]);
 
         Assert.Empty(parsed.Errors);
     }
@@ -226,7 +365,8 @@ public class CliExperienceTests
             statusCode: (HttpStatusCode)status,
             output: output,
             diagnostics: diagnostics,
-            verbose: true);
+            verbose: true,
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(expected, result);
         Assert.Equal(body + Environment.NewLine, output.ToString());
@@ -243,7 +383,8 @@ public class CliExperienceTests
             body: """{"succeeded":true,"moderation":{"openCounts":{"cases":12,"reports":0,"appeals":3}}}""",
             statusCode: HttpStatusCode.OK,
             output: output,
-            diagnostics: diagnostics);
+            diagnostics: diagnostics,
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(0, result);
         Assert.Equal(
@@ -252,13 +393,185 @@ public class CliExperienceTests
             "  📨  Reports: 0" + Environment.NewLine +
             "  ⚖   Appeals: 3" + Environment.NewLine,
             output.ToString());
-        Assert.StartsWith("✔   ", diagnostics.ToString(), StringComparison.Ordinal);
+        Assert.Empty(diagnostics.ToString());
+    }
+
+    [Theory]
+    [InlineData(0, true, false, "Viewer", "👁️", "🟢  Status: Active")]
+    [InlineData(1, false, false, "Moderator", "⚖️", "⏸   Status: Inactive")]
+    [InlineData(2, false, true, "Administrator", "👑", "🚫  Status: Removed")]
+    [InlineData(2, true, true, "Administrator", "👑", "🚫  Status: Removed")]
+    [InlineData(99, true, false, "Unknown (99)", "🛡️", "🟢  Status: Active")]
+    public async Task TeamOutputUsesDidHeadingsVerifiedHandlesAndNamedRoles(
+        int role,
+        bool active,
+        bool removed,
+        string expectedRole,
+        string expectedIcon,
+        string expectedStatus)
+    {
+        string body = $$$"""
+            {"succeeded":true,"members":[{"did":"did:plc:member","role":{{{role}}},"active":{{{active.ToString().ToLowerInvariant()}}},"removed":{{{removed.ToString().ToLowerInvariant()}}},"notificationEmail":null}]}
+            """;
+        using StringWriter output = new();
+        using StringWriter diagnostics = new();
+        int resolutions = 0;
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        int result = await Program.WriteResponseAsync(
+            body: body,
+            statusCode: HttpStatusCode.OK,
+            output: output,
+            diagnostics: diagnostics,
+            resolveHandle: (did, token) =>
+            {
+                Assert.Equal("did:plc:member", did.Value);
+                Assert.Equal(cancellationToken, token);
+                resolutions++;
+                return Task.FromResult(new Handle("member.example"));
+            },
+            cancellationToken: cancellationToken);
+
+        string heading = !active || removed ? "\u001b[9mdid:plc:member\u001b[29m" : "did:plc:member";
+        Assert.Equal(0, result);
+        Assert.Equal(1, resolutions);
+        Assert.Equal(
+            "👤  Members:" + Environment.NewLine +
+            $"  🔗  DID: {heading}" + Environment.NewLine +
+            "    🪪  Handle: @member.example" + Environment.NewLine +
+            $"    {expectedIcon}  Role: {expectedRole}" + Environment.NewLine +
+            $"    {expectedStatus}" + Environment.NewLine +
+            "    📧  Notification email: (none)" + Environment.NewLine,
+            output.ToString());
+        Assert.Empty(diagnostics.ToString());
+    }
+
+    [Theory]
+    [InlineData("invalid", "Unavailable (no verified handle)")]
+    [InlineData("failure", "Unavailable (lookup failed)")]
+    [InlineData("timeout", "Unavailable (lookup timed out)")]
+    public async Task TeamOutputRetainsDidWhenVerifiedHandleIsUnavailable(string outcome, string expected)
+    {
+        using StringWriter output = new();
+        using StringWriter diagnostics = new();
+        int result = await Program.WriteResponseAsync(
+            body: """{"succeeded":true,"members":[{"did":"did:plc:member","role":0,"active":true,"removed":false}]}""",
+            statusCode: HttpStatusCode.OK,
+            output: output,
+            diagnostics: diagnostics,
+            resolveHandle: (_, _) => outcome switch
+            {
+                "failure" => Task.FromException<Handle>(new HttpRequestException()),
+                "timeout" => Task.FromException<Handle>(new OperationCanceledException()),
+                _ => Task.FromResult(Handle.Invalid)
+            },
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, result);
+        Assert.Contains("🔗  DID: did:plc:member", output.ToString(), StringComparison.Ordinal);
+        Assert.Contains($"🪪  Handle: {expected}", output.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task TeamOutputGroupsEachPersonUnderTheirOwnDid()
+    {
+        using StringWriter output = new();
+        using StringWriter diagnostics = new();
+        int result = await Program.WriteResponseAsync(
+            body: """
+                {"succeeded":true,"members":[
+                  {"did":"did:plc:first","role":2,"active":true,"removed":false,"notificationEmail":"first@example.com"},
+                  {"did":"did:plc:second","role":1,"active":false,"removed":false}
+                ]}
+                """,
+            statusCode: HttpStatusCode.OK,
+            output: output,
+            diagnostics: diagnostics,
+            resolveHandle: (did, _) => Task.FromResult(new Handle(did.Value == "did:plc:first" ? "first.example" : "second.example")),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, result);
+        Assert.Equal(
+            "👤  Members:" + Environment.NewLine +
+            "  🔗  DID: did:plc:first" + Environment.NewLine +
+            "    🪪  Handle: @first.example" + Environment.NewLine +
+            "    👑  Role: Administrator" + Environment.NewLine +
+            "    🟢  Status: Active" + Environment.NewLine +
+            "    📧  Notification email: first@example.com" + Environment.NewLine +
+            "  🔗  DID: \u001b[9mdid:plc:second\u001b[29m" + Environment.NewLine +
+            "    🪪  Handle: @second.example" + Environment.NewLine +
+            "    ⚖️  Role: Moderator" + Environment.NewLine +
+            "    ⏸   Status: Inactive" + Environment.NewLine,
+            output.ToString());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task EmptyAndVerboseTeamOutputDoNotResolveHandles(bool verbose)
+    {
+        string body = verbose
+            ? """{"succeeded":true,"members":[{"did":"did:plc:member","role":0,"active":true,"removed":false}]}"""
+            : """{"succeeded":true,"members":[]}""";
+        using StringWriter output = new();
+        using StringWriter diagnostics = new();
+        int result = await Program.WriteResponseAsync(
+            body: body,
+            statusCode: HttpStatusCode.OK,
+            output: output,
+            diagnostics: diagnostics,
+            verbose: verbose,
+            resolveHandle: (_, _) => throw new InvalidOperationException("No handle lookup was expected."),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, result);
+        Assert.Equal(
+            verbose ? body + Environment.NewLine : "👤  Members:" + Environment.NewLine + "  ℹ   None" + Environment.NewLine,
+            output.ToString());
+    }
+
+    [Fact]
+    public async Task TeamOutputSanitizesUntrustedTextBeforeAddingStrikethrough()
+    {
+        using StringWriter output = new();
+        using StringWriter diagnostics = new();
+        await Program.WriteResponseAsync(
+            body: """{"succeeded":true,"members":[{"did":"bad\u001b[0m","role":0,"active":false,"removed":true,"notificationEmail":"unsafe\u001b[0m"}]}""",
+            statusCode: HttpStatusCode.OK,
+            output: output,
+            diagnostics: diagnostics,
+            resolveHandle: (_, _) => throw new InvalidOperationException("An invalid DID cannot be resolved."),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Contains("DID: \u001b[9mbad [0m\u001b[29m", output.ToString(), StringComparison.Ordinal);
+        Assert.Contains("Handle: Unavailable (invalid DID)", output.ToString(), StringComparison.Ordinal);
+        Assert.Contains("Notification email: unsafe [0m", output.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("\u001b[0m", output.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task TeamHandleLookupHonorsCancellation()
+    {
+        using CancellationTokenSource cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        using StringWriter output = new();
+        using StringWriter diagnostics = new();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => Program.WriteResponseAsync(
+            body: """{"succeeded":true,"members":[{"did":"did:plc:member","role":0,"active":true,"removed":false}]}""",
+            statusCode: HttpStatusCode.OK,
+            output: output,
+            diagnostics: diagnostics,
+            resolveHandle: (_, token) =>
+            {
+                cancellation.Cancel();
+                return Task.FromCanceled<Handle>(token);
+            },
+            cancellationToken: cancellation.Token));
     }
 
     [Theory]
     [InlineData("members", "👤  ")]
     [InlineData("labels", "🏷️  ")]
     [InlineData("issuer", "🪪  ")]
+    [InlineData("did", "🔗  ")]
     [InlineData("sequence", "#   ")]
     [InlineData("streamId", "🌊  ")]
     [InlineData("issuedThrough", "🏷️  ")]
@@ -271,10 +584,15 @@ public class CliExperienceTests
     {
         using System.Text.Json.JsonDocument document = System.Text.Json.JsonDocument.Parse($"{{\"{field}\":1}}");
         using StringWriter output = new();
-        await Program.WriteReadableResultAsync(document.RootElement, output, 0);
+        await Program.WriteReadableResultAsync(
+            element: document.RootElement,
+            output: output,
+            depth: 0,
+            cancellationToken: TestContext.Current.CancellationToken);
 
         string name = field switch
         {
+            "did" => "DID",
             "issuedThrough" => "Labels issued",
             "publishedThrough" => "Labels published",
             _ => field
@@ -292,7 +610,11 @@ public class CliExperienceTests
     {
         using System.Text.Json.JsonDocument document = System.Text.Json.JsonDocument.Parse($"{{\"replayFloor\":{floor}}}");
         using StringWriter output = new();
-        await Program.WriteReadableResultAsync(document.RootElement, output, 0);
+        await Program.WriteReadableResultAsync(
+            element: document.RootElement,
+            output: output,
+            depth: 0,
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal($"⏮   Label history: {expected}{Environment.NewLine}", output.ToString());
     }
@@ -303,7 +625,11 @@ public class CliExperienceTests
         using System.Text.Json.JsonDocument document = System.Text.Json.JsonDocument.Parse(
             """{"state":{"streamId":"test-stream","issuer":"did:plc:test","issuedThrough":12,"phase":"Active","revision":24}}""");
         using StringWriter output = new();
-        await Program.WriteReadableResultAsync(document.RootElement, output, 0);
+        await Program.WriteReadableResultAsync(
+            element: document.RootElement,
+            output: output,
+            depth: 0,
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(
             "ℹ   State:" + Environment.NewLine +
@@ -327,7 +653,11 @@ public class CliExperienceTests
         using System.Text.Json.JsonDocument document = System.Text.Json.JsonDocument.Parse(
             $$$"""{"state":{"retirementUpperBound":0,"phase":"{{{phase}}}","retirementThrough":0,"issuedThrough":12}}""");
         using StringWriter output = new();
-        await Program.WriteReadableResultAsync(document.RootElement, output, 0);
+        await Program.WriteReadableResultAsync(
+            element: document.RootElement,
+            output: output,
+            depth: 0,
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(visible, output.ToString().Contains("RetirementUpperBound:", StringComparison.Ordinal));
         Assert.Equal(visible, output.ToString().Contains("RetirementThrough:", StringComparison.Ordinal));
@@ -347,12 +677,14 @@ public class CliExperienceTests
             body: body,
             statusCode: (HttpStatusCode)status,
             output: output,
-            diagnostics: diagnostics);
+            diagnostics: diagnostics,
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(expected, result);
         Assert.DoesNotContain(body, output.ToString(), StringComparison.Ordinal);
         if (expected == 0)
         {
+            Assert.Empty(diagnostics.ToString());
             Assert.Contains("Issuer: did:plc:test", output.ToString(), StringComparison.Ordinal);
             Assert.Contains("Sequence: 42", output.ToString(), StringComparison.Ordinal);
         }

@@ -17,9 +17,9 @@ public record AtProtoRepositoryRecord : AtProtoRepositoryObject
     /// Creates a new instance of <see cref="AtProtoRepositoryRecord"/>.
     /// </summary>
     /// <param name="uri">The <see cref="AtUri"/> of the record in an atproto repository.</param>
-    /// <param name="cid">The <see cref="Cid"/> of the record in an atproto repository.</param>
+    /// <param name="cid">The <see cref="Cid"/> of the record in an atproto repository, or <see langword="null"/> if the server did not supply one.</param>
     /// <param name="value">The value of the record.</param>
-    public AtProtoRepositoryRecord(AtUri uri, Cid cid, JsonObject? value) : base(uri, cid)
+    public AtProtoRepositoryRecord(AtUri uri, Cid? cid, JsonObject? value) : base(uri, cid, cidIsOptional: true)
     {
         Value = value;
     }
@@ -57,7 +57,7 @@ public record AtProtoRepositoryRecord : AtProtoRepositoryObject
         }
 
         return Uri == other.Uri &&
-            Cid == other.Cid &&
+            CidOrDefault == other.CidOrDefault &&
             JsonNode.DeepEquals(Value, other.Value) &&
             ExtensionDataComparer.Equals(ExtensionData, other.ExtensionData);
     }
@@ -75,7 +75,7 @@ public record AtProtoRepositoryRecord : AtProtoRepositoryObject
 
         hashCode.Add(EqualityContract);
         hashCode.Add(Uri);
-        hashCode.Add(Cid);
+        hashCode.Add(CidOrDefault);
         hashCode.Add(ExtensionDataComparer.GetHashCode(ExtensionData));
 
         return hashCode.ToHashCode();
@@ -92,9 +92,9 @@ public record AtProtoRepositoryRecord<TRecord> : AtProtoRepositoryObject where T
     /// Creates a new instance of at AT Proto record.
     /// </summary>
     /// <param name="uri">The <see cref="AtUri"/> of the record in an atproto repository.</param>
-    /// <param name="cid">The <see cref="Cid"/> of the record in an atproto repository.</param>
+    /// <param name="cid">The <see cref="Cid"/> of the record in an atproto repository, or <see langword="null"/> if the server did not supply one.</param>
     /// <param name="value">The value of the record.</param>
-    public AtProtoRepositoryRecord(AtUri uri, Cid cid, TRecord value) : base(uri, cid)
+    public AtProtoRepositoryRecord(AtUri uri, Cid? cid, TRecord value) : base(uri, cid, cidIsOptional: true)
     {
         Value = value;
     }
@@ -133,7 +133,7 @@ public record AtProtoRepositoryRecord<TRecord> : AtProtoRepositoryObject where T
         }
 
         return Uri == other.Uri &&
-            Cid == other.Cid &&
+            CidOrDefault == other.CidOrDefault &&
             EqualityComparer<TRecord>.Default.Equals(Value, other.Value) &&
             ExtensionDataComparer.Equals(ExtensionData, other.ExtensionData);
     }
@@ -151,7 +151,7 @@ public record AtProtoRepositoryRecord<TRecord> : AtProtoRepositoryObject where T
 
         hashCode.Add(EqualityContract);
         hashCode.Add(Uri);
-        hashCode.Add(Cid);
+        hashCode.Add(CidOrDefault);
         hashCode.Add(Value);
         hashCode.Add(ExtensionDataComparer.GetHashCode(ExtensionData));
 

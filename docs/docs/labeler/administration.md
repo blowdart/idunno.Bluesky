@@ -346,10 +346,18 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 app.MapLabelerAdministration();
 ```
 
-The signing key and hardened identity-resolution HTTP client are caller-owned. Configure outbound
-network/DNS restrictions, timeouts and cancellation for identity resolution. Registration requires
-one policy and the same provider instance for `ILabelStore` and `ILabelAdministrationStore`; there
-is no permissive fallback. Initialize storage before starting hosted services.
+The signing key and identity-resolution HTTP client are caller-owned. The client is used as supplied;
+its handler must check resolved IP addresses at connection time and reject loopback, link-local and
+private addresses, including cloud metadata endpoints. This is necessary because handles and DID
+documents can direct requests to hostnames chosen outside the application. Register an
+`IHttpClientFactory` with `AddAtProtoHttpClient(IServiceCollection)` for the library's SSRF-protected
+handler, or configure equivalent checks in a custom handler. Disable automatic redirects: a handler
+that follows one can send the request to an unchecked destination before the application can inspect
+the response. Also configure appropriate timeouts and cancellation.
+
+Registration requires one policy and the same provider instance for `ILabelStore` and
+`ILabelAdministrationStore`; there is no permissive fallback. Initialize storage before starting
+hosted services.
 Remote administration endpoints opt out of a host's ASP.NET authorization fallback policy because
 they perform their own service-token authentication and live team authorization. This endpoint
 metadata does not grant anonymous access: missing or invalid service tokens are still rejected.
@@ -391,7 +399,7 @@ rebinding an owner's OS identity to another member.
 Only the current owner can transfer ownership to another active Administrator. In Xenon, use
 **Team and membership > Labeler ownership**, select the new owner's handle, give a reason and
 confirm the transfer. The CLI exposes the same operation as
-`change-team <administrator-DID> --action TransferOwnership` with the usual transport, operation
+`team update <administrator-DID> --action TransferOwnership` with the usual transport, operation
 ID and reason options. Ownership protection and control of the remote CLI switch move together
 in one audited transaction. The switch's enabled state, both members' roles and existing local
 bindings are unchanged. The former owner remains an ordinary Administrator and can then be
@@ -401,17 +409,49 @@ Upgrade every host sharing the database before relying on these protections; old
 Protected local administration remains available in all three modes. Neither mode selection nor
 the Xenon switch bypasses HTTPS, service-token method binding, authentication or live authorization.
 
-Configure admission/rate limiting in the hosting application before administrative handlers.
-Verification and required denial audit consume outbound requests and durable transactions, so
-bound unauthenticated traffic and monitor audit growth. Administrative routes require HTTPS:
-requests for which `HttpRequest.IsHttps` is `false` are audited and rejected with `403 Forbidden`
-before service-token authentication.
+Remote administration has built-in, per-process admission limits shared by the native,
+issuance and Ozone adapters. The limits apply before HTTPS enforcement, authentication,
+dispatch or denial-audit persistence. Each peer may start 120 requests per one-minute fixed
+window, with at most 16 concurrent admitted requests; the peer table retains at most 1,024
+addresses. IPv4-mapped IPv6 addresses share their IPv4 allowance, and connections without an
+address share one allowance. Active allowances are not evicted to admit new addresses.
+
+Configure `LabelerAdministration:RequestsPerMinutePerPeer` (1-100,000),
+`LabelerAdministration:MaximumConcurrentRequestsPerPeer` (1-1,024), and
+`LabelerAdministration:MaximumTrackedPeers` (1-65,536) in the standalone host.
+Custom hosts configure these properties on `LabelerAdministrationOptions` using their chosen
+configuration section. Invalid limits fail options validation at startup.
+An exhausted allowance or full peer table returns `429 Too Many Requests`, `Retry-After: 60`
+and `Cache-Control: no-store`, without authenticating, dispatching or writing an audit row.
+Other peers retain their own allowances while table capacity remains available.
+Protected local administration and public label distribution do not consume these allowances.
+
+Admitted insecure, malformed and unauthenticated requests retain their required denial audit;
+audit failure still returns `503 Service Unavailable`. Administrative routes require HTTPS:
+admitted requests for which `HttpRequest.IsHttps` is `false` are audited and rejected with
+`403 Forbidden` before service-token authentication.
+These admission limits bound each process, not an entire deployment. The built-in SQLite,
+PostgreSQL and MySQL stores additionally retain only the latest 256 boundary-denial events
+per issuer across all clients, reasons and host processes sharing the store. This includes
+`invocation-denied` events and failed service `authenticate` events. Each admitted denial is
+persisted with its original timestamp, actor and bounded reason; older boundary denials and
+their query projections are pruned in the same transaction. No credential or raw request
+content is retained. The next denial also trims excess boundary-denial history from older
+versions. Successful events, bootstrap evidence, operation receipts and operation-specific
+failures are not pruned. Sequence gaps are expected.
+
+Audit exports cover retained history and abort explicitly if concurrent pruning changes it;
+start a new download rather than treating an interrupted download as complete.
+Retention bounds live rows, not transaction volume, database high-water file sizes, backups
+or transaction logs. Keep perimeter rate limiting and database maintenance/monitoring,
+especially against distributed clients. Upgrade every writer before relying on the bound.
 When the application terminates TLS itself, no additional configuration is needed. When HTTPS
 terminates at a reverse proxy, call ASP.NET Core's `UseForwardedHeaders` before mapping endpoints,
 as shown above, and list every trusted hop in `KnownProxies` or `KnownIPNetworks`. Set
 `ForwardLimit` to the trusted chain length. ASP.NET Core only trusts forwarded headers from listed
 proxies, so requests from unlisted peers remain HTTP even if they send those headers; ASP.NET Core
 trusts loopback proxies by default unless the lists are cleared.
+Admission uses only the resulting connection address, never raw forwarding headers.
 Restrict direct network access to the application so clients cannot bypass the trusted proxy chain.
 Configure each trusted proxy to discard untrusted incoming forwarding headers and emit accurate
 address/protocol pairs. See
@@ -516,9 +556,11 @@ scope superset and its actual desktop callback path, `http://127.0.0.1/`. Use th
 directly with the CLI. See [deployment](deployment.md#native-oauth-and-tls-forwarding) for
 explicit trusted-proxy configuration when HTTPS terminates before the container.
 
-The document declares the permitted scope superset; request only needed method-bound permissions
-at sign-in. Add `rpc:<administrative-method>?aud=<encoded-DID#service>` per method. The member's PDS
-checks the requested service token's `lxm` permission, not a scope naming `getServiceAuth` itself.
+The document declares the permitted scope superset. Clients may request one or more exact
+method-bound permissions using `rpc:<administrative-method>?aud=<encoded-DID#service>`.
+The CLI requests the advertised administration methods for its selected service as one
+reusable grant. The member's PDS checks each service token's `lxm` permission, not a scope
+naming `getServiceAuth` itself.
 The native metadata also advertises `identity:*`. Only PLC publication and recovery request that
 permission (alongside `atproto`) because they mutate identity through the PDS; ordinary labeler
 administration continues to request only its method-bound service permission.
@@ -654,19 +696,31 @@ Windows x64, Windows ARM64, Linux x64 and Linux arm64. Each invocation selects e
 transport. Local mode uses the configured protected named pipe or Unix socket and must run under
 the OS identity explicitly bound to a live team member. Remote mode opens the user's browser for
 native OAuth, obtains a method-bound service token from the user's PDS, and calls the labeler's
-HTTPS administration endpoint. OAuth credentials are temporary unless `--remember-me` is
-explicitly supplied. The CLI never accepts a private label-signing key.
+HTTPS administration endpoint. New OAuth sessions are temporary unless `--remember-me` is
+explicitly supplied; existing saved sessions are reused automatically. The CLI never accepts a
+private label-signing key.
 
-Download the ZIP matching the operating system and architecture from the GitHub release, then verify
-its build provenance before extracting or running it:
+Download the executable matching the operating system and architecture from the GitHub release
+or the labeler's **CLI Downloads** page. Windows executables have the Xenon icon and are
+Authenticode signed. Downloads are standalone binaries, not archives; there is nothing to extract.
+Verify the build provenance before running it:
 
 ```text
-gh attestation verify idunno.Bluesky.Labeler.Cli-linux-x64.zip --repo blowdart/idunno.Bluesky
+gh attestation verify idunno.Bluesky.Labeler.Cli-linux-x64 --repo blowdart/idunno.Bluesky
 ```
+
+On Linux, make the downloaded file executable:
+
+```sh
+chmod +x idunno.Bluesky.Labeler.Cli-linux-x64
+./idunno.Bluesky.Labeler.Cli-linux-x64 --help
+```
+
+Use the `linux-arm64` filename instead on ARM64. Windows downloads end in `.exe`.
 
 Keep the release tag and artifact digest with deployment records. Replace a directly installed CLI only after verifying the new release. The `update` command
 downloads one exact stable release, verifies its GitHub artifact attestation with the installed
-GitHub CLI (`gh`), checks the archive SHA-256 and staged executable, and schedules an atomic
+GitHub CLI (`gh`), checks the executable SHA-256 and staged executable, and schedules an atomic
 replacement after the current process exits. It preserves the prior executable as a sibling backup;
 restore that file manually if an interrupted helper leaves the installation unusable.
 
@@ -675,7 +729,7 @@ labeler-admin update --tag v9.0.1
 ```
 
 The update requires a self-contained installation from a supported Windows x64, Windows ARM64,
-Linux x64 or Linux arm64 release ZIP, GitHub CLI authentication/verification support, and write
+Linux x64 or Linux arm64 release binary, GitHub CLI authentication/verification support, and write
 access to the executable's directory. It does not update a `dotnet tool`, package-manager
 installation or renamed launcher. The command asks for confirmation; `--yes` is only for an
 explicitly controlled script.
@@ -686,7 +740,7 @@ and the endpoint configured by the host.
 Read team, publication and lifecycle status, audit, or an operation receipt locally:
 
 ```text
-labeler-admin team --local-endpoint /run/bean-bureau/admin.sock
+labeler-admin team list --local-endpoint /run/bean-bureau/admin.sock
 labeler-admin status --local-endpoint /run/bean-bureau/admin.sock
 labeler-admin audit --after-sequence 100 --limit 16 --local-endpoint /run/bean-bureau/admin.sock
 labeler-admin operation --operation-id label-op-123 --local-endpoint /run/bean-bureau/admin.sock
@@ -696,14 +750,15 @@ The status response includes issuer and stream identity, revision, issued/publis
 boundaries, replay floor, lifecycle phase, retirement checkpoints, and the grace deadline when set.
 
 Use the configured Windows pipe name instead of the Unix socket path on Windows. Remote commands
-require the labeler's HTTPS origin and administrator handle. The CLI discovers the exact service
+require the labeler's HTTPS origin, plus an administrator handle for the first sign-in or to
+choose between multiple saved accounts. The CLI discovers the exact service
 reference from the native OAuth metadata unless `--admin-service` is supplied as an override.
 The native OAuth metadata URL defaults to `/native-client-metadata.json` on that origin.
 Use `--oauth-client-id` to select another metadata document on the same origin; do not substitute
 a development client ID.
 
 ```text
-labeler-admin team --labeler-url https://labeler.example --admin-handle admin.example
+labeler-admin team list --labeler-url https://labeler.example --admin-handle admin.example
 labeler-admin operation --operation-id label-op-123 --labeler-url https://labeler.example --admin-handle admin.example --remember-me
 ```
 
@@ -711,8 +766,9 @@ PLC publication/recovery instead uses `--account-handle` because it signs in as 
 identity will change, not a moderator. Those commands require `--oauth-client-id`.
 
 Before opening the browser, Xenon explains the account and purpose of the sign-in.
-Administrator sessions request just one method-bound permission each. Policy publication also
-requires a separate labeler-account session for the conditional repository write. Its
+The CLI requests the administration RPC scopes advertised for the selected service as one
+reusable administrator session. It still obtains a method-bound service token for each call.
+Policy publication also requires a separate labeler-account session for the conditional repository write. Its
 `--labeler-oauth-client-id` overrides the metadata URL only for that
 account; otherwise it uses the administrator's metadata URL, or the default native metadata on
 `--labeler-url`. A local-transport publication must supply this URL explicitly because there is
@@ -728,16 +784,28 @@ abandoned or retried.
 
 ### Remembering sign-ins
 
-Supply `--remember-me` on each invocation that may load or save a remembered session. Without it,
-the CLI neither reads nor writes the cache. Credentials are stored beneath the current user's
+Supply `--remember-me` when first saving a session. Subsequent invocations reuse a matching
+saved session and persist renewed credentials without requiring that flag again.
+You can also omit `--admin-handle` when exactly one saved account matches the labeler and
+command. If multiple accounts match, specify the handle explicitly. For example:
+
+```text
+labeler-admin counts --labeler-url https://labeler.example --admin-handle admin.example --remember-me
+labeler-admin counts --labeler-url https://labeler.example
+```
+
+Older method-specific sessions do not include the combined permission set. The first use after
+this change requires a new browser consent; use `--remember-me` to save the resulting session.
+The older sessions are retained and are not used to authorize methods they were not granted.
+Credentials are stored beneath the current user's
 `~/.xenon` directory, separately bound to the actor DID, PDS, OAuth client ID and exact permission
 set. Administrator method sessions and labeler-account sessions are not interchangeable.
 Refreshed credentials, including rotating refresh tokens and DPoP state, are saved before the
 credential-update notification completes.
 
 On Windows, saved credentials are protected with current-user DPAPI. On macOS/Linux they are
-**unencrypted**: the CLI warns and requires affirmative interactive consent before using
-persistent credentials, creates a user-only directory (`0700`) and restricts credential files to
+**unencrypted**: the CLI warns and requires affirmative interactive consent before creating a
+new saved session, creates a user-only directory (`0700`) and restricts credential files to
 user read/write (`0600`). `--yes` does not bypass this consent. Anyone able to read an unencrypted
 cache can act within its retained grants; do not place it on shared or synchronized storage.
 
@@ -755,15 +823,16 @@ and value and does not accept an expiry:
 labeler-admin issue did:plc:subject spam --operation-id issue-001 --reason "Manual review" --local-endpoint /run/bean-bureau/admin.sock
 labeler-admin issue at://did:plc:subject/app.bsky.actor.profile/self impersonation --cid bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4 --operation-id issue-002 --reason "Profile review" --local-endpoint /run/bean-bureau/admin.sock
 labeler-admin negate at://did:plc:subject/app.bsky.feed.post/record-key spam --operation-id negate-001 --reason "Appeal accepted" --local-endpoint /run/bean-bureau/admin.sock
-labeler-admin enroll did:plc:new-member --role Moderator --operation-id enroll-001 --reason "Moderator onboarding" --local-endpoint /run/bean-bureau/admin.sock
-labeler-admin change-team did:plc:member --action SetRole --role Viewer --operation-id role-001 --reason "Role review" --local-endpoint /run/bean-bureau/admin.sock
-labeler-admin change-team did:plc:member --action BindLocal --credential uid:1001 --operation-id bind-001 --reason "Grant local access" --local-endpoint /run/bean-bureau/admin.sock
+labeler-admin team add did:plc:new-member --role Moderator --operation-id enroll-001 --reason "Moderator onboarding" --local-endpoint /run/bean-bureau/admin.sock
+labeler-admin team update did:plc:member --role Viewer --operation-id role-001 --reason "Role review" --local-endpoint /run/bean-bureau/admin.sock
+labeler-admin team update did:plc:member --action BindLocal --credential uid:1001 --operation-id bind-001 --reason "Grant local access" --local-endpoint /run/bean-bureau/admin.sock
 ```
 
 Issue and negation, enrollment, and team changes require an interactive confirmation. Use `--yes`
 only in an explicitly controlled script; the operation ID makes a retry recoverable, not harmless
 when changed to a new ID. Mutation reasons are required and written to the shared audit trail.
-Results use human-readable text by default, with success/failure confirmations on standard error.
+Results use human-readable text by default. Browser prompts, warnings and errors remain visible;
+routine sign-in, credential-cache and request progress and success confirmations require `--verbose`.
 Add `--verbose` to print raw JSON responses on standard output instead, including failed responses.
 The option works before or after a subcommand. Use it when scripting or generating a JSON
 `rotation did-web` snippet. It does not enable HTTP or OAuth credential logging.
