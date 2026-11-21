@@ -24,7 +24,7 @@ public static class LabelerModerationExtensions
     /// <summary>Registers report intake and shared durable policy verification.</summary>
     /// <param name="services">The service collection with one shared relational provider.</param>
     /// <param name="issuer">The initialized labeler issuer.</param>
-    /// <param name="httpClient">The caller-owned hardened identity and repository client.</param>
+    /// <param name="httpClient">The caller-owned <see cref="HttpClient"/> used for identity and repository requests.</param>
     /// <param name="options">The optional report limits and explicit verification freshness.</param>
     /// <returns>The service collection.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
@@ -35,7 +35,16 @@ public static class LabelerModerationExtensions
     /// <see cref="ILabelPolicyStore.InitializePolicyAsync"/> with the same freshness. This permanently
     /// enables commit-time policy fences on that issuer database; configuration alone cannot bypass them.</para>
     /// <para>Admission limits apply per host process, before expensive authentication or durable audit.
-    /// Operators should additionally bound aggregate traffic across replicas at their trusted proxy.</para></remarks>
+    /// Operators should additionally bound aggregate traffic across replicas at their trusted proxy.</para>
+    /// <para><paramref name="httpClient"/> is used as supplied for identity resolution and repository reads.
+    /// Its handler must enforce SSRF protection for destinations resolved from handles and DID documents. Without
+    /// those protections, a reported DID's PDS endpoint or a handle host can resolve to loopback, link-local or
+    /// private network addresses, including cloud metadata services. A client created by an
+    /// <see cref="IHttpClientFactory"/> registered with
+    /// <see cref="ServiceCollectionExtensions.AddAtProtoHttpClient(Microsoft.Extensions.DependencyInjection.IServiceCollection)"/> has the library's
+    /// connection-time SSRF protections; custom handlers must provide equivalent protections.</para>
+    /// <para>Disable automatic redirects on the handler. A handler that follows redirects can send a request to
+    /// a disallowed destination before this API can inspect the response.</para></remarks>
     public static IServiceCollection AddLabelerModeration(
         this IServiceCollection services,
         Did issuer,

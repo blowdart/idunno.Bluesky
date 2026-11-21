@@ -337,6 +337,45 @@ public class FeedQueryStringTests
         Assert.DoesNotContain("feedFilter=", queryString, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(FeedFilter.PostsAndRepliesOnly, true, "filter=posts_and_replies_only", "includePins=true")]
+    [InlineData(FeedFilter.PostsNoReplies, false, "filter=posts_no_replies", "includePins=false")]
+    public async Task GetAuthorFeedSendsLexiconFilterAndLowercaseIncludePins(FeedFilter filter, bool includePins, string expectedFilter, string expectedPins)
+    {
+        string queryString = string.Empty;
+
+        using TestServer testServer = CreateSearchServer(
+            "/xrpc/app.bsky.feed.getAuthorFeed",
+            """{"feed":[]}""",
+            value => queryString = value);
+        BlueskyAgent agent = new(new TestHttpClientFactory(testServer)) { Service = TestServerBuilder.DefaultUri };
+
+        await agent.GetAuthorFeed(
+            s_did,
+            filter: filter,
+            includePins: includePins,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Contains(expectedFilter, queryString, StringComparison.Ordinal);
+        Assert.Contains(expectedPins, queryString, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task GetAuthorFeedDefaultsToTheLexiconDefaultFilter()
+    {
+        string queryString = string.Empty;
+
+        using TestServer testServer = CreateSearchServer(
+            "/xrpc/app.bsky.feed.getAuthorFeed",
+            """{"feed":[]}""",
+            value => queryString = value);
+        BlueskyAgent agent = new(new TestHttpClientFactory(testServer)) { Service = TestServerBuilder.DefaultUri };
+
+        await agent.GetAuthorFeed(s_did, cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Contains("filter=posts_with_replies", queryString, StringComparison.Ordinal);
+    }
+
 #pragma warning disable BSKYUnspecced // The unspecced endpoint is called to verify its lexicon query parameter.
     [Fact]
     public async Task GetPopularFeedGeneratorsUsesTheLexiconQueryName()

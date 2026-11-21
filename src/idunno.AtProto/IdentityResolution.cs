@@ -13,6 +13,17 @@ namespace idunno.AtProto;
 /// <summary>
 /// Resolves and verifies AT Protocol identities, resolving handles, DIDs, DID documents and personal data servers.
 /// </summary>
+/// <remarks>
+/// <para>When a method receives an <see cref="HttpClient"/>, it uses that client as supplied and adds no SSRF
+/// protection. Depending on the method, requests can go to a handle host or the configured DID directory. The
+/// handler must check resolved IP addresses at connection time and reject loopback, link-local and private
+/// addresses, including cloud metadata endpoints. Use a client from an <see cref="IHttpClientFactory"/>
+/// registered with
+/// <see cref="ServiceCollectionExtensions.AddAtProtoHttpClient(Microsoft.Extensions.DependencyInjection.IServiceCollection)"/>
+/// or provide equivalent checks in a custom handler.</para>
+/// <para>Disable automatic redirects on the handler. Otherwise, a redirect can send a request to an unchecked
+/// destination before the caller can inspect the response.</para>
+/// </remarks>
 public static class IdentityResolution
 {
     /// <summary>
@@ -28,6 +39,13 @@ public static class IdentityResolution
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="handle"/> is empty.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="maximumWellKnownResponseSize"/> is zero or negative.</exception>
+    /// <remarks>
+    /// <para>
+    ///   When supplied, <paramref name="httpClient"/> performs identity-resolution requests, which may target the
+    ///   handle's host or a configured directory. It must enforce SSRF protection at connection time and must not
+    ///   follow redirects; these overloads do not validate caller-supplied client behavior.
+    /// </para>
+    /// </remarks>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Overload with different first parameter type for convenience")]
     public static async Task<Did?> ResolveHandleAsync(
         string handle,
@@ -79,6 +97,13 @@ public static class IdentityResolution
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="maximumWellKnownResponseSize"/> is zero or negative.</exception>
+    /// <remarks>
+    /// <para>
+    ///   When supplied, <paramref name="httpClient"/> performs identity-resolution requests, which may target the
+    ///   handle's host or a configured directory. It must enforce SSRF protection at connection time and must not
+    ///   follow redirects; these overloads do not validate caller-supplied client behavior.
+    /// </para>
+    /// </remarks>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Overload with different first parameter type for convenience")]
     public static async Task<Did?> ResolveHandleAsync(
         Handle handle,
@@ -131,6 +156,11 @@ public static class IdentityResolution
     ///   Verify before treating a <see cref="Handle"/> as identifying the holder of a <see cref="Did"/>. Anyone can put any handle
     ///   in a <see cref="DidDocument"/> they control, or point a handle they own at someone else's <see cref="Did"/>, so an
     ///   unverified handle proves nothing.
+    /// </para>
+    /// <para>
+    ///   When supplied, <paramref name="httpClient"/> performs identity-resolution requests, which may target the
+    ///   handle's host or a configured directory. It must enforce SSRF protection at connection time and must not
+    ///   follow redirects; these overloads do not validate caller-supplied client behavior.
     /// </para>
     /// </remarks>
     public static async Task<bool> VerifyHandleAsync(
@@ -215,6 +245,11 @@ public static class IdentityResolution
     /// <para>
     ///   Use <see cref="Handle.IsValid"/> on the result, or compare it to <see cref="Handle.Invalid"/>, before displaying
     ///   it or treating it as identifying the holder of <paramref name="did"/>.
+    /// </para>
+    /// <para>
+    ///   When supplied, <paramref name="httpClient"/> performs identity-resolution requests, which may target the
+    ///   claimed handle's host or a configured directory. It must enforce SSRF protection at connection time and must
+    ///   not follow redirects; these overloads do not validate caller-supplied client behavior.
     /// </para>
     /// </remarks>
     public static async Task<Handle> ResolveVerifiedHandleAsync(
@@ -336,6 +371,13 @@ public static class IdentityResolution
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   When supplied, <paramref name="httpClient"/> performs identity-resolution requests, which may target a
+    ///   handle's host or a configured directory. It must enforce SSRF protection at connection time and must not
+    ///   follow redirects; these overloads do not validate caller-supplied client behavior.
+    /// </para>
+    /// </remarks>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Overload with different first parameter type for convenience")]
     public static async Task<DidDocument?> ResolveDidDocumentAsync(
         Did did,
@@ -395,6 +437,13 @@ public static class IdentityResolution
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="handle"/> could not be resolved to a <see cref="Did"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   When supplied, <paramref name="httpClient"/> performs identity-resolution requests, which may target the
+    ///   handle's host or a configured directory. It must enforce SSRF protection at connection time and must not
+    ///   follow redirects; these overloads do not validate caller-supplied client behavior.
+    /// </para>
+    /// </remarks>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Overload with different first parameter type for convenience")]
     public static async Task<DidDocument?> ResolveDidDocumentAsync(
         Handle handle,
@@ -463,6 +512,13 @@ public static class IdentityResolution
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="atIdentifier"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="atIdentifier"/> is empty, or could not be resolved to a <see cref="Did"/> or a <see cref="Handle"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   When supplied, <paramref name="httpClient"/> performs identity-resolution requests, which may target a
+    ///   handle's host or a configured directory. It must enforce SSRF protection at connection time and must not
+    ///   follow redirects; these overloads do not validate caller-supplied client behavior.
+    /// </para>
+    /// </remarks>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Overload with different first parameter type for convenience")]
     public static async Task<DidDocument?> ResolveDidDocumentAsync(
         string atIdentifier,
@@ -524,6 +580,13 @@ public static class IdentityResolution
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   When supplied, <paramref name="httpClient"/> performs identity-resolution requests to a configured directory.
+    ///   It must enforce SSRF protection at connection time and must not follow redirects; these overloads do not
+    ///   validate caller-supplied client behavior.
+    /// </para>
+    /// </remarks>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Overload with different first parameter type for convenience")]
     public static async Task<Uri?> ResolvePdsAsync(
         Did did,
@@ -585,6 +648,13 @@ public static class IdentityResolution
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="handle"/> could not be resolved to a <see cref="Did"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   When supplied, <paramref name="httpClient"/> performs identity-resolution requests, which may target the
+    ///   handle's host or a configured directory. It must enforce SSRF protection at connection time and must not
+    ///   follow redirects; these overloads do not validate caller-supplied client behavior.
+    /// </para>
+    /// </remarks>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Overload with different first parameter type for convenience")]
     public static async Task<Uri?> ResolvePdsAsync(
         Handle handle,
@@ -630,6 +700,13 @@ public static class IdentityResolution
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="atIdentifier"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="atIdentifier"/> could not be resolved to a <see cref="Did"/> or <see cref="Handle"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   When supplied, <paramref name="httpClient"/> performs identity-resolution requests, which may target a
+    ///   handle's host or a configured directory. It must enforce SSRF protection at connection time and must not
+    ///   follow redirects; these overloads do not validate caller-supplied client behavior.
+    /// </para>
+    /// </remarks>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Overload with different first parameter type for convenience")]
     public static async Task<Uri?> ResolvePdsAsync(
         string atIdentifier,

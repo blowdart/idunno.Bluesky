@@ -17,6 +17,7 @@ using idunno.Bluesky.Labeler.Moderation;
 using idunno.Bluesky.Labeler.Signing;
 using idunno.Bluesky.Labeler.Storage;
 
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace idunno.Bluesky.AspNet.Labeler.Integration.Test;
@@ -26,6 +27,138 @@ public partial class XenonUiTests
     private static readonly Did s_administrator = new("did:plc:xenon-admin");
     private static readonly Did s_member = new("did:plc:xenon-member");
     private static readonly AtProtoServiceReference s_audience = new(TestServerBuilder.s_issuer, "labeler_admin");
+
+    [Theory]
+    [InlineData("/Xenon", false)]
+    [InlineData("/Xenon/Terms", false)]
+    [InlineData("/Xenon/Privacy", false)]
+    [InlineData("/Xenon/Policy", true)]
+    public async Task HtmlPagesHaveRestrictiveCspWithoutInlineScriptOrStyleRequirements(string path, bool oauthNavigation)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new();
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
+            configureAdministration: services =>
+            {
+                services.AddLabelerModeration(TestServerBuilder.s_issuer, identity);
+                services.AddSingleton<IDidHandleResolver, TestHandles>();
+                services.AddLabelerAdministration(s_audience, key, identity);
+            },
+            moderation: true,
+            xenonUi: true);
+        Assert.True((await fixture.Services.GetRequiredService<ILabelAdministrationStore>().BootstrapAsync(
+            s_administrator, "uid:0", "csp-bootstrap", token)).Succeeded);
+        using HttpResponseMessage page = path is "/Xenon/Terms" or "/Xenon/Privacy"
+            ? await fixture.Client.GetAsync(path, token)
+            : await GetAsAsync(fixture, s_administrator, path);
+
+        Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+        Assert.Equal("text/html", page.Content.Headers.ContentType?.MediaType);
+        string policy = Assert.Single(page.Headers.GetValues("Content-Security-Policy"));
+        foreach (string directive in new[]
+        {
+            "default-src 'none'", "script-src 'self'", "style-src 'self'", "font-src 'self'",
+            "media-src 'self'", "img-src 'self' data: https:",
+            "connect-src 'self' https://public.api.bsky.app", "frame-ancestors 'none'",
+            "base-uri 'none'", "object-src 'none'"
+        })
+        {
+            Assert.Contains(directive, policy, StringComparison.Ordinal);
+        }
+        Assert.EndsWith(oauthNavigation ? "form-action 'self' https:" : "form-action 'self'", policy, StringComparison.Ordinal);
+        Assert.DoesNotContain("unsafe-inline", policy, StringComparison.Ordinal);
+        Assert.DoesNotContain("unsafe-eval", policy, StringComparison.Ordinal);
+        string html = await page.Content.ReadAsStringAsync(token);
+        Assert.Contains("<!DOCTYPE html>", html, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("/Xenon/js/theme", html, StringComparison.Ordinal);
+        Assert.Contains("/Xenon/css/xenon", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("<style", html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(" style=", html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("<script>", html, StringComparison.OrdinalIgnoreCase);
+        using HttpResponseMessage json = await GetAsAsync(fixture, s_administrator, "/Xenon?handler=Counts");
+        Assert.Equal(HttpStatusCode.OK, json.StatusCode);
+        Assert.Equal("application/json", json.Content.Headers.ContentType?.MediaType);
+        Assert.False(json.Headers.Contains("Content-Security-Policy"));
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task CliDownloadsServeBinariesWithLinuxCommandsAndInitiallyExpandedChecksums(bool localBuild, bool mixedBuilds)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        string directory = Directory.CreateTempSubdirectory().FullName;
+        try
+        {
+            List<object> downloads = [];
+            foreach (string rid in new[] { "linux-x64", "linux-arm64", "win-x64", "win-arm64" })
+            {
+                string[] parts = rid.Split('-');
+                downloads.Add(new
+                {
+                    name = $"idunno.Bluesky.Labeler.Cli-{rid}{(parts[0] == "win" ? ".exe" : string.Empty)}",
+                    os = parts[0],
+                    arch = parts[1],
+                    size = 12345678,
+                    sha256 = new string('a', 64),
+                    sha512 = new string('b', 128),
+                    localBuild = localBuild || mixedBuilds && parts[1] == "x64"
+                });
+            }
+            await File.WriteAllTextAsync(
+                Path.Combine(directory, "cli-downloads.json"),
+                JsonSerializer.Serialize(downloads),
+                token);
+            using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+            using HttpClient identity = new();
+            await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
+                configureAdministration: services =>
+                {
+                    services.AddSingleton<ILabelIssuancePolicyProvider, UiPolicy>();
+                    services.AddSingleton<IDidHandleResolver, TeamHandles>();
+                    services.AddLabelerAdministration(s_audience, key, identity);
+                },
+                xenonUi: true);
+            fixture.Services.GetRequiredService<IConfiguration>()["Labeler:CliDownloadsDirectory"] = directory;
+            ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+            Assert.True((await team.BootstrapAsync(
+                administrator: s_administrator,
+                localIdentity: "uid:0",
+                operationId: "downloads-bootstrap",
+                cancellationToken: token)).Succeeded);
+            using HttpResponseMessage page = await GetAsAsync(fixture, s_administrator, "/Xenon/Downloads");
+            string html = await page.Content.ReadAsStringAsync(token);
+            Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+            Assert.Contains("chmod +x idunno.Bluesky.Labeler.Cli-linux-x64", html, StringComparison.Ordinal);
+            Assert.Contains("chmod +x idunno.Bluesky.Labeler.Cli-linux-arm64", html, StringComparison.Ordinal);
+            Assert.DoesNotContain("chmod +x idunno.Bluesky.Labeler.Cli-win", html, StringComparison.Ordinal);
+            Assert.Equal(!localBuild && !mixedBuilds, html.Contains("Authenticode signed", StringComparison.Ordinal));
+            Assert.Contains("sha256sum idunno.Bluesky.Labeler.Cli-linux-x64", html, StringComparison.Ordinal);
+            Assert.Contains("sha512sum idunno.Bluesky.Labeler.Cli-linux-arm64", html, StringComparison.Ordinal);
+            Assert.Contains(@"Get-FileHash .\idunno.Bluesky.Labeler.Cli-win-x64.exe -Algorithm SHA256", html, StringComparison.Ordinal);
+            Assert.Contains(@"Get-FileHash .\idunno.Bluesky.Labeler.Cli-win-arm64.exe -Algorithm SHA512", html, StringComparison.Ordinal);
+            Assert.Equal(!localBuild && !mixedBuilds, html.Contains("gh attestation verify idunno.Bluesky.Labeler.Cli-linux-x64 --repo blowdart/idunno.Bluesky", StringComparison.Ordinal));
+            Assert.Equal(!localBuild, html.Contains("gh attestation verify idunno.Bluesky.Labeler.Cli-win-arm64.exe --repo blowdart/idunno.Bluesky", StringComparison.Ordinal));
+            Assert.Equal(4, OpenDownloadChecksumsRegex().Count(html));
+            Assert.DoesNotContain(".zip", html, StringComparison.Ordinal);
+            const string name = "idunno.Bluesky.Labeler.Cli-linux-x64";
+            byte[] binary = [0x7f, 0x45, 0x4c, 0x46];
+            await File.WriteAllBytesAsync(Path.Combine(directory, name), binary, token);
+            Assert.Contains($"name={name}", html, StringComparison.Ordinal);
+            using HttpResponseMessage file = await GetAsAsync(fixture, s_administrator, $"/Xenon/Downloads?handler=File&name={name}");
+            Assert.Equal(HttpStatusCode.OK, file.StatusCode);
+            Assert.Equal("application/octet-stream", file.Content.Headers.ContentType?.MediaType);
+            Assert.Equal(name, file.Content.Headers.ContentDisposition?.FileName);
+            Assert.Equal(binary, await file.Content.ReadAsByteArrayAsync(token));
+            TestContext.Current.TestOutputHelper?.WriteLine(html);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
 
     [Theory]
     [InlineData(true, true, true)]
@@ -1297,6 +1430,10 @@ public partial class XenonUiTests
         private static Handle MemberHandle(Did did) =>
             did.Value == "did:plc:unavailable" ? Handle.Invalid : new Handle(did.Value.Split(':')[^1] + ".example");
     }
+
+    /// <summary>Counts the expanded download verification sections.</summary>
+    [GeneratedRegex("""<details class="cli-download-checksums" open>""")]
+    private static partial Regex OpenDownloadChecksumsRegex();
 
     /// <summary>Finds the team member input without changing its matching rules.</summary>
     [GeneratedRegex("""<input name="target"[^>]*data-team-member[^>]*>""")]

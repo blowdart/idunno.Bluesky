@@ -333,6 +333,11 @@ public static class Maximum
     public static readonly int SuggestedUsers = 50;
 
     /// <summary>
+    /// The maximum number of Atmosphere Explore article recommendations that can be requested.
+    /// </summary>
+    public static readonly int AtmosphereExploreArticleRecommendations = 100;
+
+    /// <summary>
     /// The maximum number of suggested start packs that can be requested.
     /// </summary>
     public static readonly int SuggestedStarterPacks = 25;

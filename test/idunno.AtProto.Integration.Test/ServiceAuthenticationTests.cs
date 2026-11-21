@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 
 using idunno.AtProto.Authentication;
+using idunno.Security;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
@@ -21,6 +22,179 @@ public class ServiceAuthenticationTests
 {
     private static readonly AtProtoServiceReference s_audience = new(new Did(OtherDid), "atproto_labeler");
     private static readonly Nsid s_method = new("com.atproto.label.applyLabels");
+
+    [Theory]
+    [InlineData("com.atproto.label.applyLabels")]
+    [InlineData("com.atproto.moderation.createReport")]
+    [InlineData("tools.ozone.inbox.appealActionedSubject")]
+    [InlineData("tools.ozone.server.getConfig")]
+    public async Task DefaultClientRejectsLoopbackForEveryVerifier(string method)
+    {
+        FakeTimeProvider clock = CreateClock();
+        using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        JsonObject payload = Payload(clock);
+        payload["iss"] = "did:web:localhost";
+        payload["lxm"] = method;
+        string token = Sign(key, """{"typ":"JWT","alg":"ES256"}""", payload.ToJsonString());
+
+        for (int attempt = 0; attempt < 2; attempt++)
+        {
+            HttpRequestException exception = await Assert.ThrowsAsync<HttpRequestException>(() =>
+                VerifyWithDefaultClientAsync(
+                    method: method,
+                    token: token,
+                    timeProvider: clock,
+                    maximumLifetime: TimeSpan.FromSeconds(60),
+                    cancellationToken: TestContext.Current.CancellationToken));
+            Assert.IsType<SsrfException>(exception.InnerException);
+        }
+    }
+
+    [Theory]
+    [InlineData("com.atproto.label.applyLabels")]
+    [InlineData("com.atproto.moderation.createReport")]
+    [InlineData("tools.ozone.inbox.appealActionedSubject")]
+    [InlineData("tools.ozone.server.getConfig")]
+    public async Task SuppliedClientIsUsedAndRemainsCallerOwnedForEveryVerifier(string method)
+    {
+        const string issuer = "did:web:localhost";
+        FakeTimeProvider clock = CreateClock();
+        using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        JsonObject payload = Payload(clock);
+        payload["iss"] = issuer;
+        payload["lxm"] = method;
+        string token = Sign(key, """{"typ":"JWT","alg":"ES256"}""", payload.ToJsonString());
+        int requests = 0;
+        using TestServer server = TestServerBuilder.CreateServer("localhost", async context =>
+        {
+            Assert.Equal("localhost", context.Request.Host.Host);
+            Assert.Equal("/.well-known/did.json", context.Request.Path);
+            Interlocked.Increment(ref requests);
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(
+                JsonSerializer.Serialize(DidDocumentFor(issuer, "atproto", key), AtProtoServer.AtProtoJsonSerializerOptions),
+                TestContext.Current.CancellationToken);
+        });
+        using HttpClient client = server.CreateClient();
+
+        Did authenticated = await VerifyWithSuppliedClientAsync(
+            method: method,
+            token: token,
+            httpClient: client,
+            timeProvider: clock,
+            cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Equal(new Did(issuer), authenticated);
+
+        using HttpResponseMessage response = await client.GetAsync(
+            new Uri("https://localhost/.well-known/did.json"),
+            TestContext.Current.CancellationToken);
+        Assert.True(response.IsSuccessStatusCode);
+        Assert.Equal(2, requests);
+    }
+
+    [Theory]
+    [InlineData("com.atproto.label.applyLabels")]
+    [InlineData("com.atproto.moderation.createReport")]
+    [InlineData("tools.ozone.inbox.appealActionedSubject")]
+    [InlineData("tools.ozone.server.getConfig")]
+    public async Task DefaultClientOverloadsRespectTheSuppliedClockAndMaximumLifetime(string method)
+    {
+        FakeTimeProvider clock = CreateClock();
+        using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        JsonObject payload = Payload(clock);
+        payload["lxm"] = method;
+        string token = Sign(key, """{"typ":"JWT","alg":"ES256"}""", payload.ToJsonString());
+
+        InvalidDataException exception = await Assert.ThrowsAsync<InvalidDataException>(() =>
+            VerifyWithDefaultClientAsync(
+                method: method,
+                token: token,
+                timeProvider: clock,
+                maximumLifetime: TimeSpan.FromSeconds(30),
+                cancellationToken: TestContext.Current.CancellationToken));
+        Assert.Equal("token-lifetime-invalid", exception.Data["ServiceAuthenticationFailure"]);
+    }
+
+    [Theory]
+    [InlineData("com.atproto.label.applyLabels")]
+    [InlineData("com.atproto.moderation.createReport")]
+    [InlineData("tools.ozone.inbox.appealActionedSubject")]
+    [InlineData("tools.ozone.server.getConfig")]
+    public async Task DefaultClientOverloadsPropagateCancellation(string method)
+    {
+        using CancellationTokenSource cancellation = new();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            VerifyWithDefaultClientAsync(
+                method: method,
+                token: "not-read-after-cancellation",
+                timeProvider: CreateClock(),
+                maximumLifetime: null,
+                cancellationToken: cancellation.Token));
+    }
+
+    [Theory]
+    [InlineData("com.atproto.label.applyLabels")]
+    [InlineData("com.atproto.moderation.createReport")]
+    [InlineData("tools.ozone.inbox.appealActionedSubject")]
+    [InlineData("tools.ozone.server.getConfig")]
+    public async Task DefaultConvenienceOverloadsSupportCallsWithAndWithoutCancellation(string method)
+    {
+        const string token = "not-a-token";
+        Func<Task> withoutCancellation = method switch
+        {
+            "com.atproto.label.applyLabels" => () => ServiceAuthentication.VerifyAsync(token, s_audience, new Nsid(method)),
+            "com.atproto.moderation.createReport" => () => ServiceAuthentication.VerifyModerationReportAsync(token, s_audience.Did),
+            "tools.ozone.inbox.appealActionedSubject" => () => ServiceAuthentication.VerifyModerationAppealAsync(token, s_audience.Did),
+            "tools.ozone.server.getConfig" => () => ServiceAuthentication.VerifyOzoneAdministrationAsync(token, s_audience.Did, new Nsid(method)),
+            _ => throw new ArgumentOutOfRangeException(nameof(method))
+        };
+        await Assert.ThrowsAsync<InvalidDataException>(withoutCancellation);
+
+        using CancellationTokenSource cancellation = new();
+        cancellation.Cancel();
+        Func<Task> withCancellation = method switch
+        {
+            "com.atproto.label.applyLabels" => () => ServiceAuthentication.VerifyAsync(
+                token: token,
+                audience: s_audience,
+                method: new(method),
+                cancellationToken: cancellation.Token),
+            "com.atproto.moderation.createReport" => () => ServiceAuthentication.VerifyModerationReportAsync(
+                token: token,
+                labeler: s_audience.Did,
+                cancellationToken: cancellation.Token),
+            "tools.ozone.inbox.appealActionedSubject" => () => ServiceAuthentication.VerifyModerationAppealAsync(
+                token: token,
+                labeler: s_audience.Did,
+                cancellationToken: cancellation.Token),
+            "tools.ozone.server.getConfig" => () => ServiceAuthentication.VerifyOzoneAdministrationAsync(
+                token: token,
+                labeler: s_audience.Did,
+                method: new(method),
+                cancellationToken: cancellation.Token),
+            _ => throw new ArgumentOutOfRangeException(nameof(method))
+        };
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(withCancellation);
+    }
+
+    [Theory]
+    [InlineData("com.atproto.label.applyLabels")]
+    [InlineData("com.atproto.moderation.createReport")]
+    [InlineData("tools.ozone.inbox.appealActionedSubject")]
+    [InlineData("tools.ozone.server.getConfig")]
+    public async Task SuppliedClientOverloadsStillRejectNull(string method)
+    {
+        ArgumentNullException exception = await Assert.ThrowsAsync<ArgumentNullException>(() =>
+            VerifyWithSuppliedClientAsync(
+                method: method,
+                token: "not-read-before-validation",
+                httpClient: null!,
+                timeProvider: CreateClock(),
+                cancellationToken: TestContext.Current.CancellationToken));
+        Assert.Equal("httpClient", exception.ParamName);
+    }
 
     [Theory]
     [InlineData(false, "tools.ozone.server.getConfig")]
@@ -745,6 +919,84 @@ public class ServiceAuthenticationTests
         /// <summary>Moves the reported wall clock backwards without relying on scheduler timing.</summary>
         internal void MoveBackwards() => _clock = new FakeTimeProvider(_clock.GetUtcNow().AddSeconds(-6));
     }
+
+    /// <summary>
+    /// Selects the default-client verifier matching the token's method.
+    /// </summary>
+    private static Task VerifyWithDefaultClientAsync(
+        string method,
+        string token,
+        TimeProvider timeProvider,
+        TimeSpan? maximumLifetime,
+        CancellationToken cancellationToken) => method switch
+        {
+            "com.atproto.label.applyLabels" => ServiceAuthentication.VerifyAsync(
+                token: token,
+                audience: s_audience,
+                method: new(method),
+                timeProvider: timeProvider,
+                maximumLifetime: maximumLifetime,
+                cancellationToken: cancellationToken),
+            "com.atproto.moderation.createReport" => ServiceAuthentication.VerifyModerationReportAsync(
+                token: token,
+                labeler: s_audience.Did,
+                timeProvider: timeProvider,
+                maximumLifetime: maximumLifetime,
+                cancellationToken: cancellationToken),
+            "tools.ozone.inbox.appealActionedSubject" => ServiceAuthentication.VerifyModerationAppealAsync(
+                token: token,
+                labeler: s_audience.Did,
+                timeProvider: timeProvider,
+                maximumLifetime: maximumLifetime,
+                cancellationToken: cancellationToken),
+            "tools.ozone.server.getConfig" => ServiceAuthentication.VerifyOzoneAdministrationAsync(
+                token: token,
+                labeler: s_audience.Did,
+                method: new(method),
+                timeProvider: timeProvider,
+                maximumLifetime: maximumLifetime,
+                cancellationToken: cancellationToken),
+            _ => throw new ArgumentOutOfRangeException(nameof(method))
+        };
+
+    /// <summary>
+    /// Selects the caller-client verifier matching the token's method and returns its authenticated issuer.
+    /// </summary>
+    private static async Task<Did> VerifyWithSuppliedClientAsync(
+        string method,
+        string token,
+        HttpClient httpClient,
+        TimeProvider timeProvider,
+        CancellationToken cancellationToken) => method switch
+        {
+            "com.atproto.label.applyLabels" => (await ServiceAuthentication.VerifyAsync(
+                token: token,
+                audience: s_audience,
+                method: new(method),
+                httpClient: httpClient,
+                timeProvider: timeProvider,
+                cancellationToken: cancellationToken)).Issuer,
+            "com.atproto.moderation.createReport" => (await ServiceAuthentication.VerifyModerationReportAsync(
+                token: token,
+                labeler: s_audience.Did,
+                httpClient: httpClient,
+                timeProvider: timeProvider,
+                cancellationToken: cancellationToken)).Reporter,
+            "tools.ozone.inbox.appealActionedSubject" => (await ServiceAuthentication.VerifyModerationAppealAsync(
+                token: token,
+                labeler: s_audience.Did,
+                httpClient: httpClient,
+                timeProvider: timeProvider,
+                cancellationToken: cancellationToken)).Reporter,
+            "tools.ozone.server.getConfig" => (await ServiceAuthentication.VerifyOzoneAdministrationAsync(
+                token: token,
+                labeler: s_audience.Did,
+                method: new(method),
+                httpClient: httpClient,
+                timeProvider: timeProvider,
+                cancellationToken: cancellationToken)).Issuer,
+            _ => throw new ArgumentOutOfRangeException(nameof(method))
+        };
 
     /// <summary>
     /// Creates the shared fixed clock used to issue and validate tokens.

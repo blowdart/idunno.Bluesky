@@ -104,20 +104,20 @@ public partial class BlueskyAgent
     /// <summary>
     /// Get a view of an actor's 'author feed' (post and reposts by the author).
     /// </summary>
-    /// <param name="actor">The <see cref="Did"/> of the actor whose feed should be retrieved.</param>
+    /// <param name="actor">The <see cref="AtIdentifier"/> (handle or <see cref="Did"/>) of the actor whose feed should be retrieved.</param>
     /// <param name="limit">The maximum number of feeds to return from the api.</param>
     /// <param name="cursor">An optional cursor for pagination.</param>
-    /// <param name="filter">Combinations of post/repost types to include in the results.</param>
+    /// <param name="filter">Combinations of post/repost types to include in the results. Defaults to <see cref="FeedFilter.PostsWithReplies"/>, the lexicon default.</param>
     /// <param name="includePins">Flag indicating whether to include pinned posts in the results.</param>
     /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is <see langword="null"/>.</exception>
     public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>> GetAuthorFeed(
-        Did actor,
+        AtIdentifier actor,
         int? limit = null,
         string? cursor = null,
-        FeedFilter? filter = FeedFilter.PostsNoReplies,
+        FeedFilter? filter = FeedFilter.PostsWithReplies,
         bool? includePins = null,
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)

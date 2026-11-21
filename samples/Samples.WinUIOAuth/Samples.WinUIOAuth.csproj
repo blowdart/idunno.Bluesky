@@ -38,6 +38,8 @@
     <!-- Custom Main redirects activation to the running instance before starting the XAML UI. -->
     <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
     <PublishTrimmed>false</PublishTrimmed>
+    <!-- Work around microsoft/microsoft-ui-xaml#12503: MSBuildWorkspace loads XAML-generated sources twice. -->
+    <EnableWinUIDesignTimeGeneratedXamlCompileItems>false</EnableWinUIDesignTimeGeneratedXamlCompileItems>
   </PropertyGroup>
   <!-- Do not even restore Windows packages or reference the SDK from the non-Windows placeholder.
        Local package versions keep sample tooling independent of the shared library dependencies. -->

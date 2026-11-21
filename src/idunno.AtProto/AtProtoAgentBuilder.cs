@@ -43,7 +43,12 @@ public class AtProtoAgentBuilder
     /// Gets or sets the <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.
     /// </summary>
     /// <remarks>
-    ///<para>If an <see cref="IHttpClientFactory"/> is set then <see cref="HttpClientOptions"/> will be ignored.</para>
+    /// <para>The factory's clients are used as supplied. The factory must enforce SSRF protection for destinations
+    /// used by the agent, including private-address checks at connection time for services obtained from DID
+    /// documents, and disable automatic redirects. Register it with
+    /// <see cref="ServiceCollectionExtensions.AddAtProtoHttpClient(Microsoft.Extensions.DependencyInjection.IServiceCollection)"/>
+    /// to use the library's protected handler; custom factories must provide equivalent protections.</para>
+    /// <para>If an <see cref="IHttpClientFactory"/> is set, <see cref="HttpClientOptions"/> is ignored.</para>
     /// </remarks>
     public IHttpClientFactory? HttpClientFactory { get; set; } = null!;
 
@@ -244,11 +249,16 @@ public class AtProtoAgentBuilder
     /// <summary>
     /// Sets the <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.
     /// </summary>
-    /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use</param>
+    /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use.</param>
     /// <returns>The same instance of <see cref="AtProtoAgentBuilder"/> for chaining.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClientFactory"/> is <see langword="null"/>.</exception>
     /// <remarks>
-    ///<para>If an <see cref="IHttpClientFactory"/> is set then <see cref="HttpClientOptions"/> will be ignored.</para>
+    /// <para>The factory's clients are used as supplied. The factory must enforce SSRF protection for destinations
+    /// used by the agent, including private-address checks at connection time for services obtained from DID
+    /// documents, and disable automatic redirects. Register it with
+    /// <see cref="ServiceCollectionExtensions.AddAtProtoHttpClient(Microsoft.Extensions.DependencyInjection.IServiceCollection)"/>
+    /// to use the library's protected handler; custom factories must provide equivalent protections.</para>
+    /// <para>If an <see cref="IHttpClientFactory"/> is set, <see cref="HttpClientOptions"/> is ignored.</para>
     /// </remarks>
     public AtProtoAgentBuilder WithHttpClientFactory(IHttpClientFactory httpClientFactory)
     {

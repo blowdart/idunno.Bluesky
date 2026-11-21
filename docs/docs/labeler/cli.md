@@ -7,18 +7,18 @@ administration, create a team membership, or grant an account authority.
 
 ## Install and run
 
-Use the trimmed, self-contained single-file CLI ZIP for your operating system and architecture from a
+Use the trimmed, self-contained CLI executable for your operating system and architecture from a
 release that includes the labeler. Verify its GitHub release attestation before
-extracting it to a trusted directory on your `PATH`. Keep configuration, keys,
+placing it in a trusted directory on your `PATH`. Keep configuration, keys,
 database files and backups outside that directory. See
 [release installation and updates](deployment.md#safe-updates-and-rollback).
 The executable bundles its runtime and does not require a separate .NET installation.
-The release workflow attaches the ZIPs for win-x64, win-arm64, linux-x64 and
-linux-arm64 to the GitHub release. The prerelease workflow builds the same ZIPs and checksum manifest,
-but keeps them only as short-lived workflow artifacts; it does not create a GitHub release. Windows executables are Authenticode signed; Linux executables are covered by build
-attestations and the published SHA-256/SHA-512 checksums. ZIP archives do not preserve the Unix
-execute bit, so run `chmod +x` on the extracted Linux executable.
-The same ZIPs are available to signed-in moderators from the **CLI Downloads** page in the Xenon UI.
+The release workflow attaches executables for win-x64, win-arm64, linux-x64 and
+linux-arm64 to the GitHub release. The prerelease workflow builds the same executables and checksum
+manifest, but keeps them only as short-lived workflow artifacts; it does not create a GitHub release.
+Windows release executables are Authenticode signed; Linux executables are covered by build
+attestations and the published SHA-256/SHA-512 checksums. Run `chmod +x` on the Linux executable.
+The same executables are available to signed-in moderators from the **CLI Downloads** page in the Xenon UI.
 The canonical host image includes the matching Linux executable in
 `/opt/labeler-cli`, with `labeler-admin` available on `PATH`:
 
@@ -131,7 +131,7 @@ $remote = @(
 
 labeler-admin status @ipc
 labeler-admin counts @ipc
-labeler-admin team @remote
+labeler-admin team list @remote
 ```
 
 Use either `@ipc` or `@remote`, not both. `@ipc` and `@remote` are PowerShell array
@@ -144,8 +144,8 @@ options and values.
 | `--labeler-url` | Public HTTPS **origin**, not `/Xenon` or an XRPC path: `status --labeler-url https://labeler.example --admin-handle moderator.example`. |
 | `--admin-service` | Optional exact `DID#service` override. By default, the CLI discovers the audience from the native OAuth metadata's advertised labeler administration RPC scopes; discovery requires exactly one audience. |
 | `--admin-handle` | Account exercising team authority, not automatically the labeler account; see the preceding example. |
-| `--oauth-client-id` | Native OAuth metadata URL; defaults to `<labeler-url>/native-client-metadata.json`. Override explicitly with `team @remote --oauth-client-id https://labeler.example/native-client-metadata.json`. Remote metadata must share the labeler origin. |
-| `--remember-me` | Opt into retaining that exact account/client/scope/PDS session: `team @remote --remember-me`. Not needed for IPC. |
+| `--oauth-client-id` | Native OAuth metadata URL; defaults to `<labeler-url>/native-client-metadata.json`. Override explicitly with `team list @remote --oauth-client-id https://labeler.example/native-client-metadata.json`. Remote metadata must share the labeler origin. |
+| `--remember-me` | Opt into retaining that exact account/client/scope/PDS session: `team list @remote --remember-me`. Not needed for IPC. |
 
 Remote use requires an existing team membership, a published administration service,
 correct trusted-proxy HTTPS forwarding, and anonymously reachable native OAuth
@@ -161,16 +161,28 @@ from the labeler account's repository write.
 
 ### Remembered sessions
 
-Without `--remember-me`, credentials are not persisted by the CLI. With it, sessions
-are stored under `~/.xenon` and reused only for the matching account, resolved DID,
-OAuth metadata, requested permissions and service. Different method-bound
-permissions can require separate browser sign-ins.
+A new session is persisted only with `--remember-me`. Saved sessions under `~/.xenon`
+are reused and updated without repeating that option, but only for the matching
+account, resolved DID, OAuth metadata, requested permissions and service. Different
+labeler services use separate grants. Remote administrator commands for one service share
+the RPC permissions advertised by its native OAuth metadata, while each request still gets
+an exact method-bound service token. Older method-specific sessions remain in the cache but
+cannot authorize the combined grant; the first use requires browser consent, and
+`--remember-me` saves the new permission set.
 
 Windows protects saved credentials with current-user DPAPI. Other systems require
 separate explicit consent to **unencrypted** storage and enforce private directory
 and file permissions. `--yes` does not approve unencrypted storage and redirected
 input cannot provide that consent. Protect the cache and backups; never copy them
 into a repository or executable directory.
+
+Run `labeler-admin list-credentials` to list saved accounts, permission scopes and
+known labeler origins without displaying credentials. A session can have more than
+one associated labeler; the listed origins were selected during sign-in, not proof
+of a successful operation or additional authority. Older administrator sessions
+identify their labeler origin from their origin-bound OAuth client. Older policy or
+identity sessions may show `unknown (not recorded)` until used with a known origin.
+Listing does not check whether a saved session has expired or been revoked.
 
 Run `labeler-admin forget-me` to delete every saved OAuth credential in `~/.xenon`.
 This removes local credential files for all accounts and permission sets but does
@@ -196,8 +208,13 @@ on standard output, including failed service responses:
 ```powershell
 labeler-admin --verbose status @ipc
 labeler-admin status @remote --verbose
-labeler-admin team @ipc --verbose > team.json
+labeler-admin team list @ipc --verbose > team.json
 ```
+
+For a new operation without `--operation-id`, the generated ID is printed to standard
+output before the request. With `--verbose`, this line precedes the raw JSON response,
+so the combined output is not a single JSON document. Supply `--operation-id` explicitly
+when a script needs only the raw response JSON.
 
 Normal status output shows Issuer first, followed by Phase, and uses “Labels issued”
 and “Labels published” for the lifetime totals, including withdrawals. Label history
@@ -205,16 +222,22 @@ says “Full label history available” or identifies the first available label 
 Internal revisions are omitted, and retirement checkpoints are hidden while Active.
 These display changes do not alter verbose JSON.
 
+Team output lists each person under a DID heading, with their verified handle, named role,
+membership status and notification email when returned by the service. Inactive and removed
+members' DIDs use ANSI strikethrough; their status is also written explicitly for terminals
+without strikethrough support. Handle lookup failures are shown as unavailable without
+hiding the member's DID. Verbose JSON is unchanged and does not perform handle lookups.
+
 `--verbose` does not enable HTTP tracing or OAuth credential logging. Treat exported
 team, audit, policy and recovery material as confidential. A successful local
 receipt does not prove downstream clients have consumed a label or withdrawal.
 
 | Option | Meaning and example |
 |---|---|
-| `--operation-id` | Stable, nonblank identity for a mutation or receipt lookup: `operation @ipc --operation-id label-1`. Retain the same ID and exact intent after an uncertain outcome. |
+| `--operation-id` | Stable, nonblank identity for an operation. New operations generate and display an ID on standard output when it is omitted. Retain the same ID and exact intent after an uncertain outcome. Lookups and continuations require the existing ID. |
 | `--reason` | Nonblank audit explanation for mutations: `issue did:plc:example beansonista @ipc --operation-id label-1 --reason "Reviewed account"`. Do not include secrets. |
 | `--yes` | Skip the ordinary mutation prompt: append `--yes` to the preceding example. Does not bypass authorization, a retirement challenge, attestation, or plaintext-cache consent. |
-| `--verbose` | Raw JSON result output: `status @ipc --verbose`. |
+| `--verbose` | Raw JSON result output: `status @ipc --verbose`. Generated operation IDs precede the JSON. |
 | `--help`, `-h`, `-?` | Command-specific usage without executing: `retire begin --help`. |
 | `--version` | Executable version at the root: `labeler-admin --version`. Policy subcommands also use `--version <id>` for a policy identifier. |
 
@@ -239,13 +262,16 @@ the same durable totals shown by Xenon's moderation navigation.
 |---|---|
 | `status` | `labeler-admin status @ipc` |
 | `counts` | `labeler-admin counts @ipc` |
-| `team` | `labeler-admin team @remote` |
+| `team list` | `labeler-admin team list @remote` |
 | `operation` | `labeler-admin operation @ipc --operation-id label-1 --reason "Recover uncertain reply"` |
 | `audit` | `labeler-admin audit @ipc --after-sequence 0 --limit 16` |
 | `issue` | `labeler-admin issue did:plc:example beansonista @ipc --operation-id label-1 --reason "Reviewed account"` |
 | `negate` | `labeler-admin negate did:plc:example beansonista @ipc --operation-id withdrawal-1 --reason "Appeal upheld"` |
-| `enroll` | `labeler-admin enroll moderator.example @ipc --role Moderator --operation-id enroll-1 --reason "Approved team member"` |
-| `change-team` | `labeler-admin change-team did:plc:member @ipc --action SetRole --role Viewer --operation-id role-1 --reason "Changed duties"` |
+| `team add` | `labeler-admin team add moderator.example @ipc --role Moderator --operation-id enroll-1 --reason "Approved team member"` |
+| `team update` | `labeler-admin team update did:plc:member @ipc --role Viewer --operation-id role-1 --reason "Changed duties"` |
+| `team disable` | `labeler-admin team disable did:plc:member @ipc --operation-id disable-1 --reason "Suspended access"` |
+| `team enable` | `labeler-admin team enable did:plc:member @ipc --operation-id enable-1 --reason "Restored access"` |
+| `team remove` | `labeler-admin team remove did:plc:member @ipc --operation-id remove-1 --reason "Left the team"` |
 
 | Additional option | Scope and example |
 |---|---|
@@ -253,21 +279,25 @@ the same durable totals shown by Xenon's moderation navigation.
 | `--limit` | Audit page size 1-16, default 16; other command families have their own limits below. |
 | `--cid` | Pin a **record** label/withdrawal to an explicitly chosen CID: `negate at://did:plc:example/app.bsky.feed.post/record beansonista @ipc --cid <actual-cid> --operation-id withdrawal-2 --reason "Withdraw pinned version"`. Omit for URI-wide scope; never infer or manufacture a CID. |
 | `--expires-at` | Absolute issue-only expiry: `issue did:plc:example beansonista @ipc --expires-at 2030-01-01T00:00:00Z --operation-id label-2 --reason "Time-limited label"`. |
-| `--role` | `Viewer`, `Moderator` or `Administrator`; required for `enroll` and `change-team --action SetRole`. |
-| `--action` | Team action: `SetRole`, `Suspend`, `Reinstate`, `Remove`, `BindLocal`, `RevokeLocal`, or owner-only `TransferOwnership`. |
-| `--credential` | OS identity, not a password/token; required for binding actions: `change-team did:plc:member @ipc --action BindLocal --credential uid:1001 --operation-id bind-1 --reason "Approved local operator"`. Windows uses `sid:<actual-SID>`. |
+| `--role` | `Viewer`, `Moderator` or `Administrator`; required for `team add` and `team update` with the default `SetRole` action. |
+| `--action` | Optional `team update` action: `SetRole` (default), `Suspend`, `Reinstate`, `Remove`, `BindLocal`, `RevokeLocal`, or owner-only `TransferOwnership`. |
+| `--credential` | OS identity, not a password/token; required for binding actions: `team update did:plc:member @ipc --action BindLocal --credential uid:1001 --operation-id bind-1 --reason "Approved local operator"`. Windows uses `sid:<actual-SID>`. |
 
-For example, suspend, reinstate or remove a member by replacing `SetRole --role Viewer`
-with `Suspend`, `Reinstate` or `Remove` after `--action`, and choose a new operation ID.
-To revoke a local binding, use `--action RevokeLocal --credential uid:1001`.
-Roles, owner protection and last-administrator protections are enforced by the service; reinstatement
-does not recreate revoked local bindings.
+`team add` accepts a verified handle or DID; the other team mutations require a DID.
+`team disable` makes a member inactive and revokes their local bindings. `team enable`
+makes an inactive member active but does not restore those bindings. `team remove`
+removes the membership; add the member again rather than enabling a removed account.
+To revoke a local binding, use `team update --action RevokeLocal --credential uid:1001`.
+Roles, owner protection and last-administrator protections are enforced by the service.
+Each mutation requires a reason and confirmation. Its operation ID is generated when omitted;
+reuse that ID only when retrying the same operation. The original direct `team` form and the hidden
+`enroll` and `change-team` commands remain available for existing scripts.
 
 The owner cannot be removed, suspended or demoted. Only the current owner can transfer
 ownership to another active Administrator:
 
 ```shell
-labeler-admin change-team did:plc:new-owner @ipc --action TransferOwnership --operation-id transfer-owner-1 --reason "Approved ownership handover"
+labeler-admin team update did:plc:new-owner @ipc --action TransferOwnership --operation-id transfer-owner-1 --reason "Approved ownership handover"
 ```
 
 Confirm the prompt only after checking the recipient. The new owner receives protection and
@@ -282,6 +312,19 @@ it. Publication can irreversibly withdraw removed label values even if the later
 repository write fails. Review the
 [policy publication workflow](moderation.md#policies-publication-and-recovery) first.
 
+`status` shows the current policy and gate; `version` and `versions` inspect
+one retained version or a page of versions. `history` lists policy administration
+and verification events; `operation` retrieves the recorded result for one
+operation ID.
+
+`save` creates or updates an unpublished draft. `begin` starts publication,
+closes the gate and authorizes withdrawal of removed label values without
+writing to the PDS. `publish` also conditionally writes and verifies the
+declaration. `recover` continues an existing publication using its original
+operation ID; `resume` renews paused withdrawal authorization without writing
+to the PDS. `abandon` leaves reports and new issuance blocked; it does not
+undo withdrawals or PDS writes.
+
 | Command | Example |
 |---|---|
 | `policy status` | `labeler-admin policy status @ipc` |
@@ -295,13 +338,25 @@ repository write fails. Review the
 | `policy recover` | `labeler-admin policy recover @remote --version policy-v2 --expected-revision 3 --previous-cid <actual-declaration-cid> --labeler-handle labeler.example --operation-id publish-1 --reason "Approved publication"` |
 | `policy resume` | `labeler-admin policy resume @ipc --operation-id publish-1 --reason "Reviewed interrupted publication"` |
 | `policy verify` | `labeler-admin policy verify @ipc --reason "Independently verify declaration"` |
+| `policy verify --check-only` | `labeler-admin policy verify @ipc --check-only` |
 | `policy abandon` | `labeler-admin policy abandon @ipc --expected-revision 3 --operation-id abandon-1 --reason "Candidate withdrawn"` |
+
+`policy verify` checks the published declaration without changing it. An observation updates
+the local verification state and can complete an already-authorized publication or detect a
+conflict. Its confirmation can be skipped with `--yes`; `--reason` supplies the audit reason.
+Use `policy verify --check-only` to compare the retained declaration with the public PDS record
+without changing local verification state. It does not prompt or write policy state; it exits
+successfully only when the declarations match. This read-only check can inspect a mismatch without
+moving the local gate into Conflict. The result shows an outcome icon, issuer DID and observed CID;
+with `--verbose`, it returns JSON containing `status`, `issuer` and `observedCid`.
+The icons are ✅ for a match, 📄⚠️ for a mismatch, 🔎❌ for a missing public declaration,
+📋❌ when no policy is selected, and 🌐⚠️ when the public lookup fails.
 
 | Option | Meaning |
 |---|---|
 | `--file` | Operator-authored policy JSON, at most 1 MiB. See the [policy file example](moderation.md#cli-policy-administration) for its schema. |
 | `--version` | Exact retained policy version; do not substitute the CLI version. |
-| `--expected-revision` | Positive current publication revision from `policy status`, used for optimistic concurrency. |
+| `--expected-revision` | Positive current publication revision from `policy status --verbose`, used for optimistic concurrency. |
 | `--previous-cid` | Expected current declaration CID for a conditional replacement. |
 | `--create` | First declaration only; replaces `--previous-cid`, never combines with it. Example: `policy begin @ipc --version policy-v1 --expected-revision 1 --create --operation-id first-publication --reason "Initial declaration"`. |
 | `--labeler-handle` | Labeler repository account for `publish`/`recover`, distinct from `--admin-handle`. |
@@ -312,7 +367,8 @@ repository write fails. Review the
 
 Use exactly one of `--create` and `--previous-cid` for `begin`, `publish` and
 `recover`. Recover the saved intent using its original operation ID and fields;
-do not blindly copy revision 3 or create a new operation after an uncertain write.
+`policy recover`, `policy resume` and `policy operation` require that existing ID.
+Do not blindly copy revision 3 or create a new operation after an uncertain write.
 
 ## Signing-key rotation and identity publication
 
@@ -352,6 +408,8 @@ then verify the published document. PLC commands mutate account identity through
 the PDS after sign-in and confirmation, independently of labeler administration
 transport. Use `--verbose` when retaining structured PLC outcome/recovery material.
 Do not mistake signed public operation data for private signing-key material.
+`rotation begin` generates an operation ID when omitted; all later rotation steps
+require that same ID.
 
 ## Retirement commands
 
@@ -387,7 +445,8 @@ The normal path uses a durable server worker, not repeated CLI `advance` calls.
 
 For each challenged action, preflight must use the **same action, operation ID,
 reason, days, inventory, attestation and host ID** as execution. For example, before
-the completion example, obtain its challenge with:
+the completion example, obtain its challenge with the ID you choose or the ID printed
+by preflight:
 
 ```powershell
 labeler-admin retire preflight @ipc --action completeRetirement --operation-id complete-1 --reason "Reviewed distribution" --attestation "Reviewed endpoint and outage records"

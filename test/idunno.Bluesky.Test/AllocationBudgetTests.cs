@@ -44,13 +44,14 @@ public class AllocationBudgetTests
     private static readonly JsonTypeInfo<GetAuthorFeedResponse> s_authorFeedTypeInfo =
         (JsonTypeInfo<GetAuthorFeedResponse>)BlueskyJsonSerializerOptions.Options.GetTypeInfo(typeof(GetAuthorFeedResponse));
 
-    // Bytes allocated per call, for a captured page of 50 feed entries. Baselines measured on .NET 9 and 10, then .NET 8,
-    // are in the comments.
+    // Bytes allocated per call, for a captured page of 50 feed entries. Baselines measured on .NET 10, then .NET 8, are in the
+    // comments. ViewRecord.Value reads embedded records through a converter that preserves unrecognized record types, and each
+    // record it reads starts a nested deserialization of about 4 KB, so pages with many quoted records cost more.
     public static TheoryData<string, long> XrpcBudgets => new()
     {
-        { "Xrpc.GetTimeline", 2_260_000 },             // 2,018,624 / 2,048,304
-        { "Xrpc.GetAuthorFeed", 3_540_000 },           // 3,167,576 / 3,212,310
-        { "Xrpc.TimelineDecode", 2_230_000 },          // 2,009,672 / 2,039,176
+        { "Xrpc.GetTimeline", 2_060_000 },             // 1,799,726 / 1,864,686
+        { "Xrpc.GetAuthorFeed", 3_510_000 },           // 3,066,476 / 3,185,726
+        { "Xrpc.TimelineDecode", 2_040_000 },          // 1,788,584 / 1,854,176
     };
 
     [Theory]

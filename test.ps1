@@ -6,10 +6,12 @@ Runs the clean Debug build and full test suite against disposable databases.
 Requires PowerShell 7 and Docker with Linux containers. Creates unique, loopback-only PostgreSQL 17 and
 MySQL 8.4 servers with temporary storage, verifies authenticated access from the test runner, runs every
 test project and framework with the default test parallelism, and removes only this run's containers in finally.
+Runs PostgreSQL and other tests first, then MySQL-named tests, so the two providers do not compete during the suite.
 Logs, the build binary log, JUnit results, and elapsed times are retained under the ignored .artifacts/test-runs directory.
+Both database servers permit up to 500 connections to accommodate concurrent test fixtures across frameworks.
 The build uses default MSBuild parallelism and shared compilation. By default it is incremental and skips analyzers;
-pass -Full for the clean, analyzer-enabled Debug build that matches CI. PostgreSQL is limited to two CPUs and MySQL to six (both capped at the Docker engine's CPU count),
-4 GiB of memory without additional swap, and a 2 GiB temporary data filesystem.
+pass -Full for the clean, analyzer-enabled Debug build that matches CI. Each database container is limited to 4 GiB of
+memory without additional swap and a 2 GiB temporary data filesystem.
 
 .PARAMETER Full
 Runs the clean (--no-incremental) build with analyzers enabled, and every target framework, instead of the fast local run.
@@ -90,20 +92,15 @@ try
     $env:MYSQL_ROOT_PASSWORD = $password
     $postgres = "idunno-tests-$suffix-pg"
     $mysql = "idunno-tests-$suffix-mysql"
-    # Docker rejects a --cpus value above the engine's CPU count, so cap the limits to what the engine exposes.
-    $engineCpus = [int](& docker info --format '{{.NCPU}}')
-    if ($LASTEXITCODE -ne 0 -or $engineCpus -lt 1) { $engineCpus = 1 }
-    $postgresCpus = [Math]::Min(2, $engineCpus)
-    $mysqlCpus = [Math]::Min(6, $engineCpus)
     & docker run --detach --name $postgres --env POSTGRES_PASSWORD --publish '127.0.0.1::5432' `
-        "--cpus=$postgresCpus" --memory=4g --memory-swap=4g `
-        --tmpfs '/var/lib/postgresql/data:rw,size=2147483648' postgres:17 | Out-Null
+        --memory=4g --memory-swap=4g `
+        --tmpfs '/var/lib/postgresql/data:rw,size=2147483648' postgres:17 -c max_connections=500 | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'Disposable PostgreSQL startup failed.' }
     $containers.Add($postgres)
     & docker run --detach --name $mysql --env MYSQL_ROOT_PASSWORD --env 'MYSQL_ROOT_HOST=%' `
-        --publish '127.0.0.1::3306' "--cpus=$mysqlCpus" --memory=4g --memory-swap=4g `
+        --publish '127.0.0.1::3306' --memory=4g --memory-swap=4g `
         --tmpfs '/var/lib/mysql:rw,size=2147483648' mysql:8.4 `
-        --max-connections=200 --innodb-redo-log-capacity=536870912 | Out-Null
+        --max-connections=500 --innodb-redo-log-capacity=536870912 | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'Disposable MySQL startup failed.' }
     $containers.Add($mysql)
 
@@ -129,19 +126,47 @@ try
     $env:LABELER_TEST_MYSQL_CONNECTION = "Server=127.0.0.1;Port=$myPort;User ID=root;Password=$password;SslMode=None;AllowPublicKeyRetrieval=True"
     $env:BOTSDK_TEST_POSTGRESQL_CONNECTION = $env:LABELER_TEST_POSTGRESQL_CONNECTION
     $env:BOTSDK_TEST_MYSQL_CONNECTION = $env:LABELER_TEST_MYSQL_CONNECTION
-    Invoke-DotNet -Name 'database-preflight' -Arguments @(
-        'test', '--project', 'test/idunno.Bluesky.Labeler.Test/idunno.Bluesky.Labeler.Test.csproj',
-        '--no-build', '--no-restore', '--max-parallel-test-modules', '1', '--max-threads', '1',
-        '--filter-method', '*.RefusesRotationWithoutARegisteredHost',
-        "-bl:$logDirectory\database-preflight-{}.binlog")
-    $testArguments = @(
-        'test', '--no-build', '--no-restore', '--results-directory', "$logDirectory\results", '--report-xunit-junit',
-        "-bl:$logDirectory\tests-{}.binlog")
+    $frameworkArguments = @()
     if (-not ($Full -or $AllFrameworks))
     {
-        $testArguments += @('--framework', 'net10.0')
+        $frameworkArguments = @('--framework', 'net10.0')
     }
-    Invoke-DotNet -Name 'tests' -Arguments $testArguments
+    foreach ($provider in @('PostgreSql', 'MySql'))
+    {
+        Invoke-DotNet -Name "database-preflight-$provider" -Arguments (@(
+            'test', '--project', 'test/idunno.Bluesky.Labeler.Test/idunno.Bluesky.Labeler.Test.csproj',
+            '--no-build', '--no-restore', '--filter-method',
+            "*.ProviderConformance${provider}Tests.RefusesRotationWithoutARegisteredHost",
+            "-bl:$logDirectory\database-preflight-$provider-{}.binlog") + $frameworkArguments)
+    }
+
+    $mysqlConnection = $env:LABELER_TEST_MYSQL_CONNECTION
+    $env:LABELER_TEST_MYSQL_CONNECTION = $null
+    $env:BOTSDK_TEST_MYSQL_CONNECTION = $null
+    Invoke-DotNet -Name 'tests-postgresql' -Arguments (@(
+        'test', '--no-build', '--no-restore', '--results-directory', "$logDirectory\results\postgresql",
+        '--report-xunit-junit', '--filter-not-display-name', '*mysql*',
+        "-bl:$logDirectory\tests-postgresql-{}.binlog") + $frameworkArguments)
+    if (Select-String -Path (Join-Path $logDirectory 'tests-postgresql.log') -Quiet `
+        -Pattern '^\s*Set (BOTSDK|LABELER)_TEST_(MYSQL|POSTGRESQL)_CONNECTION\b')
+    {
+        throw "A database test was skipped because its connection was missing. Logs: $logDirectory"
+    }
+
+    $env:LABELER_TEST_POSTGRESQL_CONNECTION = $null
+    $env:BOTSDK_TEST_POSTGRESQL_CONNECTION = $null
+    $env:LABELER_TEST_MYSQL_CONNECTION = $mysqlConnection
+    $env:BOTSDK_TEST_MYSQL_CONNECTION = $mysqlConnection
+    # Modules without MySQL-named tests return exit code 8; require at least one test overall.
+    Invoke-DotNet -Name 'tests-mysql' -Arguments (@(
+        'test', '--no-build', '--no-restore', '--results-directory', "$logDirectory\results\mysql",
+        '--report-xunit-junit', '--filter-display-name', '*mysql*', '--ignore-exit-code', '8',
+        '--minimum-expected-tests', '1', "-bl:$logDirectory\tests-mysql-{}.binlog") + $frameworkArguments)
+    if (Select-String -Path (Join-Path $logDirectory 'tests-mysql.log') -Quiet `
+        -Pattern '^\s*Set (BOTSDK|LABELER)_TEST_(MYSQL|POSTGRESQL)_CONNECTION\b')
+    {
+        throw "A database test was skipped because its connection was missing. Logs: $logDirectory"
+    }
 }
 finally
 {

@@ -21,7 +21,12 @@ namespace idunno.Bluesky.AspNet.Labeler;
 
 /// <summary>Bounds independent reporter admission and adapts standard XRPC without accepting team credentials.</summary>
 /// <param name="issuer">The bound labeler DID.</param>
-/// <param name="httpClient">The caller-owned hardened identity client.</param>
+/// <param name="httpClient">The caller-owned <see cref="HttpClient"/> used for identity and repository requests.</param>
+/// <remarks>
+/// <para>The client is used as supplied. Its handler must enforce connection-time SSRF protection for PDS
+/// destinations resolved from DID documents and must disable automatic redirects. Without those protections,
+/// a reported DID can direct requests to loopback, link-local or private network addresses.</para>
+/// </remarks>
 /// <param name="store">The shared signed-label and decision store.</param>
 /// <param name="reports">The shared atomic report store.</param>
 /// <param name="policyStore">The shared policy gate store.</param>

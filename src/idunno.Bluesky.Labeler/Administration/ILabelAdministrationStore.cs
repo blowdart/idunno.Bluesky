@@ -33,7 +33,10 @@ public interface ILabelAdministrationStore
     /// <param name="caller">Provider-issued caller evidence, if authentication had already succeeded.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The denied audit event, or an explicit persistence failure.</returns>
-    /// <remarks><para>This trusted infrastructure seam must not itself be exposed as an administrative endpoint.</para></remarks>
+    /// <remarks><para>This trusted infrastructure seam must not itself be exposed as an administrative endpoint.
+    /// Built-in providers retain the latest 256 boundary-denial events per issuer, shared with failed service
+    /// authentication, regardless of caller or reason. Older boundary denials are removed atomically with
+    /// the new event; successful and operation-specific audit history is unaffected.</para></remarks>
     Task<LabelServiceResult<LabelAdministrationReceipt>> RecordAdministrationDenialAsync(
         string reason,
         LabelAdministrationCaller? caller = null,

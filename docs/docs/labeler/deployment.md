@@ -144,6 +144,9 @@ provider, or a host-owned configuration file:
 | `Labeler:AllowRecordLabels` | Whether the issuance policy permits record labels |
 | `LabelerAdministration:RemoteMode` | `Disabled` (default), `Enabled`, or `WebUiControlled`; overrides the legacy Boolean |
 | `LabelerAdministration:RemoteEnabled` | Legacy fallback only when `RemoteMode` is absent; defaults to `false` |
+| `LabelerAdministration:RequestsPerMinutePerPeer` | Shared remote administration/issuance/Ozone allowance per peer per fixed one-minute window; defaults to `120`, valid range `1`-`100000` |
+| `LabelerAdministration:MaximumConcurrentRequestsPerPeer` | Concurrent admitted remote requests per peer; defaults to `16`, valid range `1`-`1024` |
+| `LabelerAdministration:MaximumTrackedPeers` | Bounded per-process admission peer table; defaults to `1024`, valid range `1`-`65536` |
 | `LabelerOzone:Enabled` | Startup opt-in to `MapOzoneCompatibility()` discovery and labeler-focused administration; defaults to `false` and does not enable remote administration |
 | `LabelerOzone:AllowedOrigins` | Exact Ozone UI HTTP(S) origin array, including non-default ports and without trailing slashes; defaults to empty (no cross-origin access). For a local UI, set `LabelerOzone__AllowedOrigins__0=http://127.0.0.1:3000`. CORS is automatic and limited to mapped Ozone routes; changes require a restart |
 | `LabelerModeration:Enabled` | Optional Xenon report/case/policy backend; defaults to `false` |
@@ -173,6 +176,15 @@ affect protected local administration. An explicitly configured `RemoteMode` alw
 precedence over `RemoteEnabled`. If `RemoteMode` is omitted, the old Boolean continues to apply,
 so existing deployments are not silently enabled.
 
+Remote admission runs before authentication and denial auditing, using the connection address
+after trusted forwarding. Exhaustion returns `429` with `Retry-After: 60` and no audit write.
+Admitted denials remain audited and fail closed with `503` if audit persistence fails.
+Admission limits are process-local. Built-in stores also retain at most 256 boundary-denial
+events per issuer across all clients and processes sharing the database, without pruning
+successful or operation-specific audit history. Upgrade every writer to enforce this bound.
+Retain perimeter protection and database maintenance/monitoring.
+See [administration admission](administration.md#remote-administration-control-modes) for details.
+
 ### Native OAuth and TLS forwarding
 
 The host serves `/native-client-metadata.json` publicly without authentication or redirects.
@@ -196,6 +208,15 @@ multiple trusted proxies are involved, and list every trusted proxy IP. No forwa
 are processed when the list is empty; arbitrary client addresses never become trusted.
 Without a TLS-terminating proxy, configure Kestrel HTTPS directly. Do not enable the
 ASP.NET Core environment shortcut that trusts all forwarded headers.
+
+For a non-development HTTPS public origin, the canonical host and `Xenon.TestHost` apply
+HTTP Strict Transport Security (HSTS) to HTTPS responses, including responses served by
+OAuth metadata middleware. Trusted forwarding is processed first, so proxy-terminated
+HTTPS receives the header without trusting arbitrary client-supplied scheme headers.
+Development, HTTP and loopback origins do not enable HSTS; loopback request hosts are
+also excluded. The default policy uses a 30-day `max-age`, without `includeSubDomains`
+or `preload`. HSTS does not configure a TLS listener or replace the requirement to terminate
+TLS securely. Custom hosts must configure their own HSTS middleware after trusted forwarding.
 
 Identity resolution uses the existing `idunno.Security.Ssrf` connection-time DNS/IP protection,
 with redirects disabled; private and loopback issuer endpoints are not allowed.
@@ -231,14 +252,21 @@ provide that wiring through project references, without another builder or NuGet
 
 `LabelerApplicationExtensions.RunAsync(args, configureStorage)` reuses the complete canonical
 configuration, bootstrap, key/HTTP-client ownership and shutdown lifecycle. Applications
-composing the individual extensions own their hardened identity client and signing-key ring;
-keep both alive until the application is disposed, and pass the same ring during registration
-and initialization. Identity, feature flags and signing role are captured at registration.
+composing the individual extensions own their identity client and signing-key ring; keep both
+alive until the application is disposed, and pass the same ring during registration and
+initialization. The client is used as supplied. Its handler must check resolved IP addresses at
+connection time and reject loopback, link-local and private addresses, including cloud metadata
+endpoints, because handles and DID documents can supply network destinations. Register an
+`IHttpClientFactory` with `AddAtProtoHttpClient(IServiceCollection)` or provide equivalent checks
+in a custom handler. Disable automatic redirects so the handler cannot send a request to an
+unchecked destination before the application can inspect it. Identity, feature flags and signing
+role are captured at registration.
 For independently selected behavior, applications can instead compose the independent provider,
 `AddBlueskyLabeler`, optional `AddLabelerModeration`, and
 `AddLabelerAdministration` services. Initialize the shared store and optional
-policy gate before serving, using the same issuer, hardened caller-owned HTTP
-client and protected signing-key ring. Bootstrap deliberately through the
+policy gate before serving, using the same issuer, caller-owned HTTP client and
+protected signing-key ring. Apply the SSRF and redirect requirements above to
+that client. Bootstrap deliberately through the
 existing setup boundary, never automatically from an anonymous request.
 
 Map `MapBlueskyLabeler()`, `MapLabelerModeration()` when enabled, and protected

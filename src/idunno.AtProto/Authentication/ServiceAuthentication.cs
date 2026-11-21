@@ -28,6 +28,117 @@ public static class ServiceAuthentication
     /// <param name="token">The compact signed JWT.</param>
     /// <param name="audience">The exact destination service reference.</param>
     /// <param name="method">The exact XRPC method receiving the token.</param>
+    /// <returns>The verified identity and identifiers for replay protection.</returns>
+    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidDataException">The token, claims, DID document or signature is invalid.</exception>
+    /// <exception cref="HttpRequestException">DID resolution fails at the transport layer.</exception>
+    /// <exception cref="OperationCanceledException">The HTTP request times out.</exception>
+    /// <remarks>
+    /// <para>This overload uses an SSRF-protected client that rejects loopback, link-local and private destinations
+    /// at connection time and does not follow redirects.</para>
+    /// <para>Requires an integer lifetime of at most 15 minutes, validates an optional integer <c>nbf</c> timestamp,
+    /// allows five seconds of clock skew, and accepts only ES256 or ES256K signatures made by the issuer's matching
+    /// <c>#atproto</c> key.</para>
+    /// <para>This method does not prevent replay. The caller must atomically reserve the issuer and token identifier
+    /// and the token hash before accepting a request, retaining them through the expiry plus clock skew.</para>
+    /// </remarks>
+    public static Task<ServiceAuthenticationResult> VerifyAsync(
+        string token,
+        AtProtoServiceReference audience,
+        Nsid method)
+    {
+        return VerifyAsync(
+            token: token,
+            audience: audience,
+            method: method,
+            cancellationToken: default);
+    }
+
+    /// <summary>
+    /// Verifies a service token's signature, issuer, audience, method and lifetime.
+    /// </summary>
+    /// <param name="token">The compact signed JWT.</param>
+    /// <param name="audience">The exact destination service reference.</param>
+    /// <param name="method">The exact XRPC method receiving the token.</param>
+    /// <param name="cancellationToken">A cancellation token for DID resolution.</param>
+    /// <returns>The verified identity and identifiers for replay protection.</returns>
+    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidDataException">The token, claims, DID document or signature is invalid.</exception>
+    /// <exception cref="HttpRequestException">DID resolution fails at the transport layer.</exception>
+    /// <exception cref="OperationCanceledException">The operation is canceled or the HTTP request times out.</exception>
+    /// <remarks>
+    /// <para>This overload uses an SSRF-protected client that rejects loopback, link-local and private destinations
+    /// at connection time and does not follow redirects.</para>
+    /// <para>Requires an integer lifetime of at most 15 minutes, validates an optional integer <c>nbf</c> timestamp,
+    /// allows five seconds of clock skew, and accepts only ES256 or ES256K signatures made by the issuer's matching
+    /// <c>#atproto</c> key.</para>
+    /// <para>This method does not prevent replay. The caller must atomically reserve the issuer and token identifier
+    /// and the token hash before accepting a request, retaining them through the expiry plus clock skew.</para>
+    /// </remarks>
+    public static Task<ServiceAuthenticationResult> VerifyAsync(
+        string token,
+        AtProtoServiceReference audience,
+        Nsid method,
+        CancellationToken cancellationToken)
+    {
+        return VerifyAsync(
+            token: token,
+            audience: audience,
+            method: method,
+            timeProvider: null,
+            maximumLifetime: null,
+            cancellationToken: cancellationToken);
+    }
+
+    /// <summary>
+    /// Verifies a service token's signature, issuer, audience, method and lifetime.
+    /// </summary>
+    /// <param name="token">The compact signed JWT.</param>
+    /// <param name="audience">The exact destination service reference.</param>
+    /// <param name="method">The exact XRPC method receiving the token.</param>
+    /// <param name="timeProvider">The clock used to validate the lifetime, or <see langword="null"/> to use the system clock.</param>
+    /// <param name="maximumLifetime">The maximum accepted token lifetime, or <see langword="null"/> to use the default of 15 minutes.</param>
+    /// <param name="cancellationToken">A cancellation token for DID resolution.</param>
+    /// <returns>The verified identity and identifiers for replay protection.</returns>
+    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="maximumLifetime"/> is zero or negative.</exception>
+    /// <exception cref="InvalidDataException">The token, claims, DID document or signature is invalid.</exception>
+    /// <exception cref="HttpRequestException">DID resolution fails at the transport layer.</exception>
+    /// <exception cref="OperationCanceledException">The operation is canceled.</exception>
+    /// <remarks>
+    /// <para>This overload uses an SSRF-protected client that rejects loopback, link-local and private destinations
+    /// at connection time and does not follow redirects.</para>
+    /// <para>Requires an integer lifetime no greater than <paramref name="maximumLifetime"/>, defaults to 15 minutes,
+    /// validates an optional integer <c>nbf</c> timestamp, allows five seconds of clock skew, and accepts only
+    /// ES256 or ES256K signatures made by the issuer's matching <c>#atproto</c> key.</para>
+    /// <para>This method does not prevent replay. The caller must atomically reserve the issuer and token identifier
+    /// and the token hash before accepting a request, retaining them through the expiry plus clock skew.</para>
+    /// </remarks>
+    public static async Task<ServiceAuthenticationResult> VerifyAsync(
+        string token,
+        AtProtoServiceReference audience,
+        Nsid method,
+        TimeProvider? timeProvider,
+        TimeSpan? maximumLifetime,
+        CancellationToken cancellationToken)
+    {
+        using HttpClientLease lease = new(httpClient: null, timeout: null);
+        return await VerifyAsync(
+            token: token,
+            audience: audience,
+            method: method,
+            httpClient: lease.Client,
+            timeProvider: timeProvider,
+            maximumLifetime: maximumLifetime,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Verifies a service token's signature, issuer, audience, method and lifetime.
+    /// </summary>
+    /// <param name="token">The compact signed JWT.</param>
+    /// <param name="audience">The exact destination service reference.</param>
+    /// <param name="method">The exact XRPC method receiving the token.</param>
     /// <param name="httpClient">The HTTP client used to resolve the issuer's DID document.</param>
     /// <param name="timeProvider">An optional clock used to validate the lifetime.</param>
     /// <param name="maximumLifetime">The maximum accepted token lifetime. The default is 15 minutes.</param>
@@ -44,6 +155,15 @@ public static class ServiceAuthentication
     /// ES256 or ES256K signatures made by the issuer's matching <c>#atproto</c> key.</para>
     /// <para>This method does not prevent replay. The caller must atomically reserve the issuer and token identifier
     /// and the token hash before accepting a request, retaining them through the expiry plus clock skew.</para>
+    /// <para>This method uses <paramref name="httpClient"/> as supplied, adds no SSRF protection and does not dispose
+    /// it. An attacker can choose a <c>did:web</c> issuer whose hostname resolves to loopback, link-local or private
+    /// addresses, including cloud metadata endpoints. The handler must check resolved IP addresses at connection time
+    /// and reject those destinations; checking a hostname before connecting does not prevent DNS rebinding. Disable
+    /// automatic redirects, which can send a request to an unchecked destination.</para>
+    /// <para>Register an <see cref="IHttpClientFactory"/> with
+    /// <see cref="ServiceCollectionExtensions.AddAtProtoHttpClient(Microsoft.Extensions.DependencyInjection.IServiceCollection)"/>
+    /// and call <c>factory.CreateClient("idunno.atproto")</c> for the library's protected client, or provide equivalent
+    /// protections in a custom handler. Calling <c>factory.CreateClient()</c> does not select the named client.</para>
     /// </remarks>
     public static async Task<ServiceAuthenticationResult> VerifyAsync(
         string token,
@@ -68,7 +188,120 @@ public static class ServiceAuthentication
     /// </summary>
     /// <param name="token">The compact signed service JWT.</param>
     /// <param name="labeler">The destination labeler DID.</param>
-    /// <param name="httpClient">The hardened HTTP client used to resolve the reporter's DID document.</param>
+    /// <returns>The authenticated reporter and replay identifiers, not an administrative caller.</returns>
+    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidDataException">The token, claims, DID document or signature is invalid.</exception>
+    /// <exception cref="HttpRequestException">DID resolution fails at the transport layer.</exception>
+    /// <exception cref="OperationCanceledException">The HTTP request times out.</exception>
+    /// <remarks>
+    /// <para>This overload uses an SSRF-protected client that rejects loopback, link-local and private destinations
+    /// at connection time and does not follow redirects.</para>
+    /// <para>Accepts only <c>com.atproto.moderation.createReport</c>, addressed either to the exact
+    /// <c>labeler#atproto_labeler</c> service or to the same bare labeler DID for legacy PDS proxies.
+    /// This intake verifier grants no administrative authority, and
+    /// <see cref="VerifyAsync(string, AtProtoServiceReference, Nsid)"/> remains exact-audience.
+    /// Ozone administration uses the separate <see cref="VerifyOzoneAdministrationAsync(string, Did, Nsid)"/> boundary.</para>
+    /// <para>Uses the same signature, key, lifetime and replay-identifier validation as
+    /// <see cref="VerifyAsync(string, AtProtoServiceReference, Nsid)"/>. The caller must durably prevent replay before
+    /// accepting the report. A verified reporter does not need labeler team membership.</para>
+    /// </remarks>
+    public static Task<ModerationReportAuthenticationResult> VerifyModerationReportAsync(
+        string token,
+        Did labeler)
+    {
+        return VerifyModerationReportAsync(
+            token: token,
+            labeler: labeler,
+            cancellationToken: default);
+    }
+
+    /// <summary>
+    /// Verifies an independent labeler's report token without granting team administration authority.
+    /// </summary>
+    /// <param name="token">The compact signed service JWT.</param>
+    /// <param name="labeler">The destination labeler DID.</param>
+    /// <param name="cancellationToken">A cancellation token for DID resolution.</param>
+    /// <returns>The authenticated reporter and replay identifiers, not an administrative caller.</returns>
+    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidDataException">The token, claims, DID document or signature is invalid.</exception>
+    /// <exception cref="HttpRequestException">DID resolution fails at the transport layer.</exception>
+    /// <exception cref="OperationCanceledException">The operation is canceled or the HTTP request times out.</exception>
+    /// <remarks>
+    /// <para>This overload uses an SSRF-protected client that rejects loopback, link-local and private destinations
+    /// at connection time and does not follow redirects.</para>
+    /// <para>Accepts only <c>com.atproto.moderation.createReport</c>, addressed either to the exact
+    /// <c>labeler#atproto_labeler</c> service or to the same bare labeler DID for legacy PDS proxies.
+    /// This intake verifier grants no administrative authority, and
+    /// <see cref="VerifyAsync(string, AtProtoServiceReference, Nsid)"/> remains exact-audience.
+    /// Ozone administration uses the separate <see cref="VerifyOzoneAdministrationAsync(string, Did, Nsid)"/> boundary.</para>
+    /// <para>Uses the same signature, key, lifetime and replay-identifier validation as
+    /// <see cref="VerifyAsync(string, AtProtoServiceReference, Nsid)"/>. The caller must durably prevent replay before
+    /// accepting the report. A verified reporter does not need labeler team membership.</para>
+    /// </remarks>
+    public static Task<ModerationReportAuthenticationResult> VerifyModerationReportAsync(
+        string token,
+        Did labeler,
+        CancellationToken cancellationToken)
+    {
+        return VerifyModerationReportAsync(
+            token: token,
+            labeler: labeler,
+            timeProvider: null,
+            maximumLifetime: null,
+            cancellationToken: cancellationToken);
+    }
+
+    /// <summary>
+    /// Verifies an independent labeler's report token without granting team administration authority.
+    /// </summary>
+    /// <param name="token">The compact signed service JWT.</param>
+    /// <param name="labeler">The destination labeler DID.</param>
+    /// <param name="timeProvider">The clock used to validate the lifetime, or <see langword="null"/> to use the system clock.</param>
+    /// <param name="maximumLifetime">The maximum accepted token lifetime, or <see langword="null"/> to use the default of 15 minutes.</param>
+    /// <param name="cancellationToken">A cancellation token for DID resolution.</param>
+    /// <returns>The authenticated reporter and replay identifiers, not an administrative caller.</returns>
+    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="maximumLifetime"/> is zero or negative.</exception>
+    /// <exception cref="InvalidDataException">The token, claims, DID document or signature is invalid.</exception>
+    /// <exception cref="HttpRequestException">DID resolution fails at the transport layer.</exception>
+    /// <exception cref="OperationCanceledException">The operation is canceled.</exception>
+    /// <remarks>
+    /// <para>This overload uses an SSRF-protected client that rejects loopback, link-local and private destinations
+    /// at connection time and does not follow redirects.</para>
+    /// <para>Accepts only <c>com.atproto.moderation.createReport</c>, addressed either to the exact
+    /// <c>labeler#atproto_labeler</c> service or to the same bare labeler DID for legacy PDS proxies.
+    /// This intake verifier grants no administrative authority, and
+    /// <see cref="VerifyAsync(string, AtProtoServiceReference, Nsid, TimeProvider?, TimeSpan?, CancellationToken)"/>
+    /// remains exact-audience. Ozone administration uses the separate
+    /// <see cref="VerifyOzoneAdministrationAsync(string, Did, Nsid, TimeProvider?, TimeSpan?, CancellationToken)"/> boundary.</para>
+    /// <para>Uses the same signature, key, lifetime and required replay-identifier validation as
+    /// <see cref="VerifyAsync(string, AtProtoServiceReference, Nsid, TimeProvider?, TimeSpan?, CancellationToken)"/>.
+    /// The caller must durably prevent replay before accepting the report. A verified reporter does not need labeler
+    /// team membership.</para>
+    /// </remarks>
+    public static async Task<ModerationReportAuthenticationResult> VerifyModerationReportAsync(
+        string token,
+        Did labeler,
+        TimeProvider? timeProvider,
+        TimeSpan? maximumLifetime,
+        CancellationToken cancellationToken)
+    {
+        using HttpClientLease lease = new(httpClient: null, timeout: null);
+        return await VerifyModerationReportAsync(
+            token: token,
+            labeler: labeler,
+            httpClient: lease.Client,
+            timeProvider: timeProvider,
+            maximumLifetime: maximumLifetime,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Verifies an independent labeler's report token without granting team administration authority.
+    /// </summary>
+    /// <param name="token">The compact signed service JWT.</param>
+    /// <param name="labeler">The destination labeler DID.</param>
+    /// <param name="httpClient">The HTTP client used to resolve the reporter's DID document.</param>
     /// <param name="timeProvider">An optional clock used to validate the lifetime.</param>
     /// <param name="maximumLifetime">The maximum accepted token lifetime. The default is 15 minutes.</param>
     /// <param name="cancellationToken">A cancellation token for DID resolution.</param>
@@ -81,11 +314,23 @@ public static class ServiceAuthentication
     /// <remarks>
     /// <para>Accepts only <c>com.atproto.moderation.createReport</c>, addressed either to the exact
     /// <c>labeler#atproto_labeler</c> service or to the same bare labeler DID for legacy PDS proxies.
-    /// This intake verifier grants no administrative authority, and <see cref="VerifyAsync"/> remains exact-audience.
-    /// Ozone administration uses the separate <see cref="VerifyOzoneAdministrationAsync"/> boundary.</para>
+    /// This intake verifier grants no administrative authority, and
+    /// <see cref="VerifyAsync(string, AtProtoServiceReference, Nsid, TimeProvider?, TimeSpan?, CancellationToken)"/>
+    /// remains exact-audience. Ozone administration uses the separate
+    /// <see cref="VerifyOzoneAdministrationAsync(string, Did, Nsid, TimeProvider?, TimeSpan?, CancellationToken)"/> boundary.</para>
     /// <para>Uses the same signature, key, lifetime and required replay-identifier validation as
-    /// <see cref="VerifyAsync"/>. The caller must durably prevent replay before accepting the report.
-    /// A verified reporter does not need labeler team membership.</para>
+    /// <see cref="VerifyAsync(string, AtProtoServiceReference, Nsid, TimeProvider?, TimeSpan?, CancellationToken)"/>.
+    /// The caller must durably prevent replay before accepting the report. A verified reporter does not need labeler
+    /// team membership.</para>
+    /// <para>This method uses <paramref name="httpClient"/> as supplied, adds no SSRF protection and does not dispose
+    /// it. An attacker can choose a <c>did:web</c> issuer whose hostname resolves to loopback, link-local or private
+    /// addresses, including cloud metadata endpoints. The handler must check resolved IP addresses at connection time
+    /// and reject those destinations; checking a hostname before connecting does not prevent DNS rebinding. Disable
+    /// automatic redirects, which can send a request to an unchecked destination.</para>
+    /// <para>Register an <see cref="IHttpClientFactory"/> with
+    /// <see cref="ServiceCollectionExtensions.AddAtProtoHttpClient(Microsoft.Extensions.DependencyInjection.IServiceCollection)"/>
+    /// and call <c>factory.CreateClient("idunno.atproto")</c> for the library's protected client, or provide equivalent
+    /// protections in a custom handler. Calling <c>factory.CreateClient()</c> does not select the named client.</para>
     /// </remarks>
     public static async Task<ModerationReportAuthenticationResult> VerifyModerationReportAsync(
         string token,
@@ -113,9 +358,121 @@ public static class ServiceAuthentication
     /// </summary>
     /// <param name="token">The compact signed service JWT.</param>
     /// <param name="labeler">The destination labeler DID.</param>
-    /// <param name="httpClient">The hardened HTTP client used to resolve the reporter's DID document.</param>
+    /// <returns>The authenticated reporter and replay identifiers, not an administrative caller.</returns>
+    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidDataException">The token, claims, DID document or signature is invalid.</exception>
+    /// <exception cref="HttpRequestException">DID resolution fails at the transport layer.</exception>
+    /// <exception cref="OperationCanceledException">The HTTP request times out.</exception>
+    /// <remarks>
+    /// <para>This overload uses an SSRF-protected client that rejects loopback, link-local and private destinations
+    /// at connection time and does not follow redirects.</para>
+    /// <para>Requires the <c>tools.ozone.inbox.appealActionedSubject</c> method claim and accepts either the exact
+    /// <c>labeler#atproto_labeler</c> audience or the same bare labeler DID used by PDS proxies.
+    /// This intake verifier grants no administrative authority, and
+    /// <see cref="VerifyAsync(string, AtProtoServiceReference, Nsid)"/> remains exact-audience.
+    /// Ozone administration uses the separate <see cref="VerifyOzoneAdministrationAsync(string, Did, Nsid)"/> boundary.</para>
+    /// <para>Uses the same signature, key, lifetime and replay-identifier validation as
+    /// <see cref="VerifyAsync(string, AtProtoServiceReference, Nsid)"/>. The caller must durably prevent replay before
+    /// accepting the appeal.</para>
+    /// </remarks>
+    public static Task<ModerationReportAuthenticationResult> VerifyModerationAppealAsync(
+        string token,
+        Did labeler)
+    {
+        return VerifyModerationAppealAsync(
+            token: token,
+            labeler: labeler,
+            cancellationToken: default);
+    }
+
+    /// <summary>
+    /// Verifies an authenticated Ozone appeal submission addressed to an independent labeler.
+    /// </summary>
+    /// <param name="token">The compact signed service JWT.</param>
+    /// <param name="labeler">The destination labeler DID.</param>
+    /// <param name="cancellationToken">A cancellation token for DID resolution.</param>
+    /// <returns>The authenticated reporter and replay identifiers, not an administrative caller.</returns>
+    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidDataException">The token, claims, DID document or signature is invalid.</exception>
+    /// <exception cref="HttpRequestException">DID resolution fails at the transport layer.</exception>
+    /// <exception cref="OperationCanceledException">The operation is canceled or the HTTP request times out.</exception>
+    /// <remarks>
+    /// <para>This overload uses an SSRF-protected client that rejects loopback, link-local and private destinations
+    /// at connection time and does not follow redirects.</para>
+    /// <para>Requires the <c>tools.ozone.inbox.appealActionedSubject</c> method claim and accepts either the exact
+    /// <c>labeler#atproto_labeler</c> audience or the same bare labeler DID used by PDS proxies.
+    /// This intake verifier grants no administrative authority, and
+    /// <see cref="VerifyAsync(string, AtProtoServiceReference, Nsid)"/> remains exact-audience.
+    /// Ozone administration uses the separate <see cref="VerifyOzoneAdministrationAsync(string, Did, Nsid)"/> boundary.</para>
+    /// <para>Uses the same signature, key, lifetime and replay-identifier validation as
+    /// <see cref="VerifyAsync(string, AtProtoServiceReference, Nsid)"/>. The caller must durably prevent replay before
+    /// accepting the appeal.</para>
+    /// </remarks>
+    public static Task<ModerationReportAuthenticationResult> VerifyModerationAppealAsync(
+        string token,
+        Did labeler,
+        CancellationToken cancellationToken)
+    {
+        return VerifyModerationAppealAsync(
+            token: token,
+            labeler: labeler,
+            timeProvider: null,
+            maximumLifetime: null,
+            cancellationToken: cancellationToken);
+    }
+
+    /// <summary>
+    /// Verifies an authenticated Ozone appeal submission addressed to an independent labeler.
+    /// </summary>
+    /// <param name="token">The compact signed service JWT.</param>
+    /// <param name="labeler">The destination labeler DID.</param>
+    /// <param name="timeProvider">The clock used to validate the lifetime, or <see langword="null"/> to use the system clock.</param>
+    /// <param name="maximumLifetime">The maximum accepted service-token lifetime, or <see langword="null"/> to use the default of 15 minutes.</param>
+    /// <param name="cancellationToken">A cancellation token for DID resolution.</param>
+    /// <returns>The authenticated reporter and replay identifiers, not an administrative caller.</returns>
+    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="maximumLifetime"/> is zero or negative.</exception>
+    /// <exception cref="InvalidDataException">The token, claims, DID document or signature is invalid.</exception>
+    /// <exception cref="HttpRequestException">DID resolution fails at the transport layer.</exception>
+    /// <exception cref="OperationCanceledException">The operation is canceled.</exception>
+    /// <remarks>
+    /// <para>This overload uses an SSRF-protected client that rejects loopback, link-local and private destinations
+    /// at connection time and does not follow redirects.</para>
+    /// <para>Requires the <c>tools.ozone.inbox.appealActionedSubject</c> method claim and accepts either the exact
+    /// <c>labeler#atproto_labeler</c> audience or the same bare labeler DID used by PDS proxies.
+    /// This intake verifier grants no administrative authority, and
+    /// <see cref="VerifyAsync(string, AtProtoServiceReference, Nsid, TimeProvider?, TimeSpan?, CancellationToken)"/>
+    /// remains exact-audience. Ozone administration uses the separate
+    /// <see cref="VerifyOzoneAdministrationAsync(string, Did, Nsid, TimeProvider?, TimeSpan?, CancellationToken)"/> boundary.</para>
+    /// <para>Uses the same signature, key, lifetime and replay-identifier validation as
+    /// <see cref="VerifyAsync(string, AtProtoServiceReference, Nsid, TimeProvider?, TimeSpan?, CancellationToken)"/>.
+    /// The caller must durably prevent replay before accepting the appeal.</para>
+    /// </remarks>
+    public static async Task<ModerationReportAuthenticationResult> VerifyModerationAppealAsync(
+        string token,
+        Did labeler,
+        TimeProvider? timeProvider,
+        TimeSpan? maximumLifetime,
+        CancellationToken cancellationToken)
+    {
+        using HttpClientLease lease = new(httpClient: null, timeout: null);
+        return await VerifyModerationAppealAsync(
+            token: token,
+            labeler: labeler,
+            httpClient: lease.Client,
+            timeProvider: timeProvider,
+            maximumLifetime: maximumLifetime,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Verifies an authenticated Ozone appeal submission addressed to an independent labeler.
+    /// </summary>
+    /// <param name="token">The compact signed service JWT.</param>
+    /// <param name="labeler">The destination labeler DID.</param>
+    /// <param name="httpClient">The HTTP client used to resolve the reporter's DID document.</param>
     /// <param name="timeProvider">An optional clock used to validate the lifetime.</param>
-    /// <param name="maximumLifetime">The maximum accepted service-token lifetime.</param>
+    /// <param name="maximumLifetime">The maximum accepted service-token lifetime. The default is 15 minutes.</param>
     /// <param name="cancellationToken">A cancellation token for DID resolution.</param>
     /// <returns>The authenticated reporter and replay identifiers, not an administrative caller.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
@@ -126,10 +483,22 @@ public static class ServiceAuthentication
     /// <remarks>
     /// <para>Requires the <c>tools.ozone.inbox.appealActionedSubject</c> method claim and accepts either the exact
     /// <c>labeler#atproto_labeler</c> audience or the same bare labeler DID used by PDS proxies.
-    /// This intake verifier grants no administrative authority, and <see cref="VerifyAsync"/> remains exact-audience.
-    /// Ozone administration uses the separate <see cref="VerifyOzoneAdministrationAsync"/> boundary.</para>
+    /// This intake verifier grants no administrative authority, and
+    /// <see cref="VerifyAsync(string, AtProtoServiceReference, Nsid, TimeProvider?, TimeSpan?, CancellationToken)"/>
+    /// remains exact-audience. Ozone administration uses the separate
+    /// <see cref="VerifyOzoneAdministrationAsync(string, Did, Nsid, TimeProvider?, TimeSpan?, CancellationToken)"/> boundary.</para>
     /// <para>Uses the same signature, key, lifetime and replay-identifier validation as
-    /// <see cref="VerifyAsync"/>. The caller must durably prevent replay before accepting the appeal.</para>
+    /// <see cref="VerifyAsync(string, AtProtoServiceReference, Nsid, TimeProvider?, TimeSpan?, CancellationToken)"/>.
+    /// The caller must durably prevent replay before accepting the appeal.</para>
+    /// <para>This method uses <paramref name="httpClient"/> as supplied, adds no SSRF protection and does not dispose
+    /// it. An attacker can choose a <c>did:web</c> issuer whose hostname resolves to loopback, link-local or private
+    /// addresses, including cloud metadata endpoints. The handler must check resolved IP addresses at connection time
+    /// and reject those destinations; checking a hostname before connecting does not prevent DNS rebinding. Disable
+    /// automatic redirects, which can send a request to an unchecked destination.</para>
+    /// <para>Register an <see cref="IHttpClientFactory"/> with
+    /// <see cref="ServiceCollectionExtensions.AddAtProtoHttpClient(Microsoft.Extensions.DependencyInjection.IServiceCollection)"/>
+    /// and call <c>factory.CreateClient("idunno.atproto")</c> for the library's protected client, or provide equivalent
+    /// protections in a custom handler. Calling <c>factory.CreateClient()</c> does not select the named client.</para>
     /// </remarks>
     public static async Task<ModerationReportAuthenticationResult> VerifyModerationAppealAsync(
         string token,
@@ -156,7 +525,131 @@ public static class ServiceAuthentication
     /// <param name="token">The compact signed service JWT.</param>
     /// <param name="labeler">The destination labeler DID.</param>
     /// <param name="method">The exact Ozone administration method receiving the assertion.</param>
-    /// <param name="httpClient">The hardened identity-resolution client.</param>
+    /// <returns>The verified caller evidence and identifiers for durable replay protection.</returns>
+    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="method"/> is not a supported Ozone compatibility method or administration namespace.</exception>
+    /// <exception cref="InvalidDataException">The token, claims, identity or signature is invalid.</exception>
+    /// <exception cref="HttpRequestException">Identity resolution fails at the transport layer.</exception>
+    /// <exception cref="OperationCanceledException">The HTTP request times out.</exception>
+    /// <remarks>
+    /// <para>This overload uses an SSRF-protected client that rejects loopback, link-local and private destinations
+    /// at connection time and does not follow redirects.</para>
+    /// <para>Accepts the exact <c>labeler#atproto_labeler</c> audience or the same bare labeler DID used by Ozone's
+    /// PDS proxy. This does not change <see cref="VerifyAsync(string, AtProtoServiceReference, Nsid)"/> or accept
+    /// native <c>dev.idunno.labeler.admin</c> assertions.</para>
+    /// <para>Verification grants no permission. The trusted adapter must consume the replay identifiers
+    /// through <c>ILabelAdministrationStore.AuthenticateServiceAsync</c> and check live team authority
+    /// for every operation. Public report and appeal intake must use their separate verification methods.</para>
+    /// <para>The stock Ozone UI also requires the exact read methods <c>app.bsky.actor.getProfile</c>,
+    /// <c>app.bsky.feed.getPostThread</c> and <c>tools.ozone.setting.listOptions</c>, and the settings procedure
+    /// <c>tools.ozone.setting.upsertOption</c>. These are accepted without granting other AppView or settings methods,
+    /// or relaxing the method claim.</para>
+    /// </remarks>
+    public static Task<ServiceAuthenticationResult> VerifyOzoneAdministrationAsync(
+        string token,
+        Did labeler,
+        Nsid method)
+    {
+        return VerifyOzoneAdministrationAsync(
+            token: token,
+            labeler: labeler,
+            method: method,
+            cancellationToken: default);
+    }
+
+    /// <summary>Verifies a method-bound Ozone administration assertion for an independent labeler.</summary>
+    /// <param name="token">The compact signed service JWT.</param>
+    /// <param name="labeler">The destination labeler DID.</param>
+    /// <param name="method">The exact Ozone administration method receiving the assertion.</param>
+    /// <param name="cancellationToken">A cancellation token for DID resolution.</param>
+    /// <returns>The verified caller evidence and identifiers for durable replay protection.</returns>
+    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="method"/> is not a supported Ozone compatibility method or administration namespace.</exception>
+    /// <exception cref="InvalidDataException">The token, claims, identity or signature is invalid.</exception>
+    /// <exception cref="HttpRequestException">Identity resolution fails at the transport layer.</exception>
+    /// <exception cref="OperationCanceledException">The operation is canceled or the HTTP request times out.</exception>
+    /// <remarks>
+    /// <para>This overload uses an SSRF-protected client that rejects loopback, link-local and private destinations
+    /// at connection time and does not follow redirects.</para>
+    /// <para>Accepts the exact <c>labeler#atproto_labeler</c> audience or the same bare labeler DID used by Ozone's
+    /// PDS proxy. This does not change <see cref="VerifyAsync(string, AtProtoServiceReference, Nsid)"/> or accept
+    /// native <c>dev.idunno.labeler.admin</c> assertions.</para>
+    /// <para>Verification grants no permission. The trusted adapter must consume the replay identifiers
+    /// through <c>ILabelAdministrationStore.AuthenticateServiceAsync</c> and check live team authority
+    /// for every operation. Public report and appeal intake must use their separate verification methods.</para>
+    /// <para>The stock Ozone UI also requires the exact read methods <c>app.bsky.actor.getProfile</c>,
+    /// <c>app.bsky.feed.getPostThread</c> and <c>tools.ozone.setting.listOptions</c>, and the settings procedure
+    /// <c>tools.ozone.setting.upsertOption</c>. These are accepted without granting other AppView or settings methods,
+    /// or relaxing the method claim.</para>
+    /// </remarks>
+    public static Task<ServiceAuthenticationResult> VerifyOzoneAdministrationAsync(
+        string token,
+        Did labeler,
+        Nsid method,
+        CancellationToken cancellationToken)
+    {
+        return VerifyOzoneAdministrationAsync(
+            token: token,
+            labeler: labeler,
+            method: method,
+            timeProvider: null,
+            maximumLifetime: null,
+            cancellationToken: cancellationToken);
+    }
+
+    /// <summary>Verifies a method-bound Ozone administration assertion for an independent labeler.</summary>
+    /// <param name="token">The compact signed service JWT.</param>
+    /// <param name="labeler">The destination labeler DID.</param>
+    /// <param name="method">The exact Ozone administration method receiving the assertion.</param>
+    /// <param name="timeProvider">The validation clock, or <see langword="null"/> to use the system clock.</param>
+    /// <param name="maximumLifetime">The maximum accepted service-token lifetime, or <see langword="null"/> to use the default of 15 minutes.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The verified caller evidence and identifiers for durable replay protection.</returns>
+    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="method"/> is not a supported Ozone compatibility method or administration namespace.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="maximumLifetime"/> is zero or negative.</exception>
+    /// <exception cref="InvalidDataException">The token, claims, identity or signature is invalid.</exception>
+    /// <exception cref="HttpRequestException">Identity resolution fails at the transport layer.</exception>
+    /// <exception cref="OperationCanceledException">The operation is canceled.</exception>
+    /// <remarks>
+    /// <para>This overload uses an SSRF-protected client that rejects loopback, link-local and private destinations
+    /// at connection time and does not follow redirects.</para>
+    /// <para>Accepts the exact <c>labeler#atproto_labeler</c> audience or the same bare labeler DID
+    /// used by Ozone's PDS proxy. This does not change
+    /// <see cref="VerifyAsync(string, AtProtoServiceReference, Nsid, TimeProvider?, TimeSpan?, CancellationToken)"/>
+    /// or accept native <c>dev.idunno.labeler.admin</c> assertions.</para>
+    /// <para>Verification grants no permission. The trusted adapter must consume the replay identifiers
+    /// through <c>ILabelAdministrationStore.AuthenticateServiceAsync</c> and check live team authority
+    /// for every operation. Public report and appeal intake must use their separate verification methods.</para>
+    /// <para>The stock Ozone UI also requires the exact read methods <c>app.bsky.actor.getProfile</c>,
+    /// <c>app.bsky.feed.getPostThread</c> and <c>tools.ozone.setting.listOptions</c>, and the settings procedure
+    /// <c>tools.ozone.setting.upsertOption</c>. These are accepted without granting other AppView or settings methods,
+    /// or relaxing the method claim.</para>
+    /// </remarks>
+    public static async Task<ServiceAuthenticationResult> VerifyOzoneAdministrationAsync(
+        string token,
+        Did labeler,
+        Nsid method,
+        TimeProvider? timeProvider,
+        TimeSpan? maximumLifetime,
+        CancellationToken cancellationToken)
+    {
+        using HttpClientLease lease = new(httpClient: null, timeout: null);
+        return await VerifyOzoneAdministrationAsync(
+            token: token,
+            labeler: labeler,
+            method: method,
+            httpClient: lease.Client,
+            timeProvider: timeProvider,
+            maximumLifetime: maximumLifetime,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Verifies a method-bound Ozone administration assertion for an independent labeler.</summary>
+    /// <param name="token">The compact signed service JWT.</param>
+    /// <param name="labeler">The destination labeler DID.</param>
+    /// <param name="method">The exact Ozone administration method receiving the assertion.</param>
+    /// <param name="httpClient">The HTTP client used to resolve the caller's DID document.</param>
     /// <param name="timeProvider">An optional validation clock.</param>
     /// <param name="maximumLifetime">The maximum accepted service-token lifetime. The default is 15 minutes.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
@@ -169,8 +662,9 @@ public static class ServiceAuthentication
     /// <exception cref="OperationCanceledException">The operation is canceled.</exception>
     /// <remarks>
     /// <para>Accepts the exact <c>labeler#atproto_labeler</c> audience or the same bare labeler DID
-    /// used by Ozone's PDS proxy. This does not change <see cref="VerifyAsync"/> or accept native
-    /// <c>dev.idunno.labeler.admin</c> assertions.</para>
+    /// used by Ozone's PDS proxy. This does not change
+    /// <see cref="VerifyAsync(string, AtProtoServiceReference, Nsid, TimeProvider?, TimeSpan?, CancellationToken)"/>
+    /// or accept native <c>dev.idunno.labeler.admin</c> assertions.</para>
     /// <para>Verification grants no permission. The trusted adapter must consume the replay identifiers
     /// through <c>ILabelAdministrationStore.AuthenticateServiceAsync</c> and check live team authority
     /// for every operation. Public report and appeal intake must use their separate verification methods.</para>
@@ -178,6 +672,15 @@ public static class ServiceAuthentication
     /// <c>app.bsky.feed.getPostThread</c> and <c>tools.ozone.setting.listOptions</c>, and the settings procedure
     /// <c>tools.ozone.setting.upsertOption</c>. These are accepted without granting other AppView or settings methods,
     /// or relaxing the method claim.</para>
+    /// <para>This method uses <paramref name="httpClient"/> as supplied, adds no SSRF protection and does not dispose
+    /// it. An attacker can choose a <c>did:web</c> issuer whose hostname resolves to loopback, link-local or private
+    /// addresses, including cloud metadata endpoints. The handler must check resolved IP addresses at connection time
+    /// and reject those destinations; checking a hostname before connecting does not prevent DNS rebinding. Disable
+    /// automatic redirects, which can send a request to an unchecked destination.</para>
+    /// <para>Register an <see cref="IHttpClientFactory"/> with
+    /// <see cref="ServiceCollectionExtensions.AddAtProtoHttpClient(Microsoft.Extensions.DependencyInjection.IServiceCollection)"/>
+    /// and call <c>factory.CreateClient("idunno.atproto")</c> for the library's protected client, or provide equivalent
+    /// protections in a custom handler. Calling <c>factory.CreateClient()</c> does not select the named client.</para>
     /// </remarks>
     public static Task<ServiceAuthenticationResult> VerifyOzoneAdministrationAsync(
         string token,

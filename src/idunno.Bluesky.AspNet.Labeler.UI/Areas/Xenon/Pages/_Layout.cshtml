@@ -1,5 +1,6 @@
 @using System.Reflection
 @using idunno.Bluesky.AspNet.Authentication
+@using idunno.Bluesky.AspNet.Labeler
 @inject idunno.AtProto.IDidHandleResolver Handles
 @{
     LabelTeamRole? role = ViewData["CurrentRole"] is LabelTeamRole currentRole ? currentRole : null;
@@ -7,9 +8,7 @@
     string? error = ViewData["Error"] as string;
     Assembly uiAssembly = typeof(Microsoft.Extensions.DependencyInjection.LabelerUIExtensions).Assembly;
     string? version = uiAssembly.GetName().Version?.ToString(3);
-    string? build = uiAssembly.GetCustomAttributes<AssemblyMetadataAttribute>()
-        .FirstOrDefault(attribute => attribute.Key == "BuildCommitId")?.Value
-        ?? uiAssembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+    string? build = LabelerBuildInfo.GetBuildStamp(uiAssembly);
     ModerationOpenCountsView? counts = ViewData["OpenCounts"] as ModerationOpenCountsView;
     string pageTitle = $"{ViewData["Title"]} · Xenon";
     string title = role is not null && counts is not null

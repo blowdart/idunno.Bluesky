@@ -260,7 +260,7 @@ internal abstract partial class RelationalLabelStore
             auditAction: "audit-export").ConfigureAwait(false);
     }
 
-    /// <summary>Reads an immutable export prefix in sequence order without repeated full-table counts or long-held transactions.</summary>
+    /// <summary>Reads an export prefix in sequence order, rejecting history changed by denial retention.</summary>
     async Task<LabelServiceResult<IReadOnlyList<LabelAdministrationReceipt>>> ILabelTableStore.ReadAuditExportPageAsync(
         LabelAdministrationCaller caller,
         LabelTableQuery query,
@@ -277,8 +277,27 @@ internal abstract partial class RelationalLabelStore
             permission: LabelAdministrationPermission.Inspect,
             operationId: string.Empty,
             reason: "Read an audit JSON download page.",
-            action: async (connection, transaction, _) =>
+            action: async (connection, transaction, team) =>
             {
+                if (team.DenialRetentionSequence != 0)
+                {
+                    object? payload = await ScalarAsync(
+                        connection: connection,
+                        transaction: transaction,
+                        sql: "SELECT payload FROM label_admin_audit WHERE seq=@seq",
+                        token: cancellationToken,
+                        ("@seq", checked(query.AuditThroughSequence.Value + 1))).ConfigureAwait(false);
+                    AdministrationAudit? started = payload is byte[] bytes
+                        ? JsonSerializer.Deserialize(bytes, AdministrationJsonContext.Default.AdministrationAudit)
+                        : null;
+                    if (started is not { Action: "audit-export-started" } ||
+                        started.DenialRetentionSequence != team.DenialRetentionSequence)
+                    {
+                        return LabelServiceResult<IReadOnlyList<LabelAdministrationReceipt>>.Failure(new(
+                            code: LabelServiceErrorCode.StaleDecision,
+                            message: "Denial retention changed the audit history. Start a new download of retained events."));
+                    }
+                }
                 DbCommand command = Command(
                     connection: connection,
                     transaction: transaction,

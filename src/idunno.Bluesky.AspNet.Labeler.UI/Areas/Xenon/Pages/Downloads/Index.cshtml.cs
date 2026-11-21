@@ -32,7 +32,7 @@ public sealed class IndexModel(IConfiguration configuration) : PageModel
 
     /// <summary>Streams a build listed in the manifest. Only manifest names that exist on disk can be requested.</summary>
     /// <param name="name">The file name from the manifest.</param>
-    /// <returns>The zip archive, or not found.</returns>
+    /// <returns>The executable, or not found.</returns>
     public IActionResult OnGetFile(string? name)
     {
         Response.Headers.CacheControl = "private, no-store";
@@ -43,7 +43,7 @@ public sealed class IndexModel(IConfiguration configuration) : PageModel
         }
 
         string path = Path.Combine(_directory, download.Name);
-        return System.IO.File.Exists(path) ? PhysicalFile(path, "application/zip", download.Name) : NotFound();
+        return System.IO.File.Exists(path) ? PhysicalFile(path, "application/octet-stream", download.Name) : NotFound();
     }
 
     internal static List<CliDownload> ReadManifest(string directory)
@@ -76,13 +76,20 @@ public sealed class IndexModel(IConfiguration configuration) : PageModel
                 string? sha256 = Text(entry, "sha256");
                 string? sha512 = Text(entry, "sha512");
                 if (name is null || os is null || arch is null || sha256 is null || sha512 is null ||
-                    name != Path.GetFileName(name) || !name.EndsWith(".zip", StringComparison.Ordinal))
+                    os is not ("win" or "linux") || arch is not ("x64" or "arm64") ||
+                    name != $"idunno.Bluesky.Labeler.Cli-{os}-{arch}{(os == "win" ? ".exe" : string.Empty)}")
                 {
                     continue;
                 }
 
                 long size = entry.TryGetProperty("size", out JsonElement sizeElement) && sizeElement.ValueKind is JsonValueKind.Number && sizeElement.TryGetInt64(out long parsed) ? parsed : 0;
-                downloads.Add(new CliDownload(name, os, arch, Text(entry, "version") ?? string.Empty, size, sha256, sha512));
+                if (entry.TryGetProperty("localBuild", out JsonElement localBuild) &&
+                    localBuild.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+                {
+                    continue;
+                }
+
+                downloads.Add(new CliDownload(name, os, arch, Text(entry, "version") ?? string.Empty, size, sha256, sha512, localBuild.ValueKind == JsonValueKind.True));
             }
         }
         catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
@@ -98,4 +105,4 @@ public sealed class IndexModel(IConfiguration configuration) : PageModel
 }
 
 /// <summary>A CLI build listed in the image's download manifest. Checksums come from the manifest, not from hashing at request time.</summary>
-internal sealed record CliDownload(string Name, string Os, string Arch, string Version, long Size, string Sha256, string Sha512);
+internal sealed record CliDownload(string Name, string Os, string Arch, string Version, long Size, string Sha256, string Sha512, bool LocalBuild);

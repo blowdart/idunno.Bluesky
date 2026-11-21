@@ -13,6 +13,8 @@ internal sealed class AdministrationState
     public bool Bootstrapped { get; set; }
     public string? OwnerDid { get; set; }
     public long Sequence { get; set; }
+    /// <summary>Gets or sets the latest audit sequence at which boundary-denial retention removed history.</summary>
+    public long DenialRetentionSequence { get; set; }
     public bool RemoteAdministrationEnabled { get; set; }
     public Dictionary<string, AdministrationMember> Members { get; set; } = [with(StringComparer.Ordinal)];
     public Dictionary<string, AdministrationBinding> Bindings { get; set; } = [with(StringComparer.Ordinal)];
@@ -66,6 +68,9 @@ internal sealed record AdministrationAudit(
 
     /// <summary>Gets the credential-free change description, present only for eligible notification events.</summary>
     public string? ChangeDescription { get; init; }
+
+    /// <summary>Gets the denial-retention fence captured when an export starts.</summary>
+    public long DenialRetentionSequence { get; init; }
 
     /// <summary>Projects persisted primitive values into the typed public audit result.</summary>
     internal LabelAdministrationReceipt ToReceipt() => new(

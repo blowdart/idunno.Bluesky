@@ -50,13 +50,39 @@ internal static partial class Program
     /// <summary>Creates POST-based inspection without placing confidential filters in request URLs.</summary>
     private static Command CreatePolicyReadCommand(string name, string method)
     {
-        Command command = new(name, "Read protected policy state or retained publication history.");
+        Command command = new(name, name switch
+        {
+            "status" => "Show the current policy and its publication and verification state.",
+            "version" => "Show one retained policy definition by its version ID.",
+            "versions" => "List retained policy definitions, one page at a time.",
+            "history" => "List policy administration and verification events in sequence.",
+            "operation" => "Show the recorded result of a policy operation by its operation ID.",
+            _ => throw new ArgumentOutOfRangeException(nameof(name))
+        });
         TransportOptions transport = AddTransportOptions(command);
-        Option<string?> version = new("--version") { Required = name == "version" };
-        Option<string?> operationId = new("--operation-id") { Required = name == "operation" };
-        Option<string?> afterVersion = new("--after-version");
-        Option<long> afterSequence = new("--after-sequence");
-        Option<int> limit = new("--limit") { DefaultValueFactory = _ => 8 };
+        Option<string?> version = new("--version")
+        {
+            Description = "The exact retained policy version.",
+            Required = name == "version"
+        };
+        Option<string?> operationId = new("--operation-id")
+        {
+            Description = "The policy operation identifier to inspect.",
+            Required = name == "operation"
+        };
+        Option<string?> afterVersion = new("--after-version")
+        {
+            Description = "The exclusive policy version cursor."
+        };
+        Option<long> afterSequence = new("--after-sequence")
+        {
+            Description = "The nonnegative exclusive history sequence cursor; defaults to 0."
+        };
+        Option<int> limit = new("--limit")
+        {
+            Description = "The page size from 1 through 16; defaults to 8.",
+            DefaultValueFactory = _ => 8
+        };
         if (name == "version")
         {
             command.Options.Add(version);
@@ -108,22 +134,76 @@ internal static partial class Program
     {
         bool publisher = name is "publish" or "recover";
         bool publication = publisher || name == "begin";
-        Command command = new(name, publisher
-            ? "Conditionally publish the exact retained declaration using a separate labeler-account sign-in."
-            : "Explicitly change or independently verify the persisted publication gate.");
+        bool requiresExistingOperation = name is "recover" or "resume";
+        Command command = new(name, name switch
+        {
+            "save" => "Save or update an unpublished policy draft from a JSON file.",
+            "begin" => "Begin publication, block reports and new issuance, and authorize withdrawal of removed label values; no PDS write.",
+            "publish" => "Publish a saved policy with a conditional PDS write and separate labeler-account sign-in.",
+            "recover" => "Recover an existing publication by its original operation ID; conditionally write or verify the PDS declaration.",
+            "resume" => "Resume paused label withdrawal by renewing authorization; does not write to the PDS.",
+            "verify" => "Verify the public declaration against the selected policy and update local state; --check-only is read-only.",
+            "abandon" => "Abandon a pending publication; reports and new label issuance remain blocked. Does not undo withdrawals or PDS writes.",
+            _ => throw new ArgumentOutOfRangeException(nameof(name))
+        });
         TransportOptions transport = AddTransportOptions(command);
-        Option<string> reason = new("--reason") { Required = true };
-        Option<bool> yes = new("--yes");
-        Option<string> operationId = new("--operation-id") { Required = name != "verify" };
-        Option<long> revision = new("--expected-revision") { Required = publication || name == "abandon" };
-        Option<string> version = new("--version") { Required = publication };
-        Option<string?> previousCid = new("--previous-cid");
-        Option<bool> create = new("--create");
-        Option<FileInfo> file = new("--file") { Required = name == "save" };
-        Option<string> labelerHandle = new("--labeler-handle") { Required = publisher };
+        Option<string> reason = new("--reason")
+        {
+            Description = name == "verify"
+                ? "A nonblank audit reason for state-changing verification; optional with --check-only. Do not include secrets."
+                : "A nonblank audit reason for this policy operation; do not include secrets.",
+            Required = name != "verify"
+        };
+        Option<bool> yes = new("--yes")
+        {
+            Description = "Skip the confirmation prompt; does not bypass authorization or credential-storage consent."
+        };
+        Option<bool> checkOnly = new("--check-only")
+        {
+            Description = "Compare the retained declaration with the public PDS record without changing local verification state."
+        };
+        Option<string> operationId = new("--operation-id")
+        {
+            Description = requiresExistingOperation
+                ? "The original publication ID to resume or recover."
+                : "A stable operation identifier; generated and displayed when omitted.",
+            Required = requiresExistingOperation
+        };
+        Option<long> revision = new("--expected-revision")
+        {
+            Description = "The positive current policy state revision from policy status --verbose.",
+            Required = publication || name == "abandon"
+        };
+        Option<string> version = new("--version")
+        {
+            Description = "The exact retained policy version to publish.",
+            Required = publication
+        };
+        Option<string?> previousCid = new("--previous-cid")
+        {
+            Description = "The expected current declaration CID for an update; cannot be combined with --create."
+        };
+        Option<bool> create = new("--create")
+        {
+            Description = "Create the first declaration instead of specifying --previous-cid."
+        };
+        Option<FileInfo> file = new("--file")
+        {
+            Description = "The policy definition JSON file, at most 1 MiB.",
+            Required = name == "save"
+        };
+        Option<string> labelerHandle = new("--labeler-handle")
+        {
+            Description = "The labeler repository account handle, separate from --admin-handle.",
+            Required = publisher
+        };
         Option<Uri?> labelerClientId = CreateUriOption("--labeler-oauth-client-id", "An optional native OAuth metadata URL for the labeler account; defaults to --oauth-client-id or <labeler-url>/native-client-metadata.json.");
         command.Options.Add(reason);
         command.Options.Add(yes);
+        if (name == "verify")
+        {
+            command.Options.Add(checkOnly);
+        }
         if (name != "verify")
         {
             command.Options.Add(operationId);
@@ -151,18 +231,32 @@ internal static partial class Program
         command.SetAction(async (parsed, token) =>
         {
             string? auditReason = parsed.GetValue(reason);
-            string operation = name == "verify" ? "" : parsed.GetValue(operationId) ?? "";
+            bool readOnlyCheck = name == "verify" && parsed.GetValue(checkOnly);
+            string operation = "";
+            if (name != "verify")
+            {
+                string? suppliedOperation = parsed.GetValue(operationId);
+                operation = requiresExistingOperation
+                    ? suppliedOperation ?? ""
+                    : await GetOrCreateOperationIdAsync(suppliedOperation, Console.Out).ConfigureAwait(false);
+            }
             long expectedRevision = publication || name == "abandon" ? parsed.GetValue(revision) : 0;
             string? selectedVersion = publication ? parsed.GetValue(version) : null;
             string? previous = publication ? parsed.GetValue(previousCid) : null;
             bool creating = publication && parsed.GetValue(create);
             Handle? owner = null;
             string? ownerText = publisher ? parsed.GetValue(labelerHandle) : null;
+            Uri? labelerOrigin = parsed.GetValue(transport.AdminUrl);
             Uri? metadata = publisher ? SelectPolicyClientMetadata(
                 labelerMetadata: parsed.GetValue(labelerClientId),
                 administratorMetadata: parsed.GetValue(transport.ClientId),
-                origin: parsed.GetValue(transport.AdminUrl)) : null;
-            if (string.IsNullOrWhiteSpace(auditReason) ||
+                origin: labelerOrigin) : null;
+            if (!readOnlyCheck && string.IsNullOrWhiteSpace(auditReason))
+            {
+                await Console.Error.WriteLineAsync("✖   Supply a nonblank --reason for this policy operation.").ConfigureAwait(false);
+                return 2;
+            }
+            if (readOnlyCheck && auditReason is not null && string.IsNullOrWhiteSpace(auditReason) ||
                 name != "verify" && string.IsNullOrWhiteSpace(operation) ||
                 (publication || name == "abandon") && expectedRevision <= 0 ||
                 publication && (string.IsNullOrWhiteSpace(selectedVersion) ||
@@ -202,28 +296,177 @@ internal static partial class Program
                 }
             }
 
-            string confirmation = publication || name == "resume"
-                ? "Authorize publication and irreversible batched negation of removed label values, even if publication later fails?"
-                : "Change Xenon policy publication state?";
-            if (!await ConfirmAsync(parsed.GetValue(yes), confirmation, token).ConfigureAwait(false))
+            if (!readOnlyCheck && !await ConfirmAsync(parsed.GetValue(yes), GetPolicyConfirmationPrompt(name), token).ConfigureAwait(false))
             {
                 return 2;
             }
 
-            AdministrationCommand request = new(Method: method, OperationId: operation, Reason: auditReason, Moderation: input);
+            AdministrationCommand request = new(
+                Method: readOnlyCheck ? "getPolicy" : method,
+                OperationId: operation,
+                Reason: auditReason ?? (readOnlyCheck ? "Read-only policy comparison." : ""),
+                Moderation: input);
             AdministrationWorkflow? workflow = publisher
                 ? (sender, cancellationToken) => PublishPolicyAsync(
                     sender: sender,
                     request: request,
                     owner: owner!,
                     clientId: metadata!,
+                    labelerOrigin: labelerOrigin,
                     rememberMe: parsed.GetValue(transport.RememberMe),
                     cancellationToken: cancellationToken)
                 : null;
+            if (readOnlyCheck)
+            {
+                workflow = async (sender, cancellationToken) =>
+                {
+                    try
+                    {
+                        (PolicyCheckResult? result, int failure) = await CheckPublishedPolicyAsync(
+                            sender: sender,
+                            readPublicPolicy: ReadPublicPolicyDeclarationAsync,
+                            reason: request.Reason,
+                            cancellationToken: cancellationToken).ConfigureAwait(false);
+                        if (result is not null)
+                        {
+                            await WritePolicyCheckResultAsync(
+                                result: result,
+                                output: Console.Out,
+                                verbose: s_verboseOutput.Value).ConfigureAwait(false);
+                        }
+                        return failure;
+                    }
+                    catch (HttpRequestException exception)
+                    {
+                        string status = exception.StatusCode is { } statusCode ? $" (HTTP {(int)statusCode})" : "";
+                        await Console.Error.WriteLineAsync($"🌐⚠️  Public policy lookup failed{status}. Local verification state was not changed.").ConfigureAwait(false);
+                        return 5;
+                    }
+                    catch (InvalidDataException exception)
+                    {
+                        await Console.Error.WriteLineAsync($"🌐⚠️  {exception.Message} Local verification state was not changed.").ConfigureAwait(false);
+                        return 5;
+                    }
+                };
+            }
             return await ExecuteAsync(
-                method: method, request: request, transport: transport, parseResult: parsed, cancellationToken: token, workflow: workflow).ConfigureAwait(false);
+                method: readOnlyCheck ? "getPolicy" : method,
+                request: request,
+                transport: transport,
+                parseResult: parsed,
+                cancellationToken: token,
+                workflow: workflow,
+                workflowMethods: readOnlyCheck ? ["getPolicy"] : null).ConfigureAwait(false);
         });
         return command;
+    }
+
+    /// <summary>Distinguishes verification from publication and its potentially irreversible label withdrawals.</summary>
+    internal static string GetPolicyConfirmationPrompt(string name) =>
+        name switch
+        {
+            "verify" => "Verify the published policy and update Xenon's local verification state without changing the published policy?",
+            "begin" or "publish" or "recover" or "resume" => "Authorize publication and irreversible batched negation of removed label values, even if publication later fails?",
+            _ => "Change Xenon policy publication state?"
+        };
+
+    /// <summary>Reads the retained declaration and compares it with the public record without observing or persisting verification.</summary>
+    internal static async Task<(PolicyCheckResult? Result, int Failure)> CheckPublishedPolicyAsync(
+        AdministrationSender sender,
+        Func<Did, CancellationToken, Task<PublicPolicyDeclaration>> readPublicPolicy,
+        string reason,
+        CancellationToken cancellationToken)
+    {
+        AdministrationReply reply = await sender(
+            new(Method: "getPolicy", Reason: reason),
+            cancellationToken).ConfigureAwait(false);
+        (PolicyState? state, int failure) = await ReadPolicyReplyAsync(reply).ConfigureAwait(false);
+        if (state is null)
+        {
+            return (null, failure);
+        }
+        if (state.Definition is not { } definition)
+        {
+            return (new("NoSelectedPolicy", state.Issuer, null), 5);
+        }
+
+        Did issuer = new(state.Issuer);
+        PublicPolicyDeclaration observed = await readPublicPolicy(issuer, cancellationToken).ConfigureAwait(false);
+        bool matches = observed.Exists &&
+            JsonNode.DeepEquals(JsonNode.Parse(definition.Declaration.GetRawText()), observed.Declaration);
+        string status;
+        if (!observed.Exists)
+        {
+            status = "Missing";
+        }
+        else
+        {
+            status = matches ? "Matches" : "Mismatch";
+        }
+        return (
+            new(status, state.Issuer, observed.Cid),
+            matches ? 0 : 5);
+    }
+
+    /// <summary>Displays the read-only comparison with outcome-specific icons or as structured JSON.</summary>
+    internal static async Task WritePolicyCheckResultAsync(PolicyCheckResult result, TextWriter output, bool verbose)
+    {
+        if (verbose)
+        {
+            await output.WriteLineAsync(JsonSerializer.Serialize(result, PolicyJsonContext.Default.PolicyCheckResult)).ConfigureAwait(false);
+            return;
+        }
+
+        string status = result.Status switch
+        {
+            "Matches" => "✅  Status: Matches",
+            "Mismatch" => "📄⚠️  Status: Mismatch",
+            "Missing" => "🔎❌  Status: Public declaration missing",
+            "NoSelectedPolicy" => "📋❌  Status: No selected policy",
+            _ => throw new InvalidDataException("Unknown policy check status.")
+        };
+        await output.WriteLineAsync(status).ConfigureAwait(false);
+        await output.WriteLineAsync($"🔗  Issuer DID: {SanitizeConsoleText(result.Issuer)}").ConfigureAwait(false);
+        await output.WriteLineAsync($"🆔  Observed CID: {SanitizeConsoleText(result.ObservedCid ?? "(none)")}").ConfigureAwait(false);
+    }
+
+    /// <summary>Resolves the issuer's current PDS record using public, unauthenticated reads only.</summary>
+    private static async Task<PublicPolicyDeclaration> ReadPublicPolicyDeclarationAsync(Did issuer, CancellationToken cancellationToken)
+    {
+        using HttpClient httpClient = new() { Timeout = s_remoteRequestTimeout };
+        Uri pds = await IdentityResolution.ResolvePdsAsync(
+            did: issuer,
+            httpClient: httpClient,
+            timeout: s_remoteRequestTimeout,
+            cancellationToken: cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidDataException("The labeler account's PDS could not be resolved.");
+
+        AtUri expectedUri = new($"at://{issuer}/app.bsky.labeler.service/self");
+        AtProtoHttpResult<AtProtoRepositoryRecord> response = await AtProtoServer.GetRecord(
+            repo: issuer,
+            collection: new("app.bsky.labeler.service"),
+            rKey: new("self"),
+            cid: null,
+            service: pds,
+            accessCredentials: null,
+            httpClient: httpClient,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        bool missing = !response.Succeeded &&
+            (response.StatusCode == HttpStatusCode.NotFound || response.AtErrorDetail?.Error == "RecordNotFound");
+        if (missing)
+        {
+            return new(false, null, null);
+        }
+        if (!response.Succeeded)
+        {
+            throw new HttpRequestException("The public policy record request failed.", null, response.StatusCode);
+        }
+        if (response.Result.Uri != expectedUri || response.Result.Value is null)
+        {
+            throw new InvalidDataException("The PDS returned a policy record that does not match the labeler account.");
+        }
+
+        return new(true, response.Result.Cid.ToString(), response.Result.Value);
     }
 
     /// <summary>Defaults labeler publication to the same native metadata without hiding malformed explicit configuration.</summary>
@@ -290,6 +533,7 @@ internal static partial class Program
         AdministrationCommand request,
         Handle owner,
         Uri clientId,
+        Uri? labelerOrigin,
         bool rememberMe,
         CancellationToken cancellationToken)
     {
@@ -329,6 +573,7 @@ internal static partial class Program
             options: oauth,
             purpose: "Labeler-account authority to conditionally publish app.bsky.labeler.service/self. This is separate from administrator sign-in.",
             rememberMe: rememberMe,
+            labelerOrigin: labelerOrigin,
             lifetime: signInLifetime,
             cancellationToken: cancellationToken).ConfigureAwait(false))
         {
@@ -522,7 +767,7 @@ internal static partial class Program
             await Console.Error.WriteLineAsync("✖   Independent verification did not activate this exact intent. Inspect retained publication history; do not repeat an unconditional write.").ConfigureAwait(false);
             return 5;
         }
-        return await WriteResponseAsync(reply.Body, reply.StatusCode).ConfigureAwait(false);
+        return await WriteResponseAsync(reply.Body, reply.StatusCode, token).ConfigureAwait(false);
     }
 
     /// <summary>Checks classified administrative outcomes before consuming their typed policy payload.</summary>
@@ -583,6 +828,12 @@ internal static partial class Program
         string? PreviousCid = null,
         PolicyWithdrawal? Withdrawal = null);
 
+    /// <summary>Reports a read-only comparison with the public declaration.</summary>
+    internal sealed record PolicyCheckResult(string Status, string Issuer, string? ObservedCid);
+
+    /// <summary>Contains a public PDS declaration read without changing the local policy gate.</summary>
+    internal sealed record PublicPolicyDeclaration(bool Exists, string? Cid, JsonNode? Declaration);
+
     /// <summary>Reads resumable authorization failures without treating cleanup as a declaration-ready publication.</summary>
     internal sealed record PolicyWithdrawal(string? PauseReason = null);
 
@@ -591,6 +842,7 @@ internal static partial class Program
     [JsonSerializable(typeof(PolicyDefinition))]
     [JsonSerializable(typeof(PolicyState))]
     [JsonSerializable(typeof(PolicyWithdrawal))]
+    [JsonSerializable(typeof(PolicyCheckResult))]
     [JsonSerializable(typeof(AtProtoRecord))]
     internal sealed partial class PolicyJsonContext : JsonSerializerContext;
 }
