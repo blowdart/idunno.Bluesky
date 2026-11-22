@@ -1,5 +1,6 @@
 @using System.Reflection
 @using idunno.Bluesky.AspNet.Authentication
+@using idunno.Bluesky.AspNet.Labeler
 @inject idunno.AtProto.IDidHandleResolver Handles
 @{
     LabelTeamRole? role = ViewData["CurrentRole"] is LabelTeamRole currentRole ? currentRole : null;
@@ -7,9 +8,7 @@
     string? error = ViewData["Error"] as string;
     Assembly uiAssembly = typeof(Microsoft.Extensions.DependencyInjection.LabelerUIExtensions).Assembly;
     string? version = uiAssembly.GetName().Version?.ToString(3);
-    string? build = uiAssembly.GetCustomAttributes<AssemblyMetadataAttribute>()
-        .FirstOrDefault(attribute => attribute.Key == "BuildCommitId")?.Value
-        ?? uiAssembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+    string? build = LabelerBuildInfo.GetBuildStamp(uiAssembly);
     ModerationOpenCountsView? counts = ViewData["OpenCounts"] as ModerationOpenCountsView;
     string pageTitle = $"{ViewData["Title"]} · Xenon";
     string title = role is not null && counts is not null
@@ -157,12 +156,10 @@
             </div>
             <p>&copy; 2026 Barry Dorrans</p>
             <p><a asp-area="Xenon" asp-page="/Terms">Terms and conditions</a> &middot; <a asp-area="Xenon" asp-page="/Privacy">Privacy</a></p>
-            <p>V@(version ?? "Unknown")</p>
             <p><a href="https://github.com/blowdart/idunno.Bluesky">Get the source on GitHub</a></p>
-            <p>Icons by <a href="https://fontawesome.com/">Font Awesome Free</a> &middot; <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></p>
-            <p>Inter font by <a href="https://rsms.me/inter/">The Inter Project Authors</a> &middot; <a href="~/Xenon/vendor/inter/LICENSE.txt">SIL Open Font License 1.1</a></p>
-            <p>Google Sans Code font by <a href="https://github.com/googlefonts/googlesans-code">The Google Sans Code Project Authors</a> &middot; <a href="~/Xenon/vendor/google-sans-code/TRADEMARKS.md">Trademark notice</a> &middot; <a href="~/Xenon/vendor/google-sans-code/OFL.txt">SIL Open Font License 1.1</a></p>
-            <p class="build-number">Build number <code>@(build ?? "Unknown")</code></p>
+            <p><a asp-area="Xenon" asp-page="/Acknowledgements">Acknowledgements</a></p>
+            <p>Version V@(version ?? "Unknown")</p>
+            <p class="build-number">Commit <code>@(build ?? "Unknown")</code></p>
         </div>
     </footer>
 <script src="~/Xenon/js/identities.js" asp-append-version="true" defer></script>

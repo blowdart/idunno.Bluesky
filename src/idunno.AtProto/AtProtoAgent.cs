@@ -86,6 +86,16 @@ public partial class AtProtoAgent : Agent
     /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.</param>
     /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> or <paramref name="httpClientFactory"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The factory's clients are used as supplied. It must check resolved IP addresses at connection time and reject
+    ///   loopback, link-local and private addresses, including cloud metadata endpoints, for services obtained from
+    ///   DID documents. Disable automatic redirects; otherwise the handler can send a request to an unchecked
+    ///   destination before the agent sees the response. Register it with
+    ///   <see cref="ServiceCollectionExtensions.AddAtProtoHttpClient(Microsoft.Extensions.DependencyInjection.IServiceCollection)"/>
+    ///   to use the library's protected handler; custom factories must provide equivalent protections.
+    /// </para>
+    /// </remarks>
     public AtProtoAgent(
         Uri service,
         IHttpClientFactory httpClientFactory,
@@ -187,6 +197,16 @@ public partial class AtProtoAgent : Agent
     /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.</param>
     /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="principal"/> or <paramref name="options"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The factory's clients are used as supplied. It must check resolved IP addresses at connection time and reject
+    ///   loopback, link-local and private addresses, including cloud metadata endpoints, for services obtained from
+    ///   DID documents. Disable automatic redirects; otherwise the handler can send a request to an unchecked
+    ///   destination before the agent sees the response. Register it with
+    ///   <see cref="ServiceCollectionExtensions.AddAtProtoHttpClient(Microsoft.Extensions.DependencyInjection.IServiceCollection)"/>
+    ///   to use the library's protected handler; custom factories must provide equivalent protections.
+    /// </para>
+    /// </remarks>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Already overloaded with various helpers")]
     public AtProtoAgent(
         ClaimsPrincipal? principal,
@@ -295,6 +315,16 @@ public partial class AtProtoAgent : Agent
     /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.</param>
     /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="identity"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The factory's clients are used as supplied. It must check resolved IP addresses at connection time and reject
+    ///   loopback, link-local and private addresses, including cloud metadata endpoints, for services obtained from
+    ///   DID documents. Disable automatic redirects; otherwise the handler can send a request to an unchecked
+    ///   destination before the agent sees the response. Register it with
+    ///   <see cref="ServiceCollectionExtensions.AddAtProtoHttpClient(Microsoft.Extensions.DependencyInjection.IServiceCollection)"/>
+    ///   to use the library's protected handler; custom factories must provide equivalent protections.
+    /// </para>
+    /// </remarks>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Already overloaded with various helpers")]
     public AtProtoAgent(
         ClaimsIdentity? identity,

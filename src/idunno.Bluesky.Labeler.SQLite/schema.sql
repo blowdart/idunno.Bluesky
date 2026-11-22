@@ -60,6 +60,10 @@ CREATE INDEX IF NOT EXISTS label_retirement_slot ON label_retirement_slots(slot_
 INSERT OR IGNORE INTO label_state(id, stream_id, issuer) VALUES(1, '00000000000000000000000000000000', '');
 CREATE TABLE IF NOT EXISTS label_team (id INTEGER PRIMARY KEY CHECK(id=1), payload BLOB NOT NULL);
 CREATE TABLE IF NOT EXISTS label_admin_audit (seq INTEGER PRIMARY KEY, payload BLOB NOT NULL);
+CREATE TABLE IF NOT EXISTS label_boundary_denials (
+    seq INTEGER PRIMARY KEY REFERENCES label_admin_audit(seq) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS label_schema_migrations (migration_id TEXT PRIMARY KEY);
 CREATE TABLE IF NOT EXISTS label_admin_receipts (operation_hash BLOB PRIMARY KEY, operation_id TEXT NOT NULL, intent BLOB NOT NULL, payload BLOB NOT NULL);
 CREATE TABLE IF NOT EXISTS label_admin_tokens (replay_hash BLOB PRIMARY KEY, token_hash TEXT NOT NULL, actor TEXT NOT NULL, expires_ms INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS label_admin_token_hash ON label_admin_tokens(token_hash);
@@ -260,4 +264,4 @@ CREATE TABLE IF NOT EXISTS label_audit_queries (
 );
 CREATE INDEX IF NOT EXISTS label_audit_queries_actor ON label_audit_queries(actor,succeeded,seq);
 CREATE INDEX IF NOT EXISTS label_audit_queries_time ON label_audit_queries(created_ms,seq);
-INSERT OR IGNORE INTO label_schema(id, version) VALUES(1, 18);
+INSERT OR IGNORE INTO label_schema(id, version) VALUES(1, 19);

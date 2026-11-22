@@ -12,6 +12,8 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 
+using idunno.AtProto.Repo;
+
 namespace idunno.AtProto.Json;
 
 /// <summary>
@@ -75,6 +77,9 @@ internal sealed class TolerantPolymorphicConverter(
     internal static JsonSerializerOptions FinalizeWriteOptions(JsonSerializerOptions options)
     {
         JsonSerializerOptions result = new(options);
+        IJsonTypeInfoResolver resolver = result.TypeInfoResolver
+            ?? throw new InvalidOperationException("The configured JSON options do not have a type-info resolver.");
+        result.TypeInfoResolver = resolver.WithAddedModifier(AdaptOptionalRepositoryRecordCid);
         result.MakeReadOnly();
         return result;
     }
@@ -765,6 +770,8 @@ internal sealed class TolerantPolymorphicConverter(
 
         private static JsonTypeInfo ApplyCustomConverterPolymorphismWorkaround(JsonTypeInfo info)
         {
+            TolerantPolymorphicConverter.AdaptOptionalRepositoryRecordCid(info);
+
             // A custom converter cannot also expose built-in polymorphism metadata. Keep it on the
             // underlying contract; the tolerant wrapper performs dispatch using that original contract.
             if (info.Kind == JsonTypeInfoKind.None &&
@@ -776,6 +783,73 @@ internal sealed class TolerantPolymorphicConverter(
 
             return info;
         }
+
+    }
+
+    /// <summary>Adapts repository-record contracts so absent CIDs are read safely and omitted when writing.</summary>
+    /// <param name="info">The contract to adapt.</param>
+    /// <remarks>
+    /// <para><c>com.atproto.repo.getRecord</c> makes <c>cid</c> optional, but <see cref="AtProtoRepositoryObject.Cid"/>
+    /// keeps its non-nullable public shape and throws when absent. Other repository objects, such as notifications,
+    /// continue to require a CID.</para>
+    /// </remarks>
+    private static void AdaptOptionalRepositoryRecordCid(JsonTypeInfo info)
+    {
+        if (info.Kind != JsonTypeInfoKind.Object || !IsRepositoryRecord(info.Type))
+        {
+            return;
+        }
+
+        string cidPropertyName = info.Options.PropertyNamingPolicy?.ConvertName(nameof(AtProtoRepositoryObject.Cid))
+            ?? nameof(AtProtoRepositoryObject.Cid);
+        string strongReferencePropertyName = info.Options.PropertyNamingPolicy?.ConvertName(nameof(AtProtoRepositoryObject.StrongReference))
+            ?? nameof(AtProtoRepositoryObject.StrongReference);
+
+        foreach (JsonPropertyInfo property in info.Properties)
+        {
+            if (property.PropertyType == typeof(Cid) &&
+                string.Equals(property.Name, cidPropertyName, StringComparison.Ordinal))
+            {
+                property.IsRequired = false;
+                property.Get = static value => ((AtProtoRepositoryObject)value).CidOrDefault;
+                property.IsGetNullable = true;
+                SetShouldSerialize(property);
+            }
+            else if (property.PropertyType == typeof(StrongReference) &&
+                string.Equals(property.Name, strongReferencePropertyName, StringComparison.Ordinal))
+            {
+                property.Get = static value =>
+                    ((AtProtoRepositoryObject)value).TryGetStrongReference(out StrongReference? strongReference) ? strongReference : null;
+                property.IsGetNullable = true;
+                SetShouldSerialize(property);
+            }
+        }
+
+        static void SetShouldSerialize(JsonPropertyInfo property)
+        {
+            Func<object, object?, bool>? shouldSerialize = property.ShouldSerialize;
+            property.ShouldSerialize = (value, propertyValue) =>
+                value is AtProtoRepositoryObject record &&
+                record.HasCid &&
+                (shouldSerialize?.Invoke(value, propertyValue) ?? true);
+        }
+    }
+
+    /// <summary>Determines whether <paramref name="type"/> is a repository-record type.</summary>
+    /// <param name="type">The type to check.</param>
+    /// <returns><see langword="true"/> if <paramref name="type"/> is a repository-record type; otherwise, <see langword="false"/>.</returns>
+    private static bool IsRepositoryRecord(Type type)
+    {
+        for (Type? current = type; current is not null; current = current.BaseType)
+        {
+            if (current == typeof(AtProtoRepositoryRecord) ||
+                (current.IsGenericType && current.GetGenericTypeDefinition() == typeof(AtProtoRepositoryRecord<>)))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private sealed class Converter(Type type, JsonSerializerOptions underlyingOptions) : JsonConverter<object>

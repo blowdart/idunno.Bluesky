@@ -20,7 +20,7 @@ namespace idunno.Bluesky.Labeler.Issuance;
 /// <param name="store">The initialized decision storage provider.</param>
 /// <param name="authorizer">The required authorization implementation.</param>
 /// <param name="policyProvider">The active issuance-policy provider.</param>
-/// <param name="httpClient">The configured caller-owned HTTP client.</param>
+/// <param name="httpClient">The caller-owned <see cref="HttpClient"/> used for identity and repository requests.</param>
 /// <param name="timeProvider">An optional service clock.</param>
 /// <param name="loggerFactory">An optional logger factory.</param>
 /// <exception cref="ArgumentNullException">A required dependency is <see langword="null"/>.</exception>
@@ -31,6 +31,14 @@ namespace idunno.Bluesky.Labeler.Issuance;
 /// its version is audit evidence, not an atomic team-revocation fence. Administrative hosting must
 /// integrate commit-valid authorization with the team provider before exposing mutation endpoints.</para>
 /// <para>The host owns key/client disposal. Storage initialization and publication are separate operations.</para>
+/// <para><paramref name="httpClient"/> is used as supplied to resolve target identities and PDS endpoints.
+/// Its handler must enforce SSRF protection at connection time; without it, DID documents can direct requests to
+/// loopback, link-local or private network addresses, including cloud metadata services. A client created by an
+/// <see cref="IHttpClientFactory"/> registered with
+/// <see cref="ServiceCollectionExtensions.AddAtProtoHttpClient(Microsoft.Extensions.DependencyInjection.IServiceCollection)"/> has the library's
+/// connection-time SSRF protections; custom handlers must provide equivalent protections.</para>
+/// <para>Disable automatic redirects on the handler. A handler that follows redirects can send a request to a
+/// disallowed destination before this service can inspect the response.</para>
 /// </remarks>
 public sealed partial class LabelIssuanceService(
     Did issuer,

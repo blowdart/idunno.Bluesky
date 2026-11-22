@@ -412,7 +412,7 @@ internal sealed partial class LocalAdministrationHost(
                         ?? throw new JsonException("The command is null.");
                     response = await dispatcher.DispatchAsync(caller.Result, command, deadline.Token).ConfigureAwait(false);
                 }
-                catch (Exception exception) when (exception is JsonException or ArgumentException or FormatException or InvalidDataException)
+                catch (Exception exception) when (ModerationWire.IsMalformedInput(exception) || exception is InvalidDataException)
                 {
                     AdministrationLog.Rejected(logger, exception.GetType().Name);
                     LabelServiceResult<LabelAdministrationReceipt> audit = await store.RecordAdministrationDenialAsync(

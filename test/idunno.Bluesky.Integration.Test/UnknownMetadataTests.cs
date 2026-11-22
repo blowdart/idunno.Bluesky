@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
@@ -51,6 +52,31 @@ public class UnknownMetadataTests
         Assert.NotNull(result.Result);
         Assert.Equal("hello", result.Result.Value.Text);
         Assert.Equal("kazahana", result.Result.Value.ExtensionData!["$via"].GetString());
+    }
+
+    [Fact]
+    public async Task GetPostParentReturnsAnErrorWhenTheServerOmitsThePostCid()
+    {
+        AtUri uri = new("at://did:plc:heztswuhu24kudwdaz7y4bi3/app.bsky.feed.post/3mxqswzprj42r");
+        const string cid = "bafyreififokk7ii62nxnsoldrnm33bro62a2k36xp5fhfhgptuanobuwuq";
+        const string json = """
+            {"uri":"at://did:plc:heztswuhu24kudwdaz7y4bi3/app.bsky.feed.post/3mxqswzprj42r","value":{"$type":"app.bsky.feed.post","text":"hello","createdAt":"2026-10-13T10:24:57.970Z"}}
+            """;
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(json, TestContext.Current.CancellationToken);
+        });
+        using BlueskyAgent agent = new(new TestHttpClientFactory(server),
+            options: new BlueskyAgentOptions { PublicAppViewUri = TestServerBuilder.DefaultUri });
+
+        AtProtoHttpResult<StrongReference> result = await agent.GetPostParent(
+            new StrongReference(uri, new Cid(cid)),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(HttpStatusCode.BadGateway, result.StatusCode);
+        Assert.Equal("InvalidResponse", result.AtErrorDetail?.Error);
     }
 
     [Theory]

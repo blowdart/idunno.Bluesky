@@ -1072,6 +1072,8 @@ public sealed class ProviderConformanceOtherTests : ProviderConformanceTestBase
     [InlineData("label_distribution")]
     [InlineData("label_team")]
     [InlineData("label_admin_audit")]
+    [InlineData("label_boundary_denials")]
+    [InlineData("label_schema_migrations")]
     [InlineData("label_admin_receipts")]
     [InlineData("label_admin_tokens")]
     [InlineData("label_report_tokens")]
@@ -1090,7 +1092,12 @@ public sealed class ProviderConformanceOtherTests : ProviderConformanceTestBase
         await using StoreFixture fixture = await StoreFixture.CreateAsync("mysql");
         if (table == "label_admin_audit")
         {
-            await fixture.ExecuteAsync("DROP TABLE label_audit_queries");
+            await fixture.ExecuteAsync("ALTER TABLE label_audit_queries DROP FOREIGN KEY label_audit_queries_ibfk_1");
+            await fixture.ExecuteAsync("ALTER TABLE label_boundary_denials DROP FOREIGN KEY label_boundary_denials_audit");
+        }
+        else if (table == "label_boundary_denials")
+        {
+            await fixture.ExecuteAsync("ALTER TABLE label_boundary_denials DROP FOREIGN KEY label_boundary_denials_audit");
         }
         else if (table.EndsWith("_queries", StringComparison.Ordinal))
         {
@@ -1105,8 +1112,12 @@ public sealed class ProviderConformanceOtherTests : ProviderConformanceTestBase
             }
         }
         await fixture.ExecuteAsync($"ALTER TABLE {table} ENGINE=MyISAM");
-        await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.NewStore().GetStateAsync(TestContext.Current.CancellationToken));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Store.InitializeAsync(StoreFixture.s_issuer, TestContext.Current.CancellationToken));
+        InvalidOperationException readError = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => fixture.NewStore().GetStateAsync(TestContext.Current.CancellationToken));
+        Assert.Equal("All label tables must use InnoDB.", readError.Message);
+        InvalidOperationException initializationError = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => fixture.Store.InitializeAsync(StoreFixture.s_issuer, TestContext.Current.CancellationToken));
+        Assert.Equal("All label tables must use InnoDB.", initializationError.Message);
     }
 
 

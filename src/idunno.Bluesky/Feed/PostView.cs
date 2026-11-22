@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 using idunno.AtProto;
@@ -8,6 +9,7 @@ using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
 using idunno.Bluesky.Actor;
 using idunno.Bluesky.Embed;
+using idunno.Bluesky.Record;
 
 namespace idunno.Bluesky.Feed;
 
@@ -25,7 +27,6 @@ public sealed record PostView : PostViewBase
         AtUri uri,
         Cid cid,
         ProfileViewBasic author,
-        Post record,
         int replyCount,
         int repostCount,
         int likeCount,
@@ -43,8 +44,6 @@ public sealed record PostView : PostViewBase
 
         Author = author;
 
-        Record = record;
-
         ReplyCount = replyCount;
         RepostCount = repostCount;
         LikeCount = likeCount;
@@ -57,14 +56,7 @@ public sealed record PostView : PostViewBase
 
         Viewer = viewer;
 
-        if (labels is not null)
-        {
-            Labels = labels;
-        }
-        else
-        {
-            Labels = new List<Label>().AsReadOnly<Label>();
-        }
+        Labels = labels ?? [];
 
         Embed = embed;
     }
@@ -94,10 +86,40 @@ public sealed record PostView : PostViewBase
     public ProfileViewBasic Author { get; init; }
 
     /// <summary>
-    /// The value of the post record.
+    /// Gets the value of the post record.
     /// </summary>
+    /// <remarks>
+    /// <para>The lexicon declares the record as <c>unknown</c>. Post views hold posts in practice, so the record is read
+    /// through the polymorphic <see cref="BlueskyRecord"/> contract to keep feed decoding fast. A record whose <c>$type</c> this
+    /// library does not recognize, or that has no <c>$type</c>, is returned as a base <see cref="BlueskyRecord"/> whose
+    /// <see cref="AtProto.Repo.AtProtoRecord.ExtensionData"/> holds its properties; its <c>$type</c> is not preserved.</para>
+    /// </remarks>
+    [JsonInclude]
     [JsonRequired]
-    public Post Record { get; init; }
+    [JsonPropertyName("record")]
+    public required BlueskyRecord RecordValue { get; init; }
+
+    /// <summary>
+    /// Gets the post record.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when <see cref="RecordValue"/> is not a <see cref="Post"/>.</exception>
+    /// <remarks>
+    /// <para>Use <see cref="TryGetPost(out Post?)"/> or <see cref="RecordValue"/> to handle a view whose record is not a post.</para>
+    /// </remarks>
+    [JsonIgnore]
+    public Post Record => RecordValue as Post ??
+        throw new InvalidOperationException($"The post view record is a '{RecordValue.GetType().Name}', not a '{nameof(Post)}'.");
+
+    /// <summary>
+    /// Gets the post record, if <see cref="RecordValue"/> is a <see cref="Post"/>.
+    /// </summary>
+    /// <param name="post">When this method returns <see langword="true"/>, the post record; otherwise <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> if <see cref="RecordValue"/> is a <see cref="Post"/>; otherwise <see langword="false"/>.</returns>
+    public bool TryGetPost([NotNullWhen(true)] out Post? post)
+    {
+        post = RecordValue as Post;
+        return post is not null;
+    }
 
     /// <summary>
     /// The number of replies to this post.
@@ -130,6 +152,15 @@ public sealed record PostView : PostViewBase
     public int BookmarkCount { get; init; }
 
     /// <summary>
+    /// The number of times the post has been viewed, if the server supplied it.
+    /// </summary>
+    /// <remarks>
+    /// <para>The server only supplies the view count to the author of the post.</para>
+    /// </remarks>
+    [JsonInclude]
+    public int? ViewCount { get; init; }
+
+    /// <summary>
     /// The date and time the post was indexed at.
     /// </summary>
     [JsonInclude]
@@ -153,8 +184,15 @@ public sealed record PostView : PostViewBase
     /// <summary>
     /// Any labels applied to the post.
     /// </summary>
+    /// <remarks>
+    /// <para>Entries that the server supplies as <see langword="null"/> are discarded.</para>
+    /// </remarks>
     [JsonInclude]
-    public IReadOnlyCollection<Label> Labels { get; init; }
+    public IReadOnlyCollection<Label> Labels
+    {
+        get;
+        init => field = NullEntryFilter.WithoutNullEntries(value);
+    }
 
     /// <summary>
     /// Returns a list of label values for labels that appear to have been applied by the actor to themselves, based on the label source and uri.

@@ -63,7 +63,7 @@ internal sealed partial class SubjectPreviewService(
                 loggerFactory: loggerFactory,
                 maximumResponseSize: 524_288,
                 cancellationToken: deadline.Token).ConfigureAwait(false);
-            if (!record.Succeeded || record.Result.Uri != uri)
+            if (!record.Succeeded || record.Result.Uri != uri || !record.Result.HasCid)
             {
                 return (null, "The current content version could not be loaded from the account server.");
             }
@@ -149,7 +149,7 @@ internal sealed partial class SubjectPreviewService(
                 loggerFactory: loggerFactory,
                 maximumResponseSize: 524_288,
                 cancellationToken: deadline.Token).ConfigureAwait(false);
-            if (!record.Succeeded || record.Result.Uri != recordUri || record.Result.Value is not { } value ||
+            if (!record.Succeeded || record.Result.Uri != recordUri || !record.Result.HasCid || record.Result.Value is not { } value ||
                 Text(value, "$type") != recordUri.Collection!.ToString() || post && Text(value, "text") is null ||
                 kind is "List" or "Starter pack" && Text(value, "name") is null)
             {

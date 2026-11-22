@@ -1,0 +1,72 @@
+@page
+@model idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.AcknowledgementsModel
+@using idunno.Bluesky.AspNet.Labeler.UI
+@{
+    ViewData["Title"] = "Acknowledgements";
+
+    void RenderBlock(INoticeBlock block)
+    {
+        switch (block)
+        {
+            case NoticeParagraph paragraph:
+                <p>@ThirdPartyNotices.Linkify(paragraph.Text)</p>
+                break;
+            case NoticePreformatted preformatted:
+                <pre>@ThirdPartyNotices.Linkify(preformatted.Text)</pre>
+                break;
+            case NoticeTable table:
+                <table>
+                    <thead>
+                        <tr>
+                            @foreach (string header in table.Headers)
+                            {
+                                <th scope="col">@header</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (IReadOnlyList<string> row in table.Rows)
+                        {
+                            <tr>
+                                @foreach (string cell in row)
+                                {
+                                    <td>@cell</td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                break;
+        }
+    }
+}
+<h1>Acknowledgements</h1>
+@if (Model.Notices.Sections.Count > 0)
+{
+    <section class="panel third-party-notices" id="third-party-software">
+        <h2>Third-party software</h2>
+        <p>This labeler, its container images and its administration CLI include the third-party software listed below. <a asp-area="Xenon" asp-page="/Acknowledgements" asp-page-handler="Text"><span class="fa-icon fa-download" aria-hidden="true"></span> Download @ThirdPartyNotices.FileName</a></p>
+        @foreach (INoticeBlock block in Model.Notices.Introduction)
+        {
+            RenderBlock(block);
+        }
+        @foreach (NoticeSection notice in Model.Notices.Sections)
+        {
+            if (notice.LicenseText is not null)
+            {
+                <details class="notice-license">
+                    <summary>@notice.Title</summary>
+                    <pre>@ThirdPartyNotices.Linkify(notice.LicenseText)</pre>
+                </details>
+            }
+            else
+            {
+                <h3>@notice.Title</h3>
+                foreach (INoticeBlock block in notice.Blocks)
+                {
+                    RenderBlock(block);
+                }
+            }
+        }
+    </section>
+}

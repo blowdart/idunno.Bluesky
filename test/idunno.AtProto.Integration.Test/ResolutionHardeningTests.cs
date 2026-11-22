@@ -308,6 +308,7 @@ public class ResolutionHardeningTests
         Assert.IsNotType<HttpClientHandler>(handler);
         SocketsHttpHandler socketsHttpHandler = Assert.IsType<SocketsHttpHandler>(handler);
         Assert.NotNull(socketsHttpHandler.ConnectCallback);
+        Assert.False(socketsHttpHandler.AllowAutoRedirect);
     }
 
     [Fact]

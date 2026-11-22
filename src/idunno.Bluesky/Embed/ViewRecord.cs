@@ -103,19 +103,27 @@ public sealed record ViewRecord : View
     /// <summary>
     /// Gets the record itself.
     /// </summary>
+    /// <remarks>
+    /// <para>The lexicon declares the record as <c>unknown</c>. A record whose <c>$type</c> is not recognized by this library
+    /// is returned as an <see cref="UnknownBlueskyRecord"/>, which preserves the original JSON.</para>
+    /// </remarks>
     [JsonInclude]
     [JsonRequired]
+    [JsonConverter(typeof(Json.BlueskyRecordValueConverter))]
     public BlueskyRecord Value { get; init; }
 
     /// <summary>
     /// Gets any labels applied to the record.
     /// </summary>
+    /// <remarks>
+    /// <para>Entries that the server supplies as <see langword="null"/> are discarded.</para>
+    /// </remarks>
     [NotNull]
     [JsonInclude]
     public IReadOnlyCollection<Label>? Labels
     {
         get;
-        init => field = value is null ? [] : [.. value];
+        init => field = NullEntryFilter.WithoutNullEntries(value);
     }
 
     /// <summary>
@@ -157,12 +165,15 @@ public sealed record ViewRecord : View
     /// <summary>
     /// Gets views over any embeds the record has.
     /// </summary>
+    /// <remarks>
+    /// <para>Entries that the server supplies as <see langword="null"/> are discarded.</para>
+    /// </remarks>
     [NotNull]
     [JsonInclude]
     public IReadOnlyCollection<EmbeddedView>? Embeds
     {
         get;
-        init => field = value is null ? [] : [.. value];
+        init => field = NullEntryFilter.WithoutNullEntries(value);
     }
 
     /// <summary>

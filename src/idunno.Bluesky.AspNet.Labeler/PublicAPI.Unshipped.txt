@@ -68,10 +68,16 @@ static idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.operator !=(idunno.Bl
 static idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.operator ==(idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions? left, idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions? right) -> bool
 idunno.Bluesky.AspNet.Labeler.LabelerAdministrationExtensions
 idunno.Bluesky.AspNet.Labeler.LabelerAdministrationOptions
+idunno.Bluesky.AspNet.Labeler.LabelerAdministrationOptions.MaximumConcurrentRequestsPerPeer.get -> int
+idunno.Bluesky.AspNet.Labeler.LabelerAdministrationOptions.MaximumConcurrentRequestsPerPeer.set -> void
+idunno.Bluesky.AspNet.Labeler.LabelerAdministrationOptions.MaximumTrackedPeers.get -> int
+idunno.Bluesky.AspNet.Labeler.LabelerAdministrationOptions.MaximumTrackedPeers.set -> void
 idunno.Bluesky.AspNet.Labeler.LabelerAdministrationOptions.RemoteEnabled.get -> bool
 idunno.Bluesky.AspNet.Labeler.LabelerAdministrationOptions.RemoteEnabled.set -> void
 idunno.Bluesky.AspNet.Labeler.LabelerAdministrationOptions.RemoteMode.get -> idunno.Bluesky.AspNet.Labeler.RemoteAdministrationMode?
 idunno.Bluesky.AspNet.Labeler.LabelerAdministrationOptions.RemoteMode.set -> void
+idunno.Bluesky.AspNet.Labeler.LabelerAdministrationOptions.RequestsPerMinutePerPeer.get -> int
+idunno.Bluesky.AspNet.Labeler.LabelerAdministrationOptions.RequestsPerMinutePerPeer.set -> void
 idunno.Bluesky.AspNet.Labeler.LabelerAdministrationOptions.LabelerAdministrationOptions() -> void
 idunno.Bluesky.AspNet.Labeler.LabelerLocalAdministration
 static idunno.Bluesky.AspNet.Labeler.LabelerAdministrationExtensions.AddLabelerAdministration(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, idunno.AtProto.AtProtoServiceReference! audience, idunno.AtProto.Labels.LabelSigningKey! signingKey, System.Net.Http.HttpClient! httpClient, System.TimeSpan? maximumServiceTokenLifetime = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

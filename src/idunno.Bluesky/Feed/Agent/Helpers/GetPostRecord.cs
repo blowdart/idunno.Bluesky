@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Net;
+
 using idunno.AtProto;
 using idunno.AtProto.Repo;
 
@@ -8,6 +10,17 @@ namespace idunno.Bluesky;
 
 public partial class BlueskyAgent
 {
+    /// <summary>Returns a classified failure when a thread helper cannot construct the required post strong reference.</summary>
+    private static AtProtoHttpResult<TResult> FailedForMissingPostCid<TResult>(
+        AtProtoHttpResult<AtProtoRepositoryRecord<Post>> result)
+        where TResult : class =>
+        new(
+            null,
+            HttpStatusCode.BadGateway,
+            result.HttpResponseHeaders,
+            new("InvalidResponse", "The server returned a post without a CID, so a strong reference cannot be created."),
+            result.RateLimit);
+
     /// <summary>
     /// Gets the post record for the specified <see cref="StrongReference"/>.
     /// </summary>

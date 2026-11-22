@@ -3,7 +3,9 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
 
 using idunno.AtProto;
@@ -20,6 +22,7 @@ using idunno.Bluesky.Labeler.Storage;
 using idunno.Security;
 
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.Extensions.Hosting;
 
 namespace idunno.Bluesky.Labeler.Host;
 
@@ -108,6 +111,7 @@ internal static partial class Program
             throw new InvalidOperationException("Register canonical hosting only once.");
         }
         CanonicalLabelerTelemetry.AddServices(builder);
+        builder.Services.AddHsts(_ => { });
         if (IsKeylessConfiguration(builder.Configuration) != (keyRing is null))
         {
             throw new InvalidOperationException("The signing-key ring must match the explicitly configured signing role.");
@@ -266,7 +270,7 @@ internal static partial class Program
         Uri publicEndpoint = settings.PublicEndpoint;
         AtProtoServiceReference audience = settings.Audience;
         bool uiEnabled = settings.UiEnabled;
-        ConfigureForwardedHeaders(app);
+        ConfigureTransportSecurity(app, publicEndpoint);
         app.UseBlueskyOAuthClientMetadata(
             CreateNativeOAuthOptions(publicEndpoint, audience),
             new BlueskyOAuthClientMetadataOptions
@@ -303,18 +307,10 @@ internal static partial class Program
     /// <summary>Maps the plain-text root banner and public crawler exclusion instructions.</summary>
     internal static void MapRootRoute(WebApplication app)
     {
-        string blankLine = new(' ', 31);
-        string banner = string.Join(
-            '\n',
-            blankLine,
-            blankLine,
-            " _____ _____ ____   ___  ____  ",
-            "(___  ) ___ |  _ \\ / _ \\|  _ \\ ",
-            " / __/| ____| | | | |_| | | | |",
-            "(_____)_____)_| |_|\\___/|_| |_|",
-            blankLine) + '\n';
-
-        app.MapGet("/", () => Results.Text(banner, contentType: "text/plain; charset=utf-8"));
+        Assembly assembly = typeof(LabelerUIExtensions).Assembly;
+        string version = assembly.GetName().Version?.ToString(3) ?? "Unknown";
+        string commit = LabelerBuildInfo.GetBuildStamp(assembly) ?? "Unknown";
+        app.MapGet("/", () => Results.Text($"🏷️ V{version} Commit {commit}", contentType: "text/plain; charset=utf-8", contentEncoding: Encoding.UTF8));
         app.MapGet("/robots.txt", () => Results.Text("User-agent: *\nDisallow: /\n", contentType: "text/plain; charset=utf-8"))
             .AllowAnonymous();
     }
@@ -459,6 +455,7 @@ internal static partial class Program
                 Timeout = TimeSpan.FromSeconds(20)
             };
         }
+
         catch
         {
             handler.Dispose();
@@ -524,6 +521,20 @@ internal static partial class Program
         services.AddAuthorization();
         services.AddBlueskyClaimsTransformer();
         services.AddBlueskyOAuthClientMetadata();
+    }
+
+    /// <summary>Establishes proxy trust before enabling HSTS for non-development, non-loopback HTTPS origins.</summary>
+    internal static void ConfigureTransportSecurity(WebApplication app, Uri publicEndpoint)
+    {
+        ConfigureForwardedHeaders(app);
+        if (!app.Environment.IsDevelopment() && publicEndpoint.Scheme == Uri.UriSchemeHttps && !publicEndpoint.IsLoopback)
+        {
+            // HSTS's default exclusions cover only specific host strings, not the whole loopback range.
+            app.UseWhen(
+                context => !IPAddress.TryParse(context.Request.Host.Host, out IPAddress? address) ||
+                    !IPAddress.IsLoopback(address.IsIPv4MappedToIPv6 ? address.MapToIPv4() : address),
+                branch => branch.UseHsts());
+        }
     }
 
     /// <summary>Trusts only explicitly installed proxy addresses and never accepts arbitrary forwarded headers.</summary>

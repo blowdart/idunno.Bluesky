@@ -63,10 +63,59 @@ internal static partial class Program
     {
         Option<bool> option = new("--remember-me")
         {
-            Description = "Remember this exact account and OAuth permission set in ~/.xenon. Windows uses current-user DPAPI; other systems require confirmation to save unencrypted credentials."
+            Description = "Save a new session for this exact account and OAuth permission set in ~/.xenon; saved sessions are reused automatically. Windows uses current-user DPAPI; other systems require confirmation to save unencrypted credentials."
         };
         command.Options.Add(option);
         return option;
+    }
+
+    /// <summary>Creates a read-only listing of saved accounts, permissions and associated labeler origins.</summary>
+    private static Command CreateListCredentialsCommand()
+    {
+        Command command = new("list-credentials", "List saved accounts, permissions and known labeler URLs without displaying credentials.");
+        command.SetAction((_, cancellationToken) => ListCredentialsAsync(
+            output: Console.Out,
+            cancellationToken: cancellationToken));
+        return command;
+    }
+
+    /// <summary>Displays saved-session metadata without printing tokens, keys or untrusted control characters.</summary>
+    /// <param name="output">The destination for the listing.</param>
+    /// <param name="directory">An optional private cache directory.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The successful process exit code.</returns>
+    internal static async Task<int> ListCredentialsAsync(
+        TextWriter output,
+        string? directory = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(output);
+        IReadOnlyList<CliCredentialCacheSummary> saved = await CliCredentialCache.ListAsync(directory, cancellationToken).ConfigureAwait(false);
+        if (saved.Count == 0)
+        {
+            await output.WriteLineAsync("ℹ   No saved credentials found.").ConfigureAwait(false);
+            return 0;
+        }
+
+        foreach (CliCredentialCacheSummary item in saved)
+        {
+            await output.WriteLineAsync($"👤  Account: {SanitizeConsoleText(item.Binding.Account)} ({SanitizeConsoleText(item.Binding.Actor)})").ConfigureAwait(false);
+            if (item.LabelerOrigins.Count == 0)
+            {
+                await output.WriteLineAsync("  🔗  Labeler: unknown (not recorded)").ConfigureAwait(false);
+            }
+            else
+            {
+                foreach (string origin in item.LabelerOrigins)
+                {
+                    await output.WriteLineAsync($"  🔗  Labeler: {SanitizeConsoleText(origin)}").ConfigureAwait(false);
+                }
+            }
+
+            await output.WriteLineAsync($"  🔒  Permissions: {SanitizeConsoleText(item.Binding.RequestedScope)}").ConfigureAwait(false);
+        }
+
+        return 0;
     }
 
     /// <summary>Starts a quiet loopback listener with static branding that never embeds callback credentials in its page.</summary>
@@ -139,21 +188,28 @@ internal static partial class Program
             string.Equals(answer, "yes", StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <summary>Writes concise sign-in feedback, adding an account-purpose warning only for labeler-account operations.</summary>
+    /// <summary>Keeps account-purpose warnings visible while restricting sign-in progress to verbose output.</summary>
     internal static async Task WriteSignInNoticeAsync(
         TextWriter diagnostics,
         Handle handle,
         string? labelerPurpose,
-        bool rememberMe)
+        bool rememberMe,
+        bool verbose = false)
     {
-        await diagnostics.WriteLineAsync($"🔑  Xenon starting sign-in for {handle}.").ConfigureAwait(false);
+        if (verbose)
+        {
+            await diagnostics.WriteLineAsync($"🔑  Xenon starting sign-in for {handle}.").ConfigureAwait(false);
+        }
         if (labelerPurpose is not null)
         {
             await diagnostics.WriteLineAsync($"⚠   {labelerPurpose}").ConfigureAwait(false);
         }
-        await diagnostics.WriteLineAsync(rememberMe
-            ? "💾  Credential persistence was requested with --remember-me."
-            : "ℹ   This sign-in is temporary. Use --remember-me to save credentials.").ConfigureAwait(false);
+        if (verbose)
+        {
+            await diagnostics.WriteLineAsync(rememberMe
+                ? "💾  Credential persistence was requested with --remember-me."
+                : "ℹ   Reusing saved credentials when available; otherwise this sign-in is temporary. Use --remember-me to save a new session.").ConfigureAwait(false);
+        }
     }
 
     /// <summary>Authenticates only the named account, warning for a labeler-account purpose, and stops on denial or an incomplete callback.</summary>
@@ -163,6 +219,7 @@ internal static partial class Program
         OAuthOptions options,
         string? purpose,
         bool rememberMe,
+        Uri? labelerOrigin,
         CliSignInLifetime lifetime,
         CancellationToken cancellationToken)
     {
@@ -170,40 +227,39 @@ internal static partial class Program
             diagnostics: Console.Error,
             handle: handle,
             labelerPurpose: purpose,
-            rememberMe: rememberMe).ConfigureAwait(false);
+            rememberMe: rememberMe,
+            verbose: s_verboseOutput.Value).ConfigureAwait(false);
         Did expectedDid = await agent.ResolveHandle(handle, cancellationToken).ConfigureAwait(false)
             ?? throw new OAuthException("The selected account could not be resolved.");
-        CliCredentialCache? cache = null;
-        if (rememberMe)
+        Uri expectedPds = await agent.ResolvePds(expectedDid, cancellationToken).ConfigureAwait(false)
+            ?? throw new OAuthException("The selected account's PDS could not be resolved.");
+        CliCredentialCache? cache = await lifetime.GetCacheAsync(
+            binding: new(
+                Account: handle.ToString(),
+                Actor: expectedDid.Value,
+                ClientMetadataId: options.ClientId,
+                RequestedScope: string.Join(" ", options.Scopes),
+                Service: expectedPds),
+            rememberMe: rememberMe,
+            cancellationToken: cancellationToken,
+            labelerOrigin: labelerOrigin).ConfigureAwait(false);
+        if (cache is not null)
         {
-            Uri expectedPds = await agent.ResolvePds(expectedDid, cancellationToken).ConfigureAwait(false)
-                ?? throw new OAuthException("The selected account's PDS could not be resolved.");
-            cache = await lifetime.GetCacheAsync(
-                new(
-                    Account: handle.ToString(),
-                    Actor: expectedDid.Value,
-                    ClientMetadataId: options.ClientId,
-                    RequestedScope: string.Join(" ", options.Scopes),
-                    Service: expectedPds),
-                cancellationToken).ConfigureAwait(false);
-            if (cache is not null)
+            cache.Attach(agent);
+            DPoPAccessCredentials? saved = await cache.LoadAsync(cancellationToken).ConfigureAwait(false);
+            if (saved is not null)
             {
-                cache.Attach(agent);
-                DPoPAccessCredentials? saved = await cache.LoadAsync(cancellationToken).ConfigureAwait(false);
-                if (saved is not null)
+                await WriteVerboseNoticeAsync($"🔒  Validating the remembered session for {handle} with its PDS.").ConfigureAwait(false);
+                if (!await agent.Login(saved, cancellationToken).ConfigureAwait(false) ||
+                    !await agent.RefreshCredentials(cancellationToken).ConfigureAwait(false) ||
+                    !agent.IsAuthenticated || agent.Did != expectedDid)
                 {
-                    await Console.Error.WriteLineAsync($"🔒  Validating the remembered session for {handle} with its PDS.").ConfigureAwait(false);
-                    if (!await agent.Login(saved, cancellationToken).ConfigureAwait(false) ||
-                        !await agent.RefreshCredentials(cancellationToken).ConfigureAwait(false) ||
-                        !agent.IsAuthenticated || agent.Did != expectedDid)
-                    {
-                        await Console.Error.WriteLineAsync("✖   The remembered session could not be renewed. No command was sent. Revoke or remove this saved session before signing in again.").ConfigureAwait(false);
-                        return false;
-                    }
-
-                    await Console.Error.WriteLineAsync($"✔   Remembered sign-in validated for {handle}. The command has not yet completed.").ConfigureAwait(false);
-                    return true;
+                    await Console.Error.WriteLineAsync("✖   The remembered session could not be renewed. No command was sent. Revoke or remove this saved session before signing in again.").ConfigureAwait(false);
+                    return false;
                 }
+
+                await WriteVerboseNoticeAsync($"✔   Remembered sign-in validated for {handle}. The command has not yet completed.").ConfigureAwait(false);
+                return true;
             }
         }
         CallbackServer callback = await CreateCallbackAsync(cancellationToken).ConfigureAwait(false);
@@ -241,44 +297,61 @@ internal static partial class Program
             await cache.SaveAsync(credentials, cancellationToken).ConfigureAwait(false);
         }
 
-        await Console.Error.WriteLineAsync($"✔   Signed in as {handle}. Authentication succeeded; the command has not yet completed.").ConfigureAwait(false);
+        await WriteVerboseNoticeAsync($"✔   Signed in as {handle}. Authentication succeeded; the command has not yet completed.").ConfigureAwait(false);
         return true;
     }
 
     /// <summary>Keeps cache leases until all agents in the workflow are disposed, serializing single-use refresh tokens across processes.</summary>
-    private sealed class CliSignInLifetime : IAsyncDisposable
+    /// <param name="directory">An optional private cache directory.</param>
+    internal sealed class CliSignInLifetime(string? directory = null) : IAsyncDisposable
     {
         private readonly Dictionary<CliCredentialCacheBinding, CliCredentialCache> _caches = [];
         private bool? _storagePermitted;
 
         /// <summary>Obtains one exact session lease and asks separately before any unencrypted persistence.</summary>
-        internal async Task<CliCredentialCache?> GetCacheAsync(CliCredentialCacheBinding binding, CancellationToken cancellationToken)
+        internal async Task<CliCredentialCache?> GetCacheAsync(
+            CliCredentialCacheBinding binding,
+            bool rememberMe,
+            CancellationToken cancellationToken,
+            Uri? labelerOrigin = null)
         {
             if (_caches.TryGetValue(binding, out CliCredentialCache? existing))
             {
+                existing.AssociateLabelerOrigin(labelerOrigin);
                 return existing;
             }
-            _storagePermitted ??= await CliCredentialCache.ConfirmStorageAsync(
-                warning: Console.Error,
-                confirm: token => ConfirmCredentialStorageAsync(
-                    input: Console.In,
-                    diagnostics: Console.Error,
-                    inputRedirected: Console.IsInputRedirected,
-                    cancellationToken: token),
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-            if (!_storagePermitted.Value)
-            {
-                await Console.Error.WriteLineAsync("⚠   Credential storage was declined. Continuing with a temporary sign-in.").ConfigureAwait(false);
-                return null;
-            }
-
             CliCredentialCache cache = new(
                 binding: binding,
-                directory: null,
-                allowUnencryptedStorage: true);
+                directory: directory,
+                allowUnencryptedStorage: true,
+                labelerOrigin: labelerOrigin);
+            if (!cache.HasSavedSession)
+            {
+                if (!rememberMe)
+                {
+                    await cache.DisposeAsync().ConfigureAwait(false);
+                    return null;
+                }
+
+                _storagePermitted ??= await CliCredentialCache.ConfirmStorageAsync(
+                    warning: Console.Error,
+                    confirm: token => ConfirmCredentialStorageAsync(
+                        input: Console.In,
+                        diagnostics: Console.Error,
+                        inputRedirected: Console.IsInputRedirected,
+                        cancellationToken: token),
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+                if (!_storagePermitted.Value)
+                {
+                    await cache.DisposeAsync().ConfigureAwait(false);
+                    await Console.Error.WriteLineAsync("⚠   Credential storage was declined. Continuing with a temporary sign-in.").ConfigureAwait(false);
+                    return null;
+                }
+            }
+
             _caches.Add(binding, cache);
             await cache.AcquireSessionAsync(cancellationToken).ConfigureAwait(false);
-            await Console.Error.WriteLineAsync("💾  Using ~/.xenon for this account/client/permission set. Sessions remain until removed; the PDS controls expiry and revocation.").ConfigureAwait(false);
+            await WriteVerboseNoticeAsync("💾  Saving credentials in ~/.xenon.").ConfigureAwait(false);
             return cache;
         }
 

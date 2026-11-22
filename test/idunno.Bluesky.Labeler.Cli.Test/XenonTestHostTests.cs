@@ -576,6 +576,12 @@ public partial class XenonTestHostTests
             Assert.Equal("?ReturnUrl=%2FXenon", login.Query);
             using HttpResponseMessage loginPage = await client.GetAsync(login, token);
             Assert.Equal(HttpStatusCode.OK, loginPage.StatusCode);
+            string loginPolicy = Assert.Single(loginPage.Headers.GetValues("Content-Security-Policy"));
+            Assert.Contains("script-src 'self'", loginPolicy, StringComparison.Ordinal);
+            Assert.Contains("frame-ancestors 'none'", loginPolicy, StringComparison.Ordinal);
+            Assert.Contains("form-action 'self' https:", loginPolicy, StringComparison.Ordinal);
+            Assert.DoesNotContain("unsafe-inline", loginPolicy, StringComparison.Ordinal);
+            Assert.False(loginPage.Headers.Contains("Strict-Transport-Security"));
             string loginHtml = await loginPage.Content.ReadAsStringAsync(token);
             Assert.Contains("aria-label=\"Xenon home\"", loginHtml, StringComparison.Ordinal);
             Assert.Contains("id=\"theme-choice\"", loginHtml, StringComparison.Ordinal);
@@ -638,7 +644,9 @@ public partial class XenonTestHostTests
                 Assert.Contains("did:web:" + displayedHost, html, StringComparison.Ordinal);
                 Assembly uiAssembly = typeof(LabelerUIExtensions).Assembly;
                 string? version = uiAssembly.GetName().Version?.ToString(3);
-                string? build = uiAssembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+                string? build = uiAssembly.GetCustomAttributes<AssemblyMetadataAttribute>()
+                    .FirstOrDefault(attribute => attribute.Key == "BuildCommitId")?.Value
+                    ?? uiAssembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
                 Assert.Contains("<footer class=\"site-footer\">", html, StringComparison.Ordinal);
                 Assert.Contains("rel=\"icon\" type=\"image/svg+xml\" sizes=\"any\"", html, StringComparison.Ordinal);
                 Assert.Contains("aria-label=\"Xenon home\"", html, StringComparison.Ordinal);
@@ -668,11 +676,11 @@ public partial class XenonTestHostTests
                 Assert.True(themeScript.Success, html);
                 Assert.True(themeScript.Index < html.IndexOf("<link rel=\"stylesheet\"", StringComparison.Ordinal), html);
                 Assert.Contains("&copy; 2026 Barry Dorrans", html, StringComparison.Ordinal);
-                Assert.Contains($"<p>V{version}</p>", html, StringComparison.Ordinal);
+                Assert.Contains($"<p>Version V{version}</p>", html, StringComparison.Ordinal);
                 Assert.Contains("href=\"https://github.com/blowdart/idunno.Bluesky\">Get the source on GitHub</a>", html, StringComparison.Ordinal);
                 Assert.Contains("href=\"/Xenon/Terms\"", html, StringComparison.Ordinal);
                 Assert.Contains("href=\"/Xenon/Privacy\"", html, StringComparison.Ordinal);
-                Assert.Contains($"Build number <code>{build}</code>", WebUtility.HtmlDecode(html), StringComparison.Ordinal);
+                Assert.Contains($"Commit <code>{build}</code>", WebUtility.HtmlDecode(html), StringComparison.Ordinal);
                 if (path is "/Xenon/Cases" or "/Xenon/Reports" or "/Xenon/Audit")
                 {
                     Assert.Contains("class=\"table-pagination\"", html, StringComparison.Ordinal);
@@ -3067,8 +3075,12 @@ public partial class XenonTestHostTests
             Assert.Equal("image/svg+xml", asset.Content.Headers.ContentType!.MediaType);
             Assert.Contains("Font Awesome Free", await asset.Content.ReadAsStringAsync(token), StringComparison.Ordinal);
         }
-        Assert.Contains("Icons by <a href=\"https://fontawesome.com/\">Font Awesome Free</a>", html, StringComparison.Ordinal);
-        Assert.Contains("href=\"https://creativecommons.org/licenses/by/4.0/\"", html, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Xenon/Acknowledgements\"", html, StringComparison.Ordinal);
+        using HttpResponseMessage acknowledgements = await client.GetAsync("/Xenon/Acknowledgements", token);
+        Assert.Equal(HttpStatusCode.OK, acknowledgements.StatusCode);
+        string acknowledgementHtml = await acknowledgements.Content.ReadAsStringAsync(token);
+        Assert.Contains("Font Awesome Free", acknowledgementHtml, StringComparison.Ordinal);
+        Assert.Contains("href=\"https://creativecommons.org/licenses/by/4.0/\"", acknowledgementHtml, StringComparison.Ordinal);
         Assert.DoesNotContain("subject-glyph", html, StringComparison.Ordinal);
         using HttpResponseMessage license = await client.GetAsync("/Xenon/vendor/fontawesome/LICENSE.txt", token);
         Assert.Equal(HttpStatusCode.OK, license.StatusCode);

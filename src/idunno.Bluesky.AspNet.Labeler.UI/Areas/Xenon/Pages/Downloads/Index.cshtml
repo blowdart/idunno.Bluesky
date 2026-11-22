@@ -10,24 +10,70 @@
 }
 else
 {
-    <p>Administration CLI builds matching this labeler's version. Windows executables are Authenticode signed. Linux executables are not signed; verify them with the checksums below or the GitHub release attestations. Linux archives do not preserve the executable bit, so run <code>chmod +x</code> after extracting.</p>
+    <p>Download the administration CLI matching this labeler's version. Choose your operating system and processor architecture.</p>
+    <div class="cli-downloads">
     @foreach (IGrouping<string, idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Downloads.CliDownload> group in Model.Downloads.GroupBy(download => download.Os).OrderBy(group => group.Key))
     {
         <section class="panel">
             <h2>@(group.Key switch { "win" => "Windows", "linux" => "Linux", _ => group.Key })</h2>
-            <ul>
+            @if (group.Key == "win" && group.All(download => !download.LocalBuild))
+            {
+                <p class="muted">Windows executables are Authenticode signed.</p>
+            }
+            else if (group.Key == "linux" && group.All(download => !download.LocalBuild))
+            {
+                <p class="muted">Linux executables are not signed. Verify your download using the checksums or GitHub release attestations, then make it executable using the command below.</p>
+            }
+            else if (group.Key == "linux")
+            {
+                <p class="muted">Make each executable runnable using the command below.</p>
+            }
+            <ul class="cli-download-list">
                 @foreach (var download in group.OrderBy(download => download.Arch))
                 {
                     <li>
-                        <a asp-area="Xenon" asp-page="/Downloads/Index" asp-page-handler="File" asp-route-name="@download.Name">@download.Name</a>
-                        (@download.Arch, @((download.Size / 1048576.0).ToString("0.0")) MiB)
-                        <dl>
-                            <dt>SHA-256</dt><dd><code>@download.Sha256</code></dd>
-                            <dt>SHA-512</dt><dd><code>@download.Sha512</code></dd>
-                        </dl>
+                        <div class="cli-download-heading">
+                            <h3>@download.Arch</h3>
+                            <span class="muted">@((download.Size / 1048576.0).ToString("0.0")) MiB</span>
+                        </div>
+                        <a class="cli-download-link" asp-area="Xenon" asp-page="/Downloads/Index" asp-page-handler="File" asp-route-name="@download.Name"><span class="fa-icon fa-download" aria-hidden="true"></span> @download.Name</a>
+                        @if (group.Key == "linux")
+                        {
+                            <p class="cli-download-command"><code>chmod +x @download.Name</code></p>
+                        }
+                        <details class="cli-download-checksums" open>
+                            <summary>Verify download<span class="sr-only"> for @download.Name</span></summary>
+                            <h4>SHA checksums</h4>
+                            <p>Run these commands in the directory containing your download. Compare each hash with its expected value below, ignoring letter case. A checksum detects a changed download; it does not verify who published it.</p>
+                            @if (group.Key == "win")
+                            {
+                                <p class="cli-download-command"><code>Get-FileHash .\@download.Name -Algorithm SHA256</code></p>
+                                <p class="cli-download-command"><code>Get-FileHash .\@download.Name -Algorithm SHA512</code></p>
+                            }
+                            else
+                            {
+                                <p class="cli-download-command"><code>sha256sum @download.Name</code></p>
+                                <p class="cli-download-command"><code>sha512sum @download.Name</code></p>
+                            }
+                            <dl>
+                                <dt>SHA-256</dt>
+                                <dd><code>@download.Sha256</code></dd>
+                                <dt>SHA-512</dt>
+                                <dd><code>@download.Sha512</code></dd>
+                            </dl>
+                            @if (!download.LocalBuild)
+                            {
+                                <h4>GitHub build attestation</h4>
+                                <p>To verify that this binary was built by this repository's GitHub Actions workflow, install the <a href="https://cli.github.com/">GitHub CLI</a> and sign in once with <code>gh auth login</code>. Then run:</p>
+                                <p class="cli-download-command"><code>gh attestation verify @download.Name --repo blowdart/idunno.Bluesky</code></p>
+                                <p>Check that verification succeeds before running the binary. See the <a href="https://cli.github.com/manual/gh_attestation_verify">GitHub attestation verification documentation</a> for details.</p>
+                            }
+                        </details>
                     </li>
                 }
             </ul>
         </section>
     }
+    </div>
+    <p class="muted">The CLI includes third-party software. See the <a asp-area="Xenon" asp-page="/Acknowledgements" asp-fragment="third-party-software">third-party software acknowledgements</a> or <a asp-area="Xenon" asp-page="/Acknowledgements" asp-page-handler="Text">download THIRD-PARTY-NOTICES.txt</a>.</p>
 }

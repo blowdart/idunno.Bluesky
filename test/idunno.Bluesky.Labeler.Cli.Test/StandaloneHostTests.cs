@@ -2,6 +2,8 @@
 // Licensed under the MIT License.
 
 using System.Net;
+using System.Reflection;
+using System.Text;
 using System.Text.Json;
 
 using idunno.AtProto;
@@ -28,7 +30,7 @@ namespace idunno.Bluesky.Labeler.Cli.Test;
 public class StandaloneHostTests
 {
     [Fact]
-    public async Task RootRouteReturnsThePlainTextBanner()
+    public async Task RootRouteReturnsTheUtf8BannerWithVersionAndCommit()
     {
         CancellationToken token = TestContext.Current.CancellationToken;
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
@@ -46,18 +48,15 @@ public class StandaloneHostTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("text/plain", response.Content.Headers.ContentType!.MediaType);
         Assert.Equal("utf-8", response.Content.Headers.ContentType.CharSet);
-        string blankLine = new(' ', 31);
+        Assembly uiAssembly = typeof(LabelerUIExtensions).Assembly;
+        string? commit = uiAssembly.GetCustomAttributes<AssemblyMetadataAttribute>()
+            .FirstOrDefault(attribute => attribute.Key == "BuildCommitId")?.Value
+            ?? uiAssembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        string version = uiAssembly.GetName().Version?.ToString(3) ?? "Unknown";
+        Assert.False(string.IsNullOrWhiteSpace(commit));
         Assert.Equal(
-            string.Join(
-                '\n',
-                blankLine,
-                blankLine,
-                " _____ _____ ____   ___  ____  ",
-                "(___  ) ___ |  _ \\ / _ \\|  _ \\ ",
-                " / __/| ____| | | | |_| | | | |",
-                "(_____)_____)_| |_|\\___/|_| |_|",
-                blankLine) + '\n',
-            await response.Content.ReadAsStringAsync(token));
+            Encoding.UTF8.GetBytes($"🏷️ V{version} Commit {commit}"),
+            await response.Content.ReadAsByteArrayAsync(token));
 
         await app.StopAsync(token);
     }
@@ -174,6 +173,75 @@ public class StandaloneHostTests
         string json = JsonSerializer.Serialize(receipt, HostJsonSerializerContext.Default.LabelAdministrationReceipt);
         LabelAdministrationReceipt? restored = JsonSerializer.Deserialize(json, HostJsonSerializerContext.Default.LabelAdministrationReceipt);
         Assert.Equal(receipt, restored);
+    }
+
+    [Theory]
+    [InlineData("Production", "https://labeler.example", "labeler.example", true, true, true)]
+    [InlineData("Production", "https://labeler.example", "labeler.example", false, true, false)]
+    [InlineData("Production", "https://labeler.example", "labeler.example", true, false, false)]
+    [InlineData("Development", "https://labeler.example", "labeler.example", true, true, false)]
+    [InlineData("Production", "http://labeler.example", "labeler.example", true, true, false)]
+    [InlineData("Production", "https://localhost", "localhost", true, true, false)]
+    [InlineData("Production", "https://127.0.0.1", "127.0.0.1", true, true, false)]
+    [InlineData("Production", "https://[::1]", "[::1]", true, true, false)]
+    [InlineData("Production", "https://labeler.example", "localhost", true, true, false)]
+    [InlineData("Production", "https://labeler.example", "127.0.0.2", true, true, false)]
+    [InlineData("Production", "https://labeler.example", "[::ffff:127.0.0.1]", true, true, false)]
+    public async Task HstsRequiresNonDevelopmentPublicHttpsAndTrustedTransport(
+        string environment,
+        string publicOrigin,
+        string requestHost,
+        bool trusted,
+        bool forwardedHttps,
+        bool expected)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        WebApplicationBuilder builder = WebApplication.CreateBuilder(new WebApplicationOptions
+        {
+            EnvironmentName = environment
+        });
+        builder.Logging.ClearProviders();
+        builder.WebHost.ConfigureKestrel(server => server.Listen(IPAddress.Loopback, 0));
+        builder.Services.AddHsts(_ => { });
+        if (trusted)
+        {
+            builder.Configuration["Labeler:TrustedProxies:0"] = "127.0.0.1";
+            builder.Configuration["Labeler:TrustedProxies:1"] = "::ffff:127.0.0.1";
+        }
+
+        Uri origin = new(publicOrigin);
+        await using WebApplication app = builder.Build();
+        HostProgram.ConfigureTransportSecurity(app, origin);
+        app.UseBlueskyOAuthClientMetadata(
+            HostProgram.CreateNativeOAuthOptions(
+                new Uri("https://labeler.example"),
+                new AtProtoServiceReference(new Did("did:web:labeler.example"), "labeler_admin")),
+            new BlueskyOAuthClientMetadataOptions { ApplicationType = BlueskyOAuthClientApplicationType.Native });
+        app.MapGet("/headers", () => Results.Json(new { status = "ok" }));
+        await app.StartAsync(token);
+        Uri address = new(app.Services.GetRequiredService<IServer>()
+            .Features.Get<IServerAddressesFeature>()!.Addresses.Single());
+        using HttpClient client = new() { BaseAddress = address };
+        foreach (string path in new[] { "/headers", "/native-client-metadata.json" })
+        {
+            using HttpRequestMessage request = new(HttpMethod.Get, path);
+            request.Headers.Host = requestHost;
+            request.Headers.Add("X-Forwarded-For", "198.51.100.1");
+            request.Headers.Add("X-Forwarded-Proto", forwardedHttps ? "https" : "http");
+            using HttpResponseMessage response = await client.SendAsync(request, token);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+            Assert.Equal(expected, response.Headers.Contains("Strict-Transport-Security"));
+            Assert.False(response.Headers.Contains("Content-Security-Policy"));
+            if (expected)
+            {
+                string hsts = Assert.Single(response.Headers.GetValues("Strict-Transport-Security"));
+                Assert.StartsWith("max-age=", hsts, StringComparison.Ordinal);
+                Assert.DoesNotContain("includeSubDomains", hsts, StringComparison.OrdinalIgnoreCase);
+                Assert.DoesNotContain("preload", hsts, StringComparison.OrdinalIgnoreCase);
+            }
+        }
+        await app.StopAsync(token);
     }
 
     [Theory]

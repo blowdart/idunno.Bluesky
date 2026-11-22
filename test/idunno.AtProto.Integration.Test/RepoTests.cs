@@ -3,6 +3,8 @@
 
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.Json.Serialization.Metadata;
 
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Repo;
@@ -2006,6 +2008,162 @@ public class RepoTests
         Assert.Equal(expectedCid, response.Result.Cid);
 
         Assert.Equal("test", response.Result.Value.TestValue);
+    }
+
+    [Fact]
+    public async Task GetRecordAcceptsAResponseWithoutACid()
+    {
+        AtUri expectedAtUri = new("at://did:plc:test/blue.idunno.test/rkey1");
+
+        const string jsonReturnValue = """
+        {
+          "uri": "at://did:plc:test/blue.idunno.test/rkey1",
+          "value": {
+              "testValue": "test"
+          }
+        }
+        """;
+
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            if (context.Request.Path == AtProtoServer.GetRecordEndpoint)
+            {
+                context.Response.StatusCode = 200;
+                context.Response.Headers.ContentType = "application/json";
+                await context.Response.WriteAsync(jsonReturnValue);
+            }
+        });
+
+        HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
+        JsonSerializerOptions jsonSerializerOptions = _jsonSerializerOptions;
+
+        AtProtoHttpResult<AtProtoRepositoryRecord<TestRecord>> response = await AtProtoServer.GetRecord<TestRecord>(
+            repo: new Did("did:plc:test"),
+            collection: "blue.idunno.test",
+            rKey: "rkey1",
+            cid: null,
+            service: TestServerBuilder.DefaultUri,
+            httpClient: httpClient,
+            accessCredentials: null,
+            jsonSerializerOptions: jsonSerializerOptions,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(response.Succeeded);
+        AtProtoRepositoryRecord<TestRecord> record = response.Result;
+
+        Assert.Equal(expectedAtUri, record.Uri);
+        Assert.Equal("test", record.Value.TestValue);
+        Assert.False(record.HasCid);
+        Assert.Throws<InvalidOperationException>(() => record.Cid);
+        Assert.Throws<InvalidOperationException>(() => record.StrongReference);
+        Assert.False(record.TryGetStrongReference(out StrongReference? strongReference));
+        Assert.Null(strongReference);
+        Assert.DoesNotContain("Cid = bafy", record.ToString(), StringComparison.Ordinal);
+
+        string serialized = JsonSerializer.Serialize(record, jsonSerializerOptions);
+        using JsonDocument document = JsonDocument.Parse(serialized);
+        Assert.False(document.RootElement.TryGetProperty("cid", out _));
+        Assert.False(document.RootElement.TryGetProperty("strongReference", out _));
+
+        AtProtoRepositoryRecord<TestRecord>? roundTripped = JsonSerializer.Deserialize<AtProtoRepositoryRecord<TestRecord>>(serialized, jsonSerializerOptions);
+        Assert.NotNull(roundTripped);
+        Assert.False(roundTripped.HasCid);
+        Assert.Equal(record, roundTripped);
+    }
+
+    [Fact]
+    public void RepositoryRecordsWithoutCidsOmitCidPropertiesWithPublicSerializerOptions()
+    {
+        AtProtoRepositoryRecord record = new(
+            uri: new AtUri("at://did:plc:test/blue.idunno.test/rkey1"),
+            cid: null,
+            value: new JsonObject { ["testValue"] = "test" });
+        JsonSerializerOptions[] options =
+        [
+            AtProtoJsonSerializerOptions.Default,
+            AtProtoJsonSerializerOptions.Create(static _ => { }),
+            AtProtoJsonSerializerOptions.CreateWriteOptions(static _ => { })
+        ];
+
+        foreach (JsonSerializerOptions serializerOptions in options)
+        {
+            using JsonDocument document = JsonDocument.Parse(JsonSerializer.Serialize(record, serializerOptions));
+            Assert.False(document.RootElement.TryGetProperty("cid", out _));
+            Assert.False(document.RootElement.TryGetProperty("strongReference", out _));
+        }
+    }
+
+    [Fact]
+    public void RepositoryRecordsWithoutCidsSupportNullPropertyNamingPolicy()
+    {
+        static void Configure(JsonSerializerOptions options)
+        {
+            options.PropertyNamingPolicy = null;
+            options.TypeInfoResolver = JsonTypeInfoResolver.Combine(
+                global::idunno.AtProto.SourceGenerationContext.Default,
+                SourceGenerationContext.Default);
+        }
+
+        JsonSerializerOptions writeOptions = AtProtoJsonSerializerOptions.CreateWriteOptions(Configure);
+        JsonSerializerOptions readOptions = AtProtoJsonSerializerOptions.CreateReadOptions(Configure);
+        AtProtoRepositoryRecord<TestRecord> record = new(
+            uri: new AtUri("at://did:plc:test/blue.idunno.test/rkey1"),
+            cid: null,
+            value: new TestRecord { TestValue = "test" });
+
+        string serialized = JsonSerializer.Serialize(record, writeOptions);
+        using JsonDocument document = JsonDocument.Parse(serialized);
+        Assert.False(document.RootElement.TryGetProperty("Cid", out _));
+        Assert.False(document.RootElement.TryGetProperty("StrongReference", out _));
+
+        AtProtoRepositoryRecord<TestRecord>? roundTripped = JsonSerializer.Deserialize<AtProtoRepositoryRecord<TestRecord>>(serialized, readOptions);
+        Assert.NotNull(roundTripped);
+        Assert.False(roundTripped.HasCid);
+        Assert.Equal(record, roundTripped);
+    }
+
+    [Theory]
+    [InlineData("cid", "strongReference")]
+    [InlineData("strongReference", "cid")]
+    public void WriteOptionsPreserveCallerShouldSerializePredicates(string suppressedProperty, string includedProperty)
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.CreateWriteOptions(serializerOptions =>
+        {
+            serializerOptions.TypeInfoResolver = JsonTypeInfoResolver.Combine(
+                global::idunno.AtProto.SourceGenerationContext.Default,
+                SourceGenerationContext.Default).WithAddedModifier(info =>
+                {
+                    if (info.Type == typeof(AtProtoRepositoryRecord<TestRecord>))
+                    {
+                        JsonPropertyInfo property = Assert.Single(info.Properties, property => property.Name == suppressedProperty);
+                        property.ShouldSerialize = static (_, _) => false;
+                    }
+                });
+        });
+        AtProtoRepositoryRecord<TestRecord> record = new(
+            uri: new AtUri("at://did:plc:test/blue.idunno.test/rkey1"),
+            cid: "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4",
+            value: new TestRecord { TestValue = "test" });
+
+        using JsonDocument document = JsonDocument.Parse(JsonSerializer.Serialize(record, options));
+        Assert.False(document.RootElement.TryGetProperty(suppressedProperty, out _));
+        Assert.True(document.RootElement.TryGetProperty(includedProperty, out _));
+    }
+
+    [Fact]
+    public void RepositoryRecordWithACidExposesItsStrongReference()
+    {
+        AtUri uri = new("at://did:plc:test/blue.idunno.test/rkey1");
+        Cid cid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+        AtProtoRepositoryRecord<TestRecord> record = new(uri, cid, new TestRecord { TestValue = "test" });
+
+        Assert.True(record.HasCid);
+        Assert.True(record.TryGetStrongReference(out StrongReference? strongReference));
+        Assert.Equal(new StrongReference(uri, cid), strongReference);
+
+        string serialized = JsonSerializer.Serialize(record, _jsonSerializerOptions);
+        using JsonDocument document = JsonDocument.Parse(serialized);
+        Assert.Equal(cid.Value, document.RootElement.GetProperty("cid").GetString());
     }
 
     [Fact]

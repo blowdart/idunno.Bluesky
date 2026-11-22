@@ -18,6 +18,8 @@
 
 #### idunno.Bluesky.AspNet.Labeler
 
+* Malformed AT identifiers in report intake, appeal intake and Ozone administration return HTTP 400 instead of unhandled exceptions. Appeal label values are validated before authentication and decision lookup.
+* Bounded per-peer request and concurrency admission across remote administration, issuance and Ozone routes, before authentication or denial auditing. Rate-limited requests return `429` without audit writes; admitted denial-audit failures remain fail-closed.
 * Public `com.atproto.server.describeServer` identity discovery, configurable contact and policy links for method-bound service authentication, plus label queries and HTTP/1.1 or HTTP/2 WebSocket subscriptions, with stable pagination, bounded replay, live delivery, admission limits and liveness/readiness health checks.
 * Optional Xenon moderation backend with authenticated report and appeal intake, shared case workflows and independent verification of the labeler's published declaration. Public label distribution remains independent of moderation and remote administration.
 * Replay-protected, method-bound service-token administration over HTTPS and protected local administration through Windows named pipes or Linux Unix sockets, with browserless owner setup and live team authorization.
@@ -37,6 +39,12 @@
 
 #### idunno.Bluesky.AspNet.Labeler.UI
 
+* Font and icon credits appear on a public Acknowledgements page linked from the footer instead of being repeated in every footer.
+* The Acknowledgements page renders the embedded third-party software notices, with collapsible license texts and a plain-text download linked from CLI Downloads.
+* Workflow status text aligns with adjacent table text while keeping its icon centered, including Cases, Reports and Appeals.
+* The Xenon footer shows the version immediately before the commit identifier.
+* Restrictive HTML-only Content Security Policy with same-origin scripts/styles/fonts/media, explicit preview and handle-search sources, and a narrowly scoped HTTPS form-navigation allowance for OAuth sign-in and policy publication.
+* CLI downloads use responsive operating-system panels, direct executable links, Linux `chmod +x` instructions, and initially expanded, collapsible checksums that wrap within the page.
 * Opt-in Xenon-branded Razor Pages UI with Bluesky OAuth sign-in, live Administrator/Moderator/Viewer authorization, and shared web/CLI administration.
 * Filtered, sortable and paged case, report and appeal queues, with assignment, escalation, acknowledgment, subject/reporter mutes, global search and background refresh of visible queues and open counts.
 * Online-team presence with verified-handle member listings and shared five-minute activity observations across Xenon and Ozone.
@@ -53,6 +61,9 @@
 
 #### idunno.Bluesky.Labeler.Host
 
+* The root endpoint returns the label emoji, version and commit identifier as UTF-8 plain text.
+* PostgreSQL and MySQL host containers include the repository's third-party notices at `/app/THIRD-PARTY-NOTICES.txt`.
+* HSTS for non-development, non-loopback HTTPS deployments after trusted proxy processing, including OAuth metadata responses; development and loopback requests remain excluded.
 * Documented that the canonical host ships untrimmed and does not support trimming or Native AOT because it includes Razor Pages; disabling the UI at runtime does not remove that dependency.
 * Provider-neutral, non-packable canonical hosting library with reusable registration, initialization, mapping and lifecycle extensions over the existing hosting helpers; no additional NuGet packages.
 * Separate provider-neutral base, PostgreSQL and MySQL containers, with no database fallback or bundled server. Thin canonical applications reuse the existing storage and authentication packages and retain independently optional Xenon moderation, web UI and Ozone compatibility.
@@ -72,13 +83,22 @@
 
 #### idunno.Bluesky.Labeler.Cli
 
+* Windows CLI executables include the Xenon application icon. Release/prerelease downloads and attestation-verified self-updates use standalone binaries instead of ZIP archives containing XML documentation.
 * Signed CLI downloads for Windows x64/arm64 and Linux x64/arm64, attached to prereleases and releases with a checksum manifest.
 * Self-contained Windows x64, Linux x64 and Linux arm64 administration CLI, with protected local IPC or OAuth/PDS service-authenticated remote access and a dedicated command reference.
 * Label issuance and negation, team management, moderation counts, audit inspection, publication/lifecycle status and durable operation-receipt reads through the shared authorization boundary.
 * Policy draft inspection and saving, conditional publication, independent verification, cleanup resume, abandonment and recovery, with separate administrator and labeler-account authority.
+* Read-only `policy verify --check-only` compares the retained declaration with its public PDS record without updating local verification state, and displays an outcome icon without a redundant match field.
+* Policy command and option help distinguishes each operation and parameter, and the verification confirmation distinguishes local verification from changes to the published policy.
 * Resumable maintenance and signing-key rotation, public did:web identity snippets, authenticated PLC publication and recovery, and explicit retirement, grace, stopped-host attestation, local purge and external key-removal commands.
 * Optional `--remember-me` credentials in `~/.xenon` and `forget-me`, using current-user DPAPI on Windows or explicitly confirmed owner-only unencrypted files on macOS/Linux, with rotating-credential persistence and account/client/scope/service binding.
-* Human-readable results and progress, explicit success/failure feedback, confirmed irreversible actions and raw JSON output through `--verbose`.
+* Automatically reuse saved CLI sessions without repeating `--remember-me`; omit `--admin-handle` when one saved account matches the labeler and command.
+* Reuse one PDS OAuth grant across remote administrator methods advertised for a labeler service; service tokens remain bound to the exact method.
+* `list-credentials` shows saved accounts, permissions and known labeler origins without displaying secrets; older policy and identity sessions with unrecorded origins are identified explicitly.
+* Human-readable results with browser prompts, warnings and errors visible by default; routine authentication/request progress, success confirmations and raw JSON output through `--verbose`.
+* Team output uses DID headings, verified handles, named roles and status icons, with ANSI strikethrough for inactive or removed members.
+* Grouped team listing, enrollment, role changes, enablement, disablement and removal under `team` subcommands, retaining the original command forms for compatibility.
+* Generate and display operation IDs on standard output before new CLI actions when omitted; lookups and continuations still require their existing IDs.
 * Attestation-verified executable self-updates and confirmed digest-pinned Docker Compose redeployment for canonical PostgreSQL/MySQL images and compatible legacy digests, with graceful stop, readiness checks and previous-image rollback; provider-neutral base images are not service-update targets.
 
 #### idunno.Bluesky.Labeler
@@ -86,7 +106,7 @@
 * Host-neutral label issuance and signed negation for accounts or arbitrary records, with optional CID scope and expiry, authorization/policy providers, durable same-intent retries and audited no-ops.
 * Signed-label storage and distribution contracts with immutable signed snapshots, ordered publication and replay, retained-slot queries, stable cursors, operation receipts, structured logging and persistence metrics.
 * Xenon reports, exact-subject cases and appeals, with retained evidence, assignment, escalation, workflow filtering, temporary subject/reporter mutes and atomic label/report decisions. Intake never automatically labels content.
-* Verified DID/handle enrollment, Administrator/Moderator/Viewer roles, explicit local OS delegations, live revocation, last-administrator protection and append-only administrative audit of changes and denials, without successful team-read polling noise.
+* Verified DID/handle enrollment, Administrator/Moderator/Viewer roles, explicit local OS delegations, live revocation, last-administrator protection and administrative audit of changes and denials, without successful team-read polling noise.
 * Protected labeler ownership: the current owner cannot be removed, suspended or demoted, and other administrators cannot replace their local access bindings. Owners can explicitly transfer protection and remote CLI control to another active administrator through Xenon or the CLI, with atomic audit and retry-safe receipts.
 * Editable unpublished policy drafts and retained publication history, independent declaration verification, scope enforcement, conditional publication/recovery and bounded withdrawal of removed labels.
 * Editing an unpublished draft invalidates outstanding publication reviews without changing the active policy's verification deadline.
@@ -107,6 +127,7 @@
 
 #### idunno.Bluesky.Labeler.SQLite / PostgreSQL / MySQL
 
+* Retain the latest 256 boundary-denial audit events per issuer across all clients and processes, atomically pruning older denials and query projections while preserving successful and operation-specific history. Exports abort explicitly if concurrent retention changes their history.
 * SQLite, PostgreSQL and MySQL providers with transactional sequence allocation, durable decisions and audit receipts, signed-label history, publication/replay metadata and bounded reconciliation.
 * Shared persistence for teams, replay protection, policies, reports, cases, appeals, mutes, search projections, Ozone events, notification leases and resumable maintenance/retirement checkpoints.
 * Indexed subject-wide mute exclusion for moderation counts and queues, avoiding repeated scans of retained expired mutes. Schema seventeen backfills CID-independent subject keys without changing evidence, mute deadlines or concurrency fences.
@@ -123,6 +144,8 @@
 
 #### idunno.AtProto
 
+* Added optional-CID support for `com.atproto.repo.getRecord` results, with `HasCid` and `TryGetStrongReference()` for safely handling records without a CID.
+* Added service-token verification overloads that use the library's SSRF-protected HTTP client by default while retaining caller-supplied client overloads.
 * Adds separate Ozone administration service-token verification for exact labeler service and PDS bare-DID audiences, retaining method binding, replay identifiers and strict generic/native verification.
 * Allows the exact Ozone compatibility reads `app.bsky.actor.getProfile`, `app.bsky.feed.getPostThread` and `tools.ozone.setting.listOptions`, and the narrow `tools.ozone.setting.upsertOption` procedure, through that verifier without accepting other AppView or settings methods.
 * Added moderation-only service authentication for exact labeler service audiences and bare issuer DIDs used by PDS proxies, with exact-method verification for reports and Ozone label appeals without relaxing administration. Added shared explicit label-policy publication validation without restricting remote DTO deserialization.
@@ -140,6 +163,10 @@
 
 #### idunno.Bluesky
 
+* Added optional-authentication `getFeedSkeleton` and `sendInteractions` feed-generator APIs, including typed skeleton reasons, feed contexts and interaction events.
+* Added the experimental `getAtmosphereExploreArticleRecommendations` API for the Atmosphere Explore article skeleton.
+* Added `FeedFilter.PostsAndRepliesOnly`, lowercase `includePins` query values, and the lexicon's `posts_with_replies` default for `GetAuthorFeed`.
+* Added `UnknownBlueskyRecord` and `ViewRecord` record-value handling to preserve unrecognized record types; `PostView` now exposes `RecordValue` and `TryGetPost()`, discards null label entries, and reads the author-only `ViewCount`.
 * Added labeler declaration creation, authenticated record reads with CIDs, and conditional updates with publication-time policy validation.
 * Added idempotent labeler declaration setup that compares JSON structurally, avoids replacing a different existing declaration, and handles named missing-record and concurrent-create protocol errors.
 * Added authenticated PLC identity-signature requests and labeler-key/service updates through the PDS, including version-checked PLC state merges, DID-document verification, and signed-operation recovery results for submission and verification transport failures or malformed published DID entries.
@@ -185,6 +212,7 @@
 
 #### idunno.Bluesky
 
+* `PostView.Record` is now read-only. Use `RecordValue` for the underlying record and `TryGetPost()` to access it when it is a post.
 * Corrected `Labeler.Service.Labels` from a collection of `SelfLabel` to an optional `SelfLabels` object. Omitted subject types now remain omitted instead of becoming an empty array.
 
 ### ✅ Fixed
@@ -209,10 +237,20 @@
 * Recursive validation now checks required URI and CID members of embedded and associated strong references, and required mention DIDs and nonblank link values in known facet features. Failures preserve indexed member paths without changing unknown facet handling.
 * Profile validation now checks strong references in links, pinned posts and starter pack attribution. Message validation accepts supported group-chat join-link embeds. Gate validation requires a post record key, while tolerant parsing retains collection-only targets for inspection.
 * Message validation reports missing join-link codes as `Embed.Code`, including when a code is cleared through an initializer or `with` expression.
+* Unauthenticated feed-skeleton requests now resolve the generator's `#bsky_fg` endpoint and call it directly; PDS proxying remains for authenticated requests. Thread helpers return a classified error rather than throwing when a repository read omits its CID.
 
 #### idunno.Bluesky.AspNet.Labeler.UI
 
 * Unsupported DID methods show unavailable public previews and current-version lookups instead of server errors, while retaining canonical subject details and issuer-local account label checks.
+* Policy publication and record previews now reject records without a CID when compare-and-swap or a strong reference is required.
+
+#### idunno.Bluesky.AspNet.Labeler
+
+* Policy verification now classifies a public policy record without a CID as unverifiable instead of throwing.
+
+#### idunno.Bluesky.Labeler.Storage
+
+* Boundary-denial retention now uses a dedicated indexed projection, avoiding scans of successful audit history while the issuer lock is held; existing audit history is backfilled during schema migration.
 ## 8.0.1 - 2026-11-12
 
 ### ➕ Added

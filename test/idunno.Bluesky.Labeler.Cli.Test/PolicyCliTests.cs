@@ -5,6 +5,7 @@ using System.CommandLine;
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
@@ -84,6 +85,89 @@ public class PolicyCliTests
         Assert.Equal(expected, Program.MatchesPolicyPublication(current, intent));
         Assert.False(Program.MatchesPolicyPublication(current, intent with { PublicationOperationId = null }));
         Assert.False(Program.MatchesPolicyPublication(current with { Definition = null }, intent));
+    }
+
+    [Theory]
+    [InlineData(true, true, "Matches", 0)]
+    [InlineData(false, true, "Mismatch", 5)]
+    [InlineData(false, false, "Missing", 5)]
+    public async Task ReadOnlyPolicyCheckOnlyReadsStateAndPublicDeclaration(
+        bool expectedMatch,
+        bool recordExists,
+        string expectedStatus,
+        int expectedFailure)
+    {
+        List<string> methods = [];
+        Program.PolicyState state = new(Issuer, "VerifiedActive", Definition: Definition());
+        (Program.PolicyCheckResult? result, int failure) = await Program.CheckPublishedPolicyAsync(
+            sender: (command, _) =>
+            {
+                methods.Add(command.Method);
+                Assert.Equal("Read-only test comparison.", command.Reason);
+                string json = """{"succeeded":true,"moderation":{"policy":""" +
+                    JsonSerializer.Serialize(state, Program.PolicyJsonContext.Default.PolicyState) + "}}";
+                return Task.FromResult(new Program.AdministrationReply(json, HttpStatusCode.OK));
+            },
+            readPublicPolicy: (issuer, _) =>
+            {
+                Assert.Equal(Issuer, issuer.Value);
+                JsonNode? declaration = recordExists
+                    ? JsonNode.Parse(expectedMatch ? Declaration : """{"different":true}""")
+                    : null;
+                return Task.FromResult(new Program.PublicPolicyDeclaration(
+                    recordExists,
+                    recordExists ? RecordCid : null,
+                    declaration));
+            },
+            reason: "Read-only test comparison.",
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(expectedFailure, failure);
+        Assert.NotNull(result);
+        Assert.Equal(expectedStatus, result.Status);
+        Assert.Equal(recordExists ? RecordCid : null, result.ObservedCid);
+        Assert.Equal(["getPolicy"], methods);
+    }
+
+    [Theory]
+    [InlineData("Matches", RecordCid, "✅  Status: Matches")]
+    [InlineData("Mismatch", RecordCid, "📄⚠️  Status: Mismatch")]
+    [InlineData("Missing", null, "🔎❌  Status: Public declaration missing")]
+    [InlineData("NoSelectedPolicy", null, "📋❌  Status: No selected policy")]
+    public async Task ReadOnlyPolicyCheckShowsOutcomeIconsWithoutDuplicateMatchField(
+        string status,
+        string? cid,
+        string expectedStatus)
+    {
+        Program.PolicyCheckResult result = new(status, Issuer, cid);
+        using StringWriter output = new();
+        await Program.WritePolicyCheckResultAsync(result: result, output: output, verbose: false);
+
+        Assert.Equal(
+            expectedStatus + Environment.NewLine +
+            $"🔗  Issuer DID: {Issuer}" + Environment.NewLine +
+            $"🆔  Observed CID: {cid ?? "(none)"}" + Environment.NewLine,
+            output.ToString());
+
+        using StringWriter jsonOutput = new();
+        await Program.WritePolicyCheckResultAsync(result: result, output: jsonOutput, verbose: true);
+        using JsonDocument document = JsonDocument.Parse(jsonOutput.ToString());
+        Assert.Equal(status, document.RootElement.GetProperty("status").GetString());
+        Assert.Equal(Issuer, document.RootElement.GetProperty("issuer").GetString());
+        Assert.Equal(cid, document.RootElement.GetProperty("observedCid").GetString());
+        Assert.False(document.RootElement.TryGetProperty("matches", out _));
+    }
+
+    [Fact]
+    public async Task ReadOnlyPolicyCheckSanitizesTerminalControlCharacters()
+    {
+        Program.PolicyCheckResult result = new("Mismatch", "did:plc:labeler\u001b[31m", "cid\nforged");
+        using StringWriter output = new();
+        await Program.WritePolicyCheckResultAsync(result: result, output: output, verbose: false);
+
+        Assert.Contains("did:plc:labeler [31m", output.ToString(), StringComparison.Ordinal);
+        Assert.Contains("cid forged", output.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("\u001b", output.ToString(), StringComparison.Ordinal);
     }
 
     [Theory]
@@ -214,6 +298,7 @@ public class PolicyCliTests
     [InlineData("save", "--file", "policy.json", "--reason", "Reviewed", "--operation-id", "draft", "--yes")]
     [InlineData("begin", "--version", "v1", "--expected-revision", "1", "--create", "--reason", "Reviewed", "--operation-id", "publication", "--yes")]
     [InlineData("verify", "--reason", "Reviewed", "--yes")]
+    [InlineData("verify", "--check-only")]
     [InlineData("abandon", "--expected-revision", "2", "--reason", "Reviewed", "--operation-id", "abandon", "--yes")]
     public void ExplicitPolicyCommandsParseWithoutGenericMethodOrCallerOverrides(params string[] arguments)
     {

@@ -8,11 +8,15 @@ create a separate authorization, issuance, or audit path.
 
 Xenon uses the locally bundled Inter variable font, including its italic face,
 with system-font fallbacks and non-blocking font loading. No font requests go to
-Google Fonts or a CDN. The footer credits The Inter Project Authors and links to
+Google Fonts or a CDN. The public Acknowledgements page credits The Inter Project Authors and links to
 the bundled SIL Open Font License 1.1. JSON displays and editors, code blocks,
 and fixed-width identifiers use locally bundled Google Sans Code with programming
 ligatures disabled. Its normal and italic variable fonts, SIL Open Font License
-1.1, and trademark notice are also included and linked from the footer.
+1.1, and trademark notice are also included and linked from the Acknowledgements page.
+The footer links to `/Xenon/Acknowledgements` rather than repeating these credits.
+The same page renders the third-party software notices embedded from `THIRD-PARTY-NOTICES.txt`
+and offers them as a plain-text download at `/Xenon/Acknowledgements?handler=Text`, which the
+CLI Downloads page also links. Host containers include the file at `/app/THIRD-PARTY-NOTICES.txt`.
 
 On Team, select a member's verified handle to fill the
 Change member form with their handle and current role. Select an action,
@@ -64,6 +68,24 @@ Audit actions have readable names with their original identifiers in tooltips.
 List counts use singular wording for one item. Terms and Privacy explain operator
 responsibilities, sign-in storage, external requests and data retention in plain
 language without replacing the operator's required service-specific disclosures.
+
+## Browser security headers
+
+Xenon HTML and its Bluesky sign-in pages send a restrictive Content Security Policy (CSP).
+Scripts, styles, fonts and media must come from the same origin; inline scripts/styles,
+`eval`, embedding frames, document base URLs and plugins are not allowed.
+Images may also use `data:` previews and external HTTPS account images. Connections are
+limited to the same origin and `https://public.api.bsky.app` for team handle suggestions.
+The default for every other resource type is `default-src 'none'`.
+
+Forms normally submit only to the same origin. The sign-in and Policy pages additionally
+allow HTTPS form navigation because browsers can apply `form-action` to OAuth redirects
+after a POST, and the authorization server is discovered from the submitted account.
+This exception does not allow external scripts, styles or arbitrary network connections.
+The policy does not require `unsafe-inline` or `unsafe-eval`.
+JSON APIs, OAuth metadata, downloads and callback redirects are unchanged by this HTML-only
+policy. The canonical host also configures production HTTPS
+[HSTS and trusted proxy handling](deployment.md#native-oauth-and-tls-forwarding).
 
 ## Account reports and reason compatibility
 
@@ -281,7 +303,7 @@ beside a person icon. Feeds, starter packs and other records have distinct
 descriptions, while the full canonical identifier remains available in the
 identity tooltip. Icons are decorative; the text and canonical identifiers
 carry the meaning. Subject icons are unmodified Font Awesome Free 7.3.1 SVGs
-bundled locally under CC BY 4.0, with their upstream license notice and footer
+bundled locally under CC BY 4.0, with their upstream license notice and Acknowledgements page
 credit. No Font Awesome CDN, external font or icon script is requested.
 The same local icons provide author cards, search, workflow statuses, the
 UTC/Local globe, account controls and verified-account cautions. In-review work
@@ -333,8 +355,10 @@ name, handle and bio. Anonymous AppView metadata also supplies follower, followi
 and post counts when available; these counts are omitted if AppView is unavailable.
 The read-only card does not show viewer relationships or follow/message controls.
 No third-party embeds or remote browser media requests are used for reported content.
-PDS resolution and media reads use the SSRF-protected HTTP handler with redirects
-and cookies disabled. The signed-in user's
+PDS resolution and media reads use a handler that checks resolved destination IP
+addresses at connection time and rejects loopback, link-local and private
+addresses, including cloud metadata endpoints. Automatic redirects and cookies
+are disabled. The signed-in user's
 own header avatar is separate and loads from its transformed profile URI.
 Missing/deleted/restricted content produces
 an explicit unavailable preview, not a failed moderation action. A differing record
@@ -608,7 +632,11 @@ Handles are verified and resolved to DIDs before filtering or exporting; local O
 identities and system identifiers are not accepted as actor filters. Resolution
 failures are shown explicitly rather than returning an unfiltered log.
 
-The download glyph exports every event matching the applied filters, not just
+Boundary authentication and malformed/insecure invocation denials retain the latest 256
+events across all clients in the built-in stores. Older boundary denials expire, leaving
+sequence gaps; successful and operation-specific audit events are unaffected.
+
+The download glyph exports every retained event matching the applied filters, not just
 the current page, as a JSON array in sequence order. JSON retains sequence numbers
 and timestamps for machine processing. Downloads negotiate Brotli or gzip using
 `Accept-Encoding`, or send uncompressed JSON. Responses are not cached.
@@ -617,6 +645,8 @@ Downloads require antiforgery protection and live inspection authority. Each
 download first records an `audit-export-started` event with the actor, filters
 and sequence cutoff. This records the start, not confirmation that the browser
 saved the file. The export excludes that new event and any later events.
+If denial retention changes history during the download, the export aborts rather than
+silently omitting events. Discard the incomplete file and start a new download.
 It reads bounded pages and rechecks authorization between them; storage errors,
 cancellation or lost authority abort the response rather than completing a
 misleading partial JSON file. Successful audit-feed reads do not append events,
@@ -734,10 +764,19 @@ separately.
 ## CLI downloads
 
 The **CLI Downloads** page, under the user menu, lists the labeler administration CLI builds that
-were packaged into the container image, with their SHA-256 and SHA-512 checksums. It reads
+were packaged into the container image as standalone executables, not ZIP archives.
+Responsive operating-system panels show each architecture and download size; collapsible
+checksums are expanded by default and contain the SHA-256 and SHA-512 values without overflowing the page.
+Each download's **Verify download** section includes Linux `sha256sum`/`sha512sum` or
+Windows PowerShell `Get-FileHash` commands and expected checksum values. Release downloads also
+show GitHub CLI setup guidance and the exact `gh attestation verify` command for that binary.
+Windows release executables are Authenticode signed and use the Xenon icon. Each Linux download includes
+its exact `chmod +x` command so the downloaded binary can be run without extracting an archive.
+The page reads
 `cli-downloads.json` from the directory named by the `Labeler:CliDownloadsDirectory`
 configuration value (default `/opt/labeler-downloads`) and serves only files listed in that
-manifest. The page is empty when the host is not running from the canonical image.
+manifest. Locally built entries can set `localBuild` to `true` to omit release-signing and
+attestation claims. The page is empty when the host is not running from the canonical image.
 
 ## Running the isolated manual-test host
 
@@ -814,7 +853,7 @@ data it protects. No additional database server or NuGet dependency is required.
 While the host is running, use the protected local endpoint from the same OS user:
 
 ```powershell
-dotnet run --project src\idunno.Bluesky.Labeler.Cli -- team --local-endpoint xenon-test-admin
+dotnet run --project src\idunno.Bluesky.Labeler.Cli -- team list --local-endpoint xenon-test-admin
 dotnet run --project src\idunno.Bluesky.Labeler.Cli -- status --local-endpoint xenon-test-admin
 ```
 
@@ -824,7 +863,7 @@ name. `TestHost:LocalEndpoint` overrides the endpoint on either platform.
 To exercise remote CLI OAuth through the tunnel:
 
 ```powershell
-dotnet run --project src\idunno.Bluesky.Labeler.Cli -- team `
+dotnet run --project src\idunno.Bluesky.Labeler.Cli -- team list `
   --labeler-url https://your-tunnel-host.example `
   --admin-service "did:web:labeler.xenon.invalid#labeler_admin" `
   --admin-handle your-actual-handle.bsky.social `
@@ -858,7 +897,9 @@ It also submits one fictional out-of-scope report, handled as `Not Applicable`,
 with an automatic system audit entry. This example is idempotent and changes no
 labels or pending review work.
 Fixture identity/record reads are resolved locally; other identity reads use the
-canonical host's hardened HTTPS client. Use these fictional targets for manual
+canonical host's HTTPS client, which checks resolved IP addresses at connection
+time, rejects loopback, link-local and private destinations, and disables
+automatic redirects. Use these fictional targets for manual
 labeling and decisions. Fixture identities also resolve to matching handles, such
 as `subject-01.xenon.invalid`, so the test host exercises verified handle displays
 without sending those identity reads to real services.

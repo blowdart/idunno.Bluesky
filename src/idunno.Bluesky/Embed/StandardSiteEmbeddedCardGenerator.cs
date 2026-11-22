@@ -229,56 +229,59 @@ public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbedde
             uri: documentAtUri,
             pds: documentRecordPds,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        if (documentRecordResult.Succeeded)
+        if (!documentRecordResult.Succeeded)
         {
-            Did? publicationAuthorDid = null;
+            return result;
+        }
 
-            if (documentAtUri.Repo.Equals(publicationAtUri.Repo))
-            {
-                publicationAuthorDid = documentAuthorDid;
-            }
-            else if (publicationAtUri.Repo is Handle publicationAuthorHandle)
-            {
-                publicationAuthorDid = await Agent.ResolveHandle(publicationAuthorHandle, cancellationToken).ConfigureAwait(false);
-            }
-            else if (publicationAtUri.Repo is Did did)
-            {
-                publicationAuthorDid = did;
-            }
+        Did? publicationAuthorDid = null;
 
-            if (publicationAuthorDid is null)
-            {
-                Bluesky.Logger.PublicationDidRepoNotPresent(ILogger, publicationAtUri, uri);
-                return result;
-            }
+        if (documentAtUri.Repo.Equals(publicationAtUri.Repo))
+        {
+            publicationAuthorDid = documentAuthorDid;
+        }
+        else if (publicationAtUri.Repo is Handle publicationAuthorHandle)
+        {
+            publicationAuthorDid = await Agent.ResolveHandle(publicationAuthorHandle, cancellationToken).ConfigureAwait(false);
+        }
+        else if (publicationAtUri.Repo is Did did)
+        {
+            publicationAuthorDid = did;
+        }
 
-            Uri? publicationRecordPds;
+        if (publicationAuthorDid is null)
+        {
+            Bluesky.Logger.PublicationDidRepoNotPresent(ILogger, publicationAtUri, uri);
+            return result;
+        }
 
-            if (documentAuthorDid.Equals(publicationAuthorDid))
-            {
-                publicationRecordPds = documentRecordPds;
-            }
-            else
-            {
-                publicationRecordPds = await Agent.ResolvePds(publicationAuthorDid, cancellationToken).ConfigureAwait(false);
-            }
+        Uri? publicationRecordPds;
 
-            if (publicationRecordPds is null)
-            {
-                Bluesky.Logger.PdsForPublicationDidNotFound(ILogger, publicationAuthorDid, uri);
-                return result;
-            }
+        if (documentAuthorDid.Equals(publicationAuthorDid))
+        {
+            publicationRecordPds = documentRecordPds;
+        }
+        else
+        {
+            publicationRecordPds = await Agent.ResolvePds(publicationAuthorDid, cancellationToken).ConfigureAwait(false);
+        }
 
-            AtProtoHttpResult<AtProtoRepositoryRecord> publicationRecordResult = await Agent.GetRawRecord(
-                uri: publicationAtUri,
-                pds: publicationRecordPds,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (publicationRecordPds is null)
+        {
+            Bluesky.Logger.PdsForPublicationDidNotFound(ILogger, publicationAuthorDid, uri);
+            return result;
+        }
 
-            if (publicationRecordResult.Succeeded)
-            {
-                result.External.AssociatedRefs = [documentRecordResult.Result.StrongReference, publicationRecordResult.Result.StrongReference];
-            }
+        AtProtoHttpResult<AtProtoRepositoryRecord> publicationRecordResult = await Agent.GetRawRecord(
+            uri: publicationAtUri,
+            pds: publicationRecordPds,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        if (documentRecordResult.Succeeded && publicationRecordResult.Succeeded &&
+            documentRecordResult.Result.TryGetStrongReference(out StrongReference? documentReference) &&
+            publicationRecordResult.Result.TryGetStrongReference(out StrongReference? publicationReference))
+        {
+            result.External.AssociatedRefs = [documentReference, publicationReference];
         }
 
         return result;

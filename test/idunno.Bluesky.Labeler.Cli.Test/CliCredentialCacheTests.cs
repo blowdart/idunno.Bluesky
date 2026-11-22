@@ -1,12 +1,20 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Net;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Events;
+
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
+using Microsoft.IdentityModel.JsonWebTokens;
+using Microsoft.IdentityModel.Tokens;
 
 namespace idunno.Bluesky.Labeler.Cli.Test;
 
@@ -14,6 +22,358 @@ public sealed class CliCredentialCacheTests : IDisposable
 {
     private static readonly DateTimeOffset s_expiration = new(2030, 1, 1, 0, 0, 0, TimeSpan.Zero);
     private readonly string _directory = Path.Combine(Environment.CurrentDirectory, ".credential-cache-tests", Guid.NewGuid().ToString("N"));
+
+    [Fact]
+    public async Task DiscoveryDoesNotCreateAMissingCacheDirectory()
+    {
+        CliCredentialCacheBinding binding = CreateBinding();
+        IReadOnlyList<string> accounts = await CliCredentialCache.FindAccountsAsync(
+            clientMetadataId: binding.ClientMetadataId,
+            requestedScope: binding.RequestedScope,
+            directory: _directory,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Empty(accounts);
+        Assert.False(Directory.Exists(_directory));
+    }
+
+    [Fact]
+    public async Task ListingAnEmptyCacheDoesNotCreateADirectory()
+    {
+        using StringWriter output = new();
+        int exitCode = await Program.ListCredentialsAsync(
+            output: output,
+            directory: _directory,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("No saved credentials", output.ToString(), StringComparison.Ordinal);
+        Assert.False(Directory.Exists(_directory));
+    }
+
+    [Fact]
+    public async Task ListingLegacyAdministratorCredentialsIsReadOnlyAndDoesNotRevealSecrets()
+    {
+        CliCredentialCacheBinding binding = CreateBinding();
+        DPoPAccessCredentials credentials = CreateCredentials(binding, s_expiration);
+        await using CliCredentialCache cache = CreateCache(binding);
+        await cache.SaveAsync(credentials, TestContext.Current.CancellationToken);
+
+        CliCredentialCacheEntry entry = new(
+            Version: 1,
+            Binding: binding,
+            AccessJwt: credentials.AccessJwt,
+            RefreshToken: credentials.RefreshToken,
+            DPoPProofKey: credentials.DPoPProofKey,
+            DPoPNonce: credentials.DPoPNonce,
+            ClientSigningKeyId: credentials.ClientSigningKeyId);
+        JsonObject legacy = JsonSerializer.SerializeToNode(entry, CliCredentialCacheJsonContext.Default.CliCredentialCacheEntry)!.AsObject();
+        Assert.True(legacy.Remove(nameof(CliCredentialCacheEntry.LabelerOrigins)));
+        byte[] legacyBytes = Encoding.UTF8.GetBytes(legacy.ToJsonString());
+        if (OperatingSystem.IsWindows())
+        {
+            legacyBytes = CliCredentialProtection.Protect(legacyBytes);
+        }
+
+        string path = CredentialPath();
+        await File.WriteAllBytesAsync(path, legacyBytes, TestContext.Current.CancellationToken);
+        string[] filesBefore = [.. Directory.GetFiles(_directory).Order(StringComparer.Ordinal)];
+        using StringWriter output = new();
+        int exitCode = await Program.ListCredentialsAsync(
+            output: output,
+            directory: _directory,
+            cancellationToken: TestContext.Current.CancellationToken);
+        IReadOnlyList<string> accounts = await CliCredentialCache.FindAccountsAsync(
+            clientMetadataId: binding.ClientMetadataId,
+            requestedScope: binding.RequestedScope,
+            directory: _directory,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        string text = output.ToString();
+        Assert.Equal(0, exitCode);
+        Assert.Contains(binding.Account, text, StringComparison.Ordinal);
+        Assert.Contains(binding.Actor, text, StringComparison.Ordinal);
+        Assert.Contains("https://labeler.example", text, StringComparison.Ordinal);
+        Assert.Contains(binding.RequestedScope, text, StringComparison.Ordinal);
+        Assert.DoesNotContain(binding.Service.AbsoluteUri, text, StringComparison.Ordinal);
+        Assert.DoesNotContain(credentials.AccessJwt, text, StringComparison.Ordinal);
+        Assert.DoesNotContain(credentials.RefreshToken, text, StringComparison.Ordinal);
+        Assert.DoesNotContain(credentials.DPoPProofKey, text, StringComparison.Ordinal);
+        Assert.DoesNotContain(credentials.DPoPNonce, text, StringComparison.Ordinal);
+        Assert.DoesNotContain(credentials.ClientSigningKeyId!, text, StringComparison.Ordinal);
+        Assert.Equal(["operator.example"], accounts);
+        Assert.Equal(legacyBytes, await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken));
+        Assert.Equal(filesBefore, Directory.GetFiles(_directory).Order(StringComparer.Ordinal));
+        Assert.NotNull(await cache.LoadAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData("atproto identity:*")]
+    [InlineData("atproto repo:app.bsky.labeler.service")]
+    public async Task ListingLegacyNonAdministratorCredentialsDoesNotGuessAnOrigin(string scope)
+    {
+        CliCredentialCacheBinding binding = CreateBinding() with
+        {
+            ClientMetadataId = "https://oauth.example/client-metadata.json",
+            RequestedScope = scope
+        };
+        await using CliCredentialCache cache = CreateCache(binding);
+        await cache.SaveAsync(CreateCredentials(binding, s_expiration), TestContext.Current.CancellationToken);
+
+        IReadOnlyList<CliCredentialCacheSummary> summaries = await CliCredentialCache.ListAsync(
+            _directory,
+            TestContext.Current.CancellationToken);
+        using StringWriter output = new();
+        await Program.ListCredentialsAsync(
+            output: output,
+            directory: _directory,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Empty(Assert.Single(summaries).LabelerOrigins);
+        Assert.Contains("unknown (not recorded)", output.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("https://oauth.example", output.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("https://pds.example", output.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ListingMergesKnownOriginsWithoutReplacingNewerCredentials()
+    {
+        CliCredentialCacheBinding binding = CreateBinding() with { RequestedScope = "atproto identity:*" };
+        DPoPAccessCredentials newer = CreateCredentials(binding, s_expiration);
+        newer.DPoPNonce = "newer-nonce";
+        await using (CliCredentialCache cache = new(
+            binding: binding,
+            directory: _directory,
+            allowUnencryptedStorage: true,
+            labelerOrigin: new Uri("https://first.example")))
+        {
+            await cache.SaveAsync(newer, TestContext.Current.CancellationToken);
+        }
+
+        string originalPath = CredentialPath();
+        await using (Program.CliSignInLifetime lifetime = new(_directory))
+        {
+            CliCredentialCache? reused = await lifetime.GetCacheAsync(
+                binding: binding,
+                rememberMe: false,
+                cancellationToken: TestContext.Current.CancellationToken,
+                labelerOrigin: new Uri("https://second.example"));
+            Assert.NotNull(reused);
+            DPoPAccessCredentials older = CreateCredentials(binding, s_expiration.AddHours(-1));
+            Assert.False(await reused.SaveAsync(older, TestContext.Current.CancellationToken));
+
+            CliCredentialCache? reusedAgain = await lifetime.GetCacheAsync(
+                binding: binding,
+                rememberMe: false,
+                cancellationToken: TestContext.Current.CancellationToken,
+                labelerOrigin: new Uri("https://third.example"));
+            Assert.Same(reused, reusedAgain);
+            Assert.False(await reusedAgain!.SaveAsync(older, TestContext.Current.CancellationToken));
+        }
+
+        IReadOnlyList<CliCredentialCacheSummary> summaries = await CliCredentialCache.ListAsync(
+            _directory,
+            TestContext.Current.CancellationToken);
+        Assert.Equal(["https://first.example", "https://second.example", "https://third.example"], Assert.Single(summaries).LabelerOrigins);
+        Assert.Equal(originalPath, CredentialPath());
+        await using CliCredentialCache restored = CreateCache(binding);
+        DPoPAccessCredentials? credentials = await restored.LoadAsync(TestContext.Current.CancellationToken);
+        Assert.NotNull(credentials);
+        Assert.Equal(s_expiration, credentials.ExpiresOn);
+        Assert.Equal("newer-nonce", credentials.DPoPNonce);
+    }
+
+    [Theory]
+    [InlineData("https://b\u00fccher.example", "https://xn--bcher-kva.example")]
+    [InlineData("https://[::1]:8443", "https://[::1]:8443")]
+    public async Task ListingNormalizesEquivalentAdministratorOrigins(string configuredOrigin, string metadataOrigin)
+    {
+        CliCredentialCacheBinding binding = CreateBinding() with
+        {
+            ClientMetadataId = $"{metadataOrigin}/client-metadata.json"
+        };
+        await using CliCredentialCache cache = new(
+            binding: binding,
+            directory: _directory,
+            allowUnencryptedStorage: true,
+            labelerOrigin: new Uri(configuredOrigin));
+        await cache.SaveAsync(CreateCredentials(binding, s_expiration), TestContext.Current.CancellationToken);
+
+        IReadOnlyList<CliCredentialCacheSummary> summaries = await CliCredentialCache.ListAsync(
+            _directory,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal([metadataOrigin], Assert.Single(summaries).LabelerOrigins);
+    }
+
+    [Fact]
+    public async Task ListingSeparatesAccountsAndScopesAndSanitizesUntrustedText()
+    {
+        CliCredentialCacheBinding administrator = CreateBinding();
+        CliCredentialCacheBinding owner = administrator with
+        {
+            Account = "owner.example",
+            Actor = "did:plc:owner",
+            RequestedScope = "atproto identity:*\u001b[31m"
+        };
+        await using (CliCredentialCache cache = CreateCache(administrator))
+        {
+            await cache.SaveAsync(CreateCredentials(administrator, s_expiration), TestContext.Current.CancellationToken);
+        }
+
+        await using (CliCredentialCache cache = new(
+            binding: owner,
+            directory: _directory,
+            allowUnencryptedStorage: true,
+            labelerOrigin: new Uri("https://second.example")))
+        {
+            await cache.SaveAsync(CreateCredentials(owner, s_expiration), TestContext.Current.CancellationToken);
+        }
+
+        using StringWriter output = new();
+        await Program.ListCredentialsAsync(
+            output: output,
+            directory: _directory,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        string text = output.ToString();
+        Assert.Contains("operator.example", text, StringComparison.Ordinal);
+        Assert.Contains("owner.example", text, StringComparison.Ordinal);
+        Assert.Contains("https://labeler.example", text, StringComparison.Ordinal);
+        Assert.Contains("https://second.example", text, StringComparison.Ordinal);
+        Assert.Contains("identity:* [31m", text, StringComparison.Ordinal);
+        Assert.DoesNotContain('\u001b', text);
+        Assert.Equal(2, (await CliCredentialCache.ListAsync(_directory, TestContext.Current.CancellationToken)).Count);
+    }
+
+    [Theory]
+    [InlineData("client")]
+    [InlineData("method")]
+    [InlineData("audience")]
+    [InlineData("account")]
+    public async Task DiscoveryMatchesTheExactClientMethodAndAudienceWithoutLeasingOtherSessions(string changedField)
+    {
+        CliCredentialCacheBinding binding = CreateBinding();
+        CliCredentialCacheBinding changed = changedField switch
+        {
+            "client" => binding with { ClientMetadataId = "https://other.example/client-metadata.json" },
+            "method" => binding with { RequestedScope = binding.RequestedScope.Replace("getTeam", "getAudit", StringComparison.Ordinal) },
+            "audience" => binding with { RequestedScope = binding.RequestedScope.Replace("labeler%23", "other%23", StringComparison.Ordinal) },
+            "account" => binding with { Account = "other.example", Actor = "did:plc:other" },
+            _ => throw new ArgumentOutOfRangeException(nameof(changedField))
+        };
+        await using CliCredentialCache saved = CreateCache(binding);
+        await saved.SaveAsync(CreateCredentials(binding, s_expiration), TestContext.Current.CancellationToken);
+        await using CliCredentialCache other = CreateCache(changed);
+        await other.SaveAsync(CreateCredentials(changed, s_expiration), TestContext.Current.CancellationToken);
+
+        IReadOnlyList<string> accounts = await CliCredentialCache.FindAccountsAsync(
+            clientMetadataId: binding.ClientMetadataId,
+            requestedScope: binding.RequestedScope,
+            directory: _directory,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        string[] expected = changedField == "account" ? ["operator.example", "other.example"] : ["operator.example"];
+        Assert.Equal(expected, accounts);
+    }
+
+    [Fact]
+    public async Task DiscoveryRejectsAnEnvelopeCopiedToAnotherFilename()
+    {
+        CliCredentialCacheBinding binding = CreateBinding();
+        await using CliCredentialCache saved = CreateCache(binding);
+        await saved.SaveAsync(CreateCredentials(binding, s_expiration), TestContext.Current.CancellationToken);
+        File.Move(CredentialPath(), Path.Combine(_directory, "oauth-wrong.credential"));
+
+        await Assert.ThrowsAsync<InvalidDataException>(() => CliCredentialCache.FindAccountsAsync(
+            clientMetadataId: binding.ClientMetadataId,
+            requestedScope: binding.RequestedScope,
+            directory: _directory,
+            cancellationToken: TestContext.Current.CancellationToken));
+        using StringWriter output = new();
+        await Assert.ThrowsAsync<InvalidDataException>(() => Program.ListCredentialsAsync(
+            output: output,
+            directory: _directory,
+            cancellationToken: TestContext.Current.CancellationToken));
+        Assert.Equal(string.Empty, output.ToString());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ExistingSessionIsReusedAndUpdatedWithoutRememberMe(bool identitySession)
+    {
+        CliCredentialCacheBinding binding = identitySession
+            ? CreateBinding() with { RequestedScope = "atproto identity:*" }
+            : CreateBinding();
+        Uri? labelerOrigin = identitySession ? new Uri("https://other-labeler.example") : null;
+        await using (CliCredentialCache saved = CreateCache(binding))
+        {
+            await saved.SaveAsync(CreateCredentials(binding, s_expiration), TestContext.Current.CancellationToken);
+        }
+
+        await using (Program.CliSignInLifetime lifetime = new(_directory))
+        {
+            CliCredentialCache? reused = await lifetime.GetCacheAsync(
+                binding: binding,
+                rememberMe: false,
+                cancellationToken: TestContext.Current.CancellationToken,
+                labelerOrigin: labelerOrigin);
+            Assert.NotNull(reused);
+            DPoPAccessCredentials? credentials = await reused.LoadAsync(TestContext.Current.CancellationToken);
+            Assert.NotNull(credentials);
+            credentials.DPoPNonce = "renewed-nonce";
+            using BlueskyAgent agent = new();
+            reused.Attach(agent);
+            Assert.NotNull(agent.CredentialsUpdatedAsync);
+            await agent.CredentialsUpdatedAsync(
+                new CredentialsUpdatedEventArgs(new Did(binding.Actor), binding.Service, credentials),
+                TestContext.Current.CancellationToken);
+            Assert.Same(reused, await lifetime.GetCacheAsync(
+                binding: binding,
+                rememberMe: false,
+                cancellationToken: TestContext.Current.CancellationToken,
+                labelerOrigin: labelerOrigin));
+        }
+
+        await using CliCredentialCache restored = CreateCache(binding);
+        Assert.Equal("renewed-nonce", (await restored.LoadAsync(TestContext.Current.CancellationToken))?.DPoPNonce);
+        if (identitySession)
+        {
+            IReadOnlyList<CliCredentialCacheSummary> summaries = await CliCredentialCache.ListAsync(
+                _directory,
+                TestContext.Current.CancellationToken);
+            Assert.Equal(["https://other-labeler.example"], Assert.Single(summaries).LabelerOrigins);
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task NewSessionIsNotSavedWithoutRememberMe(bool anotherScopeWasSaved)
+    {
+        CliCredentialCacheBinding binding = CreateBinding();
+        if (anotherScopeWasSaved)
+        {
+            CliCredentialCacheBinding otherBinding = binding with { RequestedScope = "atproto identity:*" };
+            await using CliCredentialCache saved = CreateCache(otherBinding);
+            await saved.SaveAsync(CreateCredentials(otherBinding, s_expiration), TestContext.Current.CancellationToken);
+        }
+
+        await using Program.CliSignInLifetime lifetime = new(_directory);
+        Assert.Null(await lifetime.GetCacheAsync(
+            binding: binding,
+            rememberMe: false,
+            cancellationToken: TestContext.Current.CancellationToken));
+        if (anotherScopeWasSaved)
+        {
+            Assert.Single(Directory.GetFiles(_directory, "*.credential"));
+        }
+        else
+        {
+            Assert.False(Directory.Exists(_directory));
+        }
+    }
 
     [Fact]
     public async Task RoundTripPreservesAllCredentialFieldsAndSigningKey()
@@ -218,6 +578,55 @@ public sealed class CliCredentialCacheTests : IDisposable
     }
 
     [Fact]
+    public async Task RestoredSessionPersistsTheServiceTokenNonceChallengeBeforeRetrying()
+    {
+        FakeTimeProvider clock = new(new DateTimeOffset(2029, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        CliCredentialCacheBinding binding = CreateBinding();
+        using RSA rsa = RSA.Create(2048);
+        JsonWebKey key = JsonWebKeyConverter.ConvertFromSecurityKey(new RsaSecurityKey(rsa));
+        key.Alg = "PS256";
+        DPoPAccessCredentials credentials = CreateCredentials(
+            binding: binding,
+            expiration: clock.GetUtcNow().AddHours(1),
+            proofKey: JsonSerializer.Serialize(key));
+        await using (CliCredentialCache saved = CreateCache(binding))
+        {
+            await saved.SaveAsync(credentials, TestContext.Current.CancellationToken);
+        }
+
+        JsonWebTokenHandler tokenHandler = new() { SetDefaultTimesOnTokenCreation = false };
+        using ServiceTokenHandler handler = new(tokenHandler.CreateToken(new SecurityTokenDescriptor
+        {
+            Audience = "did:plc:labeler#labeler_admin",
+            Expires = clock.GetUtcNow().AddMinutes(15).UtcDateTime
+        }));
+        ServiceCollection services = new();
+        services.AddHttpClient("idunno.atproto").ConfigurePrimaryHttpMessageHandler(() => handler);
+        using ServiceProvider provider = services.BuildServiceProvider();
+        await using CliCredentialCache cache = CreateCache(binding);
+        using AtProtoAgent agent = new(
+            service: binding.Service,
+            httpClientFactory: provider.GetRequiredService<IHttpClientFactory>(),
+            options: new() { TimeProvider = clock, EnableBackgroundTokenRefresh = false });
+        cache.Attach(agent);
+        DPoPAccessCredentials? restored = await cache.LoadAsync(TestContext.Current.CancellationToken);
+        Assert.NotNull(restored);
+        Assert.True(await agent.Login(restored, TestContext.Current.CancellationToken));
+        using CancellationTokenSource watchdog = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        watchdog.CancelAfter(TimeSpan.FromSeconds(30));
+
+        AtProtoHttpResult<ServiceCredential> result = await agent.GetServiceAuth(
+            service: binding.Service,
+            audience: new AtProtoServiceReference(new Did("did:plc:labeler"), "labeler_admin"),
+            lxm: new Nsid("dev.idunno.labeler.admin.getTeam"),
+            cancellationToken: watchdog.Token);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(2, handler.Requests);
+        Assert.Equal("rotated-service-nonce", (await cache.LoadAsync(TestContext.Current.CancellationToken))?.DPoPNonce);
+    }
+
+    [Fact]
     public async Task DisposalWaitsForStartedSaveAndRestoresPreviousHandler()
     {
         CliCredentialCacheBinding binding = CreateBinding();
@@ -263,6 +672,9 @@ public sealed class CliCredentialCacheTests : IDisposable
     [InlineData("missing-refresh-token")]
     [InlineData("missing-proof-key")]
     [InlineData("missing-nonce")]
+    [InlineData("invalid-origin")]
+    [InlineData("null-origin")]
+    [InlineData("mismatched-origin")]
     public async Task InvalidEnvelopesAreExplicitErrors(string corruption)
     {
         CliCredentialCacheBinding binding = CreateBinding();
@@ -281,14 +693,29 @@ public sealed class CliCredentialCacheTests : IDisposable
         {
             "version" => entry with { Version = 2 },
             "subject" => entry with { AccessJwt = CreateJwt("did:plc:other", s_expiration) },
-            "missing-binding" => entry with { Binding = null! },
-            "missing-refresh-token" => entry with { RefreshToken = null! },
-            "missing-proof-key" => entry with { DPoPProofKey = null! },
-            "missing-nonce" => entry with { DPoPNonce = null! },
+            "invalid-origin" => entry with { LabelerOrigins = ["http://labeler.example"] },
+            "mismatched-origin" => entry with { LabelerOrigins = ["https://other.example"] },
             _ => entry
         };
-        byte[] bytes = corruption == "invalid-json" ? "invalid"u8.ToArray() :
-            JsonSerializer.SerializeToUtf8Bytes(entry, CliCredentialCacheJsonContext.Default.CliCredentialCacheEntry);
+        JsonObject envelope = JsonSerializer.SerializeToNode(entry, CliCredentialCacheJsonContext.Default.CliCredentialCacheEntry)!.AsObject();
+        string? missingField = corruption switch
+        {
+            "missing-binding" => nameof(CliCredentialCacheEntry.Binding),
+            "missing-refresh-token" => nameof(CliCredentialCacheEntry.RefreshToken),
+            "missing-proof-key" => nameof(CliCredentialCacheEntry.DPoPProofKey),
+            "missing-nonce" => nameof(CliCredentialCacheEntry.DPoPNonce),
+            _ => null
+        };
+        if (missingField is not null)
+        {
+            envelope[missingField] = null;
+        }
+        if (corruption == "null-origin")
+        {
+            envelope[nameof(CliCredentialCacheEntry.LabelerOrigins)] = new JsonArray((JsonNode?)null);
+        }
+
+        byte[] bytes = corruption == "invalid-json" ? "invalid"u8.ToArray() : Encoding.UTF8.GetBytes(envelope.ToJsonString());
         if (OperatingSystem.IsWindows())
         {
             bytes = CliCredentialProtection.Protect(bytes);
@@ -296,6 +723,17 @@ public sealed class CliCredentialCacheTests : IDisposable
 
         await File.WriteAllBytesAsync(CredentialPath(), bytes, TestContext.Current.CancellationToken);
         await Assert.ThrowsAsync<InvalidDataException>(() => cache.LoadAsync(TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<InvalidDataException>(() => CliCredentialCache.FindAccountsAsync(
+            clientMetadataId: binding.ClientMetadataId,
+            requestedScope: binding.RequestedScope,
+            directory: _directory,
+            cancellationToken: TestContext.Current.CancellationToken));
+        using StringWriter output = new();
+        await Assert.ThrowsAsync<InvalidDataException>(() => Program.ListCredentialsAsync(
+            output: output,
+            directory: _directory,
+            cancellationToken: TestContext.Current.CancellationToken));
+        Assert.Equal(string.Empty, output.ToString());
         Assert.Equal("[REDACTED]", entry.ToString());
     }
 
@@ -385,11 +823,14 @@ public sealed class CliCredentialCacheTests : IDisposable
         Service: new Uri("https://pds.example"));
 
     /// <summary>Creates a complete credential without network calls or clock-dependent data.</summary>
-    private static DPoPAccessCredentials CreateCredentials(CliCredentialCacheBinding binding, DateTimeOffset expiration) => new(
+    private static DPoPAccessCredentials CreateCredentials(
+        CliCredentialCacheBinding binding,
+        DateTimeOffset expiration,
+        string? proofKey = null) => new(
         service: binding.Service,
         accessJwt: CreateJwt(binding.Actor, expiration),
         refreshToken: "test-refresh-token",
-        dPoPProofKey: "test-private-proof-key",
+        dPoPProofKey: proofKey ?? "test-private-proof-key",
         dPoPNonce: "test-nonce")
     {
         OAuthClientId = binding.ClientMetadataId,
@@ -403,5 +844,31 @@ public sealed class CliCredentialCacheTests : IDisposable
         string header = Convert.ToBase64String("{\"alg\":\"none\"}"u8).TrimEnd('=').Replace('+', '-').Replace('/', '_');
         string payload = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{{\"sub\":\"{actor}\",\"exp\":{expiration.ToUnixTimeSeconds()}}}")).TrimEnd('=').Replace('+', '-').Replace('/', '_');
         return $"{header}.{payload}.";
+    }
+
+    /// <summary>Challenges one restored service-token request and checks that its retry uses the updated proof nonce.</summary>
+    /// <param name="serviceToken">The service credential issued by the test PDS.</param>
+    private sealed class ServiceTokenHandler(string serviceToken) : HttpMessageHandler
+    {
+        /// <summary>Gets the number of service-token requests received.</summary>
+        internal int Requests { get; private set; }
+
+        /// <summary>Returns a nonce challenge once, then a successful service token.</summary>
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Requests++;
+            Assert.Equal("/xrpc/com.atproto.server.getServiceAuth", request.RequestUri?.AbsolutePath);
+            JsonWebToken proof = new(request.Headers.GetValues("DPoP").Single());
+            Assert.Equal(Requests == 1 ? "test-nonce" : "rotated-service-nonce", proof.GetClaim("nonce").Value);
+            HttpResponseMessage response = new(Requests == 1 ? HttpStatusCode.Unauthorized : HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    Requests == 1 ? """{"error":"use_dpop_nonce"}""" : $$"""{"token":"{{serviceToken}}"}""",
+                    Encoding.UTF8,
+                    "application/json")
+            };
+            response.Headers.Add("DPoP-Nonce", "rotated-service-nonce");
+            return Task.FromResult(response);
+        }
     }
 }

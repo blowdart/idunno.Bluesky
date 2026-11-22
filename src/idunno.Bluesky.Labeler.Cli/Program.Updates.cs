@@ -4,7 +4,6 @@
 using System.CommandLine;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.IO.Compression;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -17,7 +16,7 @@ internal static partial class Program
 {
     private const string GitHubRepository = "blowdart/idunno.Bluesky";
     private const string LabelerImageRepository = "ghcr.io/blowdart/idunno-bluesky-labeler";
-    private const int MaximumReleaseArchiveSize = 512 * 1024 * 1024;
+    private const int MaximumReleaseExecutableSize = 256 * 1024 * 1024;
 
     /// <summary>Creates an explicitly confirmed, provenance-verified self-update command.</summary>
     private static Command CreateCliUpdateCommand()
@@ -106,23 +105,24 @@ internal static partial class Program
 
             string executablePath = Environment.ProcessPath ?? throw new InvalidOperationException("The running executable path is unavailable.");
             string executableName = Path.GetFileName(executablePath);
+            string assetName = GetCliReleaseAssetName(runtimeIdentifier);
             string expectedExecutable = OperatingSystem.IsWindows()
                 ? "idunno.Bluesky.Labeler.Cli.exe"
                 : "idunno.Bluesky.Labeler.Cli";
-            if (!string.Equals(executableName, expectedExecutable, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(executableName, expectedExecutable, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(executableName, assetName, StringComparison.OrdinalIgnoreCase))
             {
                 await Console.Error.WriteLineAsync("✖   Self-update requires the published self-contained CLI executable, not dotnet run or a renamed launcher.").ConfigureAwait(false);
                 return 2;
             }
 
-            string archiveName = $"idunno.Bluesky.Labeler.Cli-{runtimeIdentifier}.zip";
-            byte[] archive = await DownloadVerifiedReleaseArchiveAsync(tag!, archiveName, cancellationToken).ConfigureAwait(false);
-            string digest = Convert.ToHexStringLower(SHA256.HashData(archive));
+            byte[] executable = await DownloadVerifiedReleaseExecutableAsync(tag!, assetName, cancellationToken).ConfigureAwait(false);
+            string digest = Convert.ToHexStringLower(SHA256.HashData(executable));
             string installDirectory = Path.GetDirectoryName(executablePath)!;
             string updateId = Guid.NewGuid().ToString("N");
             string stagedPath = Path.Combine(installDirectory, $".{executableName}.{updateId}.new");
             string backupPath = Path.Combine(installDirectory, $".{executableName}.{updateId}.backup");
-            await StageExecutableAsync(archive, executableName, stagedPath, cancellationToken).ConfigureAwait(false);
+            await StageExecutableAsync(executable, stagedPath, cancellationToken).ConfigureAwait(false);
             await VerifyExecutableStartsAsync(stagedPath, cancellationToken).ConfigureAwait(false);
             StartReplacementHelper(executablePath, stagedPath, backupPath, updateId);
             await Console.Out.WriteLineAsync($"✔   Verified SHA-256 {digest}. The update is staged and will be applied after this process exits; backup: {backupPath}").ConfigureAwait(false);
@@ -143,7 +143,7 @@ internal static partial class Program
     }
 
     /// <summary>Downloads a release asset and verifies its GitHub artifact attestation before returning it.</summary>
-    private static async Task<byte[]> DownloadVerifiedReleaseArchiveAsync(string tag, string assetName, CancellationToken cancellationToken)
+    private static async Task<byte[]> DownloadVerifiedReleaseExecutableAsync(string tag, string assetName, CancellationToken cancellationToken)
     {
         using HttpClient client = new() { Timeout = TimeSpan.FromMinutes(2) };
         client.DefaultRequestHeaders.UserAgent.ParseAdd("idunno.Bluesky.Labeler.Cli");
@@ -190,17 +190,17 @@ internal static partial class Program
             HttpCompletionOption.ResponseHeadersRead,
             cancellationToken).ConfigureAwait(false);
         assetResponse.EnsureSuccessStatusCode();
-        if (assetResponse.Content.Headers.ContentLength is > MaximumReleaseArchiveSize)
+        if (assetResponse.Content.Headers.ContentLength is > MaximumReleaseExecutableSize)
         {
-            throw new InvalidDataException("The release archive exceeds the 512 MiB update limit.");
+            throw new InvalidDataException("The release executable exceeds the 256 MiB update limit.");
         }
 
-        byte[] archive = await ReadLimitedAsync(assetResponse.Content, MaximumReleaseArchiveSize, cancellationToken).ConfigureAwait(false);
+        byte[] executable = await ReadLimitedAsync(assetResponse.Content, MaximumReleaseExecutableSize, cancellationToken).ConfigureAwait(false);
 
-        string temporaryPath = Path.Combine(Path.GetTempPath(), $"labeler-cli-{Guid.NewGuid():N}.zip");
+        string temporaryPath = Path.Combine(Path.GetTempPath(), $"labeler-cli-{Guid.NewGuid():N}{Path.GetExtension(assetName)}");
         try
         {
-            await File.WriteAllBytesAsync(temporaryPath, archive, cancellationToken).ConfigureAwait(false);
+            await File.WriteAllBytesAsync(temporaryPath, executable, cancellationToken).ConfigureAwait(false);
             ProcessResult verification = await RunProcessAsync(
                 executable: "gh",
                 arguments: ["attestation", "verify", temporaryPath, "--repo", GitHubRepository],
@@ -217,24 +217,33 @@ internal static partial class Program
             File.Delete(temporaryPath);
         }
 
-        return archive;
+        return executable;
     }
 
-    /// <summary>Extracts only the expected flat executable from a verified archive.</summary>
-    private static async Task StageExecutableAsync(byte[] archive, string executableName, string stagedPath, CancellationToken cancellationToken)
-    {
-        using MemoryStream archiveStream = new(archive, writable: false);
-        using ZipArchive zip = new(archiveStream, ZipArchiveMode.Read);
-        ZipArchiveEntry? executable = zip.Entries.SingleOrDefault(entry =>
-            string.Equals(entry.FullName, executableName, StringComparison.OrdinalIgnoreCase));
-        if (executable is null || executable.Length is 0 or > 256 * 1024 * 1024)
+    /// <summary>Gets the direct executable asset name for a supported runtime.</summary>
+    /// <param name="runtimeIdentifier">The supported runtime identifier.</param>
+    /// <returns>The executable name published with the release.</returns>
+    internal static string GetCliReleaseAssetName(string runtimeIdentifier) =>
+        runtimeIdentifier switch
         {
-            throw new InvalidDataException("The verified archive does not contain the expected CLI executable.");
+            "win-x64" or "win-arm64" => $"idunno.Bluesky.Labeler.Cli-{runtimeIdentifier}.exe",
+            "linux-x64" or "linux-arm64" => $"idunno.Bluesky.Labeler.Cli-{runtimeIdentifier}",
+            _ => throw new ArgumentOutOfRangeException(nameof(runtimeIdentifier))
+        };
+
+    /// <summary>Stages a verified executable without overwriting an existing file.</summary>
+    /// <param name="executable">The verified executable bytes.</param>
+    /// <param name="stagedPath">The new file to create alongside the installed executable.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    internal static async Task StageExecutableAsync(byte[] executable, string stagedPath, CancellationToken cancellationToken)
+    {
+        if (executable.Length is 0 or > MaximumReleaseExecutableSize)
+        {
+            throw new InvalidDataException("The verified executable is empty or exceeds the 256 MiB update limit.");
         }
 
-        using Stream input = await executable.OpenAsync(cancellationToken).ConfigureAwait(false);
         using FileStream output = new(stagedPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
-        await input.CopyToAsync(output, cancellationToken).ConfigureAwait(false);
+        await output.WriteAsync(executable, cancellationToken).ConfigureAwait(false);
         await output.FlushAsync(cancellationToken).ConfigureAwait(false);
         if (!OperatingSystem.IsWindows())
         {

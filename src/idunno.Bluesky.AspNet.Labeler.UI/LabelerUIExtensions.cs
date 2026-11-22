@@ -27,7 +27,7 @@ public static class LabelerUIExtensions
     /// <remarks><para>Also register Bluesky authentication and its sign-in UI, call authentication and
     /// authorization middleware, and map Razor Pages. Administrative pages require an authenticated
     /// Bluesky DID; provider-backed team membership and permissions are checked again for each operation.
-    /// Terms and privacy notices are publicly accessible.</para></remarks>
+    /// Terms, privacy notices and acknowledgements are publicly accessible.</para></remarks>
     public static IServiceCollection AddLabelerUI(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -47,17 +47,25 @@ public static class LabelerUIExtensions
             options.Conventions.AddAreaFolderApplicationModelConvention(
                 "Bluesky",
                 "/",
-                model => model.Filters.Add(new idunno.Bluesky.AspNet.Labeler.UI.AuthenticationLayoutFilter()));
+                model =>
+                {
+                    model.Filters.Add(new idunno.Bluesky.AspNet.Labeler.UI.AuthenticationLayoutFilter());
+                    model.Filters.Add(new idunno.Bluesky.AspNet.Labeler.UI.LabelerUiSecurityHeadersFilter(
+                        allowOAuthNavigation: model.ViewEnginePath == "/Login"));
+                });
             options.Conventions.AuthorizeAreaFolder("Xenon", "/");
             options.Conventions.AllowAnonymousToAreaPage("Xenon", "/Terms");
             options.Conventions.AllowAnonymousToAreaPage("Xenon", "/Privacy");
+            options.Conventions.AllowAnonymousToAreaPage("Xenon", "/Acknowledgements");
             options.Conventions.AllowAnonymousToAreaPage("Xenon", "/Policy/ClientMetadata");
             options.Conventions.AddAreaFolderApplicationModelConvention(
                 "Xenon",
                 "/",
                 model =>
                 {
-                    if (model.ViewEnginePath is not ("/Terms" or "/Privacy" or "/Policy/ClientMetadata"))
+                    model.Filters.Add(new idunno.Bluesky.AspNet.Labeler.UI.LabelerUiSecurityHeadersFilter(
+                        allowOAuthNavigation: model.ViewEnginePath == "/Policy/Index"));
+                    if (model.ViewEnginePath is not ("/Terms" or "/Privacy" or "/Acknowledgements" or "/Policy/ClientMetadata"))
                     {
                         model.Filters.Add(new ServiceFilterAttribute(typeof(idunno.Bluesky.AspNet.Labeler.UI.LabelerUiPageFilter)));
                     }

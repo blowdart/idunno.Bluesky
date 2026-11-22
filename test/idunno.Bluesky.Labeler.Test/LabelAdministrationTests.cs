@@ -151,6 +151,105 @@ public abstract class LabelAdministrationTests : LabelAdministrationTestBase
     protected abstract string Engine { get; }
 
     [Fact]
+    public async Task BoundaryDenialRetentionIsIssuerWideAtomicAndPreservesOtherAuditHistory()
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(Engine);
+        ILabelAdministrationStore store = (ILabelAdministrationStore)fixture.Store;
+        LabelAdministrationCaller owner = await BootstrapAsync(store);
+        LabelAdministrationReceipt maintenance = (await store.AuditMaintenanceAsync(
+            caller: owner,
+            operationId: "retained-maintenance",
+            reason: "Preserve operation-specific failure evidence.",
+            phase: LabelMaintenanceAuditPhase.Failed,
+            cancellationToken: token)).Result!;
+        ILabelTableStore tables = (ILabelTableStore)fixture.Store;
+        LabelTableQuery query = new(LabelTableKind.Audit, Sort: LabelTableSort.Number, Ascending: true);
+        LabelAdministrationReceipt export = (await tables.BeginAuditExportAsync(owner, query, token)).Result!;
+        List<LabelAdministrationReceipt> denials = [];
+        for (int index = 0; index < 256; index++)
+        {
+            LabelServiceResult<LabelAdministrationReceipt> denied = await store.RecordAdministrationDenialAsync(
+                reason: $"Bounded category {index}.",
+                caller: index % 2 == 0 ? owner : null,
+                cancellationToken: token);
+            Assert.True(denied.Succeeded, denied.Error?.Message);
+            Assert.False(denied.Result.Succeeded);
+            denials.Add(denied.Result);
+        }
+
+        fixture.SetCommitHooks(beforeCommit: async (connection, transaction, cancellationToken) =>
+        {
+            await using DbCommand command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = "SELECT * FROM deliberately_missing_denial_test_table";
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        });
+        try
+        {
+            Assert.False((await store.RecordAdministrationDenialAsync("Roll back append and pruning.", cancellationToken: token)).Succeeded);
+        }
+        finally
+        {
+            fixture.SetCommitHooks();
+        }
+        Assert.True((await tables.ReadAuditExportPageAsync(
+            owner, query with { AuditThroughSequence = export.Sequence - 1 }, token)).Succeeded);
+
+        await fixture.ExecuteAsync("DROP TABLE label_boundary_denials");
+        await fixture.ExecuteAsync("DROP TABLE label_schema_migrations");
+        ILabelStore restartedStore = fixture.NewStore();
+        await restartedStore.InitializeAsync(StoreFixture.s_issuer, token);
+        ILabelAdministrationStore restarted = (ILabelAdministrationStore)restartedStore;
+        await Task.WhenAll(Enumerable.Range(0, 20).Select(async index =>
+        {
+            ILabelAdministrationStore writer = index % 2 == 0 ? store : restarted;
+            Assert.True((await writer.RecordAdministrationDenialAsync(
+                $"Additional category {index}.", cancellationToken: token)).Succeeded);
+        }));
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new ServiceIdentityHandler(key.ExportPublicKeyMultibase()));
+        FakeTimeProvider authenticationClock = new(await DatabaseNowAsync(fixture));
+        AtProtoServiceReference audience = new(StoreFixture.s_issuer, "labeler_admin");
+        ServiceAuthenticationResult nonmember = await ServiceAuthentication.VerifyAsync(
+            token: ServiceToken(key, authenticationClock.GetUtcNow(), audience),
+            audience: audience,
+            method: "dev.idunno.labeler.admin.getTeam",
+            httpClient: identity,
+            timeProvider: authenticationClock,
+            cancellationToken: token);
+        for (int index = 0; index < 12; index++)
+        {
+            Assert.False((await restarted.AuthenticateServiceAsync(nonmember, token)).Succeeded);
+        }
+        IReadOnlyList<LabelAdministrationReceipt> retained = (await restarted.GetAdministrationAuditAsync(
+            caller: owner,
+            limit: 1000,
+            cancellationToken: token)).Result!;
+        LabelAdministrationReceipt[] boundary = [.. retained.Where(entry => entry.Action is "invocation-denied" or "authenticate")];
+        Assert.Equal(256, boundary.Length);
+        Assert.Equal(12, boundary.Count(entry => entry.Action == "authenticate"));
+        Assert.Equal(denials.Skip(32), boundary.Where(entry => entry.Sequence <= denials[^1].Sequence));
+        Assert.Contains(retained, entry => entry.Action == "bootstrap" && entry.Succeeded);
+        Assert.Contains(maintenance, retained);
+        Assert.True((await restarted.GetTeamAsync(owner, token)).Succeeded);
+        Assert.True((await restarted.BootstrapAsync(s_administrator, "uid:0", "bootstrap", token)).Succeeded);
+
+        await using DbConnection inspection = fixture.Connection();
+        await inspection.OpenAsync(token);
+        await using DbCommand count = inspection.CreateCommand();
+        count.CommandText = "SELECT COUNT(*) FROM label_audit_queries";
+        Assert.Equal(retained.Count, Convert.ToInt32(await count.ExecuteScalarAsync(token)));
+        LabelServiceResult<IReadOnlyList<LabelAdministrationReceipt>> stale = await tables.ReadAuditExportPageAsync(
+            owner, query with { AuditThroughSequence = export.Sequence - 1 }, token);
+        Assert.False(stale.Succeeded);
+        Assert.Equal(LabelServiceErrorCode.StaleDecision, stale.Error!.Code);
+        LabelAdministrationReceipt fresh = (await tables.BeginAuditExportAsync(owner, query, token)).Result!;
+        Assert.True((await tables.ReadAuditExportPageAsync(
+            owner, query with { AuditThroughSequence = fresh.Sequence - 1 }, token)).Succeeded);
+    }
+
+    [Fact]
     public async Task OwnerProtectionIncludesLocalBindingsAndSurvivesRestart()
     {
         string engine = Engine;
@@ -1013,6 +1112,8 @@ public abstract class LabelAdministrationTests : LabelAdministrationTestBase
             DROP TABLE label_audit_queries;
             DROP TABLE label_admin_tokens;
             DROP TABLE label_admin_receipts;
+            DROP TABLE label_boundary_denials;
+            DROP TABLE label_schema_migrations;
             DROP TABLE label_admin_audit;
             DROP TABLE label_team;
             UPDATE label_schema SET version=3;

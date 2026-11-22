@@ -375,6 +375,7 @@ MigrationBackup/
 FodyWeavers.xsd
 
 # Test and Code Coverage output folders
+/.artifacts/test-runs/
 CoverageReport/
 coveragereport/
 CoverageResults/

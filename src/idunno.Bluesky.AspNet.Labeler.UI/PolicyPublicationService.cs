@@ -69,6 +69,11 @@ internal sealed partial class PolicyPublicationService(
             cancellationToken: deadline.Token).ConfigureAwait(false);
         if (existing.Succeeded)
         {
+            if (!existing.Result.HasCid)
+            {
+                throw new InvalidOperationException("The account's current public policy has no CID, so publication cannot safely compare and swap it. Publication has not started.");
+            }
+
             return existing.Result.Cid.ToString();
         }
         if (existing.StatusCode == HttpStatusCode.BadRequest && existing.AtErrorDetail?.Error == "RecordNotFound")
@@ -233,6 +238,11 @@ internal sealed partial class PolicyPublicationService(
             service: null,
             serviceProxy: null,
             cancellationToken: context.RequestAborted).ConfigureAwait(false);
+        if (existing.Succeeded && !existing.Result.HasCid)
+        {
+            throw new InvalidOperationException("The account's current public policy has no CID, so publication cannot safely compare and swap it.");
+        }
+
         bool matches = existing.Succeeded && existing.Result.Value is not null &&
             JsonNode.DeepEquals(existing.Result.Value, JsonNode.Parse(declaration.GetRawText()));
         if (!matches && (existing.Succeeded

@@ -21,8 +21,14 @@ not create a second moderation database or a second label-signing path.
 
 Custom applications register `AddLabelerModeration(issuer, httpClient, options)`
 after exactly one storage provider and before `AddLabelerAdministration`.
-Use the same caller-owned, hardened identity-resolution HTTP client as ordinary
-labeler administration. Before serving, initialize `ILabelStore` and then call
+The supplied client is used as-is for identity resolution and repository reads;
+it must check resolved IP addresses at connection time and reject loopback,
+link-local and private addresses, including cloud metadata endpoints. A reported
+DID can advertise a PDS hostname that resolves to one of these addresses. Use an
+`IHttpClientFactory` registered with `AddAtProtoHttpClient(IServiceCollection)`
+or provide equivalent checks in a custom handler. Disable automatic redirects,
+which can send a request to an unchecked destination before the response is
+available to the caller. Before serving, initialize `ILabelStore` and then call
 `ILabelPolicyStore.InitializePolicyAsync` with the configured freshness interval.
 Map `MapLabelerModeration()` alongside the existing distribution and
 administration routes. Do not separately register an issuance-policy provider:

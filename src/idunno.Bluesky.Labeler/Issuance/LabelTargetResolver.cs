@@ -103,7 +103,7 @@ internal sealed class LabelTargetResolver(HttpClient httpClient, ILoggerFactory 
                 return Failure("The server returned a different record identity.");
             }
 
-            if (target.Cid is not null && target.Cid != response.Result.Cid)
+            if (target.Cid is not null && (!response.Result.HasCid || target.Cid != response.Result.Cid))
             {
                 return LabelServiceResult<LabelTarget>.Failure(
                     new(

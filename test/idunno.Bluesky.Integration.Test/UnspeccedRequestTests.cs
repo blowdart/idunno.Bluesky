@@ -200,6 +200,78 @@ public class UnspeccedRequestTests
         Assert.Contains("branchingFactor=0", queryString, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task GetAtmosphereExploreArticleRecommendationsSendsTheViewerAndParsesTheSkeleton(bool authenticated)
+    {
+        string queryString = "not set";
+        string? proxyHeader = null;
+
+        using TestServer testServer = CreateCapturingServer(
+            "/xrpc/app.bsky.unspecced.getAtmosphereExploreArticleRecommendations",
+            """{"articles":[{"uri":"at://did:plc:ifn645rwvsuolxg7o3w7ouo4/site.standard.document/3mwqgs7dp2s2a"},null],"recIdStr":"12345"}""",
+            r =>
+            {
+                queryString = r.QueryString.Value ?? string.Empty;
+                proxyHeader = r.Headers["atproto-proxy"];
+            });
+
+        BlueskyAgent agent = authenticated
+            ? CreateAgent(testServer)
+            : new(new TestHttpClientFactory(testServer)) { Service = TestServerBuilder.DefaultUri };
+
+        AtProtoHttpResult<RecommendationReadOnlyCollection<AtmosphereExploreArticle>> result = await agent.GetAtmosphereExploreArticleRecommendations(
+            limit: 10,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        AtmosphereExploreArticle article = Assert.Single(result.Result);
+        Assert.Equal(new AtUri("at://did:plc:ifn645rwvsuolxg7o3w7ouo4/site.standard.document/3mwqgs7dp2s2a"), article.Uri);
+        Assert.Equal("12345", result.Result.RecommendationId);
+        Assert.Contains("limit=10", queryString, StringComparison.Ordinal);
+        Assert.Equal(BlueskyServer.AppViewProxy, proxyHeader);
+
+        if (authenticated)
+        {
+            Assert.Contains($"viewer={Uri.EscapeDataString(s_did.ToString())}", queryString, StringComparison.Ordinal);
+        }
+        else
+        {
+            Assert.DoesNotContain("viewer=", queryString, StringComparison.Ordinal);
+        }
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(101)]
+    public async Task GetAtmosphereExploreArticleRecommendationsRejectsAnOutOfRangeLimit(int limit)
+    {
+        using TestServer testServer = CreateCapturingServer("/unused", "{}", _ => { });
+        BlueskyAgent agent = CreateAgent(testServer);
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => agent.GetAtmosphereExploreArticleRecommendations(
+            limit: limit,
+            cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task GetAtmosphereExploreArticleRecommendationsFailsWhenRequiredFieldsAreMissing()
+    {
+        using TestServer testServer = CreateCapturingServer(
+            "/xrpc/app.bsky.unspecced.getAtmosphereExploreArticleRecommendations",
+            """{"articles":[]}""",
+            _ => { });
+
+        BlueskyAgent agent = CreateAgent(testServer);
+
+        AtProtoHttpResult<RecommendationReadOnlyCollection<AtmosphereExploreArticle>> result =
+            await agent.GetAtmosphereExploreArticleRecommendations(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal("InvalidResponse", result.AtErrorDetail?.Error);
+    }
+
     [ExcludeFromCodeCoverage]
     private sealed class CultureScope : IDisposable
     {

@@ -32,11 +32,13 @@ public class LabelPolicyStoreTests
     private static readonly string[] s_expectedVersions = ["v1", "v2"];
 
     [Theory]
-    [InlineData("Timeout", LabelPolicyPhase.VerifiedActive)]
-    [InlineData("NetworkFailure", LabelPolicyPhase.VerifiedActive)]
-    [InlineData("PolicyMismatch", LabelPolicyPhase.Conflict)]
+    [InlineData("MissingCid", "PolicyRecordUnverifiable", LabelPolicyPhase.VerifiedActive)]
+    [InlineData("Timeout", "Timeout", LabelPolicyPhase.VerifiedActive)]
+    [InlineData("NetworkFailure", "NetworkFailure", LabelPolicyPhase.VerifiedActive)]
+    [InlineData("PolicyMismatch", "PolicyMismatch", LabelPolicyPhase.Conflict)]
     public async Task IndependentVerificationClassifiesFailuresWithoutChangingAdmissionRules(
         string category,
+        string expectedFailureCategory,
         LabelPolicyPhase expectedPhase)
     {
         CancellationToken token = TestContext.Current.CancellationToken;
@@ -49,7 +51,7 @@ public class LabelPolicyStoreTests
         LabelServiceResult<LabelPolicyState> result = await verifier.VerifyActivePolicyAsync(token);
         Assert.False(result.Succeeded);
         Assert.Equal(LabelServiceErrorCode.PolicyUnavailable, result.Error.Code);
-        Assert.Equal(category, result.Error.VerificationFailureCategory);
+        Assert.Equal(expectedFailureCategory, result.Error.VerificationFailureCategory);
         LabelPolicyState after = (await store.ReadPolicyStateAsync(token))!;
         Assert.Equal(expectedPhase, after.Phase);
         Assert.Equal(category == "PolicyMismatch" ? null : active.VerifiedUntil, after.VerifiedUntil);
@@ -81,6 +83,16 @@ public class LabelPolicyStoreTests
             {
                 throw new HttpRequestException("private diagnostic");
             }
+            if (category == "MissingCid")
+            {
+                return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+                {
+                    Content = new StringContent($$$"""
+                        {"uri":"at://{{{StoreFixture.s_issuer}}}/app.bsky.labeler.service/self","value":{}}
+                        """, System.Text.Encoding.UTF8, "application/json")
+                });
+            }
+
             return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
             {
                 Content = new StringContent($$$"""

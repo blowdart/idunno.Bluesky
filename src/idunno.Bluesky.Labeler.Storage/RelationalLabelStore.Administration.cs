@@ -117,7 +117,8 @@ internal abstract partial class RelationalLabelStore
         {
             CreatedAt = DateTimeOffset.FromUnixTimeMilliseconds(
                 await DatabaseTimeAsync(connection, transaction, token).ConfigureAwait(false)),
-            ChangeDescription = succeeded ? changeDescription : null
+            ChangeDescription = succeeded ? changeDescription : null,
+            DenialRetentionSequence = action == "audit-export-started" ? administration.DenialRetentionSequence : 0
         };
         await ExecuteAsync(
             connection: connection,
@@ -131,8 +132,116 @@ internal abstract partial class RelationalLabelStore
             transaction: transaction,
             sequence: audit.Sequence,
             token: token).ConfigureAwait(false);
+        if (!succeeded && action is "invocation-denied" or "authenticate")
+        {
+            await ExecuteAsync(
+                connection: connection,
+                transaction: transaction,
+                sql: "INSERT INTO label_boundary_denials(seq) VALUES(@seq)",
+                token: token,
+                ("@seq", audit.Sequence)).ConfigureAwait(false);
+            await RetainBoundaryDenialsAsync(connection, transaction, administration, token).ConfigureAwait(false);
+        }
         await SaveAdministrationAsync(connection, transaction, administration, token).ConfigureAwait(false);
         return audit.ToReceipt();
+    }
+
+    /// <summary>Retains the latest 256 boundary denials across all callers under the issuer transaction lock.</summary>
+    private static async Task RetainBoundaryDenialsAsync(
+        DbConnection connection,
+        DbTransaction transaction,
+        AdministrationState administration,
+        CancellationToken token)
+    {
+        object? oldestRemoved = await ScalarAsync(
+            connection: connection,
+            transaction: transaction,
+            sql: "SELECT seq FROM label_boundary_denials ORDER BY seq DESC LIMIT 1 OFFSET 256",
+            token: token).ConfigureAwait(false);
+        if (oldestRemoved is null or DBNull)
+        {
+            return;
+        }
+
+        await ExecuteAsync(
+            connection: connection,
+            transaction: transaction,
+            sql: "DELETE FROM label_admin_audit WHERE seq IN " +
+                "(SELECT seq FROM label_boundary_denials WHERE seq<=@through)",
+            token: token,
+            ("@through", Integer(oldestRemoved))).ConfigureAwait(false);
+        administration.DenialRetentionSequence = administration.Sequence;
+    }
+
+    /// <summary>Builds the indexed denial projection once from retained historical audit events.</summary>
+    private async Task BackfillBoundaryDenialsAsync(
+        DbConnection connection,
+        DbTransaction? transaction,
+        CancellationToken token)
+    {
+        const string migration = "boundary-denial-index-v1";
+        if (await ScalarAsync(
+            connection: connection,
+            transaction: transaction,
+            sql: "SELECT migration_id FROM label_schema_migrations WHERE migration_id=@id",
+            token: token,
+            ("@id", migration)).ConfigureAwait(false) is not null)
+        {
+            return;
+        }
+
+        long after = 0;
+        while (true)
+        {
+            List<(long Sequence, byte[] Payload)> rows = [];
+            DbCommand command = Command(
+                connection: connection,
+                transaction: transaction,
+                sql: $"SELECT seq,payload FROM label_admin_audit WHERE seq>@after ORDER BY seq LIMIT {BackfillPageSize.ToString(CultureInfo.InvariantCulture)}",
+                ("@after", after));
+            await using (command.ConfigureAwait(false))
+            {
+                DbDataReader reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false);
+                await using (reader.ConfigureAwait(false))
+                {
+                    while (await reader.ReadAsync(token).ConfigureAwait(false))
+                    {
+                        rows.Add((Integer(reader.GetValue(0)), (byte[])reader.GetValue(1)));
+                    }
+                }
+            }
+
+            foreach ((long sequence, byte[] payload) in rows)
+            {
+                AdministrationAudit audit = JsonSerializer.Deserialize(payload, AdministrationJsonContext.Default.AdministrationAudit)
+                    ?? throw new InvalidDataException("The administrative audit event is null.");
+                if (!audit.Succeeded && audit.Action is "invocation-denied" or "authenticate")
+                {
+                    await ExecuteAsync(
+                        connection: connection,
+                        transaction: transaction,
+                        sql: Provider == "mysql"
+                            ? "INSERT IGNORE INTO label_boundary_denials(seq) VALUES(@seq)"
+                            : "INSERT INTO label_boundary_denials(seq) VALUES(@seq) ON CONFLICT(seq) DO NOTHING",
+                        token: token,
+                        ("@seq", sequence)).ConfigureAwait(false);
+                }
+
+                after = sequence;
+            }
+
+            if (rows.Count < BackfillPageSize)
+            {
+                break;
+            }
+        }
+
+        await ExecuteAsync(
+            connection: connection,
+            transaction: transaction,
+            sql: "INSERT INTO label_schema_migrations(migration_id) VALUES(@id)",
+            token: token,
+            ("@id", migration)).ConfigureAwait(false);
     }
 
     /// <summary>Reads a retained same-intent receipt before applying another mutation.</summary>

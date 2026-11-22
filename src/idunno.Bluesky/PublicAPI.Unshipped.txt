@@ -165,3 +165,140 @@ idunno.Bluesky.BlueskyAgent.DeleteStarterPack(idunno.AtProto.AtUri! uri, System.
 idunno.Bluesky.BlueskyAgent.UpdateStarterPack(idunno.AtProto.AtUri! uri, idunno.Bluesky.Graph.StarterPack! starterPack, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.UpdateStarterPack(idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Graph.StarterPack!>! starterPack, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
 static idunno.Bluesky.CollectionNsid.StarterPack.get -> idunno.AtProto.Nsid!
+*REMOVED*idunno.Bluesky.BlueskyAgent.GetAuthorFeed(idunno.AtProto.Did! actor, int? limit = null, string? cursor = null, idunno.Bluesky.Feed.FeedFilter? filter = idunno.Bluesky.Feed.FeedFilter.PostsNoReplies, bool? includePins = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Feed.FeedViewPost!>!>!>!
+*REMOVED*static idunno.Bluesky.BlueskyServer.GetAuthorFeed(idunno.AtProto.Did! actor, int? limit, string? cursor, idunno.Bluesky.Feed.FeedFilter? filter, bool? includePins, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Func<idunno.AtProto.Authentication.AtProtoCredential!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Feed.FeedViewPost!>!>!>!
+idunno.Bluesky.BlueskyAgent.GetAuthorFeed(idunno.AtProto.AtIdentifier! actor, int? limit = null, string? cursor = null, idunno.Bluesky.Feed.FeedFilter? filter = idunno.Bluesky.Feed.FeedFilter.PostsWithReplies, bool? includePins = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Feed.FeedViewPost!>!>!>!
+idunno.Bluesky.Feed.FeedFilter.PostsAndRepliesOnly = 5 -> idunno.Bluesky.Feed.FeedFilter
+static idunno.Bluesky.BlueskyServer.GetAuthorFeed(idunno.AtProto.AtIdentifier! actor, int? limit, string? cursor, idunno.Bluesky.Feed.FeedFilter? filter, bool? includePins, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Func<idunno.AtProto.Authentication.AtProtoCredential!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Feed.FeedViewPost!>!>!>!
+idunno.Bluesky.Feed.PostView.RecordValue.get -> idunno.Bluesky.Record.BlueskyRecord!
+idunno.Bluesky.Feed.PostView.RecordValue.init -> void
+idunno.Bluesky.Feed.PostView.TryGetPost(out idunno.Bluesky.Post? post) -> bool
+idunno.Bluesky.Feed.PostView.ViewCount.get -> int?
+idunno.Bluesky.Feed.PostView.ViewCount.init -> void
+idunno.Bluesky.Record.UnknownBlueskyRecord
+idunno.Bluesky.Record.UnknownBlueskyRecord.Equals(idunno.Bluesky.Record.UnknownBlueskyRecord? other) -> bool
+idunno.Bluesky.Record.UnknownBlueskyRecord.RecordType.get -> string?
+override idunno.Bluesky.Record.UnknownBlueskyRecord.<Clone>$() -> idunno.Bluesky.Record.UnknownBlueskyRecord!
+override idunno.Bluesky.Record.UnknownBlueskyRecord.Equals(object? obj) -> bool
+override idunno.Bluesky.Record.UnknownBlueskyRecord.GetHashCode() -> int
+override idunno.Bluesky.Record.UnknownBlueskyRecord.ToString() -> string!
+override sealed idunno.Bluesky.Record.UnknownBlueskyRecord.Equals(idunno.Bluesky.Record.BlueskyRecord? other) -> bool
+static idunno.Bluesky.Record.UnknownBlueskyRecord.operator !=(idunno.Bluesky.Record.UnknownBlueskyRecord? left, idunno.Bluesky.Record.UnknownBlueskyRecord? right) -> bool
+static idunno.Bluesky.Record.UnknownBlueskyRecord.operator ==(idunno.Bluesky.Record.UnknownBlueskyRecord? left, idunno.Bluesky.Record.UnknownBlueskyRecord? right) -> bool
+*REMOVED*idunno.Bluesky.Feed.PostView.Record.init -> void
+[BSKYUnspecced]idunno.Bluesky.BlueskyAgent.GetAtmosphereExploreArticleRecommendations(int? limit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Unspecced.RecommendationReadOnlyCollection<idunno.Bluesky.Unspecced.AtmosphereExploreArticle!>!>!>!
+const idunno.Bluesky.Feed.Interaction.MaximumFeedContextLength = 2000 -> int
+const idunno.Bluesky.Feed.Interaction.MaximumRequestIdLength = 100 -> int
+idunno.Bluesky.BlueskyAgent.GetFeedSkeleton(idunno.AtProto.AtUri! feed, idunno.AtProto.Did? feedGenerator = null, int? limit = null, string? cursor = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Feed.FeedSkeleton!>!>!
+idunno.Bluesky.BlueskyAgent.SendInteractions(System.Collections.Generic.IEnumerable<idunno.Bluesky.Feed.Interaction!>! interactions, idunno.AtProto.AtUri? feed = null, idunno.AtProto.Did? feedGenerator = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
+idunno.Bluesky.Feed.FeedSkeleton
+idunno.Bluesky.Feed.FeedSkeleton.Cursor.get -> string?
+idunno.Bluesky.Feed.FeedSkeleton.FeedSkeleton(System.Collections.Generic.IList<idunno.Bluesky.Feed.SkeletonFeedPost!>! list, string? cursor = null, string? requestId = null) -> void
+idunno.Bluesky.Feed.FeedSkeleton.RequestId.get -> string?
+idunno.Bluesky.Feed.Interaction
+idunno.Bluesky.Feed.Interaction.<Clone>$() -> idunno.Bluesky.Feed.Interaction!
+idunno.Bluesky.Feed.Interaction.Equals(idunno.Bluesky.Feed.Interaction? other) -> bool
+idunno.Bluesky.Feed.Interaction.Event.get -> idunno.Bluesky.Feed.InteractionEvent?
+idunno.Bluesky.Feed.Interaction.Event.init -> void
+idunno.Bluesky.Feed.Interaction.FeedContext.get -> string?
+idunno.Bluesky.Feed.Interaction.FeedContext.init -> void
+idunno.Bluesky.Feed.Interaction.Interaction(idunno.AtProto.AtUri? item = null, idunno.Bluesky.Feed.InteractionEvent? event = null, idunno.Bluesky.Feed.InteractionViewContext? viewContext = null, System.Text.Json.JsonElement? payload = null, string? feedContext = null, string? requestId = null) -> void
+idunno.Bluesky.Feed.Interaction.Item.get -> idunno.AtProto.AtUri?
+idunno.Bluesky.Feed.Interaction.Item.init -> void
+idunno.Bluesky.Feed.Interaction.Payload.get -> System.Text.Json.JsonElement?
+idunno.Bluesky.Feed.Interaction.Payload.init -> void
+idunno.Bluesky.Feed.Interaction.RequestId.get -> string?
+idunno.Bluesky.Feed.Interaction.RequestId.init -> void
+idunno.Bluesky.Feed.Interaction.ViewContext.get -> idunno.Bluesky.Feed.InteractionViewContext?
+idunno.Bluesky.Feed.Interaction.ViewContext.init -> void
+idunno.Bluesky.Feed.InteractionEvent
+idunno.Bluesky.Feed.InteractionEvent.ClickthroughAuthor = 3 -> idunno.Bluesky.Feed.InteractionEvent
+idunno.Bluesky.Feed.InteractionEvent.ClickthroughEmbed = 5 -> idunno.Bluesky.Feed.InteractionEvent
+idunno.Bluesky.Feed.InteractionEvent.ClickthroughItem = 2 -> idunno.Bluesky.Feed.InteractionEvent
+idunno.Bluesky.Feed.InteractionEvent.ClickthroughReposter = 4 -> idunno.Bluesky.Feed.InteractionEvent
+idunno.Bluesky.Feed.InteractionEvent.InteractionFollow = 12 -> idunno.Bluesky.Feed.InteractionEvent
+idunno.Bluesky.Feed.InteractionEvent.InteractionLike = 7 -> idunno.Bluesky.Feed.InteractionEvent
+idunno.Bluesky.Feed.InteractionEvent.InteractionQuote = 10 -> idunno.Bluesky.Feed.InteractionEvent
+idunno.Bluesky.Feed.InteractionEvent.InteractionReply = 9 -> idunno.Bluesky.Feed.InteractionEvent
+idunno.Bluesky.Feed.InteractionEvent.InteractionRepost = 8 -> idunno.Bluesky.Feed.InteractionEvent
+idunno.Bluesky.Feed.InteractionEvent.InteractionSeen = 6 -> idunno.Bluesky.Feed.InteractionEvent
+idunno.Bluesky.Feed.InteractionEvent.InteractionShare = 11 -> idunno.Bluesky.Feed.InteractionEvent
+idunno.Bluesky.Feed.InteractionEvent.InteractionUnspecced = 13 -> idunno.Bluesky.Feed.InteractionEvent
+idunno.Bluesky.Feed.InteractionEvent.RequestLess = 0 -> idunno.Bluesky.Feed.InteractionEvent
+idunno.Bluesky.Feed.InteractionEvent.RequestMore = 1 -> idunno.Bluesky.Feed.InteractionEvent
+idunno.Bluesky.Feed.InteractionEvent.Unknown = 14 -> idunno.Bluesky.Feed.InteractionEvent
+idunno.Bluesky.Feed.InteractionViewContext
+idunno.Bluesky.Feed.InteractionViewContext.Feed = 0 -> idunno.Bluesky.Feed.InteractionViewContext
+idunno.Bluesky.Feed.InteractionViewContext.Thread = 1 -> idunno.Bluesky.Feed.InteractionViewContext
+idunno.Bluesky.Feed.InteractionViewContext.Unknown = 2 -> idunno.Bluesky.Feed.InteractionViewContext
+idunno.Bluesky.Feed.SkeletonFeedPost
+idunno.Bluesky.Feed.SkeletonFeedPost.<Clone>$() -> idunno.Bluesky.Feed.SkeletonFeedPost!
+idunno.Bluesky.Feed.SkeletonFeedPost.Equals(idunno.Bluesky.Feed.SkeletonFeedPost? other) -> bool
+idunno.Bluesky.Feed.SkeletonFeedPost.FeedContext.get -> string?
+idunno.Bluesky.Feed.SkeletonFeedPost.FeedContext.init -> void
+idunno.Bluesky.Feed.SkeletonFeedPost.Post.get -> idunno.AtProto.AtUri!
+idunno.Bluesky.Feed.SkeletonFeedPost.Post.init -> void
+idunno.Bluesky.Feed.SkeletonFeedPost.Reason.get -> idunno.Bluesky.Feed.SkeletonReason?
+idunno.Bluesky.Feed.SkeletonFeedPost.Reason.init -> void
+idunno.Bluesky.Feed.SkeletonFeedPost.SkeletonFeedPost(idunno.AtProto.AtUri! post, idunno.Bluesky.Feed.SkeletonReason? reason = null, string? feedContext = null) -> void
+idunno.Bluesky.Feed.SkeletonReason
+idunno.Bluesky.Feed.SkeletonReason.ExtensionData.get -> System.Collections.Generic.IDictionary<string!, System.Text.Json.JsonElement>?
+idunno.Bluesky.Feed.SkeletonReason.ExtensionData.set -> void
+idunno.Bluesky.Feed.SkeletonReason.SkeletonReason() -> void
+idunno.Bluesky.Feed.SkeletonReason.SkeletonReason(idunno.Bluesky.Feed.SkeletonReason! original) -> void
+idunno.Bluesky.Feed.SkeletonReasonPin
+idunno.Bluesky.Feed.SkeletonReasonPin.Equals(idunno.Bluesky.Feed.SkeletonReasonPin? other) -> bool
+idunno.Bluesky.Feed.SkeletonReasonPin.SkeletonReasonPin() -> void
+idunno.Bluesky.Feed.SkeletonReasonRepost
+idunno.Bluesky.Feed.SkeletonReasonRepost.Equals(idunno.Bluesky.Feed.SkeletonReasonRepost? other) -> bool
+idunno.Bluesky.Feed.SkeletonReasonRepost.Repost.get -> idunno.AtProto.AtUri!
+idunno.Bluesky.Feed.SkeletonReasonRepost.Repost.init -> void
+idunno.Bluesky.Feed.SkeletonReasonRepost.SkeletonReasonRepost(idunno.AtProto.AtUri! repost) -> void
+idunno.Bluesky.Unspecced.AtmosphereExploreArticle
+idunno.Bluesky.Unspecced.AtmosphereExploreArticle.<Clone>$() -> idunno.Bluesky.Unspecced.AtmosphereExploreArticle!
+idunno.Bluesky.Unspecced.AtmosphereExploreArticle.AtmosphereExploreArticle(idunno.AtProto.AtUri! uri) -> void
+idunno.Bluesky.Unspecced.AtmosphereExploreArticle.Equals(idunno.Bluesky.Unspecced.AtmosphereExploreArticle? other) -> bool
+idunno.Bluesky.Unspecced.AtmosphereExploreArticle.Uri.get -> idunno.AtProto.AtUri!
+idunno.Bluesky.Unspecced.AtmosphereExploreArticle.Uri.init -> void
+override idunno.Bluesky.Feed.Interaction.Equals(object? obj) -> bool
+override idunno.Bluesky.Feed.Interaction.GetHashCode() -> int
+override idunno.Bluesky.Feed.Interaction.ToString() -> string!
+override idunno.Bluesky.Feed.SkeletonFeedPost.Equals(object? obj) -> bool
+override idunno.Bluesky.Feed.SkeletonFeedPost.GetHashCode() -> int
+override idunno.Bluesky.Feed.SkeletonFeedPost.ToString() -> string!
+override idunno.Bluesky.Feed.SkeletonReason.Equals(object? obj) -> bool
+override idunno.Bluesky.Feed.SkeletonReason.GetHashCode() -> int
+override idunno.Bluesky.Feed.SkeletonReason.ToString() -> string!
+override idunno.Bluesky.Feed.SkeletonReasonPin.<Clone>$() -> idunno.Bluesky.Feed.SkeletonReasonPin!
+override idunno.Bluesky.Feed.SkeletonReasonPin.Equals(object? obj) -> bool
+override idunno.Bluesky.Feed.SkeletonReasonPin.GetHashCode() -> int
+override idunno.Bluesky.Feed.SkeletonReasonPin.ToString() -> string!
+override idunno.Bluesky.Feed.SkeletonReasonRepost.<Clone>$() -> idunno.Bluesky.Feed.SkeletonReasonRepost!
+override idunno.Bluesky.Feed.SkeletonReasonRepost.Equals(object? obj) -> bool
+override idunno.Bluesky.Feed.SkeletonReasonRepost.GetHashCode() -> int
+override idunno.Bluesky.Feed.SkeletonReasonRepost.ToString() -> string!
+override idunno.Bluesky.Unspecced.AtmosphereExploreArticle.Equals(object? obj) -> bool
+override idunno.Bluesky.Unspecced.AtmosphereExploreArticle.GetHashCode() -> int
+override idunno.Bluesky.Unspecced.AtmosphereExploreArticle.ToString() -> string!
+override sealed idunno.Bluesky.Feed.SkeletonReasonPin.Equals(idunno.Bluesky.Feed.SkeletonReason? other) -> bool
+override sealed idunno.Bluesky.Feed.SkeletonReasonRepost.Equals(idunno.Bluesky.Feed.SkeletonReason? other) -> bool
+static idunno.Bluesky.BlueskyServer.GetFeedSkeleton(idunno.AtProto.AtUri! feed, int? limit, string? cursor, System.Uri! service, string? serviceProxy, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Func<idunno.AtProto.Authentication.AtProtoCredential!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Feed.FeedSkeleton!>!>!
+static idunno.Bluesky.BlueskyServer.SendInteractions(System.Collections.Generic.IEnumerable<idunno.Bluesky.Feed.Interaction!>! interactions, idunno.AtProto.AtUri? feed, System.Uri! service, string! serviceProxy, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Func<idunno.AtProto.Authentication.AtProtoCredential!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
+static idunno.Bluesky.Feed.Interaction.operator !=(idunno.Bluesky.Feed.Interaction? left, idunno.Bluesky.Feed.Interaction? right) -> bool
+static idunno.Bluesky.Feed.Interaction.operator ==(idunno.Bluesky.Feed.Interaction? left, idunno.Bluesky.Feed.Interaction? right) -> bool
+static idunno.Bluesky.Feed.SkeletonFeedPost.operator !=(idunno.Bluesky.Feed.SkeletonFeedPost? left, idunno.Bluesky.Feed.SkeletonFeedPost? right) -> bool
+static idunno.Bluesky.Feed.SkeletonFeedPost.operator ==(idunno.Bluesky.Feed.SkeletonFeedPost? left, idunno.Bluesky.Feed.SkeletonFeedPost? right) -> bool
+static idunno.Bluesky.Feed.SkeletonReason.operator !=(idunno.Bluesky.Feed.SkeletonReason? left, idunno.Bluesky.Feed.SkeletonReason? right) -> bool
+static idunno.Bluesky.Feed.SkeletonReason.operator ==(idunno.Bluesky.Feed.SkeletonReason? left, idunno.Bluesky.Feed.SkeletonReason? right) -> bool
+static idunno.Bluesky.Feed.SkeletonReasonPin.operator !=(idunno.Bluesky.Feed.SkeletonReasonPin? left, idunno.Bluesky.Feed.SkeletonReasonPin? right) -> bool
+static idunno.Bluesky.Feed.SkeletonReasonPin.operator ==(idunno.Bluesky.Feed.SkeletonReasonPin? left, idunno.Bluesky.Feed.SkeletonReasonPin? right) -> bool
+static idunno.Bluesky.Feed.SkeletonReasonRepost.operator !=(idunno.Bluesky.Feed.SkeletonReasonRepost? left, idunno.Bluesky.Feed.SkeletonReasonRepost? right) -> bool
+static idunno.Bluesky.Feed.SkeletonReasonRepost.operator ==(idunno.Bluesky.Feed.SkeletonReasonRepost? left, idunno.Bluesky.Feed.SkeletonReasonRepost? right) -> bool
+static idunno.Bluesky.Unspecced.AtmosphereExploreArticle.operator !=(idunno.Bluesky.Unspecced.AtmosphereExploreArticle? left, idunno.Bluesky.Unspecced.AtmosphereExploreArticle? right) -> bool
+static idunno.Bluesky.Unspecced.AtmosphereExploreArticle.operator ==(idunno.Bluesky.Unspecced.AtmosphereExploreArticle? left, idunno.Bluesky.Unspecced.AtmosphereExploreArticle? right) -> bool
+static readonly idunno.Bluesky.Maximum.AtmosphereExploreArticleRecommendations -> int
+virtual idunno.Bluesky.Feed.SkeletonReason.<Clone>$() -> idunno.Bluesky.Feed.SkeletonReason!
+virtual idunno.Bluesky.Feed.SkeletonReason.EqualityContract.get -> System.Type!
+virtual idunno.Bluesky.Feed.SkeletonReason.Equals(idunno.Bluesky.Feed.SkeletonReason? other) -> bool
+virtual idunno.Bluesky.Feed.SkeletonReason.PrintMembers(System.Text.StringBuilder! builder) -> bool
+[BSKYUnspecced]static idunno.Bluesky.BlueskyServer.GetAtmosphereExploreArticleRecommendations(idunno.AtProto.Did? viewer, int? limit, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Func<idunno.AtProto.Authentication.AtProtoCredential!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Unspecced.RecommendationReadOnlyCollection<idunno.Bluesky.Unspecced.AtmosphereExploreArticle!>!>!>!

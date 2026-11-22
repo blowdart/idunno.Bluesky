@@ -288,7 +288,7 @@ public static partial class BlueskyServer
     /// <summary>
     /// Get a view of an actor's 'author feed' (post and reposts by the author).
     /// </summary>
-    /// <param name="actor">The <see cref="Did"/> of the actor whose feed should be retrieved.</param>
+    /// <param name="actor">The <see cref="AtIdentifier"/> (handle or <see cref="Did"/>) of the actor whose feed should be retrieved.</param>
     /// <param name="limit">The maximum number of items to return from the api.</param>
     /// <param name="cursor">An optional cursor for pagination.</param>
     /// <param name="filter">Combinations of post/repost types to include in the results.</param>
@@ -312,7 +312,7 @@ public static partial class BlueskyServer
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
     public static async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>> GetAuthorFeed(
-        Did actor,
+        AtIdentifier actor,
         int? limit,
         string? cursor,
         FeedFilter? filter,
@@ -371,6 +371,10 @@ public static partial class BlueskyServer
                 case FeedFilter.PostsWithVideo:
                     filterParameter = "posts_with_video";
                     break;
+
+                case FeedFilter.PostsAndRepliesOnly:
+                    filterParameter = "posts_and_replies_only";
+                    break;
             }
 
             if (filterParameter is not null)
@@ -380,7 +384,7 @@ public static partial class BlueskyServer
         }
         if (includePins is not null)
         {
-            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&includePins={includePins}");
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&includePins={(includePins.Value ? "true" : "false")}");
         }
         string queryString = queryStringBuilder.ToString();
 

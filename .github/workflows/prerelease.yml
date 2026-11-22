@@ -183,7 +183,7 @@ jobs:
         INCLUDE_HOSTS: ${{ inputs.perform_publish_containers }}
       run: |
         # Published once here, so the version comes from the full clone. Sign signs the Windows binaries,
-        # zips the CLI and the container images are assembled from the signed result without recompiling.
+        # stages the CLI downloads and the container images are assembled from the signed result without recompiling.
         $payload = Join-Path $env:RUNNER_TEMP 'labeler-payload'
         $common = @('--configuration', 'Release', '--framework', 'net10.0',
                     '--property:PublicRelease=false', "--property:BuildCommitId=$env:GITHUB_SHA")
@@ -306,18 +306,19 @@ jobs:
         New-Item -ItemType Directory -Force -Path $downloads | Out-Null
         $version = (Get-Content (Join-Path $payload 'version.txt') -Raw).Trim()
         $entries = foreach ($rid in 'win-x64', 'win-arm64', 'linux-x64', 'linux-arm64') {
-          $name = "idunno.Bluesky.Labeler.Cli-$rid.zip"
-          $zip = Join-Path $downloads $name
-          Compress-Archive -Path (Join-Path $payload "cli/$rid/*") -DestinationPath $zip -Force
+          $extension = if ($rid.StartsWith('win-')) { '.exe' } else { '' }
+          $name = "idunno.Bluesky.Labeler.Cli-$rid$extension"
+          $binary = Join-Path $downloads $name
+          Copy-Item -LiteralPath (Join-Path $payload "cli/$rid/idunno.Bluesky.Labeler.Cli$extension") -Destination $binary
           $os, $arch = $rid -split '-', 2
           [ordered]@{
             name    = $name
             rid     = $rid
             os      = $os
             arch    = $arch
-            size    = (Get-Item $zip).Length
-            sha256  = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
-            sha512  = (Get-FileHash $zip -Algorithm SHA512).Hash.ToLowerInvariant()
+            size    = (Get-Item $binary).Length
+            sha256  = (Get-FileHash $binary -Algorithm SHA256).Hash.ToLowerInvariant()
+            sha512  = (Get-FileHash $binary -Algorithm SHA512).Hash.ToLowerInvariant()
             version = $version
           }
         }
@@ -353,7 +354,7 @@ jobs:
           $contentTypes=Join-Path "$($env:ATTESTATION_INPUT)/$($nupkg.Basename)" -ChildPath "[Content_Types].xml"
           Remove-Item -LiteralPath $contentTypes -Force
         }
-        Get-ChildItem -Path $env:BUILD_OUTPUT -File -Force | Where-Object { $_.Extension -eq '.zip' -or $_.Name -eq 'cli-downloads.json' } |
+        Get-ChildItem -Path $env:BUILD_OUTPUT -File -Force | Where-Object { $_.Name -like 'idunno.Bluesky.Labeler.Cli-*' -or $_.Name -eq 'cli-downloads.json' } |
           Copy-Item -Destination $env:ATTESTATION_INPUT
 
     - name: 'List attestation artifacts'

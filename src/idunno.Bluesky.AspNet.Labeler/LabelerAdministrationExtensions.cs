@@ -32,14 +32,24 @@ public static class LabelerAdministrationExtensions
     /// <param name="services">The service collection.</param>
     /// <param name="audience">The exact DID service reference for administrative service tokens.</param>
     /// <param name="signingKey">The established caller-owned label signing key.</param>
-    /// <param name="httpClient">The caller-owned, hardened identity-resolution client.</param>
+    /// <param name="httpClient">The caller-owned <see cref="HttpClient"/> used for identity and repository requests.</param>
     /// <param name="maximumServiceTokenLifetime">The maximum accepted service-token lifetime. The default is 15 minutes.</param>
     /// <returns>The service collection.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="maximumServiceTokenLifetime"/> is zero or negative.</exception>
     /// <exception cref="InvalidOperationException">Storage, policy or administration registration is missing or ambiguous.</exception>
-    /// <remarks><para>Initialize the database and bootstrap explicitly before accepting commands.
-    /// Keys and clients are borrowed, not disposed. No permissive authorizer or HTTP bootstrap is installed.</para></remarks>
+    /// <remarks>
+    /// <para>Initialize the database and bootstrap explicitly before accepting commands.
+    /// Keys and clients are borrowed, not disposed. No permissive authorizer or HTTP bootstrap is installed.</para>
+    /// <para><paramref name="httpClient"/> is used as supplied; its handler must enforce SSRF protection for
+    /// destinations resolved from handles and DID documents. A client without those protections can connect to
+    /// loopback, link-local or private network addresses, including cloud metadata services. A client created by
+    /// an <see cref="IHttpClientFactory"/> registered with
+    /// <see cref="ServiceCollectionExtensions.AddAtProtoHttpClient(Microsoft.Extensions.DependencyInjection.IServiceCollection)"/> has the library's
+    /// connection-time SSRF protections; custom handlers must provide equivalent protections.</para>
+    /// <para>Disable automatic redirects on the handler. A handler that follows redirects can send a request to
+    /// a disallowed destination before this API can inspect the response.</para>
+    /// </remarks>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters",
         Justification = "The overloads select between a borrowed single key and a host-owned key ring, which cannot be represented by one unambiguous parameter type.")]
     public static IServiceCollection AddLabelerAdministration(
@@ -62,14 +72,24 @@ public static class LabelerAdministrationExtensions
     /// <param name="services">The service collection.</param>
     /// <param name="audience">The exact DID service reference for administrative service tokens.</param>
     /// <param name="signingKeyRing">The host-owned key ring, including the active and preinstalled replacement keys.</param>
-    /// <param name="httpClient">The caller-owned, hardened identity-resolution client.</param>
+    /// <param name="httpClient">The caller-owned <see cref="HttpClient"/> used for identity and repository requests.</param>
     /// <param name="maximumServiceTokenLifetime">The maximum accepted service-token lifetime. The default is 15 minutes.</param>
     /// <returns>The service collection.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="maximumServiceTokenLifetime"/> is zero or negative.</exception>
     /// <exception cref="InvalidOperationException">Storage, policy or administration registration is missing or ambiguous.</exception>
-    /// <remarks><para>The key ring owns its keys and persists the active key identity. Do not transfer private key material
-    /// through administration requests. Initialize the database and bootstrap explicitly before accepting commands.</para></remarks>
+    /// <remarks>
+    /// <para>The key ring owns its keys and persists the active key identity. Do not transfer private key material
+    /// through administration requests. Initialize the database and bootstrap explicitly before accepting commands.</para>
+    /// <para><paramref name="httpClient"/> is used as supplied; its handler must enforce SSRF protection for
+    /// destinations resolved from handles and DID documents. A client without those protections can connect to
+    /// loopback, link-local or private network addresses, including cloud metadata services. A client created by
+    /// an <see cref="IHttpClientFactory"/> registered with
+    /// <see cref="ServiceCollectionExtensions.AddAtProtoHttpClient(Microsoft.Extensions.DependencyInjection.IServiceCollection)"/> has the library's
+    /// connection-time SSRF protections; custom handlers must provide equivalent protections.</para>
+    /// <para>Disable automatic redirects on the handler. A handler that follows redirects can send a request to
+    /// a disallowed destination before this API can inspect the response.</para>
+    /// </remarks>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters",
         Justification = "The overloads select between a borrowed single key and a host-owned key ring, which cannot be represented by one unambiguous parameter type.")]
     public static IServiceCollection AddLabelerAdministration(
@@ -94,13 +114,23 @@ public static class LabelerAdministrationExtensions
     /// <summary>Registers keyless administration for a permanently retired labeler.</summary>
     /// <param name="services">The service collection.</param>
     /// <param name="audience">The exact administrative service audience.</param>
-    /// <param name="httpClient">The hardened identity-resolution client.</param>
+    /// <param name="httpClient">The caller-owned <see cref="HttpClient"/> used for identity and repository requests.</param>
     /// <returns>The service collection.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException">The provider registrations are missing or ambiguous, or signing keys are registered when the services are constructed.</exception>
-    /// <remarks><para>The host must verify durable retirement and completed publication before starting.
+    /// <remarks>
+    /// <para>The host must verify durable retirement and completed publication before starting.
     /// This registration never supplies a dummy signing key or permits label issuance.
-    /// Registering an <see cref="ILabelSigningKeyRing"/> conflicts with this explicit role and is rejected at service construction.</para></remarks>
+    /// Registering an <see cref="ILabelSigningKeyRing"/> conflicts with this explicit role and is rejected at service construction.</para>
+    /// <para><paramref name="httpClient"/> is used as supplied; its handler must enforce SSRF protection for
+    /// destinations resolved from handles and DID documents. A client without those protections can connect to
+    /// loopback, link-local or private network addresses, including cloud metadata services. A client created by
+    /// an <see cref="IHttpClientFactory"/> registered with
+    /// <see cref="ServiceCollectionExtensions.AddAtProtoHttpClient(Microsoft.Extensions.DependencyInjection.IServiceCollection)"/> has the library's
+    /// connection-time SSRF protections; custom handlers must provide equivalent protections.</para>
+    /// <para>Disable automatic redirects on the handler. A handler that follows redirects can send a request to
+    /// a disallowed destination before this API can inspect the response.</para>
+    /// </remarks>
     public static IServiceCollection AddKeylessLabelerAdministration(
         this IServiceCollection services,
         AtProtoServiceReference audience,
@@ -137,8 +167,15 @@ public static class LabelerAdministrationExtensions
         }
 
         services.AddLogging();
-        services.AddOptions<LabelerAdministrationOptions>();
+        services.AddOptions<LabelerAdministrationOptions>()
+            .Validate(
+                options => options.RequestsPerMinutePerPeer is >= 1 and <= 100000 &&
+                    options.MaximumConcurrentRequestsPerPeer is >= 1 and <= 1024 &&
+                    options.MaximumTrackedPeers is >= 1 and <= 65536,
+                "Remote administration requires bounded positive request, concurrency and peer limits.")
+            .ValidateOnStart();
         services.TryAddSingleton(TimeProvider.System);
+        services.TryAddSingleton<RemoteAdministrationAdmission>();
         services.TryAddSingleton<OzoneTeamPresence>();
         services.AddSingleton(new AdministrationConfiguration(
             AdministrationAudience: audience,
@@ -376,6 +413,19 @@ public static class LabelerAdministrationExtensions
             return;
         }
 
+        using IDisposable? admission = context.RequestServices.GetRequiredService<RemoteAdministrationAdmission>()
+            .TryAcquire(context.Connection.RemoteIpAddress, currentOptions);
+        if (admission is null)
+        {
+            context.Response.Headers.CacheControl = "no-store";
+            context.Response.Headers.RetryAfter = "60";
+            await write(
+                context,
+                new(false, "RateLimitExceeded", "Remote administration admission is temporarily exhausted."),
+                StatusCodes.Status429TooManyRequests).ConfigureAwait(false);
+            return;
+        }
+
         // CodeQL cs/user-controlled-bypass is a false positive here: insecure requests return a denial,
         // never dispatch; HTTPS requests still require service-token authentication and team authorization.
         if (!context.Request.IsHttps)
@@ -467,7 +517,7 @@ public static class LabelerAdministrationExtensions
                 : new(false, "InvalidToken", "Authentication failed or the message exceeds its bounds.");
             status = StatusCodes.Status401Unauthorized;
         }
-        catch (Exception exception) when (exception is JsonException or ArgumentException or FormatException or OverflowException)
+        catch (Exception exception) when (ModerationWire.IsMalformedInput(exception) || exception is OverflowException)
         {
             AdministrationLog.Rejected(logger, exception.GetType().Name);
             response = new(false, "InvalidRequest", "The administrative input is invalid.");
