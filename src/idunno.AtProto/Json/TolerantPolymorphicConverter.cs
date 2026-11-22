@@ -77,6 +77,9 @@ internal sealed class TolerantPolymorphicConverter(
     internal static JsonSerializerOptions FinalizeWriteOptions(JsonSerializerOptions options)
     {
         JsonSerializerOptions result = new(options);
+        IJsonTypeInfoResolver resolver = result.TypeInfoResolver
+            ?? throw new InvalidOperationException("The configured JSON options do not have a type-info resolver.");
+        result.TypeInfoResolver = resolver.WithAddedModifier(AdaptOptionalRepositoryRecordCid);
         result.MakeReadOnly();
         return result;
     }
@@ -767,7 +770,7 @@ internal sealed class TolerantPolymorphicConverter(
 
         private static JsonTypeInfo ApplyCustomConverterPolymorphismWorkaround(JsonTypeInfo info)
         {
-            AdaptOptionalRepositoryRecordCid(info);
+            TolerantPolymorphicConverter.AdaptOptionalRepositoryRecordCid(info);
 
             // A custom converter cannot also expose built-in polymorphism metadata. Keep it on the
             // underlying contract; the tolerant wrapper performs dispatch using that original contract.
@@ -781,60 +784,67 @@ internal sealed class TolerantPolymorphicConverter(
             return info;
         }
 
-        /// <summary>
-        /// Allows repository record contracts to read and write records whose <c>cid</c> is absent.
-        /// </summary>
-        /// <param name="info">The contract to adapt.</param>
-        /// <remarks>
-        /// <para><c>com.atproto.repo.getRecord</c> makes <c>cid</c> optional, but <see cref="AtProtoRepositoryObject.Cid"/>
-        /// keeps its non-nullable public shape and throws when the value is absent. Record contracts therefore read the
-        /// nullable backing value, stop requiring <c>cid</c>, and omit <c>strongReference</c> when no CID is present.
-        /// Other repository objects, such as notifications, keep requiring a CID.</para>
-        /// </remarks>
-        private static void AdaptOptionalRepositoryRecordCid(JsonTypeInfo info)
-        {
-            if (info.Kind != JsonTypeInfoKind.Object || !IsRepositoryRecord(info.Type))
-            {
-                return;
-            }
+    }
 
-            foreach (JsonPropertyInfo property in info.Properties)
+    /// <summary>Adapts repository-record contracts so absent CIDs are read safely and omitted when writing.</summary>
+    /// <param name="info">The contract to adapt.</param>
+    /// <remarks>
+    /// <para><c>com.atproto.repo.getRecord</c> makes <c>cid</c> optional, but <see cref="AtProtoRepositoryObject.Cid"/>
+    /// keeps its non-nullable public shape and throws when absent. Other repository objects, such as notifications,
+    /// continue to require a CID.</para>
+    /// </remarks>
+    private static void AdaptOptionalRepositoryRecordCid(JsonTypeInfo info)
+    {
+        if (info.Kind != JsonTypeInfoKind.Object || !IsRepositoryRecord(info.Type))
+        {
+            return;
+        }
+
+        foreach (JsonPropertyInfo property in info.Properties)
+        {
+            if (property.PropertyType == typeof(Cid) &&
+                string.Equals(property.Name, "cid", StringComparison.Ordinal))
             {
-                if (property.PropertyType == typeof(Cid) &&
-                    string.Equals(property.Name, "cid", StringComparison.Ordinal))
-                {
-                    property.IsRequired = false;
-                    property.Get = static value => ((AtProtoRepositoryObject)value).CidOrDefault;
-                    property.IsGetNullable = true;
-                }
-                else if (property.PropertyType == typeof(StrongReference) &&
-                    string.Equals(property.Name, "strongReference", StringComparison.Ordinal))
-                {
-                    property.Get = static value =>
-                        ((AtProtoRepositoryObject)value).TryGetStrongReference(out StrongReference? strongReference) ? strongReference : null;
-                    property.IsGetNullable = true;
-                }
+                property.IsRequired = false;
+                property.Get = static value => ((AtProtoRepositoryObject)value).CidOrDefault;
+                property.IsGetNullable = true;
+                SetShouldSerialize(property);
+            }
+            else if (property.PropertyType == typeof(StrongReference) &&
+                string.Equals(property.Name, "strongReference", StringComparison.Ordinal))
+            {
+                property.Get = static value =>
+                    ((AtProtoRepositoryObject)value).TryGetStrongReference(out StrongReference? strongReference) ? strongReference : null;
+                property.IsGetNullable = true;
+                SetShouldSerialize(property);
             }
         }
 
-        /// <summary>
-        /// Determines whether <paramref name="type"/> is, or derives from, a repository record type whose CID is optional.
-        /// </summary>
-        /// <param name="type">The type to check.</param>
-        /// <returns><see langword="true"/> if <paramref name="type"/> is a repository record type; otherwise <see langword="false"/>.</returns>
-        private static bool IsRepositoryRecord(Type type)
+        static void SetShouldSerialize(JsonPropertyInfo property)
         {
-            for (Type? current = type; current is not null; current = current.BaseType)
-            {
-                if (current == typeof(AtProtoRepositoryRecord) ||
-                    (current.IsGenericType && current.GetGenericTypeDefinition() == typeof(AtProtoRepositoryRecord<>)))
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            Func<object, object?, bool>? shouldSerialize = property.ShouldSerialize;
+            property.ShouldSerialize = (value, propertyValue) =>
+                value is AtProtoRepositoryObject record &&
+                record.HasCid &&
+                (shouldSerialize?.Invoke(value, propertyValue) ?? true);
         }
+    }
+
+    /// <summary>Determines whether <paramref name="type"/> is a repository-record type.</summary>
+    /// <param name="type">The type to check.</param>
+    /// <returns><see langword="true"/> if <paramref name="type"/> is a repository-record type; otherwise, <see langword="false"/>.</returns>
+    private static bool IsRepositoryRecord(Type type)
+    {
+        for (Type? current = type; current is not null; current = current.BaseType)
+        {
+            if (current == typeof(AtProtoRepositoryRecord) ||
+                (current.IsGenericType && current.GetGenericTypeDefinition() == typeof(AtProtoRepositoryRecord<>)))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private sealed class Converter(Type type, JsonSerializerOptions underlyingOptions) : JsonConverter<object>

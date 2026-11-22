@@ -84,7 +84,8 @@ public partial class BlueskyAgent
                 maximumResponseSize: MaximumResponseSize,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
             Uri? directService = document?.Id == feedGenerator
-                ? document.Services?.FirstOrDefault(service => service.Id == "#bsky_fg")?.ServiceEndpoint
+                ? document.Services?.FirstOrDefault(service =>
+                    service.Id == "#bsky_fg" || service.Id == $"{feedGenerator}#bsky_fg")?.ServiceEndpoint
                 : null;
 
             if (directService is null || !IsSupportedFeedGeneratorEndpoint(directService))

@@ -56,14 +56,14 @@ public class FeedSkeletonAndInteractionTests
         }
         """;
 
-    private static string FeedGeneratorDidDocument(Uri endpoint) => JsonSerializer.Serialize(new
+    private static string FeedGeneratorDidDocument(Uri endpoint, string serviceId = "#bsky_fg") => JsonSerializer.Serialize(new
     {
         id = s_feedGeneratorDid.Value,
         service = new[]
         {
             new
             {
-                id = "#bsky_fg",
+                id = serviceId,
                 type = "BskyFeedGenerator",
                 serviceEndpoint = endpoint.AbsoluteUri
             }
@@ -230,15 +230,17 @@ public class FeedSkeletonAndInteractionTests
             cancellationToken: TestContext.Current.CancellationToken));
     }
 
-    [Fact]
-    public async Task GetFeedSkeletonCanBeCalledWithoutAuthentication()
+    [Theory]
+    [InlineData("#bsky_fg")]
+    [InlineData("did:web:feeds.example.com#bsky_fg")]
+    public async Task GetFeedSkeletonCanBeCalledWithoutAuthentication(string serviceId)
     {
         List<CapturedRequest> captured = [];
         using TestServer testServer = CreateServer(
             captured,
             path => path switch
             {
-                "/.well-known/did.json" => (HttpStatusCode.OK, FeedGeneratorDidDocument(TestServerBuilder.DefaultUri)),
+                "/.well-known/did.json" => (HttpStatusCode.OK, FeedGeneratorDidDocument(TestServerBuilder.DefaultUri, serviceId)),
                 "/xrpc/app.bsky.feed.getFeedSkeleton" => (HttpStatusCode.OK, SkeletonResponse),
                 _ => null
             });
