@@ -54,7 +54,7 @@ internal static class ReportRecordResolver
                     clock.GetUtcNow());
             }
 
-            return result.Result.Uri == uri
+            return result.Result.Uri == uri && result.Result.HasCid
                 ? new(result.Result.Cid.ToString(), "resolved", pds.AbsoluteUri, clock.GetUtcNow())
                 : new(null, "inconsistent-record", pds.AbsoluteUri, clock.GetUtcNow());
         }

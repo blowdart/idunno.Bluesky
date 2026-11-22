@@ -196,7 +196,11 @@ public abstract class LabelAdministrationTests : LabelAdministrationTestBase
         Assert.True((await tables.ReadAuditExportPageAsync(
             owner, query with { AuditThroughSequence = export.Sequence - 1 }, token)).Succeeded);
 
-        ILabelAdministrationStore restarted = (ILabelAdministrationStore)fixture.NewStore();
+        await fixture.ExecuteAsync("DROP TABLE label_boundary_denials");
+        await fixture.ExecuteAsync("DROP TABLE label_schema_migrations");
+        ILabelStore restartedStore = fixture.NewStore();
+        await restartedStore.InitializeAsync(StoreFixture.s_issuer, token);
+        ILabelAdministrationStore restarted = (ILabelAdministrationStore)restartedStore;
         await Task.WhenAll(Enumerable.Range(0, 20).Select(async index =>
         {
             ILabelAdministrationStore writer = index % 2 == 0 ? store : restarted;
@@ -1108,6 +1112,8 @@ public abstract class LabelAdministrationTests : LabelAdministrationTestBase
             DROP TABLE label_audit_queries;
             DROP TABLE label_admin_tokens;
             DROP TABLE label_admin_receipts;
+            DROP TABLE label_boundary_denials;
+            DROP TABLE label_schema_migrations;
             DROP TABLE label_admin_audit;
             DROP TABLE label_team;
             UPDATE label_schema SET version=3;

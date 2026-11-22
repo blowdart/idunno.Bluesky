@@ -1,7 +1,10 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Net;
+
 using idunno.AtProto;
+using idunno.AtProto.Authentication;
 using idunno.Bluesky.Feed;
 
 namespace idunno.Bluesky;
@@ -24,8 +27,11 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
     /// <remarks>
     /// <para>
-    /// The request is sent to the agent's PDS, which proxies it to the <c>#bsky_fg</c> service of <paramref name="feedGenerator"/>.
-    /// Authentication is optional; when the agent is authenticated, the PDS also authenticates the user to the feed generator.
+    /// Authenticated requests are sent to the agent's PDS, which proxies them to the <c>#bsky_fg</c> service of
+    /// <paramref name="feedGenerator"/> and authenticates the user to the feed generator. Unauthenticated requests resolve the
+    /// service endpoint from the feed generator's DID document and call it directly without a proxy or credentials. Because that
+    /// endpoint is externally controlled, so the HTTP client supplied to the agent should enforce SSRF protection and disable
+    /// redirects.
     /// Most applications should call
     /// <see cref="GetFeed(AtUri, int?, string?, ICollection{System.Net.Http.Headers.NameValueHeaderValue}?, IEnumerable{Did}?, CancellationToken)"/>,
     /// which returns a hydrated feed.
@@ -66,13 +72,41 @@ public partial class BlueskyAgent
             feedGenerator = generator.Result.View.Did;
         }
 
+        Uri service = Service;
+        string? serviceProxy = FeedGeneratorServiceProxy(feedGenerator);
+        AccessCredentials? accessCredentials = Credentials;
+        if (accessCredentials is null)
+        {
+            DidDocument? document = await IdentityResolution.ResolveDidDocumentAsync(
+                did: feedGenerator,
+                loggerFactory: LoggerFactory,
+                httpClient: HttpClient,
+                maximumResponseSize: MaximumResponseSize,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+            Uri? directService = document?.Id == feedGenerator
+                ? document.Services?.FirstOrDefault(service => service.Id == "#bsky_fg")?.ServiceEndpoint
+                : null;
+
+            if (directService is null || !IsSupportedFeedGeneratorEndpoint(directService))
+            {
+                return new AtProtoHttpResult<FeedSkeleton>(
+                    null,
+                    statusCode: HttpStatusCode.BadGateway,
+                    httpResponseHeaders: null,
+                    atErrorDetail: new("FeedGeneratorServiceNotFound", "The feed generator DID does not publish a supported #bsky_fg service endpoint."));
+            }
+
+            service = directService;
+            serviceProxy = null;
+        }
+
         return await BlueskyServer.GetFeedSkeleton(
             feed,
             limit,
             cursor,
-            service: Service,
-            serviceProxy: FeedGeneratorServiceProxy(feedGenerator),
-            accessCredentials: Credentials,
+            service: service,
+            serviceProxy: serviceProxy,
+            accessCredentials: accessCredentials,
             httpClient: HttpClient,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
@@ -86,4 +120,13 @@ public partial class BlueskyAgent
     /// <param name="feedGenerator">The <see cref="Did"/> of the feed generator service.</param>
     /// <returns>The service reference, <c>{feedGenerator}#bsky_fg</c>.</returns>
     private static string FeedGeneratorServiceProxy(Did feedGenerator) => $"{feedGenerator}#bsky_fg";
+
+    /// <summary>Accepts secure service endpoints and loopback HTTP endpoints used for local development.</summary>
+    private static bool IsSupportedFeedGeneratorEndpoint(Uri serviceEndpoint) =>
+        serviceEndpoint.IsAbsoluteUri &&
+        serviceEndpoint.UserInfo.Length == 0 &&
+        serviceEndpoint.Query.Length == 0 &&
+        serviceEndpoint.Fragment.Length == 0 &&
+        (serviceEndpoint.Scheme == Uri.UriSchemeHttps ||
+            serviceEndpoint.Scheme == Uri.UriSchemeHttp && serviceEndpoint.IsLoopback);
 }

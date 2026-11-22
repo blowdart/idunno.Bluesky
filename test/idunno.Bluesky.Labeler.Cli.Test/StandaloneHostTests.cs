@@ -30,7 +30,7 @@ namespace idunno.Bluesky.Labeler.Cli.Test;
 public class StandaloneHostTests
 {
     [Fact]
-    public async Task RootRouteReturnsTheUtf8BannerWithFooterBuildStamp()
+    public async Task RootRouteReturnsTheUtf8BannerWithVersionAndCommit()
     {
         CancellationToken token = TestContext.Current.CancellationToken;
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
@@ -49,12 +49,13 @@ public class StandaloneHostTests
         Assert.Equal("text/plain", response.Content.Headers.ContentType!.MediaType);
         Assert.Equal("utf-8", response.Content.Headers.ContentType.CharSet);
         Assembly uiAssembly = typeof(LabelerUIExtensions).Assembly;
-        string? build = uiAssembly.GetCustomAttributes<AssemblyMetadataAttribute>()
+        string? commit = uiAssembly.GetCustomAttributes<AssemblyMetadataAttribute>()
             .FirstOrDefault(attribute => attribute.Key == "BuildCommitId")?.Value
             ?? uiAssembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-        Assert.False(string.IsNullOrWhiteSpace(build));
+        string version = uiAssembly.GetName().Version?.ToString(3) ?? "Unknown";
+        Assert.False(string.IsNullOrWhiteSpace(commit));
         Assert.Equal(
-            Encoding.UTF8.GetBytes($"🏷️ {build}"),
+            Encoding.UTF8.GetBytes($"🏷️ V{version} Commit {commit}"),
             await response.Content.ReadAsByteArrayAsync(token));
 
         await app.StopAsync(token);

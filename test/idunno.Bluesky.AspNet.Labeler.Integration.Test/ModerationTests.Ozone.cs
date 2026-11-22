@@ -12,6 +12,8 @@ using idunno.Bluesky.Labeler.Administration;
 using idunno.Bluesky.Labeler.Moderation;
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Testing;
 
 namespace idunno.Bluesky.AspNet.Labeler.Integration.Test;
 
@@ -1022,12 +1024,51 @@ public class ModerationOzoneEventsTests : ModerationTestBase
     }
 
     [Theory]
+    [InlineData("notaturi")]
+    [InlineData("at://did:plc:x/bad..nsid/1")]
+    [InlineData("at://did:plc:x/app.bsky.feed.post/bad key!")]
+    [InlineData("at://not a did/app.bsky.feed.post/1")]
+    public async Task OzoneMalformedRecordQueriesReturnInputErrors(string uri)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(
+            key: key,
+            identity: identity,
+            remoteEnabled: true,
+            ozone: true);
+        foreach (string method in new[]
+        {
+            "tools.ozone.moderation.getRecord",
+            "tools.ozone.moderation.queryStatuses",
+            "tools.ozone.moderation.queryEvents"
+        })
+        {
+            string parameter = method == "tools.ozone.moderation.getRecord" ? "uri" : "subject";
+            using HttpResponseMessage response = await SendOzoneAsync(
+                fixture: fixture,
+                key: key,
+                method: method,
+                query: "?" + parameter + "=" + Uri.EscapeDataString(uri));
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            using JsonDocument error = JsonDocument.Parse(await response.Content.ReadAsByteArrayAsync(token));
+            Assert.Equal("InvalidRequest", error.RootElement.GetProperty("error").GetString());
+        }
+        Assert.Equal(0, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
+        Assert.DoesNotContain(fixture.Services.GetFakeLogCollector().GetSnapshot(), entry => entry.Level >= LogLevel.Error);
+    }
+
+    [Theory]
     [InlineData("{}")]
     [InlineData("""{"createdBy":true}""")]
     [InlineData("""{"createdBy":"did:plc:administration-actor","subject":{},"event":{}}""")]
     [InlineData("""{"createdBy":"did:plc:administration-actor","createdBy":"did:plc:administration-actor"}""")]
     [InlineData("""{"createdBy":"did:plc:administration-actor","subject":{"$type":"com.atproto.admin.defs#repoRef","did":"did:plc:subject"},"event":{"$type":"tools.ozone.moderation.defs#modEventAcknowledge"},"modTool":42}""")]
     [InlineData("""{"createdBy":"did:plc:administration-actor","subject":{"$type":"com.atproto.admin.defs#repoRef","did":"did:plc:subject"},"event":{"$type":"tools.ozone.moderation.defs#modEventAcknowledge"},"modTool":{"meta":{}}}""")]
+    [InlineData("""{"createdBy":"did:plc:administration-actor","subject":{"$type":"com.atproto.repo.strongRef","uri":"notaturi","cid":"bafyreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku"},"event":{"$type":"tools.ozone.moderation.defs#modEventAcknowledge"}}""")]
+    [InlineData("""{"createdBy":"did:plc:administration-actor","subject":{"$type":"com.atproto.repo.strongRef","uri":"at://did:plc:x/bad..nsid/1","cid":"bafyreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku"},"event":{"$type":"tools.ozone.moderation.defs#modEventAcknowledge"}}""")]
+    [InlineData("""{"createdBy":"did:plc:administration-actor","subject":{"$type":"com.atproto.repo.strongRef","uri":"at://did:plc:x/app.bsky.feed.post/bad key!","cid":"bafyreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku"},"event":{"$type":"tools.ozone.moderation.defs#modEventAcknowledge"}}""")]
     public async Task OzoneMalformedEventsReturnXrpcInputErrorsWithoutServerExceptions(string body)
     {
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
@@ -1046,6 +1087,16 @@ public class ModerationOzoneEventsTests : ModerationTestBase
         using JsonDocument error = JsonDocument.Parse(await response.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken));
         Assert.Equal("InvalidRequest", error.RootElement.GetProperty("error").GetString());
         Assert.Equal(0, (await fixture.Store.GetStateAsync(TestContext.Current.CancellationToken)).IssuedThrough);
+        LabelAdministrationCaller administrator = (await fixture.Services.GetRequiredService<ILabelAdministrationStore>()
+            .AuthenticateLocalAsync("uid:0", TestContext.Current.CancellationToken)).Result!;
+        using HttpResponseMessage history = await SendOzoneAsync(
+            fixture: fixture, key: key, method: "tools.ozone.moderation.queryEvents");
+        Assert.Equal(HttpStatusCode.OK, history.StatusCode);
+        using JsonDocument events = JsonDocument.Parse(await history.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken));
+        Assert.Empty(events.RootElement.GetProperty("events").EnumerateArray());
+        Assert.Empty((await fixture.Services.GetRequiredService<ILabelModerationStore>()
+            .GetCasesAsync(caller: administrator, cancellationToken: TestContext.Current.CancellationToken)).Result!);
+        Assert.DoesNotContain(fixture.Services.GetFakeLogCollector().GetSnapshot(), entry => entry.Level >= LogLevel.Error);
     }
 
     [Fact]

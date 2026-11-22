@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -13,6 +14,11 @@ namespace idunno.Bluesky.AspNet.Labeler;
 internal static class ModerationWire
 {
     internal const int MaximumReportBytes = 32768;
+
+    /// <summary>Identifies malformed protocol input, including AT identifiers whose format exceptions do not derive from <see cref="FormatException"/>.</summary>
+    internal static bool IsMalformedInput(Exception exception) =>
+        exception is JsonException or ArgumentException or FormatException or
+            AtUriFormatException or NsidFormatException or RecordKeyFormatException;
 
     /// <summary>Reads exact account/strong references and preserves submitted record CIDs without fetching targets.</summary>
     internal static LabelReportSubmission ParseReport(byte[] bytes)
@@ -95,6 +101,11 @@ internal static class ModerationWire
         }
 
         string labelValue = RequiredString(action, "val");
+        if (string.IsNullOrWhiteSpace(labelValue) || labelValue.Contains('\0', StringComparison.Ordinal) ||
+            Encoding.UTF8.GetByteCount(labelValue) > 128)
+        {
+            throw new JsonException("A label value must be nonblank, contain no U+0000 and fit within 128 UTF-8 bytes.");
+        }
         string? reason = root.TryGetProperty("reason", out _) ? RequiredString(root, "reason") : null;
         string? toolName = null;
         JsonElement? toolMetadata = null;

@@ -18,6 +18,7 @@
 
 #### idunno.Bluesky.AspNet.Labeler
 
+* Malformed AT identifiers in report intake, appeal intake and Ozone administration return HTTP 400 instead of unhandled exceptions. Appeal label values are validated before authentication and decision lookup.
 * Bounded per-peer request and concurrency admission across remote administration, issuance and Ozone routes, before authentication or denial auditing. Rate-limited requests return `429` without audit writes; admitted denial-audit failures remain fail-closed.
 * Public `com.atproto.server.describeServer` identity discovery, configurable contact and policy links for method-bound service authentication, plus label queries and HTTP/1.1 or HTTP/2 WebSocket subscriptions, with stable pagination, bounded replay, live delivery, admission limits and liveness/readiness health checks.
 * Optional Xenon moderation backend with authenticated report and appeal intake, shared case workflows and independent verification of the labeler's published declaration. Public label distribution remains independent of moderation and remote administration.
@@ -38,6 +39,10 @@
 
 #### idunno.Bluesky.AspNet.Labeler.UI
 
+* Font and icon credits appear on a public Acknowledgements page linked from the footer instead of being repeated in every footer.
+* The Acknowledgements page renders the embedded third-party software notices, with collapsible license texts and a plain-text download linked from CLI Downloads.
+* Workflow status text aligns with adjacent table text while keeping its icon centered, including Cases, Reports and Appeals.
+* The Xenon footer shows the version immediately before the commit identifier.
 * Restrictive HTML-only Content Security Policy with same-origin scripts/styles/fonts/media, explicit preview and handle-search sources, and a narrowly scoped HTTPS form-navigation allowance for OAuth sign-in and policy publication.
 * CLI downloads use responsive operating-system panels, direct executable links, Linux `chmod +x` instructions, and initially expanded, collapsible checksums that wrap within the page.
 * Opt-in Xenon-branded Razor Pages UI with Bluesky OAuth sign-in, live Administrator/Moderator/Viewer authorization, and shared web/CLI administration.
@@ -56,7 +61,8 @@
 
 #### idunno.Bluesky.Labeler.Host
 
-* The root endpoint returns the label emoji and Xenon footer's build stamp as UTF-8 plain text.
+* The root endpoint returns the label emoji, version and commit identifier as UTF-8 plain text.
+* PostgreSQL and MySQL host containers include the repository's third-party notices at `/app/THIRD-PARTY-NOTICES.txt`.
 * HSTS for non-development, non-loopback HTTPS deployments after trusted proxy processing, including OAuth metadata responses; development and loopback requests remain excluded.
 * Documented that the canonical host ships untrimmed and does not support trimming or Native AOT because it includes Razor Pages; disabling the UI at runtime does not remove that dependency.
 * Provider-neutral, non-packable canonical hosting library with reusable registration, initialization, mapping and lifecycle extensions over the existing hosting helpers; no additional NuGet packages.
@@ -231,10 +237,20 @@
 * Recursive validation now checks required URI and CID members of embedded and associated strong references, and required mention DIDs and nonblank link values in known facet features. Failures preserve indexed member paths without changing unknown facet handling.
 * Profile validation now checks strong references in links, pinned posts and starter pack attribution. Message validation accepts supported group-chat join-link embeds. Gate validation requires a post record key, while tolerant parsing retains collection-only targets for inspection.
 * Message validation reports missing join-link codes as `Embed.Code`, including when a code is cleared through an initializer or `with` expression.
+* Unauthenticated feed-skeleton requests now resolve the generator's `#bsky_fg` endpoint and call it directly; PDS proxying remains for authenticated requests. Thread helpers return a classified error rather than throwing when a repository read omits its CID.
 
 #### idunno.Bluesky.AspNet.Labeler.UI
 
 * Unsupported DID methods show unavailable public previews and current-version lookups instead of server errors, while retaining canonical subject details and issuer-local account label checks.
+* Policy publication and record previews now reject records without a CID when compare-and-swap or a strong reference is required.
+
+#### idunno.Bluesky.AspNet.Labeler
+
+* Policy verification now classifies a public policy record without a CID as unverifiable instead of throwing.
+
+#### idunno.Bluesky.Labeler.Storage
+
+* Boundary-denial retention now uses a dedicated indexed projection, avoiding scans of successful audit history while the issuer lock is held; existing audit history is backfilled during schema migration.
 ## 8.0.1 - 2026-11-12
 
 ### ➕ Added

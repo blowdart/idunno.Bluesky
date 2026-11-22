@@ -56,6 +56,20 @@ public class FeedSkeletonAndInteractionTests
         }
         """;
 
+    private static string FeedGeneratorDidDocument(Uri endpoint) => JsonSerializer.Serialize(new
+    {
+        id = s_feedGeneratorDid.Value,
+        service = new[]
+        {
+            new
+            {
+                id = "#bsky_fg",
+                type = "BskyFeedGenerator",
+                serviceEndpoint = endpoint.AbsoluteUri
+            }
+        }
+    });
+
     private static AccessCredentials CreateCredentials() => new(
         service: TestServerBuilder.DefaultUri,
         authenticationType: AuthenticationType.UsernamePassword,
@@ -222,7 +236,12 @@ public class FeedSkeletonAndInteractionTests
         List<CapturedRequest> captured = [];
         using TestServer testServer = CreateServer(
             captured,
-            path => path == "/xrpc/app.bsky.feed.getFeedSkeleton" ? (HttpStatusCode.OK, SkeletonResponse) : null);
+            path => path switch
+            {
+                "/.well-known/did.json" => (HttpStatusCode.OK, FeedGeneratorDidDocument(TestServerBuilder.DefaultUri)),
+                "/xrpc/app.bsky.feed.getFeedSkeleton" => (HttpStatusCode.OK, SkeletonResponse),
+                _ => null
+            });
         using BlueskyAgent agent = new(new TestHttpClientFactory(testServer)) { Service = TestServerBuilder.DefaultUri };
 
         AtProtoHttpResult<FeedSkeleton> result = await agent.GetFeedSkeleton(
@@ -231,7 +250,42 @@ public class FeedSkeletonAndInteractionTests
             cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);
-        Assert.Equal("did:web:feeds.example.com#bsky_fg", Assert.Single(captured).Proxy);
+        Assert.Null(Assert.Single(captured, request => request.Path == "/xrpc/app.bsky.feed.getFeedSkeleton").Proxy);
+        Assert.Contains(captured, request => request.Path == "/.well-known/did.json");
+    }
+
+    [Fact]
+    public async Task GetFeedSkeletonRejectsAnUnsupportedAnonymousServiceEndpoint()
+    {
+        List<CapturedRequest> captured = [];
+        using TestServer testServer = CreateServer(
+            captured,
+            path => path == "/.well-known/did.json"
+                ? (HttpStatusCode.OK, JsonSerializer.Serialize(new
+                {
+                    id = s_feedGeneratorDid.Value,
+                    service = new[]
+                    {
+                        new
+                        {
+                            id = "#bsky_fg",
+                            type = "BskyFeedGenerator",
+                            serviceEndpoint = "http://feed.example.com"
+                        }
+                    }
+                }))
+                : null);
+        using BlueskyAgent agent = new(new TestHttpClientFactory(testServer)) { Service = TestServerBuilder.DefaultUri };
+
+        AtProtoHttpResult<FeedSkeleton> result = await agent.GetFeedSkeleton(
+            s_feed,
+            feedGenerator: s_feedGeneratorDid,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(HttpStatusCode.BadGateway, result.StatusCode);
+        Assert.Equal("FeedGeneratorServiceNotFound", result.AtErrorDetail?.Error);
+        Assert.DoesNotContain(captured, request => request.Path == "/xrpc/app.bsky.feed.getFeedSkeleton");
     }
 
     [Theory]

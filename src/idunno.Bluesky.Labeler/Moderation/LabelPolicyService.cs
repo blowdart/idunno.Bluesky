@@ -153,12 +153,20 @@ public sealed class LabelPolicyService(
             string observedJson;
             if (response.Succeeded)
             {
-                if (response.Result.Uri != uri || response.Result.Value is null)
+                if (response.Result.Uri != uri)
                 {
                     return Reject(
                         code: LabelServiceErrorCode.PolicyUnavailable,
                         message: "The account server returned a policy that does not match this labeler account.",
                         category: "IssuerMismatch");
+                }
+
+                if (!response.Result.HasCid || response.Result.Value is null)
+                {
+                    return Reject(
+                        code: LabelServiceErrorCode.PolicyUnavailable,
+                        message: "The account server returned a policy without a verifiable record CID or value.",
+                        category: "PolicyRecordUnverifiable");
                 }
 
                 observedCid = response.Result.Cid;

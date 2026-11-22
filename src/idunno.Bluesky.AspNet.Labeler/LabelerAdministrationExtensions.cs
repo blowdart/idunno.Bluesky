@@ -517,7 +517,7 @@ public static class LabelerAdministrationExtensions
                 : new(false, "InvalidToken", "Authentication failed or the message exceeds its bounds.");
             status = StatusCodes.Status401Unauthorized;
         }
-        catch (Exception exception) when (exception is JsonException or ArgumentException or FormatException or OverflowException)
+        catch (Exception exception) when (ModerationWire.IsMalformedInput(exception) || exception is OverflowException)
         {
             AdministrationLog.Rejected(logger, exception.GetType().Name);
             response = new(false, "InvalidRequest", "The administrative input is invalid.");

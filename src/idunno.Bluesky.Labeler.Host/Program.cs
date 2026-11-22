@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
@@ -306,8 +307,10 @@ internal static partial class Program
     /// <summary>Maps the plain-text root banner and public crawler exclusion instructions.</summary>
     internal static void MapRootRoute(WebApplication app)
     {
-        string build = LabelerBuildInfo.GetBuildStamp(typeof(LabelerUIExtensions).Assembly) ?? "Unknown";
-        app.MapGet("/", () => Results.Text($"🏷️ {build}", contentType: "text/plain; charset=utf-8", contentEncoding: Encoding.UTF8));
+        Assembly assembly = typeof(LabelerUIExtensions).Assembly;
+        string version = assembly.GetName().Version?.ToString(3) ?? "Unknown";
+        string commit = LabelerBuildInfo.GetBuildStamp(assembly) ?? "Unknown";
+        app.MapGet("/", () => Results.Text($"🏷️ V{version} Commit {commit}", contentType: "text/plain; charset=utf-8", contentEncoding: Encoding.UTF8));
         app.MapGet("/robots.txt", () => Results.Text("User-agent: *\nDisallow: /\n", contentType: "text/plain; charset=utf-8"))
             .AllowAnonymous();
     }

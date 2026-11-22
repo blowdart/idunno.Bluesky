@@ -131,6 +131,8 @@ public partial class XenonUiTests
             using HttpResponseMessage page = await GetAsAsync(fixture, s_administrator, "/Xenon/Downloads");
             string html = await page.Content.ReadAsStringAsync(token);
             Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+            Assert.Contains("href=\"/Xenon/Acknowledgements#third-party-software\"", html, StringComparison.Ordinal);
+            Assert.Contains("href=\"/Xenon/Acknowledgements?handler=Text\"", html, StringComparison.Ordinal);
             Assert.Contains("chmod +x idunno.Bluesky.Labeler.Cli-linux-x64", html, StringComparison.Ordinal);
             Assert.Contains("chmod +x idunno.Bluesky.Labeler.Cli-linux-arm64", html, StringComparison.Ordinal);
             Assert.DoesNotContain("chmod +x idunno.Bluesky.Labeler.Cli-win", html, StringComparison.Ordinal);
@@ -721,6 +723,13 @@ public partial class XenonUiTests
         using HttpResponseMessage response = await fixture.Client.GetAsync(path, TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         string html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        Assert.Contains("href=\"/Xenon/Acknowledgements\"", html, StringComparison.Ordinal);
+        Assert.Contains("Version V", html, StringComparison.Ordinal);
+        Assert.Contains("Commit <code>", html, StringComparison.Ordinal);
+        Assert.True(
+            html.IndexOf("Version V", StringComparison.Ordinal) < html.IndexOf("Commit <code>", StringComparison.Ordinal));
+        Assert.DoesNotContain("Inter font by", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Icons by", html, StringComparison.Ordinal);
         Assert.Contains("person or organization", html, StringComparison.Ordinal);
         Assert.Contains("operator", html, StringComparison.Ordinal);
         if (path.EndsWith("Terms", StringComparison.Ordinal))
@@ -740,6 +749,72 @@ public partial class XenonUiTests
             Assert.Contains("do not include report text or private case notes", html, StringComparison.Ordinal);
             Assert.Contains("data protection authority", html, StringComparison.Ordinal);
         }
+    }
+
+    [Fact]
+    public async Task PublicAcknowledgementsRenderNoticesWithoutSeparateFontAndIconSection()
+    {
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new();
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
+            configureAdministration: services =>
+            {
+                services.AddSingleton<ILabelIssuancePolicyProvider, UiPolicy>();
+                services.AddLabelerAdministration(s_audience, key, identity);
+            },
+            xenonUi: true);
+        using HttpResponseMessage response = await fixture.Client.GetAsync(
+            "/Xenon/Acknowledgements",
+            TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        Assert.Contains("<h2>Third-party software</h2>", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("<h2>Icons</h2>", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("<h2>Fonts</h2>", html, StringComparison.Ordinal);
+        int thirdPartySectionStart = html.IndexOf(
+            "<section class=\"panel third-party-notices\" id=\"third-party-software\">",
+            StringComparison.Ordinal);
+        Assert.True(thirdPartySectionStart >= 0);
+        string thirdPartyHtml = html[thirdPartySectionStart..];
+        Assert.Contains("Font Awesome Free", thirdPartyHtml, StringComparison.Ordinal);
+        Assert.Contains("href=\"https://creativecommons.org/licenses/by/4.0/\"", thirdPartyHtml, StringComparison.Ordinal);
+        Assert.Contains("The Inter Project Authors", thirdPartyHtml, StringComparison.Ordinal);
+        Assert.Contains("href=\"https://github.com/rsms/inter\"", thirdPartyHtml, StringComparison.Ordinal);
+        Assert.Contains("The Google Sans Code Project Authors", thirdPartyHtml, StringComparison.Ordinal);
+        Assert.Contains("TRADEMARKS.md notice", thirdPartyHtml, StringComparison.Ordinal);
+        Assert.Contains("SIL Open Font License", thirdPartyHtml, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Xenon/Acknowledgements?handler=Text\"", html, StringComparison.Ordinal);
+        Assert.Contains("<h3>Third-party package licenses</h3>", html, StringComparison.Ordinal);
+        Assert.Contains("<th scope=\"col\">Component</th>", html, StringComparison.Ordinal);
+        Assert.Matches(@"<td>Npgsql</td>\s*<td>PostgreSQL</td>", html);
+        Assert.Contains("<summary>Apache License, Version 2.0</summary>", html, StringComparison.Ordinal);
+        Assert.Contains("href=\"https://www.sqlite.org/copyright.html\"", html, StringComparison.Ordinal);
+
+        using HttpResponseMessage text = await fixture.Client.GetAsync(
+            "/Xenon/Acknowledgements?handler=Text",
+            TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, text.StatusCode);
+        Assert.Equal("text/plain", text.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("THIRD-PARTY-NOTICES.txt", text.Content.Headers.ContentDisposition?.FileName);
+        string notices = await text.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(
+            (await File.ReadAllTextAsync(
+                Path.Combine(FindRepositoryRoot(), "THIRD-PARTY-NOTICES.txt"),
+                TestContext.Current.CancellationToken)).ReplaceLineEndings(),
+            notices.ReplaceLineEndings());
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        DirectoryInfo? directory = new(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "THIRD-PARTY-NOTICES.txt")))
+        {
+            directory = directory.Parent;
+        }
+
+        Assert.NotNull(directory);
+
+        return directory.FullName;
     }
 
     [Fact]
@@ -775,12 +850,10 @@ public partial class XenonUiTests
             Assert.Contains("<title>C:0 R:0 A:0", html, StringComparison.Ordinal);
             Assert.Contains("data-counts-url=\"/Xenon?handler=Counts\"", html, StringComparison.Ordinal);
             Assert.Contains("/Xenon/js/workflow-counts.js", html, StringComparison.Ordinal);
-            Assert.Contains("Inter font by", html, StringComparison.Ordinal);
-            Assert.Contains("The Inter Project Authors", html, StringComparison.Ordinal);
-            Assert.Contains("href=\"/Xenon/vendor/inter/LICENSE.txt\"", html, StringComparison.Ordinal);
-            Assert.Contains("The Google Sans Code Project Authors", html, StringComparison.Ordinal);
-            Assert.Contains("href=\"/Xenon/vendor/google-sans-code/OFL.txt\"", html, StringComparison.Ordinal);
-            Assert.Contains("href=\"/Xenon/vendor/google-sans-code/TRADEMARKS.md\"", html, StringComparison.Ordinal);
+            Assert.Contains("href=\"/Xenon/Acknowledgements\"", html, StringComparison.Ordinal);
+            Assert.DoesNotContain("Inter font by", html, StringComparison.Ordinal);
+            Assert.DoesNotContain("Google Sans Code font by", html, StringComparison.Ordinal);
+            Assert.DoesNotContain("Icons by", html, StringComparison.Ordinal);
         }
     }
 

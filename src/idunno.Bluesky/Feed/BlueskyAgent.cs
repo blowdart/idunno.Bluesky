@@ -515,9 +515,14 @@ public partial class BlueskyAgent
         {
             if (getPostResult.Result.Value.Reply == null)
             {
+                if (!getPostResult.Result.TryGetStrongReference(out StrongReference? postReference))
+                {
+                    return FailedForMissingPostCid<StrongReference>(getPostResult);
+                }
+
                 // The post has no reply reference, so it is not part of a thread, and its parent is itself.
                 return new AtProtoHttpResult<StrongReference>(
-                    getPostResult.Result.StrongReference,
+                    postReference,
                     getPostResult.StatusCode,
                     getPostResult.HttpResponseHeaders,
                     getPostResult.AtErrorDetail,
@@ -563,9 +568,14 @@ public partial class BlueskyAgent
         {
             if (getPostResult.Result.Value.Reply == null)
             {
+                if (!getPostResult.Result.TryGetStrongReference(out StrongReference? postReference))
+                {
+                    return FailedForMissingPostCid<StrongReference>(getPostResult);
+                }
+
                 // The post has no reply reference, so it is not part of a thread, and its root is itself.
                 return new AtProtoHttpResult<StrongReference>(
-                    getPostResult.Result.StrongReference,
+                    postReference,
                     getPostResult.StatusCode,
                     getPostResult.HttpResponseHeaders,
                     getPostResult.AtErrorDetail,
@@ -610,10 +620,15 @@ public partial class BlueskyAgent
 
         if (getPostRecordResult.Succeeded)
         {
+            if (!getPostRecordResult.Result.TryGetStrongReference(out StrongReference? postReference))
+            {
+                return FailedForMissingPostCid<ReplyReferences>(getPostRecordResult);
+            }
+
             if (getPostRecordResult.Result.Value.Reply is null)
             {
                 return new AtProtoHttpResult<ReplyReferences>(
-                    new ReplyReferences(getPostRecordResult.Result.StrongReference, getPostRecordResult.Result.StrongReference),
+                    new ReplyReferences(postReference, postReference),
                     getPostRecordResult.StatusCode,
                     getPostRecordResult.HttpResponseHeaders,
                     getPostRecordResult.AtErrorDetail,
@@ -622,7 +637,7 @@ public partial class BlueskyAgent
             else
             {
                 return new AtProtoHttpResult<ReplyReferences>(
-                    new ReplyReferences(getPostRecordResult.Result.StrongReference, getPostRecordResult.Result.Value.Reply.Root),
+                    new ReplyReferences(postReference, getPostRecordResult.Result.Value.Reply.Root),
                     getPostRecordResult.StatusCode,
                     getPostRecordResult.HttpResponseHeaders,
                     getPostRecordResult.AtErrorDetail,

@@ -108,7 +108,7 @@ internal sealed partial class LabelerModerationHost(
                     context.Request.Body, ModerationWire.MaximumReportBytes, linked.Token).ConfigureAwait(false);
                 submission = ModerationWire.ParseReport(body);
             }
-            catch (Exception exception) when (exception is JsonException or ArgumentException or FormatException)
+            catch (Exception exception) when (ModerationWire.IsMalformedInput(exception))
             {
                 Rejected(logger, "invalid-request");
                 Count("invalid-request");
@@ -270,7 +270,7 @@ internal sealed partial class LabelerModerationHost(
                 await ErrorAsync(context, "NotAppealable", exception.Message, StatusCodes.Status400BadRequest).ConfigureAwait(false);
                 return;
             }
-            catch (Exception exception) when (exception is JsonException or ArgumentException or FormatException or InvalidOperationException)
+            catch (Exception exception) when (ModerationWire.IsMalformedInput(exception) || exception is InvalidOperationException)
             {
                 Rejected(logger, "invalid-request");
                 Count("invalid-request");

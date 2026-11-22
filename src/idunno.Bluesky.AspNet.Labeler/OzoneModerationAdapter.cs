@@ -751,7 +751,7 @@ internal sealed partial class OzoneModerationAdapter(
                 result.AtErrorDetail?.Error == "RecordNotFound" ? "RecordNotFound" : "ServiceUnavailable",
                 "The requested record could not be retrieved from its PDS.");
         }
-        if (result.Result.Uri != uri || cid is not null && result.Result.Cid != cid || result.Result.Value is null)
+        if (result.Result.Uri != uri || !result.Result.HasCid || cid is not null && result.Result.Cid != cid || result.Result.Value is null)
         {
             throw new OzoneOperationException("ServiceUnavailable", "The PDS returned an inconsistent record identity or value.");
         }

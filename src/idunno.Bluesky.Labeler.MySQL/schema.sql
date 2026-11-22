@@ -62,6 +62,13 @@ CREATE TABLE IF NOT EXISTS label_retirement_confirmations (token_hash BINARY(32)
 CREATE TABLE IF NOT EXISTS label_retirement_slots (seq BIGINT PRIMARY KEY, slot_hash BINARY(32) NOT NULL, slot_key LONGBLOB NOT NULL, INDEX label_retirement_slot(slot_hash)) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS label_team (id INTEGER PRIMARY KEY CHECK(id=1), payload LONGBLOB NOT NULL) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS label_admin_audit (seq BIGINT PRIMARY KEY, payload LONGBLOB NOT NULL) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_boundary_denials (
+    seq BIGINT PRIMARY KEY,
+    CONSTRAINT label_boundary_denials_audit FOREIGN KEY(seq) REFERENCES label_admin_audit(seq) ON DELETE CASCADE
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_schema_migrations (
+    migration_id VARCHAR(128) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY
+) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS label_admin_receipts (
     operation_hash BINARY(32) PRIMARY KEY,
     operation_id TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NOT NULL,
@@ -284,4 +291,4 @@ CREATE TABLE IF NOT EXISTS label_audit_queries (
     INDEX label_audit_queries_actor(actor(512),succeeded,seq),
     INDEX label_audit_queries_time(created_ms,seq)
 ) ENGINE=InnoDB;
-INSERT INTO label_schema(id, version) VALUES(1, 18) ON DUPLICATE KEY UPDATE id=id;
+INSERT INTO label_schema(id, version) VALUES(1, 19) ON DUPLICATE KEY UPDATE id=id;

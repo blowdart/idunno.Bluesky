@@ -8,11 +8,15 @@ create a separate authorization, issuance, or audit path.
 
 Xenon uses the locally bundled Inter variable font, including its italic face,
 with system-font fallbacks and non-blocking font loading. No font requests go to
-Google Fonts or a CDN. The footer credits The Inter Project Authors and links to
+Google Fonts or a CDN. The public Acknowledgements page credits The Inter Project Authors and links to
 the bundled SIL Open Font License 1.1. JSON displays and editors, code blocks,
 and fixed-width identifiers use locally bundled Google Sans Code with programming
 ligatures disabled. Its normal and italic variable fonts, SIL Open Font License
-1.1, and trademark notice are also included and linked from the footer.
+1.1, and trademark notice are also included and linked from the Acknowledgements page.
+The footer links to `/Xenon/Acknowledgements` rather than repeating these credits.
+The same page renders the third-party software notices embedded from `THIRD-PARTY-NOTICES.txt`
+and offers them as a plain-text download at `/Xenon/Acknowledgements?handler=Text`, which the
+CLI Downloads page also links. Host containers include the file at `/app/THIRD-PARTY-NOTICES.txt`.
 
 On Team, select a member's verified handle to fill the
 Change member form with their handle and current role. Select an action,
@@ -299,7 +303,7 @@ beside a person icon. Feeds, starter packs and other records have distinct
 descriptions, while the full canonical identifier remains available in the
 identity tooltip. Icons are decorative; the text and canonical identifiers
 carry the meaning. Subject icons are unmodified Font Awesome Free 7.3.1 SVGs
-bundled locally under CC BY 4.0, with their upstream license notice and footer
+bundled locally under CC BY 4.0, with their upstream license notice and Acknowledgements page
 credit. No Font Awesome CDN, external font or icon script is requested.
 The same local icons provide author cards, search, workflow statuses, the
 UTC/Local globe, account controls and verified-account cautions. In-review work

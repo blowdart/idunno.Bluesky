@@ -19,6 +19,7 @@ using idunno.Bluesky.Labeler.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging.Testing;
 
 namespace idunno.Bluesky.AspNet.Labeler.Integration.Test;
@@ -42,6 +43,177 @@ public abstract partial class ModerationTestBase
 /// <summary>Core moderation workflow, publication and administration tests.</summary>
 public class ModerationTests : ModerationTestBase
 {
+    [Theory]
+    [InlineData("at://not a did/app.bsky.feed.post/1")]
+    [InlineData("at://did:plc:x/bad..nsid/1")]
+    [InlineData("at://did:plc:x/app.bsky.feed.post/bad key!")]
+    public async Task MalformedLocalMuteSubjectsReturnInvalidRequestAndPreserveHost(string subject)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(key: key, identity: identity);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        LabelAdministrationCaller administrator = (await team.AuthenticateLocalAsync("uid:0", token)).Result!;
+        AdministrationDispatcher dispatcher = fixture.Services.GetRequiredService<AdministrationDispatcher>();
+        using LocalAdministrationHost host = new(
+            endpoint: "unused",
+            dispatcher: dispatcher,
+            store: team,
+            logger: NullLogger<LocalAdministrationHost>.Instance);
+        string command = $$$"""
+            {"method":"changeMute","operationId":"malformed-mute","reason":"Reject an invalid subject.",
+             "moderation":{"muteSubject":{{{JsonSerializer.Serialize(subject)}}}}}
+            """;
+        using MemoryStream responseStream = new();
+        await host.ProcessAsync(
+            stream: responseStream,
+            peer: "uid:0",
+            stoppingToken: token,
+            preReadPayload: Encoding.UTF8.GetBytes(command));
+        responseStream.Position = 0;
+        using JsonDocument response = JsonDocument.Parse(await LabelerLocalAdministration.ReadFrameAsync(
+            responseStream, AdministrationWire.MaximumResponseBytes, token));
+        Assert.False(response.RootElement.GetProperty("succeeded").GetBoolean());
+        Assert.Equal("InvalidRequest", response.RootElement.GetProperty("error").GetString());
+        IReadOnlyList<LabelAdministrationReceipt> audit = (await team.GetAdministrationAuditAsync(
+            administrator, cancellationToken: token)).Result!;
+        Assert.Contains(audit, receipt => !receipt.Succeeded && receipt.Actor == administrator.Actor &&
+            receipt.Reason == "Malformed local administrative invocation.");
+        AdministrationResponse mutes = await dispatcher.DispatchAsync(
+            caller: administrator,
+            command: new(Method: "getMutes", Limit: 100, Moderation: new()),
+            token: token);
+        Assert.True(mutes.Succeeded, mutes.Message);
+        Assert.Empty(mutes.Moderation!.Mutes!);
+        Assert.Empty((await fixture.Services.GetRequiredService<ILabelModerationStore>()
+            .GetCasesAsync(caller: administrator, cancellationToken: token)).Result!);
+        Assert.Equal(0, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
+
+        using MemoryStream nextResponse = new();
+        await host.ProcessAsync(
+            stream: nextResponse,
+            peer: "uid:0",
+            stoppingToken: token,
+            preReadPayload: """{"method":"getTeam"}"""u8.ToArray());
+        nextResponse.Position = 0;
+        using JsonDocument next = JsonDocument.Parse(await LabelerLocalAdministration.ReadFrameAsync(
+            nextResponse, AdministrationWire.MaximumResponseBytes, token));
+        Assert.True(next.RootElement.GetProperty("succeeded").GetBoolean());
+    }
+
+    [Theory]
+    [InlineData("notaturi", false)]
+    [InlineData("at://did:plc:x/bad..nsid/1", false)]
+    [InlineData("at://did:plc:x/app.bsky.feed.post/bad key!", false)]
+    [InlineData("at://not a did/app.bsky.feed.post/1", false)]
+    [InlineData("at://did:plc:x/bad..nsid/1", true)]
+    [InlineData("at://did:plc:x/app.bsky.feed.post/bad key!", true)]
+    [InlineData("at://not a did/app.bsky.feed.post/1", true)]
+    public async Task MalformedIntakeSubjectsAreRejectedBeforeAuthenticationWithoutWrites(string uri, bool repoRef)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(key: key, identity: identity);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        LabelAdministrationCaller administrator = (await team.AuthenticateLocalAsync("uid:0", token)).Result!;
+        IReadOnlyList<LabelAdministrationReceipt> before = (await team.GetAdministrationAuditAsync(
+            administrator, cancellationToken: token)).Result!;
+        string subject = repoRef
+            ? JsonSerializer.Serialize(new Dictionary<string, string> { ["$type"] = "com.atproto.admin.defs#repoRef", ["did"] = uri })
+            : JsonSerializer.Serialize(new Dictionary<string, string> { ["$type"] = "com.atproto.repo.strongRef", ["uri"] = uri, ["cid"] = Cid });
+        foreach (bool appeal in new[] { false, true })
+        {
+            string method = appeal ? "tools.ozone.inbox.appealActionedSubject" : "com.atproto.moderation.createReport";
+            string body = appeal
+                ? $$$"""{"subject":{{{subject}}},"action":{"$type":"tools.ozone.inbox.appealActionedSubject#labelRef","val":"spam"}}"""
+                : $$"""{"subject":{{subject}},"reasonType":"tools.ozone.report.defs#reasonMisleadingSpam"}""";
+            using HttpRequestMessage request = new(HttpMethod.Post, "/xrpc/" + method)
+            {
+                Content = new StringContent(body, Encoding.UTF8, "application/json")
+            };
+            AdministrationTests.AddTrustedProxyHeaders(request);
+            using HttpResponseMessage response = await fixture.Client.SendAsync(request, token);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            using JsonDocument error = JsonDocument.Parse(await response.Content.ReadAsByteArrayAsync(token));
+            Assert.Equal(appeal ? "InvalidAppealSubject" : "InvalidRequest", error.RootElement.GetProperty("error").GetString());
+        }
+
+        Assert.Equal(before, (await team.GetAdministrationAuditAsync(administrator, cancellationToken: token)).Result!);
+        Assert.Empty((await fixture.Services.GetRequiredService<ILabelReportStore>()
+            .GetReportsAsync(administrator, cancellationToken: token)).Result!);
+        Assert.Empty((await fixture.Services.GetRequiredService<ILabelAppealStore>()
+            .GetAppealsAsync(caller: administrator, cancellationToken: token)).Result!);
+        Assert.Empty((await fixture.Services.GetRequiredService<ILabelModerationStore>()
+            .GetCasesAsync(caller: administrator, cancellationToken: token)).Result!);
+        Assert.Equal(0, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
+        Assert.DoesNotContain(fixture.Services.GetFakeLogCollector().GetSnapshot(), entry => entry.Level >= LogLevel.Error);
+    }
+
+    [Theory]
+    [InlineData("", 1)]
+    [InlineData(" ", 1)]
+    [InlineData("a", 129)]
+    [InlineData("\u00e9", 65)]
+    [InlineData("\0", 1)]
+    public async Task InvalidAppealLabelValuesReturnInputErrorsWithOrWithoutAuthentication(string value, int repetitions)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(key: key, identity: identity);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        LabelAdministrationCaller administrator = (await team.AuthenticateLocalAsync("uid:0", token)).Result!;
+        IReadOnlyList<LabelAdministrationReceipt> before = (await team.GetAdministrationAuditAsync(
+            administrator, cancellationToken: token)).Result!;
+        string label = string.Concat(Enumerable.Repeat(value, repetitions));
+        string body = $$$"""
+            {"subject":{"$type":"com.atproto.admin.defs#repoRef","did":"did:plc:reporter"},
+             "action":{"$type":"tools.ozone.inbox.appealActionedSubject#labelRef","val":{{{JsonSerializer.Serialize(label)}}}}}
+            """;
+        const string method = "tools.ozone.inbox.appealActionedSubject";
+        foreach (bool authenticated in new[] { false, true })
+        {
+            using HttpRequestMessage request = new(HttpMethod.Post, "/xrpc/" + method)
+            {
+                Content = new StringContent(body, Encoding.UTF8, "application/json")
+            };
+            AdministrationTests.AddTrustedProxyHeaders(request);
+            if (authenticated)
+            {
+                request.Headers.Authorization = new("Bearer", AdministrationTests.Token(
+                    key: key,
+                    now: fixture.Clock.GetUtcNow(),
+                    audience: TestServerBuilder.s_issuer.Value,
+                    method: method,
+                    actor: s_reporter.Value));
+            }
+            using HttpResponseMessage response = await fixture.Client.SendAsync(request, token);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            using JsonDocument error = JsonDocument.Parse(await response.Content.ReadAsByteArrayAsync(token));
+            Assert.Equal("InvalidAppealSubject", error.RootElement.GetProperty("error").GetString());
+        }
+        Assert.Equal(before, (await team.GetAdministrationAuditAsync(administrator, cancellationToken: token)).Result!);
+        Assert.Empty((await fixture.Services.GetRequiredService<ILabelAppealStore>()
+            .GetAppealsAsync(caller: administrator, cancellationToken: token)).Result!);
+        Assert.Equal(0, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
+        Assert.DoesNotContain(fixture.Services.GetFakeLogCollector().GetSnapshot(), entry => entry.Level >= LogLevel.Error);
+    }
+
+    [Theory]
+    [InlineData("a", 128)]
+    [InlineData("\u00e9", 64)]
+    public void AppealLabelValuesAtUtf8ByteLimitRemainValid(string value, int repetitions)
+    {
+        string label = string.Concat(Enumerable.Repeat(value, repetitions));
+        string body = $$$"""
+            {"subject":{"$type":"com.atproto.admin.defs#repoRef","did":"did:plc:reporter"},
+             "action":{"$type":"tools.ozone.inbox.appealActionedSubject#labelRef","val":{{{JsonSerializer.Serialize(label)}}}}}
+            """;
+        Assert.Equal(label, ModerationWire.ParseOzoneAppeal(Encoding.UTF8.GetBytes(body)).LabelValue);
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("v2")]

@@ -117,3 +117,6 @@ idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Downloads.IndexModel
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Downloads.IndexModel.IndexModel(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> void
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Downloads.IndexModel.OnGet() -> void
 idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Downloads.IndexModel.OnGetFile(string? name) -> Microsoft.AspNetCore.Mvc.IActionResult!
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.AcknowledgementsModel
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.AcknowledgementsModel.AcknowledgementsModel() -> void
+idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.AcknowledgementsModel.OnGetText() -> Microsoft.AspNetCore.Mvc.IActionResult!

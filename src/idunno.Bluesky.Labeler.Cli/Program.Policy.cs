@@ -466,7 +466,7 @@ internal static partial class Program
             throw new InvalidDataException("The PDS returned a policy record that does not match the labeler account.");
         }
 
-        return new(true, response.Result.Cid.ToString(), response.Result.Value);
+        return new(true, response.Result.HasCid ? response.Result.Cid.ToString() : null, response.Result.Value);
     }
 
     /// <summary>Defaults labeler publication to the same native metadata without hiding malformed explicit configuration.</summary>
@@ -621,9 +621,9 @@ internal static partial class Program
             {
                 return await VerifyPublishedPolicyAsync(sender, request.Reason, intent, cancellationToken).ConfigureAwait(false);
             }
-            if (intent.PreviousCid != existing.Result.Cid.ToString())
+            if (!existing.Result.HasCid || intent.PreviousCid != existing.Result.Cid.ToString())
             {
-                await Console.Error.WriteLineAsync("✖   The authoritative declaration differs from the expected previous CID. No overwrite was attempted.").ConfigureAwait(false);
+                await Console.Error.WriteLineAsync("✖   The authoritative declaration has no verifiable CID or differs from the expected previous CID. No overwrite was attempted.").ConfigureAwait(false);
                 return 5;
             }
         }
