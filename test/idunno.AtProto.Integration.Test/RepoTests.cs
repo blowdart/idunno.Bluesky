@@ -2093,6 +2093,35 @@ public class RepoTests
         }
     }
 
+    [Fact]
+    public void RepositoryRecordsWithoutCidsSupportNullPropertyNamingPolicy()
+    {
+        static void Configure(JsonSerializerOptions options)
+        {
+            options.PropertyNamingPolicy = null;
+            options.TypeInfoResolver = JsonTypeInfoResolver.Combine(
+                global::idunno.AtProto.SourceGenerationContext.Default,
+                SourceGenerationContext.Default);
+        }
+
+        JsonSerializerOptions writeOptions = AtProtoJsonSerializerOptions.CreateWriteOptions(Configure);
+        JsonSerializerOptions readOptions = AtProtoJsonSerializerOptions.CreateReadOptions(Configure);
+        AtProtoRepositoryRecord<TestRecord> record = new(
+            uri: new AtUri("at://did:plc:test/blue.idunno.test/rkey1"),
+            cid: null,
+            value: new TestRecord { TestValue = "test" });
+
+        string serialized = JsonSerializer.Serialize(record, writeOptions);
+        using JsonDocument document = JsonDocument.Parse(serialized);
+        Assert.False(document.RootElement.TryGetProperty("Cid", out _));
+        Assert.False(document.RootElement.TryGetProperty("StrongReference", out _));
+
+        AtProtoRepositoryRecord<TestRecord>? roundTripped = JsonSerializer.Deserialize<AtProtoRepositoryRecord<TestRecord>>(serialized, readOptions);
+        Assert.NotNull(roundTripped);
+        Assert.False(roundTripped.HasCid);
+        Assert.Equal(record, roundTripped);
+    }
+
     [Theory]
     [InlineData("cid", "strongReference")]
     [InlineData("strongReference", "cid")]

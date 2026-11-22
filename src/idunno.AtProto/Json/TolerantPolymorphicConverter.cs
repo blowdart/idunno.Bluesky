@@ -800,10 +800,15 @@ internal sealed class TolerantPolymorphicConverter(
             return;
         }
 
+        string cidPropertyName = info.Options.PropertyNamingPolicy?.ConvertName(nameof(AtProtoRepositoryObject.Cid))
+            ?? nameof(AtProtoRepositoryObject.Cid);
+        string strongReferencePropertyName = info.Options.PropertyNamingPolicy?.ConvertName(nameof(AtProtoRepositoryObject.StrongReference))
+            ?? nameof(AtProtoRepositoryObject.StrongReference);
+
         foreach (JsonPropertyInfo property in info.Properties)
         {
             if (property.PropertyType == typeof(Cid) &&
-                string.Equals(property.Name, "cid", StringComparison.Ordinal))
+                string.Equals(property.Name, cidPropertyName, StringComparison.Ordinal))
             {
                 property.IsRequired = false;
                 property.Get = static value => ((AtProtoRepositoryObject)value).CidOrDefault;
@@ -811,7 +816,7 @@ internal sealed class TolerantPolymorphicConverter(
                 SetShouldSerialize(property);
             }
             else if (property.PropertyType == typeof(StrongReference) &&
-                string.Equals(property.Name, "strongReference", StringComparison.Ordinal))
+                string.Equals(property.Name, strongReferencePropertyName, StringComparison.Ordinal))
             {
                 property.Get = static value =>
                     ((AtProtoRepositoryObject)value).TryGetStrongReference(out StrongReference? strongReference) ? strongReference : null;
