@@ -215,81 +215,6 @@ public class AdministrationCliValidationTests
     }
 
     [Theory]
-    [InlineData("v9.0.0", true)]
-    [InlineData("9.0.0", false)]
-    [InlineData("v9.0", false)]
-    [InlineData("v9.0.0-preview.1", false)]
-    public void SelfUpdateRequiresAnExactStableReleaseTag(string tag, bool expected)
-    {
-        Assert.Equal(expected, Program.IsStableReleaseTag(tag));
-    }
-
-    [Theory]
-    [InlineData("win-x64", "idunno.Bluesky.Labeler.Cli-win-x64.exe")]
-    [InlineData("win-arm64", "idunno.Bluesky.Labeler.Cli-win-arm64.exe")]
-    [InlineData("linux-x64", "idunno.Bluesky.Labeler.Cli-linux-x64")]
-    [InlineData("linux-arm64", "idunno.Bluesky.Labeler.Cli-linux-arm64")]
-    public void SelfUpdateSelectsTheDirectRuntimeExecutable(string runtimeIdentifier, string expected)
-    {
-        Assert.Equal(expected, Program.GetCliReleaseAssetName(runtimeIdentifier));
-    }
-
-    [Fact]
-    public async Task SelfUpdateStagesBinaryBytesWithoutOverwritingExistingFiles()
-    {
-        CancellationToken token = TestContext.Current.CancellationToken;
-        string directory = Directory.CreateTempSubdirectory().FullName;
-        try
-        {
-            string stagedPath = Path.Combine(directory, "cli.new");
-            byte[] executable = [0x4d, 0x5a, 0, 0xff];
-            await Program.StageExecutableAsync(executable, stagedPath, token);
-            Assert.Equal(executable, await File.ReadAllBytesAsync(stagedPath, token));
-            if (!OperatingSystem.IsWindows())
-            {
-                Assert.Equal(
-                    UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute,
-                    File.GetUnixFileMode(stagedPath));
-            }
-
-            await Assert.ThrowsAsync<IOException>(() => Program.StageExecutableAsync([1, 2], stagedPath, token));
-            Assert.Equal(executable, await File.ReadAllBytesAsync(stagedPath, token));
-            string emptyPath = Path.Combine(directory, "empty.new");
-            await Assert.ThrowsAsync<InvalidDataException>(() => Program.StageExecutableAsync([], emptyPath, token));
-            Assert.False(File.Exists(emptyPath));
-        }
-        finally
-        {
-            Directory.Delete(directory, recursive: true);
-        }
-    }
-
-    [Theory]
-    [InlineData("ghcr.io/blowdart/idunno-bluesky-labeler@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", true)]
-    [InlineData("ghcr.io/blowdart/idunno-bluesky-labeler-postgresql@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", true)]
-    [InlineData("ghcr.io/blowdart/idunno-bluesky-labeler-mysql@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", true)]
-    [InlineData("ghcr.io/blowdart/idunno-bluesky-labeler-base@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", false)]
-    [InlineData("ghcr.io/blowdart/idunno-bluesky-labeler-mysql:latest", false)]
-    [InlineData("ghcr.io/blowdart/idunno-bluesky-labeler:latest", false)]
-    [InlineData("ghcr.io/other/image@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", false)]
-    [InlineData("ghcr.io/blowdart/idunno-bluesky-labeler@sha256:xyz", false)]
-    public void ServiceUpdatesRequireThePublishedImagePinnedByDigest(string image, bool expected)
-    {
-        Assert.Equal(expected, Program.IsLabelerImageDigest(image));
-    }
-
-    [Theory]
-    [InlineData("https://labeler.example/health/labeler/ready", true)]
-    [InlineData("http://127.0.0.1:8080/health/labeler/ready", true)]
-    [InlineData("https://labeler.example/health/labeler/ready?token=secret", false)]
-    [InlineData("https://labeler.example/health/labeler/live", false)]
-    [InlineData("https://user@labeler.example/health/labeler/ready", false)]
-    public void ServiceUpdateRequiresAPlainReadinessEndpoint(string text, bool expected)
-    {
-        Assert.Equal(expected, Program.IsReadinessUri(new Uri(text)));
-    }
-
-    [Theory]
     [InlineData("getTeam", true)]
     [InlineData("getPublicationState", true)]
     [InlineData("getAudit", true)]
@@ -377,6 +302,14 @@ public class AdministrationCliValidationTests
         bool expected)
     {
         Assert.Equal(expected, Program.HasValidTeamChangeOptions(action, hasRole, hasCredential));
+    }
+
+    [Theory]
+    [InlineData("update")]
+    [InlineData("service-update")]
+    public void RemovedUpdateCommandsAreRejected(string command)
+    {
+        Assert.NotEmpty(Program.CreateRootCommand().Parse([command]).Errors);
     }
 
     [Fact]

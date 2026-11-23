@@ -83,7 +83,7 @@
 
 #### idunno.Bluesky.Labeler.Cli
 
-* Windows CLI executables include the Xenon application icon. Release/prerelease downloads and attestation-verified self-updates use standalone binaries instead of ZIP archives containing XML documentation.
+* Windows CLI executables include the Xenon application icon. Release/prerelease downloads use standalone binaries instead of ZIP archives containing XML documentation.
 * Signed CLI downloads for Windows x64/arm64 and Linux x64/arm64, attached to prereleases and releases with a checksum manifest.
 * Self-contained Windows x64, Linux x64 and Linux arm64 administration CLI, with protected local IPC or OAuth/PDS service-authenticated remote access and a dedicated command reference.
 * Label issuance and negation, team management, moderation counts, audit inspection, publication/lifecycle status and durable operation-receipt reads through the shared authorization boundary.
@@ -99,7 +99,6 @@
 * Team output uses DID headings, verified handles, named roles and status icons, with ANSI strikethrough for inactive or removed members.
 * Grouped team listing, enrollment, role changes, enablement, disablement and removal under `team` subcommands, retaining the original command forms for compatibility.
 * Generate and display operation IDs on standard output before new CLI actions when omitted; lookups and continuations still require their existing IDs.
-* Attestation-verified executable self-updates and confirmed digest-pinned Docker Compose redeployment for canonical PostgreSQL/MySQL images and compatible legacy digests, with graceful stop, readiness checks and previous-image rollback; provider-neutral base images are not service-update targets.
 
 #### idunno.Bluesky.Labeler
 
