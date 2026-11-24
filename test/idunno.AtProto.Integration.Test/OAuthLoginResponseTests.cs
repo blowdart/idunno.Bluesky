@@ -348,6 +348,50 @@ public class OAuthLoginResponseTests
     }
 
     [Theory]
+    [InlineData(true, "atproto transition:generic", true)]
+    [InlineData(true, "transition:generic", false)]
+    [InlineData(false, "", false)]
+    [InlineData(false, "transition:generic", false)]
+    public async Task RefreshAfterNonceRetryValidatesTheFinalResponseScopeBeforeTheJwtScopeClaim(
+        bool omitJwtScope,
+        string responseScope,
+        bool accepted)
+    {
+        LoginTestServer server = new() { ChallengeNonce = true, OmitJwtScope = omitJwtScope, ResponseScope = responseScope };
+        using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        OAuthOptions options = new(ClientId, s_returnUri)
+        {
+            ClientSigningKey = OAuthClientSigningKey.FromPem(key.ExportPkcs8PrivateKeyPem(), "active")
+        };
+        DPoPAccessCredentials credentials = new(
+            s_service,
+            CreateAccessJwt(new Did(AccountDid)),
+            "refreshToken",
+            JwtBuilder.CreateProofKey(),
+            "nonce")
+        {
+            OAuthClientId = ClientId,
+            RequestedScope = "atproto"
+        };
+
+        Task<DPoPAccessCredentials?> refresh = CreateClient(server, options).RefreshCredentials(
+            new DPoPRefreshCredential(credentials),
+            s_authority,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        if (accepted)
+        {
+            Assert.NotNull(await refresh);
+        }
+        else
+        {
+            await Assert.ThrowsAsync<OAuthException>(() => refresh);
+        }
+
+        Assert.Equal(["refresh_token", "refresh_token"], server.AssertionOperations);
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task ConfidentialLoginAndRefreshNonceRetriesCreateFreshClientAssertions(bool restoreState)
