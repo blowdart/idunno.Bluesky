@@ -940,7 +940,10 @@ public class ModerationTests : ModerationTestBase
         using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()));
         TimeSpan freshness = TimeSpan.FromMilliseconds(milliseconds);
         await using TestServerBuilder fixture = await CreateAsync(
-            key: key, identity: identity, options: new() { VerificationFreshness = freshness });
+            key: key,
+            identity: identity,
+            options: new() { VerificationFreshness = freshness },
+            controlDatabaseTime: true);
         LabelPolicyState state = (await fixture.Services.GetRequiredService<ILabelPolicyStore>()
             .ReadPolicyStateAsync(TestContext.Current.CancellationToken))!;
         Assert.Equal(freshness, state.VerificationFreshness);

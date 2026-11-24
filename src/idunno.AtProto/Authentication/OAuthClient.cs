@@ -428,9 +428,9 @@ public class OAuthClient
 
             JsonWebToken accessToken = new(loginResult.AccessToken);
 
-            ValidateAccessToken(accessToken, expectedAuthority, correlationId, loginResult.TokenResponse.Scope);
+            string effectiveScope = ValidateAccessToken(accessToken, expectedAuthority, correlationId, loginResult.TokenResponse.Scope);
 
-            WarnOnScopesNotGranted(requestedScopes, loginResult.TokenResponse.Scope, correlationId);
+            WarnOnScopesNotGranted(requestedScopes, effectiveScope, correlationId);
 
             AtProtoHttpResult<ServerDescription> serverDescriptionResult;
 
@@ -691,13 +691,9 @@ public class OAuthClient
 
                 // Duende's RefreshTokenResult does not surface the response scope, so it is read from the captured token
                 // response. The scope there is authoritative; a stateful server may omit the scope claim from the access token.
-                string? grantedScopes = tokenResponse.Scope;
-                ValidateAccessToken(accessToken, authority, correlationId, grantedScopes);
+                string effectiveScope = ValidateAccessToken(accessToken, authority, correlationId, tokenResponse.Scope);
 
-                if (!string.IsNullOrWhiteSpace(grantedScopes))
-                {
-                    WarnOnScopesNotGranted(requestedScopes, grantedScopes, correlationId);
-                }
+                WarnOnScopesNotGranted(requestedScopes, effectiveScope, correlationId);
 
                 AtProtoHttpResult<ServerDescription> serverDescriptionResult;
                 using (var httpClient = new HttpClient(_innerFactoryHandler()))
@@ -820,8 +816,9 @@ public class OAuthClient
     /// The scope reported by the authorization server in its token response, if any. Access tokens are opaque to clients,
     /// and some servers do not put a scope claim in them, so when present this value is used in preference to the token's scope claim.
     /// </param>
+    /// <returns>The effective scope: the token response scope when present, otherwise the access token's scope claim.</returns>
     /// <exception cref="OAuthException">Thrown when validation of <paramref name="accessToken"/> fails.</exception>
-    internal void ValidateAccessToken(JsonWebToken accessToken, Uri expectedAuthority, Guid correlationId, string? grantedScope = null)
+    internal string ValidateAccessToken(JsonWebToken accessToken, Uri expectedAuthority, Guid correlationId, string? grantedScope = null)
     {
         TimeSpan clockSkew = _options?.ClockSkew ?? OAuthOptions.DefaultClockSkew;
         DateTimeOffset now = _timeProvider.GetUtcNow();
@@ -860,8 +857,10 @@ public class OAuthClient
         // The scope claim is a space delimited list, so it is compared entry by entry rather than as a
         // substring, which would also accept scopes that merely contain "atproto", such as "notatproto".
         // A case-sensitive "ref:" prefix references scopes and permission sets resolved by the server.
+        // The token claim is only a fallback for a response which omits scope; an explicit but empty or blank
+        // response scope is a grant of nothing and is not replaced by the claim.
         string? scopeValue = grantedScope;
-        if (string.IsNullOrWhiteSpace(scopeValue) && accessToken.TryGetClaim("scope", out Claim? scopeClaim))
+        if (scopeValue is null && accessToken.TryGetClaim("scope", out Claim? scopeClaim))
         {
             scopeValue = scopeClaim.Value;
         }
@@ -884,6 +883,8 @@ public class OAuthClient
             Logger.OAuthTokenHasMismatchedAuthority(_logger, issuer, expectedAuthority, correlationId);
             throw new OAuthException("Unexpected access token issuer");
         }
+
+        return scopeValue;
     }
 
     /// <summary>
