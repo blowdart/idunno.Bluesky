@@ -473,46 +473,22 @@ services:
 Set `LABELER_IMAGE` to the current immutable digest and retain it for rollback. Before an update,
 back up the database, active-key state and configuration, verify the target image digest and
 schema compatibility, and configure a `stop_grace_period` long enough for the host to drain
-requests and subscriptions. The CLI's Compose updater requires explicit backup and compatibility
-confirmations, pulls both image digests first, writes a temporary image-only override, and
-recreates only the selected service:
-
-```text
-labeler-admin service-update \
-  --compose-file ./compose.yml \
-  --service labeler \
-  --image ghcr.io/blowdart/idunno-bluesky-labeler-postgresql@sha256:<new-digest> \
-  --previous-image ghcr.io/blowdart/idunno-bluesky-labeler-postgresql@sha256:<current-digest> \
-  --ready-url https://labeler.example/health/labeler/ready \
-  --backup-confirmed \
-  --schema-compatible \
-  --drain-seconds 90
-```
-
-The command prompts before updating; use `--yes` only in a controlled script. It never edits the
-Compose project, modifies a running container, removes volumes or changes the database backup.
-After recreation it polls the readiness endpoint for up to the configured timeout and redeploys
-the previous digest if readiness fails. Verify the restored service's readiness before retrying.
-If the command is interrupted during deployment, inspect `docker compose ps`, the running image
-digest and readiness endpoint before taking action. Never run an older binary against a database
-already migrated by a newer release.
+requests and subscriptions. Deploy the new image using the container platform's deployment
+mechanism, and verify readiness before returning traffic. Never run an older binary against a
+database already migrated by a newer release.
 Select the matching MySQL image for MySQL; changing image variants does not migrate databases.
-The updater also accepts legacy monolithic digests for compatible rollback, but never the base
-image as a service. Assess provider and schema compatibility explicitly.
+Assess provider and schema compatibility explicitly before deployment or rollback.
 
-The CLI ZIPs contain trimmed, self-contained single-file executables for each supported platform;
+The CLI releases provide trimmed, self-contained single-file executables for each supported platform;
 they bundle the runtime and do not require a separate .NET installation. Verify their GitHub release attestation
 before first installation or replacement. Keep configuration and secrets outside the executable
-directory. For a supported direct installation, `labeler-admin update --tag v9.0.1` performs that
-attestation verification, checks the staged executable, and atomically replaces it after the
-current process exits while retaining a sibling backup. The updater does not alter a labeler
-service, configuration or data.
+directory.
 
-Container updates are supported for Docker Compose deployments only. DigitalOcean App Platform,
+DigitalOcean App Platform,
 Azure App Service and other orchestrators can run the public image only when their plan supports
 the required WebSocket behavior, persistent external storage, long-lived connections, health
 checks and graceful replacement. Select and roll back images through that platform's deployment
-mechanism; do not assume the CLI can safely redeploy an arbitrary provider-managed service.
+mechanism.
 
 ## Provider examples
 

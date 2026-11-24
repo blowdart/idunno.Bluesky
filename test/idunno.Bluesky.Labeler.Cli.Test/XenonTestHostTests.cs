@@ -343,11 +343,13 @@ public partial class XenonTestHostTests
     internal static async Task RunSeededHostScenarioAsync(bool trusted, bool legacyPolicy)
     {
         CancellationToken token = TestContext.Current.CancellationToken;
+        Func<string, CancellationToken, Task<IReadOnlyList<string>>>? previousDnsTextRecordResolver = AtProtoServer.DnsTextRecordResolver;
         string directory = Path.Combine(Path.GetTempPath(), "xenon_harness_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         string database = Path.Combine(directory, "test.db");
         try
         {
+            AtProtoServer.DnsTextRecordResolver = static (_, _) => Task.FromResult<IReadOnlyList<string>>([]);
             using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
             using HttpClient network = new(new NoNetworkHandler());
             using HttpClient identity = new(new Xenon.TestHost.FixtureHandler(key.ExportPublicKeyMultibase(), network));
@@ -1103,6 +1105,7 @@ public partial class XenonTestHostTests
         }
         finally
         {
+            AtProtoServer.DnsTextRecordResolver = previousDnsTextRecordResolver;
             Directory.Delete(directory, recursive: true);
         }
     }

@@ -718,22 +718,6 @@ chmod +x idunno.Bluesky.Labeler.Cli-linux-x64
 
 Use the `linux-arm64` filename instead on ARM64. Windows downloads end in `.exe`.
 
-Keep the release tag and artifact digest with deployment records. Replace a directly installed CLI only after verifying the new release. The `update` command
-downloads one exact stable release, verifies its GitHub artifact attestation with the installed
-GitHub CLI (`gh`), checks the executable SHA-256 and staged executable, and schedules an atomic
-replacement after the current process exits. It preserves the prior executable as a sibling backup;
-restore that file manually if an interrupted helper leaves the installation unusable.
-
-```text
-labeler-admin update --tag v9.0.1
-```
-
-The update requires a self-contained installation from a supported Windows x64, Windows ARM64,
-Linux x64 or Linux arm64 release binary, GitHub CLI authentication/verification support, and write
-access to the executable's directory. It does not update a `dotnet tool`, package-manager
-installation or renamed launcher. The command asks for confirmation; `--yes` is only for an
-explicitly controlled script.
-
 Examples below use the executable name `labeler-admin`; substitute the published executable path
 and the endpoint configured by the host.
 
@@ -846,14 +830,3 @@ Rotation uses durable maintenance shared by all hosts; all participating hosts m
 signing participants must acknowledge the replacement key before distribution reopens.
 Distribution-only replicas remain keyless through rotation and restart. `rotation recover-plc` checks the
 current DID document before resubmitting a saved signed operation.
-
-The `service-update` command is limited to Docker Compose deployments using the published GHCR
-image. It requires the target and previous images as immutable digests, the Compose service name,
-the public readiness URL, and explicit confirmations that an external backup exists and the
-schema transition is compatible. It pulls both images before replacement, writes an image-only
-temporary Compose override, stops the host with a bounded grace period (90 seconds by default),
-recreates only the selected service, checks readiness, and redeploys the previous digest if the
-new service fails readiness. It never edits the operator's Compose file, enters a running
-container, removes volumes, or updates provider-managed services. Cancellation or process
-interruption can leave deployment state uncertain; inspect `docker compose ps`, the configured
-image digest and readiness endpoint before retrying.

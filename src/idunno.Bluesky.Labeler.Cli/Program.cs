@@ -85,8 +85,6 @@ internal static partial class Program
         root.Subcommands.Add(CreateChangeTeamCommand(name: "change-team", legacy: true));
         root.Subcommands.Add(CreateRetirementCommand());
         root.Subcommands.Add(CreateRotationCommand());
-        root.Subcommands.Add(CreateCliUpdateCommand());
-        root.Subcommands.Add(CreateServiceUpdateCommand());
         root.Subcommands.Add(CreatePolicyCommand());
         root.Subcommands.Add(CreateListCredentialsCommand());
         root.Subcommands.Add(CreateForgetMeCommand());

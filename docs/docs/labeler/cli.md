@@ -457,38 +457,3 @@ Resume renews authority with a new command operation ID while retaining the save
 workflow; uncertain retries retain that resume ID. Purge removes label history and
 receipts, not moderation/audit, backups or downstream copies. Key-removal commands
 record/fence external operator work; they do not delete private keys or stop hosts.
-
-## CLI and service updates
-
-These commands operate locally rather than through `@ipc`/`@remote`.
-
-```powershell
-labeler-admin update --tag v9.0.1
-labeler-admin service-update --compose-file compose.yml --service labeler --image ghcr.io/blowdart/idunno-bluesky-labeler-postgresql@sha256:<new-digest> --previous-image ghcr.io/blowdart/idunno-bluesky-labeler-postgresql@sha256:<previous-digest> --ready-url https://labeler.example/health/labeler/ready --backup-confirmed --schema-compatible --timeout-seconds 180 --drain-seconds 90
-```
-
-Replace the example release, registry image and digests with actual supported,
-verified artifacts. See [deployment updates](deployment.md#safe-updates-and-rollback)
-for the published image names, supported platforms and rollback constraints. Use the MySQL variant
-for MySQL. Provider-neutral base images cannot be deployed by this command; legacy monolithic
-digests remain accepted for compatible rollback. Changing variants does not migrate databases.
-
-| Option | Meaning |
-|---|---|
-| `--tag` | Exact stable CLI release tag; updater verifies release attestation and stages a self-contained replacement. |
-| `--compose-file` | Existing Compose deployment file. |
-| `--service` | Labeler service name in that file. |
-| `--image` | New public GHCR image pinned by SHA-256 digest. |
-| `--previous-image` | Current pinned image for rollback if readiness fails. |
-| `--ready-url` | Readiness endpoint to check after replacement. |
-| `--backup-confirmed` | Explicitly attest database and external configuration backup. |
-| `--schema-compatible` | Explicitly attest supported schema/upgrade compatibility. |
-| `--timeout-seconds` | Readiness timeout, 30-600 seconds, default 180. |
-| `--drain-seconds` | Graceful host-drain deadline, 30-600 seconds, default 90. |
-| `--yes` | Skip the ordinary update confirmation only. |
-
-`update` changes the supported direct CLI installation, not the labeler host,
-configuration or database. `service-update` supports Docker Compose, not arbitrary
-cloud orchestration. Review schema compatibility before rollback: never run an old
-binary against an unsupported migrated database. No update command replaces
-backups or independently checking an interrupted deployment.
