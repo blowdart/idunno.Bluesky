@@ -309,7 +309,9 @@ public class AdministrationCliValidationTests
     [InlineData("service-update")]
     public void RemovedUpdateCommandsAreRejected(string command)
     {
-        Assert.NotEmpty(Program.CreateRootCommand().Parse([command]).Errors);
+        RootCommand root = Program.CreateRootCommand();
+        Assert.DoesNotContain(root.Subcommands, subcommand => subcommand.Name == command);
+        Assert.NotEmpty(root.Parse([command]).Errors);
     }
 
     [Fact]
