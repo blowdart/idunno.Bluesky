@@ -428,7 +428,7 @@ public class OAuthClient
 
             JsonWebToken accessToken = new(loginResult.AccessToken);
 
-            ValidateAccessToken(accessToken, expectedAuthority, correlationId);
+            ValidateAccessToken(accessToken, expectedAuthority, correlationId, loginResult.TokenResponse.Scope);
 
             WarnOnScopesNotGranted(requestedScopes, loginResult.TokenResponse.Scope, correlationId);
 
@@ -643,6 +643,7 @@ public class OAuthClient
         // Importing the RSA proof key is not cheap, and Duende may call the client factory more than once for a single
         // refresh, so the factory is built once here rather than on every call into the lambda.
         DefaultDPoPProofTokenFactory proofTokenFactory = new(refreshCredential.DPoPProofKey);
+        TokenResponseCapture tokenResponse = new();
 
         OidcClientOptions oidcOptions = new()
         {
@@ -654,7 +655,8 @@ public class OAuthClient
             LoggerFactory = _loggerFactory,
             HttpClientFactory = (oidcOptions) =>
             {
-                var httpClient = new HttpClient(new ProofTokenMessageHandler(proofTokenFactory, _innerFactoryHandler()), true);
+                // The capturing handler sits beneath the proof handler so it sees the final response of any nonce retry.
+                var httpClient = new HttpClient(new ProofTokenMessageHandler(proofTokenFactory, new TokenResponseCapturingHandler(tokenResponse, _innerFactoryHandler())), true);
                 return _clientConfigurationHandler(httpClient);
             }
         };
@@ -687,13 +689,14 @@ public class OAuthClient
             {
                 JsonWebToken accessToken = new(refreshResult.AccessToken);
 
-                ValidateAccessToken(accessToken, authority, correlationId);
+                // Duende's RefreshTokenResult does not surface the response scope, so it is read from the captured token
+                // response. The scope there is authoritative; a stateful server may omit the scope claim from the access token.
+                string? grantedScopes = tokenResponse.Scope;
+                ValidateAccessToken(accessToken, authority, correlationId, grantedScopes);
 
-                // Duende's RefreshTokenResult does not surface the token response, so token_type cannot be checked here
-                // the way it is on the login path. The granted scopes are taken from the issued token instead.
-                if (accessToken.TryGetClaim("scope", out Claim? grantedScopeClaim))
+                if (!string.IsNullOrWhiteSpace(grantedScopes))
                 {
-                    WarnOnScopesNotGranted(requestedScopes, grantedScopeClaim.Value, correlationId);
+                    WarnOnScopesNotGranted(requestedScopes, grantedScopes, correlationId);
                 }
 
                 AtProtoHttpResult<ServerDescription> serverDescriptionResult;
@@ -714,11 +717,8 @@ public class OAuthClient
 
                 Logger.OAuthClientRefreshSucceeded(_logger, authority);
 
-                // Duende's RefreshTokenResult does not surface the token response, so the nonce the authorization server
-                // returned with the refresh is not reachable here. Carrying the previous one forward costs at most one
-                // use_dpop_nonce challenge, which the client handles. A credential holds a single nonce shared between the
-                // authorization server and the PDS, so storing an authorization server nonce here would not be an
-                // improvement; that needs per origin nonce storage rather than a different value in this line.
+                // A credential holds a single nonce shared between the authorization server and the PDS, so the nonce from
+                // the authorization server's response is not stored; the previous one costs at most one handled challenge.
                 return new(
                     refreshCredential.Service,
                     refreshResult.AccessToken,
@@ -816,8 +816,12 @@ public class OAuthClient
     /// <param name="accessToken">The access token to validate.</param>
     /// <param name="expectedAuthority">The authority the token is expected to have been issued by.</param>
     /// <param name="correlationId">The correlation identifier used in logging to tie requests and responses together.</param>
+    /// <param name="grantedScope">
+    /// The scope reported by the authorization server in its token response, if any. Access tokens are opaque to clients,
+    /// and some servers do not put a scope claim in them, so when present this value is used in preference to the token's scope claim.
+    /// </param>
     /// <exception cref="OAuthException">Thrown when validation of <paramref name="accessToken"/> fails.</exception>
-    internal void ValidateAccessToken(JsonWebToken accessToken, Uri expectedAuthority, Guid correlationId)
+    internal void ValidateAccessToken(JsonWebToken accessToken, Uri expectedAuthority, Guid correlationId, string? grantedScope = null)
     {
         TimeSpan clockSkew = _options?.ClockSkew ?? OAuthOptions.DefaultClockSkew;
         DateTimeOffset now = _timeProvider.GetUtcNow();
@@ -856,9 +860,15 @@ public class OAuthClient
         // The scope claim is a space delimited list, so it is compared entry by entry rather than as a
         // substring, which would also accept scopes that merely contain "atproto", such as "notatproto".
         // A case-sensitive "ref:" prefix references scopes and permission sets resolved by the server.
-        if (!accessToken.TryGetClaim("scope", out Claim? scopeClaim) ||
-            (!scopeClaim.Value.StartsWith("ref:", StringComparison.Ordinal) &&
-             !scopeClaim.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Contains("atproto", StringComparer.Ordinal)))
+        string? scopeValue = grantedScope;
+        if (string.IsNullOrWhiteSpace(scopeValue) && accessToken.TryGetClaim("scope", out Claim? scopeClaim))
+        {
+            scopeValue = scopeClaim.Value;
+        }
+
+        if (scopeValue is null ||
+            (!scopeValue.StartsWith("ref:", StringComparison.Ordinal) &&
+             !scopeValue.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Contains("atproto", StringComparer.Ordinal)))
         {
             Logger.OAuthTokenScopeDoesNotContainAtProtoOrBeginWithReference(_logger, correlationId);
             throw new OAuthException("Issued token scope does not contain atproto or begin with ref:.");

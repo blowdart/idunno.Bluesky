@@ -270,6 +270,11 @@ internal static partial class Program
         Uri publicEndpoint = settings.PublicEndpoint;
         AtProtoServiceReference audience = settings.Audience;
         bool uiEnabled = settings.UiEnabled;
+        if (uiEnabled)
+        {
+            app.UseLabelerForwardedHeadersDiagnostics();
+        }
+
         ConfigureTransportSecurity(app, publicEndpoint);
         app.UseBlueskyOAuthClientMetadata(
             CreateNativeOAuthOptions(publicEndpoint, audience),
@@ -537,11 +542,12 @@ internal static partial class Program
         }
     }
 
-    /// <summary>Trusts only explicitly installed proxy addresses and never accepts arbitrary forwarded headers.</summary>
+    /// <summary>Trusts only explicitly configured proxy addresses or CIDR networks and never accepts arbitrary forwarded headers.</summary>
     internal static void ConfigureForwardedHeaders(WebApplication app)
     {
         string[] proxies = app.Configuration.GetSection("Labeler:TrustedProxies").Get<string[]>() ?? [];
-        if (proxies.Length == 0)
+        string[] networks = app.Configuration.GetSection("Labeler:TrustedNetworks").Get<string[]>() ?? [];
+        if (proxies.Length == 0 && networks.Length == 0)
         {
             return;
         }
@@ -563,6 +569,16 @@ internal static partial class Program
         foreach (string proxy in proxies)
         {
             options.KnownProxies.Add(IPAddress.Parse(proxy));
+        }
+
+        foreach (string network in networks)
+        {
+            if (!network.Contains('/', StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"Labeler:TrustedNetworks entry '{network}' must use CIDR notation.");
+            }
+
+            options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse(network));
         }
 
         app.UseForwardedHeaders(options);

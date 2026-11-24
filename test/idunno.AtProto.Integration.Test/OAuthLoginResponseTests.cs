@@ -314,6 +314,40 @@ public class OAuthLoginResponseTests
     }
 
     [Theory]
+    [InlineData("atproto transition:generic", true)]
+    [InlineData("transition:generic", false)]
+    public async Task RefreshValidatesTheTokenResponseScopeWhenTheAccessTokenHasNoScopeClaim(string responseScope, bool accepted)
+    {
+        LoginTestServer server = new() { OmitJwtScope = true };
+        OAuthClient client = CreateClient(server);
+        DPoPAccessCredentials credentials = new(
+            s_service,
+            CreateAccessJwt(new Did(AccountDid)),
+            "refreshToken",
+            JwtBuilder.CreateProofKey(),
+            "nonce")
+        {
+            OAuthClientId = ClientId,
+            RequestedScope = "atproto"
+        };
+        server.ResponseScope = responseScope;
+
+        Task<DPoPAccessCredentials?> refresh = client.RefreshCredentials(
+            new DPoPRefreshCredential(credentials),
+            s_authority,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        if (accepted)
+        {
+            Assert.NotNull(await refresh);
+        }
+        else
+        {
+            await Assert.ThrowsAsync<OAuthException>(() => refresh);
+        }
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task ConfidentialLoginAndRefreshNonceRetriesCreateFreshClientAssertions(bool restoreState)
@@ -812,6 +846,10 @@ public class OAuthLoginResponseTests
 
         internal bool ChallengeNonce { get; set; }
 
+        internal bool OmitJwtScope { get; set; }
+
+        internal string ResponseScope { get; set; } = "atproto";
+
         internal bool GateTokenRequests { get; set; }
 
         internal bool ReturnTokenError { get; set; }
@@ -957,11 +995,11 @@ public class OAuthLoginResponseTests
                     response.ContentType = "application/json";
                     await response.WriteAsync($$"""
                         {
-                          "access_token": "{{CreateAccessJwt(new Did(AccountDid))}}",
+                          "access_token": "{{(OmitJwtScope ? JwtBuilder.CreateJwt(new Did(AccountDid), issuer: Authority, audience: ServerDid) : CreateAccessJwt(new Did(AccountDid)))}}",
                           "token_type": "{{(IssueBearerToken ? "Bearer" : "DPoP")}}",
                           "expires_in": 900,
                           "refresh_token": "refreshToken",
-                          "scope": "atproto"
+                          "scope": "{{ResponseScope}}"
                         }
                         """);
                     return;

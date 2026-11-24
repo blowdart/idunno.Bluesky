@@ -30,6 +30,14 @@ public sealed class LabelerAdministrationOptions
     /// <summary>Gets or sets the maximum number of peer addresses retained for admission.</summary>
     /// <value>The per-process limit, initially 1,024, from one through 65,536. Additional peers are rejected until unused entries expire.</value>
     public int MaximumTrackedPeers { get; set; } = 1024;
+
+    /// <summary>Gets or sets the maximum number of unauthenticated <c>invocation-denied</c> audit rows written per one-minute window across all peers.</summary>
+    /// <value>
+    /// The per-process limit, initially 600, from one through 1,000,000. Denials beyond the limit are still rejected, but their
+    /// individual audit rows are suppressed. The first suppression in a window logs a warning; no suppressed count is reported or persisted.
+    /// Failed service authentication after token verification is audited separately and does not use this budget.
+    /// </value>
+    public int MaximumDenialAuditsPerMinute { get; set; } = 600;
 }
 
 /// <summary>Specifies which authority controls authenticated remote labeler administration.</summary>

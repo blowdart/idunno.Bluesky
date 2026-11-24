@@ -79,6 +79,9 @@ internal static partial class Logger
     [LoggerMessage(26, LogLevel.Warning, "SignIn failed as OAuth2 response could not be processed.")]
     public static partial void SignInFailedOAuth2ProcessingFailed(this ILogger logger);
 
+    [LoggerMessage(32, LogLevel.Warning, "SignIn failed as the authorization server's response was rejected: {reason}")]
+    public static partial void SignInFailedOAuth2ResponseRejected(this ILogger logger, string reason);
+
     // Claims Transformation Logging
     [LoggerMessage(40, LogLevel.Debug, "Cached claims for {did} found.")]
     public static partial void TransformerCachedClaimsFound(this ILogger logger, Did did);

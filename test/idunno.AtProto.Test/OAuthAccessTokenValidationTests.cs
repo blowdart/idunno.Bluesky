@@ -160,6 +160,32 @@ public class OAuthAccessTokenValidationTests
         Assert.Equal("Issued token scope does not contain atproto or begin with ref:.", exception.Message);
     }
 
+    [Theory]
+    [InlineData("atproto transition:generic")]
+    [InlineData("ref:scopeReference")]
+    public void ResponseScopeIsUsedWhenTheTokenHasNoScopeClaim(string grantedScope)
+    {
+        CreateOAuthClient().ValidateAccessToken(CreateToken(scope: null), s_authority, Guid.NewGuid(), grantedScope);
+    }
+
+    [Theory]
+    [InlineData("transition:generic")]
+    [InlineData("notatproto")]
+    public void ResponseScopeWithoutAtProtoFailsValidation(string grantedScope)
+    {
+        OAuthException exception = Assert.Throws<OAuthException>(
+            () => CreateOAuthClient().ValidateAccessToken(CreateToken(scope: null), s_authority, Guid.NewGuid(), grantedScope));
+
+        Assert.Equal("Issued token scope does not contain atproto or begin with ref:.", exception.Message);
+    }
+
+    [Fact]
+    public void ResponseScopeTakesPrecedenceOverTheTokenScopeClaim()
+    {
+        Assert.Throws<OAuthException>(
+            () => CreateOAuthClient().ValidateAccessToken(CreateToken(scope: "atproto"), s_authority, Guid.NewGuid(), "transition:generic"));
+    }
+
     [Fact]
     public void TokenWithNoNotBeforeClaimPassesValidation()
     {

@@ -146,6 +146,7 @@ nav { display: flex; flex-wrap: wrap; gap: 1rem; }
 .theme-picker select { font-size: .75rem; }
 .panel { background: var(--surface); border: 1px solid var(--border); border-radius: .4rem; margin: 1rem 0; padding: 1.25rem; }
 .panel h2 { margin-top: 0; }
+.forwarded-headers table + h2 { margin-top: 1.5rem; }
 .cli-downloads { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr)); gap: 1rem; align-items: start; }
 .cli-downloads > .panel { min-width: 0; margin: 0; }
 .cli-download-list { list-style: none; margin: 1rem 0 0; padding: 0; }

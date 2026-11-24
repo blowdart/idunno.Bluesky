@@ -171,8 +171,9 @@ public static class LabelerAdministrationExtensions
             .Validate(
                 options => options.RequestsPerMinutePerPeer is >= 1 and <= 100000 &&
                     options.MaximumConcurrentRequestsPerPeer is >= 1 and <= 1024 &&
-                    options.MaximumTrackedPeers is >= 1 and <= 65536,
-                "Remote administration requires bounded positive request, concurrency and peer limits.")
+                    options.MaximumTrackedPeers is >= 1 and <= 65536 &&
+                    options.MaximumDenialAuditsPerMinute is >= 1 and <= 1_000_000,
+                "Remote administration requires bounded positive request, concurrency, peer and denial audit limits.")
             .ValidateOnStart();
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<RemoteAdministrationAdmission>();
@@ -380,6 +381,38 @@ public static class LabelerAdministrationExtensions
                     status)
                 : WriteResponseAsync).ConfigureAwait(false);
 
+    /// <summary>
+    /// Records an invocation-denial audit row. Denials of unauthenticated callers draw from a process-wide per-minute budget; once it is exhausted,
+    /// individual rows are suppressed and the first suppression in each window is logged.
+    /// Invocation-denial rows for authenticated callers do not consume the budget.
+    /// </summary>
+    /// <returns>The audit result, or <see langword="null"/> when the denial was suppressed by the budget.</returns>
+    private static async Task<LabelServiceResult<LabelAdministrationReceipt>?> RecordBudgetedDenialAsync(
+        HttpContext context,
+        ILabelAdministrationStore store,
+        ILogger logger,
+        LabelerAdministrationOptions options,
+        string reason,
+        LabelAdministrationCaller? caller)
+    {
+        if (caller is null &&
+            !context.RequestServices.GetRequiredService<RemoteAdministrationAdmission>()
+                .TryReserveDenialAudit(options, out bool firstSuppression))
+        {
+            if (firstSuppression)
+            {
+                AdministrationLog.DenialAuditSuppressed(logger, options.MaximumDenialAuditsPerMinute);
+            }
+
+            return null;
+        }
+
+        return await store.RecordAdministrationDenialAsync(
+            reason: reason,
+            caller: caller,
+            cancellationToken: context.RequestAborted).ConfigureAwait(false);
+    }
+
     /// <summary>Shares transport, replay, live remote-switch and denial-audit enforcement between native and Ozone routes.</summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S6667:Logging in a catch clause should pass the caught exception as a parameter",
         Justification = "Untrusted authentication and JSON exceptions may contain sensitive input; log only their category.")]
@@ -432,10 +465,14 @@ public static class LabelerAdministrationExtensions
         {
             AdministrationResponse transportResponse = new(false, "HttpsRequired", "HTTPS is required.");
             int transportStatus = StatusCodes.Status403Forbidden;
-            LabelServiceResult<LabelAdministrationReceipt> audit = await store.RecordAdministrationDenialAsync(
+            LabelServiceResult<LabelAdministrationReceipt>? audit = await RecordBudgetedDenialAsync(
+                context,
+                store,
+                logger,
+                currentOptions,
                 reason: "Insecure transport rejected.",
-                cancellationToken: context.RequestAborted).ConfigureAwait(false);
-            if (!audit.Succeeded)
+                caller: null).ConfigureAwait(false);
+            if (audit is { Succeeded: false })
             {
                 transportResponse = new(false, "ServiceUnavailable", "The required denial audit could not be persisted.");
                 transportStatus = StatusCodes.Status503ServiceUnavailable;
@@ -538,12 +575,14 @@ public static class LabelerAdministrationExtensions
 
         if (status is StatusCodes.Status401Unauthorized or StatusCodes.Status400BadRequest)
         {
-            LabelServiceResult<LabelAdministrationReceipt> audit = await store
-                .RecordAdministrationDenialAsync(
-                    reason: status == StatusCodes.Status401Unauthorized ? "Authentication rejected." : "Malformed administrative invocation.",
-                    caller: authenticatedCaller,
-                    cancellationToken: context.RequestAborted).ConfigureAwait(false);
-            if (!audit.Succeeded)
+            LabelServiceResult<LabelAdministrationReceipt>? audit = await RecordBudgetedDenialAsync(
+                context,
+                store,
+                logger,
+                currentOptions,
+                reason: status == StatusCodes.Status401Unauthorized ? "Authentication rejected." : "Malformed administrative invocation.",
+                caller: authenticatedCaller).ConfigureAwait(false);
+            if (audit is { Succeeded: false })
             {
                 response = new(false, "ServiceUnavailable", "The required denial audit could not be persisted.");
                 status = StatusCodes.Status503ServiceUnavailable;

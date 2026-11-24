@@ -172,6 +172,7 @@ internal static class Program
     /// <summary>Installs proxy and hostname validation before public metadata, real authentication and protected administration.</summary>
     internal static void ConfigurePipeline(WebApplication app, Uri origin)
     {
+        app.UseLabelerForwardedHeadersDiagnostics();
         // Tunnel traffic must come from an explicitly trusted proxy; request headers never choose OAuth origins.
         HostProgram.ConfigureTransportSecurity(app, origin);
         app.UseHostFiltering();

@@ -72,6 +72,8 @@ idunno.Bluesky.AspNet.Labeler.LabelerAdministrationOptions.MaximumConcurrentRequ
 idunno.Bluesky.AspNet.Labeler.LabelerAdministrationOptions.MaximumConcurrentRequestsPerPeer.set -> void
 idunno.Bluesky.AspNet.Labeler.LabelerAdministrationOptions.MaximumTrackedPeers.get -> int
 idunno.Bluesky.AspNet.Labeler.LabelerAdministrationOptions.MaximumTrackedPeers.set -> void
+idunno.Bluesky.AspNet.Labeler.LabelerAdministrationOptions.MaximumDenialAuditsPerMinute.get -> int
+idunno.Bluesky.AspNet.Labeler.LabelerAdministrationOptions.MaximumDenialAuditsPerMinute.set -> void
 idunno.Bluesky.AspNet.Labeler.LabelerAdministrationOptions.RemoteEnabled.get -> bool
 idunno.Bluesky.AspNet.Labeler.LabelerAdministrationOptions.RemoteEnabled.set -> void
 idunno.Bluesky.AspNet.Labeler.LabelerAdministrationOptions.RemoteMode.get -> idunno.Bluesky.AspNet.Labeler.RemoteAdministrationMode?

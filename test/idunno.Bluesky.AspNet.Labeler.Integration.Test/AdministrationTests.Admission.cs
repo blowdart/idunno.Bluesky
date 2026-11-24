@@ -17,6 +17,33 @@ namespace idunno.Bluesky.AspNet.Labeler.Integration.Test;
 
 public partial class AdministrationTests
 {
+    [Fact]
+    public async Task DenialsFromManyPeersBeyondTheGlobalAuditBudgetAreRejectedButNotAudited()
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAdmissionAsync(key, identity, denialAudits: 10);
+        int baseline = await AdmissionAuditCountAsync(fixture);
+        for (int index = 0; index < 40; index++)
+        {
+            using HttpRequestMessage request = AdmissionRequest(
+                path: "/xrpc/dev.idunno.labeler.admin.getTeam",
+                assertion: "invalid",
+                peer: $"198.18.0.{index + 1}");
+            using HttpResponseMessage response = await fixture.Client.SendAsync(request, token);
+            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        }
+
+        Assert.Equal(baseline + 10, await AdmissionAuditCountAsync(fixture));
+        using HttpRequestMessage valid = AdmissionRequest(
+            path: "/xrpc/dev.idunno.labeler.admin.getTeam",
+            assertion: Token(key, fixture.Clock.GetUtcNow()),
+            peer: "198.19.0.1");
+        using HttpResponseMessage authorized = await fixture.Client.SendAsync(valid, token);
+        Assert.Equal(HttpStatusCode.OK, authorized.StatusCode);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -289,7 +316,8 @@ public partial class AdministrationTests
         HttpClient identity,
         int requestsPerMinute = 1,
         int concurrentRequests = 16,
-        int peers = 1024)
+        int peers = 1024,
+        int denialAudits = 600)
     {
         TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
             configureAdministration: services =>
@@ -302,6 +330,7 @@ public partial class AdministrationTests
                     options.RequestsPerMinutePerPeer = requestsPerMinute;
                     options.MaximumConcurrentRequestsPerPeer = concurrentRequests;
                     options.MaximumTrackedPeers = peers;
+                    options.MaximumDenialAuditsPerMinute = denialAudits;
                 });
             },
             controlDatabaseTime: true,
