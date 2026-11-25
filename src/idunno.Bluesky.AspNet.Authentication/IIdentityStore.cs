@@ -276,6 +276,11 @@ public interface IIdentityStore
 
         if (credentials is DPoPAccessCredentials dPoPAccessCredentials)
         {
+            foreach (KeyValuePair<string, string> nonce in dPoPAccessCredentials.DPoPNonces)
+            {
+                claims.Add(new Claim(AtProtoClaims.DPoPOriginNonce, nonce.Value, ClaimValueTypes.String, nonce.Key));
+            }
+
             if (dPoPAccessCredentials.OAuthClientId is string clientId)
             {
                 claims.Add(new Claim(AtProtoClaims.OAuthClientId, clientId, ClaimValueTypes.String, credentials.Service.ToString()));

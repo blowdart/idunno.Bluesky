@@ -87,6 +87,7 @@ public class OAuthClient
     private string? _loginClientId;
     private string? _loginRequestedScope;
     private string? _loginSigningKeyId;
+    private DPoPNonceStore? _loginNonces;
 
     private OAuthClient(ILoggerFactory? loggerFactory = null, OAuthOptions? options = null, TimeProvider? timeProvider = null)
     {
@@ -161,7 +162,8 @@ public class OAuthClient
                     {
                         OAuthClientId = _loginClientId,
                         RequestedScope = _loginRequestedScope,
-                        ClientSigningKeyId = _loginSigningKeyId
+                        ClientSigningKeyId = _loginSigningKeyId,
+                        DPoPNonces = _loginNonces?.Snapshot ?? new Dictionary<string, string>()
                     };
                 }
             }
@@ -173,6 +175,8 @@ public class OAuthClient
 
             Uri expectedAuthority = ParseLoginStateUri(value.ExpectedAuthority, nameof(OAuthLoginState.ExpectedAuthority));
             Uri expectedService = ParseLoginStateUri(value.ExpectedService, nameof(OAuthLoginState.ExpectedService));
+            DPoPNonceStore nonces = new();
+            nonces.Restore(value.DPoPNonces);
 
             lock (_stateLock)
             {
@@ -187,8 +191,57 @@ public class OAuthClient
                 _loginClientId = value.OAuthClientId;
                 _loginRequestedScope = value.RequestedScope;
                 _loginSigningKeyId = value.ClientSigningKeyId;
+                _loginNonces = nonces;
             }
         }
+    }
+
+    /// <summary>
+    /// Loads validated authorization metadata before generating a new session's proof key.
+    /// </summary>
+    private async Task<DiscoveryDocumentResponse> GetAuthorizationMetadata(Uri authority, CancellationToken cancellationToken)
+    {
+        using HttpClient httpClient = new(_innerFactoryHandler());
+        using HttpClient configuredClient = _clientConfigurationHandler(httpClient);
+        DiscoveryPolicy policy = new OidcClientOptions().Policy.Discovery;
+        policy.DiscoveryDocumentPath = OAuthDiscoveryDocumentEndpoint;
+        using DiscoveryDocumentRequest request = new()
+        {
+            Address = authority.ToString(),
+            Policy = policy
+        };
+        DiscoveryDocumentResponse metadata = await configuredClient.GetDiscoveryDocumentAsync(request, cancellationToken).ConfigureAwait(false);
+
+        if (metadata.IsError)
+        {
+            throw new OAuthException($"Could not load authorization server metadata: {metadata.Error}");
+        }
+
+        return metadata;
+    }
+
+    /// <summary>
+    /// Generates a new proof key for a mutually supported algorithm, preferring P-256.
+    /// </summary>
+    private static string CreateProofKey(IEnumerable<string> algorithms)
+    {
+        HashSet<string> supported = new(algorithms, StringComparer.Ordinal);
+        if (supported.Contains("ES256"))
+        {
+            return JsonWebKeys.CreateECDsaJson("ES256");
+        }
+
+        if (supported.Contains("PS256"))
+        {
+            return JsonWebKeys.CreateRsaJson("PS256");
+        }
+
+        if (supported.Contains("RS256"))
+        {
+            return JsonWebKeys.CreateRsaJson("RS256");
+        }
+
+        throw new OAuthException("The authorization server does not advertise a supported DPoP signing algorithm (ES256, PS256 or RS256).");
     }
 
     private static Uri ParseLoginStateUri(string uri, string propertyName)
@@ -249,7 +302,8 @@ public class OAuthClient
 
         string scopeString = string.Join(" ", requestedScopes.Where(s => !string.IsNullOrEmpty(s)));
 
-        string proofKey = JsonWebKeys.CreateRsaJson();
+        DiscoveryDocumentResponse metadata = await GetAuthorizationMetadata(authority, cancellationToken).ConfigureAwait(false);
+        string proofKey = CreateProofKey(metadata.DPoPSigningAlgorithmsSupported);
 
         // Special case the client ID if it matches localhost to add the desired scope as query string parameters.
         // See Localhost Client Development at https://atproto.com/specs/oauth#clients.
@@ -259,7 +313,32 @@ public class OAuthClient
         }
 
         string? signingKeyId = clientId.StartsWith("http://localhost", StringComparison.OrdinalIgnoreCase) ? null : _options?.ClientSigningKey?.KeyId;
-        OidcClientOptions oidcClientOptions = BuildOidcClientOptions(proofKey, authority, clientId, returnUri, requestedScopes, signingKeyId);
+        if (signingKeyId is not null &&
+            !metadata.TokenEndpointAuthenticationSigningAlgorithmsSupported.Contains(OAuthClientSigningKey.Algorithm, StringComparer.Ordinal))
+        {
+            throw new OAuthException("The authorization server does not support the configured ES256 client signing keys.");
+        }
+
+        DPoPNonceStore nonces = new();
+        OidcClientOptions oidcClientOptions = BuildOidcClientOptions(
+            proofKey: proofKey,
+            authority: authority,
+            clientId: clientId,
+            returnUri: returnUri,
+            scopes: requestedScopes,
+            signingKeyId: signingKeyId,
+            nonces: nonces);
+        oidcClientOptions.ProviderInformation = new ProviderInformation
+        {
+            IssuerName = metadata.Issuer,
+            KeySet = metadata.KeySet,
+            AuthorizeEndpoint = metadata.AuthorizeEndpoint,
+            PushedAuthorizationRequestEndpoint = metadata.PushedAuthorizationRequestEndpoint,
+            TokenEndpoint = metadata.TokenEndpoint,
+            EndSessionEndpoint = metadata.EndSessionEndpoint,
+            UserInfoEndpoint = metadata.UserInfoEndpoint,
+            TokenEndPointAuthenticationMethods = metadata.TokenEndpointAuthenticationMethodsSupported
+        };
 
         OidcClient oidcClient = new(oidcClientOptions);
 
@@ -313,6 +392,7 @@ public class OAuthClient
                 _loginClientId = clientId;
                 _loginRequestedScope = scopeString;
                 _loginSigningKeyId = signingKeyId;
+                _loginNonces = nonces;
                 _correlationId = correlationId;
 
                 // Replaced rather than merged, and copied rather than aliased, so a second login on this instance neither
@@ -354,6 +434,7 @@ public class OAuthClient
         object? loginGeneration;
         string? savedScope;
         string? signingKeyId;
+        DPoPNonceStore nonces;
 
         // Snapshot the login state as a set, so the rest of the exchange works against one consistent login even if
         // another thread starts a new one part way through.
@@ -376,6 +457,7 @@ public class OAuthClient
             clientId ??= _loginClientId;
             savedScope = _loginRequestedScope;
             signingKeyId = _loginSigningKeyId;
+            nonces = _loginNonces ?? new();
         }
 
         // This login's state is discarded however this call ends, without discarding a login installed since the snapshot.
@@ -406,7 +488,13 @@ public class OAuthClient
             }
 
             OidcClient oidcClient = GetOrCreateOidcClient(
-                proofKey, expectedAuthority, clientId, scopes: requestedScopes, signingKeyId: signingKeyId, loginGeneration: loginGeneration);
+                proofKey: proofKey,
+                authority: expectedAuthority,
+                clientId: clientId,
+                scopes: requestedScopes,
+                signingKeyId: signingKeyId,
+                loginGeneration: loginGeneration,
+                nonces: nonces);
 
             LoginResult loginResult = await oidcClient.ProcessResponseAsync(callbackData, authorizeState, cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -460,7 +548,8 @@ public class OAuthClient
             {
                 OAuthClientId = clientId,
                 RequestedScope = scopeString,
-                ClientSigningKeyId = signingKeyId
+                ClientSigningKeyId = signingKeyId,
+                DPoPNonces = nonces.Snapshot
             };
         }
         finally
@@ -498,6 +587,7 @@ public class OAuthClient
             _loginClientId = null;
             _loginRequestedScope = null;
             _loginSigningKeyId = null;
+            _loginNonces = null;
 
             ClearOidcClient();
         }
@@ -640,10 +730,8 @@ public class OAuthClient
             clientId = QueryHelpers.AddQueryString(clientId, "scope", scopeString);
         }
 
-        // Importing the RSA proof key is not cheap, and Duende may call the client factory more than once for a single
-        // refresh, so the factory is built once here rather than on every call into the lambda.
-        DefaultDPoPProofTokenFactory proofTokenFactory = new(refreshCredential.DPoPProofKey);
         TokenResponseCapture tokenResponse = new();
+        DPoPNonceStore nonces = ((IOriginBoundDPoPCredential)refreshCredential).NonceStore;
 
         OidcClientOptions oidcOptions = new()
         {
@@ -655,8 +743,13 @@ public class OAuthClient
             LoggerFactory = _loggerFactory,
             HttpClientFactory = (oidcOptions) =>
             {
-                // The capturing handler sits beneath the proof handler so it sees the final response of any nonce retry.
-                var httpClient = new HttpClient(new ProofTokenMessageHandler(proofTokenFactory, new TokenResponseCapturingHandler(tokenResponse, _innerFactoryHandler())), true);
+                HttpClient httpClient = new(
+                    handler: new OAuthProofTokenHandler(
+                        proofKey: refreshCredential.DPoPProofKey,
+                        nonces: nonces,
+                        assertionFactory: oidcOptions.GetClientAssertionAsync,
+                        innerHandler: new TokenResponseCapturingHandler(tokenResponse, _innerFactoryHandler())),
+                    disposeHandler: true);
                 return _clientConfigurationHandler(httpClient);
             }
         };
@@ -713,9 +806,7 @@ public class OAuthClient
 
                 Logger.OAuthClientRefreshSucceeded(_logger, authority);
 
-                // A credential holds a single nonce shared between the authorization server and the PDS, so the nonce from
-                // the authorization server's response is not stored; the previous one costs at most one handled challenge.
-                return new(
+                DPoPAccessCredentials refreshed = new(
                     refreshCredential.Service,
                     refreshResult.AccessToken,
                     refreshResult.RefreshToken,
@@ -726,6 +817,9 @@ public class OAuthClient
                     RequestedScope = scopeString,
                     ClientSigningKeyId = signingKeyId
                 };
+                ((IOriginBoundDPoPCredential)refreshed).NonceStore = nonces;
+
+                return refreshed;
             }
         }
     }
@@ -896,6 +990,7 @@ public class OAuthClient
     /// <param name="returnUri">The redirect uri, if the flow needs one.</param>
     /// <param name="scopes">The scopes to request, if any.</param>
     /// <param name="signingKeyId">The signing key ID retained for this login, if any.</param>
+    /// <param name="nonces">The nonce state for this login, if available.</param>
     /// <returns>The <see cref="OidcClientOptions"/> to build an <see cref="OidcClient"/> from.</returns>
     /// <remarks>
     /// <para>
@@ -911,10 +1006,12 @@ public class OAuthClient
         string? clientId = null,
         Uri? returnUri = null,
         IEnumerable<string>? scopes = null,
-        string? signingKeyId = null)
+        string? signingKeyId = null,
+        DPoPNonceStore? nonces = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(proofKey);
         ArgumentNullException.ThrowIfNull(authority);
+        nonces ??= new();
 
         OidcClientOptions oidcOptions = new()
         {
@@ -924,7 +1021,13 @@ public class OAuthClient
             LoggerFactory = _loggerFactory,
             HttpClientFactory = (oidcOptions) =>
             {
-                var httpClient = new HttpClient(new ProofTokenMessageHandler(new DefaultDPoPProofTokenFactory(proofKey), _innerFactoryHandler()), true);
+                HttpClient httpClient = new(
+                    handler: new OAuthProofTokenHandler(
+                        proofKey: proofKey,
+                        nonces: nonces,
+                        assertionFactory: oidcOptions.GetClientAssertionAsync,
+                        innerHandler: _innerFactoryHandler()),
+                    disposeHandler: true);
                 return _clientConfigurationHandler(httpClient);
             }
         };
@@ -969,28 +1072,36 @@ public class OAuthClient
     ///   always public clients, so they never carry an assertion.
     /// </para>
     /// <para>
-    ///   A <paramref name="signingKeyId"/> which matches no configured key falls back to the active key. The authorization
-    ///   server rejects the request if the session is bound to the missing key, which ends the session.
+    ///   A <paramref name="signingKeyId"/> which matches no configured key fails locally rather than silently
+    ///   authenticating an existing session with a different key.
     /// </para>
     /// </remarks>
     internal string? ConfigureClientAssertion(OidcClientOptions oidcOptions, string clientId, Uri authority, string? signingKeyId = null)
     {
-        if (_options is null ||
-            clientId.StartsWith("http://localhost", StringComparison.OrdinalIgnoreCase) ||
-            _options.GetClientSigningKey(signingKeyId, out bool found) is not OAuthClientSigningKey signingKey)
+        if (clientId.StartsWith("http://localhost", StringComparison.OrdinalIgnoreCase))
         {
             return null;
         }
 
-        if (!found)
+        OAuthClientSigningKey? signingKey = _options?.GetClientSigningKey(signingKeyId, out _);
+        if (signingKeyId is not null && (signingKey is null || !string.Equals(signingKey.KeyId, signingKeyId, StringComparison.Ordinal)))
         {
-            Logger.OAuthClientSigningKeyNotFound(_logger, signingKeyId!, signingKey.KeyId);
+            throw new OAuthException("The signing key used to start this session is no longer configured.");
+        }
+
+        if (signingKey is null)
+        {
+            return null;
         }
 
         oidcOptions.GetClientAssertionAsync = () => Task.FromResult(new ClientAssertion
         {
             Type = OAuthClientSigningKey.JwtBearerClientAssertionType,
-            Value = signingKey.CreateClientAssertion(clientId, authority, _timeProvider.GetUtcNow(), _options.ClientAssertionClockSkew)
+            Value = signingKey.CreateClientAssertion(
+                clientId: clientId,
+                authority: authority,
+                now: _timeProvider.GetUtcNow(),
+                clockSkew: _options?.ClientAssertionClockSkew ?? OAuthOptions.DefaultClientAssertionClockSkew)
         });
 
         return signingKey.KeyId;
@@ -1007,6 +1118,7 @@ public class OAuthClient
     /// <param name="scopes">The scopes to request, if any.</param>
     /// <param name="signingKeyId">The signing key ID retained for this login, if any.</param>
     /// <param name="loginGeneration">The identity of the installed login being processed, if any.</param>
+    /// <param name="nonces">The nonce state restored for this login, if available.</param>
     /// <returns>An <see cref="OidcClient"/> configured for the specified <paramref name="proofKey"/> and <paramref name="authority"/>.</returns>
     /// <remarks>
     /// <para>
@@ -1022,7 +1134,8 @@ public class OAuthClient
         Uri? returnUri = null,
         IEnumerable<string>? scopes = null,
         string? signingKeyId = null,
-        object? loginGeneration = null)
+        object? loginGeneration = null,
+        DPoPNonceStore? nonces = null)
     {
         lock (_stateLock)
         {
@@ -1034,7 +1147,14 @@ public class OAuthClient
                 return _oidcClient;
             }
 
-            OidcClient oidcClient = new(BuildOidcClientOptions(proofKey, authority, clientId, returnUri, scopes, signingKeyId));
+            OidcClient oidcClient = new(BuildOidcClientOptions(
+                proofKey: proofKey,
+                authority: authority,
+                clientId: clientId,
+                returnUri: returnUri,
+                scopes: scopes,
+                signingKeyId: signingKeyId,
+                nonces: nonces));
 
             // An older exchange can reach this point after another login has replaced it. It can use its own client,
             // but must not leave that client's private key cached on the instance.

@@ -1642,15 +1642,30 @@ public class AtProtoHttpClient<TResult> where TResult : class
         // An empty nonce header carries nothing to rotate to. Assigning it would throw on a credential whose nonce
         // setter requires a value, out of the middle of handling a response, and would discard a working nonce on one
         // whose setter does not.
-        if (string.IsNullOrWhiteSpace(returnedDPoPNonce) ||
-            string.Equals(dPoPBoundCredential.DPoPNonce, returnedDPoPNonce, StringComparison.Ordinal))
+        if (string.IsNullOrWhiteSpace(returnedDPoPNonce))
+        {
+            return;
+        }
+
+        if (credentials is IOriginBoundDPoPCredential originBoundCredential)
+        {
+            if (!originBoundCredential.NonceStore.Set(httpRequestMessage.RequestUri!, returnedDPoPNonce))
+            {
+                return;
+            }
+        }
+        else if (string.Equals(dPoPBoundCredential.DPoPNonce, returnedDPoPNonce, StringComparison.Ordinal))
         {
             return;
         }
 
         Logger.AtProtoClientDetectedDPoPNonceChanged(_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method);
 
-        dPoPBoundCredential.DPoPNonce = returnedDPoPNonce;
+        if (credentials is not IOriginBoundDPoPCredential ||
+            DPoPNonceStore.GetOrigin(httpRequestMessage.RequestUri!) == DPoPNonceStore.GetOrigin(credentials.Service))
+        {
+            dPoPBoundCredential.DPoPNonce = returnedDPoPNonce;
+        }
 
         // Only credentials a caller can hold on to are worth raising an update for. A refresh credential is created for a
         // single exchange and discarded, so there is nothing for a handler to persist.

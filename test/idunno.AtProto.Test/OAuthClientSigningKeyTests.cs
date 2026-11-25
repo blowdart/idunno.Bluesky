@@ -4,6 +4,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 using Duende.IdentityModel.OidcClient;
 
@@ -20,6 +21,135 @@ public class OAuthClientSigningKeyTests
     private const string ClientId = "https://client.test/oauth-client-metadata.json";
 
     private static readonly DateTimeOffset s_now = new(2025, 1, 2, 3, 4, 5, TimeSpan.Zero);
+
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData("imported", null)]
+    [InlineData("imported", "override")]
+    public void PrivateJwkImportPreservesThePemKeyAndProducesVerifiableAssertions(string? importedKeyId, string? overrideKeyId)
+    {
+        using ECDsa ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        JsonObject jwk = CreatePrivateJwk(ecdsa);
+        if (importedKeyId is not null)
+        {
+            jwk["kid"] = importedKeyId;
+        }
+
+        OAuthClientSigningKey key = OAuthClientSigningKey.FromJwk(jwk.ToJsonString(), overrideKeyId);
+        OAuthClientSigningKey pemKey = OAuthClientSigningKey.FromPem(ecdsa.ExportPkcs8PrivateKeyPem());
+        Assert.Equal(overrideKeyId ?? importedKeyId ?? pemKey.KeyId, key.KeyId);
+        Assert.Equal(pemKey.X, key.X);
+        Assert.Equal(pemKey.Y, key.Y);
+        string[] assertion = key.CreateClientAssertion(
+            clientId: ClientId,
+            authority: new Uri("https://auth.example"),
+            now: s_now,
+            clockSkew: TimeSpan.Zero).Split('.');
+        Assert.True(ecdsa.VerifyData(
+            Encoding.ASCII.GetBytes($"{assertion[0]}.{assertion[1]}"),
+            Base64UrlDecode(assertion[2]),
+            HashAlgorithmName.SHA256));
+
+        using JsonDocument exported = JsonDocument.Parse(key.ToPublicJwk());
+        Assert.Equal(["alg", "crv", "kid", "kty", "use", "x", "y"], exported.RootElement.EnumerateObject().Select(property => property.Name).Order(StringComparer.Ordinal));
+        Assert.Equal(key.KeyId, exported.RootElement.GetProperty("kid").GetString());
+        Assert.Throws<ArgumentException>(() => OAuthClientSigningKey.FromJwk(key.ToPublicJwk()));
+    }
+
+    [Theory]
+    [InlineData("kty", "RSA")]
+    [InlineData("crv", "P-384")]
+    [InlineData("alg", "ES384")]
+    [InlineData("use", "enc")]
+    [InlineData("kid", " ")]
+    [InlineData("x", "not-base64url")]
+    [InlineData("y", null)]
+    [InlineData("d", null)]
+    [InlineData("d", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")]
+    public void PrivateJwkImportRejectsInvalidOrIncompatibleKeys(string member, string? value)
+    {
+        using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        JsonObject jwk = CreatePrivateJwk(key);
+        if (value is null)
+        {
+            jwk.Remove(member);
+        }
+        else
+        {
+            jwk[member] = value;
+        }
+
+        Assert.ThrowsAny<ArgumentException>(() => OAuthClientSigningKey.FromJwk(jwk.ToJsonString()));
+    }
+
+    [Theory]
+    [InlineData("""[]""")]
+    [InlineData("""["verify"]""")]
+    [InlineData("""["sign","deriveKey"]""")]
+    [InlineData("""["encrypt"]""")]
+    public void PrivateJwkImportRejectsKeysNotRestrictedToSigning(string operations)
+    {
+        using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        JsonObject jwk = CreatePrivateJwk(key);
+        jwk["key_ops"] = JsonNode.Parse(operations);
+
+        Assert.Throws<ArgumentException>(() => OAuthClientSigningKey.FromJwk(jwk.ToJsonString()));
+    }
+
+    [Fact]
+    public void PrivateJwkImportRejectsMismatchedPublicAndPrivateKeysAndDuplicateMembers()
+    {
+        using ECDsa first = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        using ECDsa second = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        JsonObject jwk = CreatePrivateJwk(first);
+        jwk["d"] = CreatePrivateJwk(second)["d"]!.DeepClone();
+        Assert.ThrowsAny<ArgumentException>(() => OAuthClientSigningKey.FromJwk(jwk.ToJsonString()));
+        string duplicated = CreatePrivateJwk(first).ToJsonString().Insert(1, "\"alg\":\"ES384\",");
+        Assert.Throws<ArgumentException>(() => OAuthClientSigningKey.FromJwk(duplicated));
+    }
+
+    [Fact]
+    public void GeneratedKeysAreDistinctAndTheirPublicExportsVerifyAssertions()
+    {
+        OAuthClientSigningKey first = OAuthClientSigningKey.Generate();
+        OAuthClientSigningKey second = OAuthClientSigningKey.Generate("second");
+        Assert.NotEqual(first.X, second.X);
+        Assert.Equal("second", second.KeyId);
+        using JsonDocument exported = JsonDocument.Parse(first.ToPublicJwk());
+        using ECDsa publicKey = ECDsa.Create(new ECParameters
+        {
+            Curve = ECCurve.NamedCurves.nistP256,
+            Q = new ECPoint { X = Base64UrlDecode(first.X), Y = Base64UrlDecode(first.Y) }
+        });
+        string[] assertion = first.CreateClientAssertion(
+            clientId: ClientId,
+            authority: new Uri("https://auth.example"),
+            now: s_now,
+            clockSkew: TimeSpan.Zero).Split('.');
+        Assert.True(publicKey.VerifyData(
+            Encoding.ASCII.GetBytes($"{assertion[0]}.{assertion[1]}"),
+            Base64UrlDecode(assertion[2]),
+            HashAlgorithmName.SHA256));
+        Assert.False(exported.RootElement.TryGetProperty("d", out _));
+    }
+
+    /// <summary>
+    /// Exports a private key fixture without depending on the signing key import implementation.
+    /// </summary>
+    private static JsonObject CreatePrivateJwk(ECDsa key)
+    {
+        ECParameters parameters = key.ExportParameters(includePrivateParameters: true);
+
+        return new JsonObject
+        {
+            ["kty"] = "EC",
+            ["crv"] = "P-256",
+            ["alg"] = "ES256",
+            ["x"] = Base64UrlEncode(parameters.Q.X!),
+            ["y"] = Base64UrlEncode(parameters.Q.Y!),
+            ["d"] = Base64UrlEncode(parameters.D!)
+        };
+    }
 
     [Fact]
     public void ClientAssertionClockSkewDefaultsToThirtySeconds()
@@ -325,8 +455,8 @@ public class OAuthClientSigningKeyTests
     [InlineData(null, "active", true)]
     [InlineData("active", "active", true)]
     [InlineData("previous", "previous", true)]
-    [InlineData("unknown", "active", false)]
-    public void GetClientSigningKeySelectsTheSessionKey(string? sessionKeyId, string expectedKeyId, bool expectedFound)
+    [InlineData("unknown", null, false)]
+    public void GetClientSigningKeySelectsTheSessionKey(string? sessionKeyId, string? expectedKeyId, bool expectedFound)
     {
         OAuthOptions options = new(ClientId)
         {
@@ -343,7 +473,6 @@ public class OAuthClientSigningKeyTests
     [Theory]
     [InlineData(null, "active")]
     [InlineData("previous", "previous")]
-    [InlineData("unknown", "active")]
     public async Task ConfigureClientAssertionSignsWithTheSessionKey(string? sessionKeyId, string expectedKeyId)
     {
         OAuthOptions options = new(ClientId)
@@ -359,6 +488,22 @@ public class OAuthClientSigningKeyTests
         Duende.IdentityModel.Client.ClientAssertion assertion = await oidcOptions.GetClientAssertionAsync();
         Assert.Equal(expectedKeyId, usedKeyId);
         Assert.Equal(expectedKeyId, GetHeader(assertion.Value, "kid"));
+    }
+
+    [Fact]
+    public void ConfigureClientAssertionRejectsARemovedSessionKeyInsteadOfUsingTheActiveKey()
+    {
+        OAuthOptions options = new(ClientId) { ClientSigningKey = CreateKey("active") };
+        OAuthClient client = CreateOAuthClient(options, new FakeTimeProvider(s_now));
+        OidcClientOptions oidcOptions = new();
+        Func<Task<Duende.IdentityModel.Client.ClientAssertion>> originalFactory = oidcOptions.GetClientAssertionAsync;
+
+        Assert.Throws<OAuthException>(() => client.ConfigureClientAssertion(
+            oidcOptions: oidcOptions,
+            clientId: ClientId,
+            authority: new Uri("https://auth.example.com/"),
+            signingKeyId: "removed"));
+        Assert.Same(originalFactory, oidcOptions.GetClientAssertionAsync);
     }
 
     [Fact]

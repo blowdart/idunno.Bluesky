@@ -314,6 +314,20 @@ and set it as `OAuthOptions.ClientSigningKey`, when the agent options are first 
 Outside ASP.NET, create the key with `OAuthClientSigningKey.FromPemFile()` or `OAuthClientSigningKey.FromPem()` and set
 `OAuthOptions.ClientSigningKey` yourself.
 
+`OAuthClientSigningKey.FromJwk(privateJwk)` also imports an ES256 private JWK, validating its P-256 coordinates,
+private scalar, algorithm and signing permissions. An explicit key ID overrides the JWK's `kid`; otherwise its `kid`
+is retained, or the RFC 7638 SHA-256 public-key thumbprint is used when neither is supplied.
+`ToPublicJwk()` exports only public parameters and metadata, never the private scalar.
+`OAuthClientSigningKey.Generate()` generates a new P-256 key in memory; it does not persist the private key.
+Do not generate a replacement on every application restart: use securely persisted private JWK or PEM keys for long-lived sessions.
+PEM configuration paths and key rotation work as before.
+
+New confidential-client sign-ins require the authorization server to advertise ES256 client authentication.
+All configured client signing keys currently use ES256, so additional retained keys do not provide other algorithms.
+Existing sessions continue using their original `kid`; a missing retained key fails locally rather than silently using the active key.
+The separate per-session DPoP proof key is negotiated from authorization metadata, preferring ES256, then PS256, then RS256.
+An absent or incompatible DPoP algorithm list fails explicitly. Restoring or refreshing a session retains its proof key and algorithm.
+
 With a signing key set:
 
 * The generated metadata publishes the public key in `jwks` and declares `token_endpoint_auth_method: private_key_jwt`

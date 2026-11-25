@@ -1063,7 +1063,8 @@ public partial class AuthenticationTests
                             {"issuer":"{{pds.Authority}}","authorization_endpoint":"{{pds.Authority}}oauth/authorize",
                             "token_endpoint":"{{pds.Authority}}oauth/token","jwks_uri":"{{pds.Authority}}jwks",
                             "response_types_supported":["code"],"grant_types_supported":["authorization_code","refresh_token"],
-                            "code_challenge_methods_supported":["S256"],"token_endpoint_auth_methods_supported":["none"]}
+                            "code_challenge_methods_supported":["S256"],"token_endpoint_auth_methods_supported":["none"],
+                            "dpop_signing_alg_values_supported":["ES256","PS256"]}
                             """);
                     case "/jwks":
                         return Json(HttpStatusCode.OK, """{"keys":[]}""");

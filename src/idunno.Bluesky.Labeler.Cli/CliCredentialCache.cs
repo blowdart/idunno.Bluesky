@@ -306,7 +306,8 @@ internal sealed class CliCredentialCache : IAsyncDisposable
             RefreshToken: oauth.RefreshToken,
             DPoPProofKey: oauth.DPoPProofKey,
             DPoPNonce: oauth.DPoPNonce,
-            ClientSigningKeyId: oauth.ClientSigningKeyId);
+            ClientSigningKeyId: oauth.ClientSigningKeyId,
+            DPoPNonces: oauth.DPoPNonces);
         DPoPAccessCredentials snapshot = CreateCredentials(entry);
         if (!Matches(snapshot))
         {
@@ -543,7 +544,11 @@ internal sealed class CliCredentialCache : IAsyncDisposable
     {
         OAuthClientId = entry.Binding.ClientMetadataId,
         RequestedScope = entry.Binding.RequestedScope,
-        ClientSigningKeyId = entry.ClientSigningKeyId
+        ClientSigningKeyId = entry.ClientSigningKeyId,
+        DPoPNonces = entry.DPoPNonces ?? new Dictionary<string, string>
+        {
+            [entry.Binding.Service.GetLeftPart(UriPartial.Authority)] = entry.DPoPNonce
+        }
     };
 
     /// <summary>Reads untrusted local data and reports corruption without exposing credential content.</summary>
@@ -731,6 +736,7 @@ internal sealed class CredentialCacheSubscription(Action detach) : IDisposable
 /// <param name="DPoPNonce">The current proof nonce.</param>
 /// <param name="ClientSigningKeyId">The original client signing key identifier.</param>
 /// <param name="LabelerOrigins">The optional labeler origins associated with this session.</param>
+/// <param name="DPoPNonces">The optional origin-bound nonce snapshot, absent in older caches.</param>
 internal sealed record CliCredentialCacheEntry(
     int Version,
     CliCredentialCacheBinding Binding,
@@ -739,7 +745,8 @@ internal sealed record CliCredentialCacheEntry(
     string DPoPProofKey,
     string DPoPNonce,
     string? ClientSigningKeyId,
-    string[]? LabelerOrigins = null)
+    string[]? LabelerOrigins = null,
+    IReadOnlyDictionary<string, string>? DPoPNonces = null)
 {
     /// <summary>Prevents credential snapshots from exposing secrets in diagnostics.</summary>
     /// <returns>A constant redacted representation.</returns>

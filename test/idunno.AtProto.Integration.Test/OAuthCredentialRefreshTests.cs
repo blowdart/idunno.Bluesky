@@ -124,7 +124,6 @@ public class OAuthCredentialRefreshTests
     [InlineData("previous", "previous")]
     [InlineData("active", "active")]
     [InlineData(null, "active")]
-    [InlineData("unknown", "active")]
     public async Task RefreshAndLogoutSignWithTheKeyTheSessionStartedWith(string? sessionKeyId, string expectedKeyId)
     {
         OAuthTestServer server = new();

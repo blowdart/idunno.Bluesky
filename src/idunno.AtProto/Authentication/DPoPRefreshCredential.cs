@@ -9,8 +9,32 @@ namespace idunno.AtProto.Authentication;
 /// <summary>
 /// Encapsulates a refresh token with proof of possession.
 /// </summary>
-public sealed class DPoPRefreshCredential : RefreshCredential, IDPoPBoundCredential
+public sealed class DPoPRefreshCredential : RefreshCredential, IDPoPBoundCredential, IOriginBoundDPoPCredential
 {
+    /// <summary>
+    /// Gets or sets nonce state shared with resource requests for this session.
+    /// </summary>
+    internal DPoPNonceStore NonceStore { get; set; } = new();
+
+    DPoPNonceStore IOriginBoundDPoPCredential.NonceStore { get => NonceStore; set => NonceStore = value; }
+
+    /// <summary>
+    /// Gets a snapshot of DPoP nonces keyed by HTTP origin, or restores a saved snapshot during initialization.
+    /// </summary>
+    /// <remarks>
+    /// <para>Persist this alongside the proof key. Missing entries are learned from nonce challenges.</para>
+    /// </remarks>
+    public IReadOnlyDictionary<string, string> DPoPNonces
+    {
+        get => NonceStore.Snapshot;
+        init
+        {
+            DPoPNonceStore restored = new();
+            restored.Restore(value);
+            NonceStore = restored;
+        }
+    }
+
     /// <summary>
     /// Gets the effective OAuth client identifier used to obtain these credentials, or <see langword="null"/> for older credentials.
     /// </summary>
@@ -67,6 +91,7 @@ public sealed class DPoPRefreshCredential : RefreshCredential, IDPoPBoundCredent
 
         _dPoPProofKey = dPoPProofKey;
         _dPoPNonce = dPoPNonce ?? string.Empty;
+        NonceStore.Set(service, dPoPNonce);
     }
 
     /// <summary>
@@ -83,6 +108,7 @@ public sealed class DPoPRefreshCredential : RefreshCredential, IDPoPBoundCredent
         OAuthClientId = dPoPAccessCredentials.OAuthClientId;
         RequestedScope = dPoPAccessCredentials.RequestedScope;
         ClientSigningKeyId = dPoPAccessCredentials.ClientSigningKeyId;
+        NonceStore = ((IOriginBoundDPoPCredential)dPoPAccessCredentials).NonceStore;
     }
 
     /// <summary>
@@ -127,7 +153,7 @@ public sealed class DPoPRefreshCredential : RefreshCredential, IDPoPBoundCredent
         {
             lock (_dPoPRefreshCredentialLock)
             {
-                return _dPoPNonce;
+                return NonceStore.Get(Service) ?? _dPoPNonce;
             }
         }
 
@@ -136,6 +162,14 @@ public sealed class DPoPRefreshCredential : RefreshCredential, IDPoPBoundCredent
             lock (_dPoPRefreshCredentialLock)
             {
                 _dPoPNonce = value ?? string.Empty;
+                if (string.IsNullOrEmpty(value))
+                {
+                    NonceStore.Remove(Service);
+                }
+                else
+                {
+                    NonceStore.Set(Service, value);
+                }
             }
         }
     }
@@ -171,7 +205,7 @@ public sealed class DPoPRefreshCredential : RefreshCredential, IDPoPBoundCredent
             DPoPProofRequest dPoPProofRequest = new()
             {
                 AccessToken = refreshToken,
-                DPoPNonce = _dPoPNonce,
+                DPoPNonce = NonceStore.Get(httpRequestMessage.RequestUri!),
                 Method = httpRequestMessage.Method.ToString(),
                 Url = httpRequestMessage.GetDPoPUrl()
             };

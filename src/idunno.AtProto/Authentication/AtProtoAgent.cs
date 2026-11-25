@@ -587,7 +587,18 @@ public partial class AtProtoAgent
                 _credentials.Service == refreshedCredentials.Service &&
                 string.Equals(currentDPoPCredentials.DPoPProofKey, refreshedDPoPCredentials.DPoPProofKey, StringComparison.Ordinal))
             {
-                refreshedDPoPCredentials.DPoPNonce = currentDPoPCredentials.DPoPNonce;
+                if (_credentials is IOriginBoundDPoPCredential currentOriginCredential &&
+                    refreshedCredentials is IOriginBoundDPoPCredential refreshedOriginCredential)
+                {
+                    if (currentOriginCredential.NonceStore.Get(_credentials.Service) is string serviceNonce)
+                    {
+                        refreshedOriginCredential.NonceStore.Set(refreshedCredentials.Service, serviceNonce);
+                    }
+                }
+                else
+                {
+                    refreshedDPoPCredentials.DPoPNonce = currentDPoPCredentials.DPoPNonce;
+                }
             }
 
             _credentials = refreshedCredentials;
@@ -733,10 +744,17 @@ public partial class AtProtoAgent
                 // Mutated in place rather than published, so the generation does not change and a refresh which is in
                 // flight is not made to think its credentials have been superseded. A handler already holding this
                 // instance sees the new nonce without being told anything.
-                if (!ReferenceEquals(currentCredentials, updatedAccessCredentials) &&
-                    !string.Equals(currentDPoPCredential.DPoPNonce, updatedDPoPCredential.DPoPNonce, StringComparison.Ordinal))
+                if (!ReferenceEquals(currentCredentials, updatedAccessCredentials))
                 {
-                    currentDPoPCredential.DPoPNonce = updatedDPoPCredential.DPoPNonce;
+                    if (currentCredentials is IOriginBoundDPoPCredential currentOriginCredential &&
+                        updatedAccessCredentials is IOriginBoundDPoPCredential updatedOriginCredential)
+                    {
+                        currentOriginCredential.NonceStore.Restore(updatedOriginCredential.NonceStore.Snapshot);
+                    }
+                    else if (!string.Equals(currentDPoPCredential.DPoPNonce, updatedDPoPCredential.DPoPNonce, StringComparison.Ordinal))
+                    {
+                        currentDPoPCredential.DPoPNonce = updatedDPoPCredential.DPoPNonce;
+                    }
                 }
 
                 credentialsToNotify = currentCredentials;
@@ -2990,7 +3008,11 @@ public partial class AtProtoAgent
                 clientId = QueryHelpers.AddQueryString(clientId, "scope", scopeString);
             }
 
-            OAuthClientSigningKey? revocationSigningKey = Options.OAuthOptions.GetClientSigningKey(accessCredentials.ClientSigningKeyId, out _);
+            OAuthClientSigningKey? revocationSigningKey = Options.OAuthOptions.GetClientSigningKey(accessCredentials.ClientSigningKeyId, out bool signingKeyFound);
+            if (!signingKeyFound)
+            {
+                throw new OAuthException("The signing key used to start this session is no longer configured.");
+            }
 
             Logger.LogoutCalled(_logger, credentials.Did, credentials.Service);
 
@@ -3006,7 +3028,10 @@ public partial class AtProtoAgent
                     accessCredentials.Service,
                     accessCredentials.RefreshToken,
                     accessCredentials.DPoPProofKey,
-                    string.Empty);
+                    string.Empty)
+                {
+                    NonceStore = ((IOriginBoundDPoPCredential)accessCredentials).NonceStore
+                };
 
                 // Revocation credential specific callback to update the DPoP nonce in credentials if the nonce needs updating ,
                 // so that automatic retry in AtProtoHttpClient will have the updated nonce for the retry attempt.
@@ -3016,7 +3041,7 @@ public partial class AtProtoAgent
 
                     if (credentials is DPoPRevokeCredentials refreshedCredentials)
                     {
-                        dPoPRevokeCredentials.DPoPNonce = refreshedCredentials.DPoPNonce;
+                        dPoPRevokeCredentials.NonceStore = refreshedCredentials.NonceStore;
 
                         Logger.OnCredentialUpdatedCallbackCalled(_logger);
                     }
