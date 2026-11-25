@@ -19,7 +19,7 @@ public partial class BlueskyAgent
     /// <returns>A task that represents the asynchronous update operation. The task result contains the outcome of the
     /// update, including the updated record information.</returns>
     /// <exception cref="AuthenticationRequiredException">Thrown if the user is not authenticated when attempting to update the status.</exception>
-    /// <exception cref="ArgumentException">Thrown if the status record's URI authority is not a valid DID or does not match the current user's DID.</exception>
+    /// <exception cref="ArgumentException">Thrown if the status record's URI authority is not a valid DID, does not match the current user's DID, or identifies a permissioned space.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -33,7 +33,12 @@ public partial class BlueskyAgent
     {
         ArgumentNullException.ThrowIfNull(status);
 
-        if (status.Uri.Authority is not Did recordDid)
+        if (status.Uri.IsSpaceUri)
+        {
+            throw SpaceUriGuard.NotSupported(status.Uri, nameof(status));
+        }
+
+        if (status.Uri.Repo is not Did recordDid)
         {
             throw new ArgumentException("Uri authority is not a DID", nameof(status));
         }

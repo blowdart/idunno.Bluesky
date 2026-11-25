@@ -456,9 +456,11 @@ internal sealed class TolerantPolymorphicConverter(
         return new Converter(typeToConvert, nestedOptions);
     }
 
+#pragma warning disable BSKYSpaces
     private static bool IsScalarConverter(JsonConverter converter) =>
-        converter is CidConverter or AtUriConverter or AtIdentifierConverter or DidConverter or HandleConverter or
+        converter is CidConverter or AtUriConverter or SpaceAtUriConverter or AtIdentifierConverter or DidConverter or HandleConverter or
             NsidConverter or RecordKeyConverter or TimestampIdentifierConverter or ByteConverter;
+#pragma warning restore BSKYSpaces
 
     private static int GetMaxDepth(JsonSerializerOptions options) => options.MaxDepth == 0 ? 64 : options.MaxDepth;
 

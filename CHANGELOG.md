@@ -58,6 +58,7 @@
 #### idunno.Bluesky.Labeler
 
 * Host-neutral label issuance and signed negation for accounts or records, with optional CID scope and expiry, authorization and policy providers, durable retries and audited no-ops.
+* Rejects permissioned space URIs as label record targets; label record targets must identify records in public repositories.
 * Signed-label storage and distribution contracts with immutable snapshots, ordered replay, stable cursors, operation receipts and persistence metrics.
 * Xenon reports, exact-subject cases and appeals with retained evidence, assignment, escalation, temporary mutes and atomic label and report decisions. Intake never labels content automatically.
 * Verified DID and handle enrollment, Administrator, Moderator and Viewer roles, local OS delegations, live revocation, last-administrator and owner protection with explicit ownership transfer, and administrative audit.
@@ -83,9 +84,11 @@
 #### idunno.AtProto.Types
 
 * Added `IParsable<T>` support to `AtUri`, `Cid`, `Did`, `Handle`, `Nsid` and `RecordKey`, including `Parse` and `TryParse` overloads accepting an `IFormatProvider`.
+* Added `SpaceAtUri` for permissioned space and space-record URIs. `AtUri` parsing, string factories and JSON deserialization recognize both URI forms, while preserving value-based equality across `AtUri` and `SpaceAtUri`. An experimental, record-value-only compatibility path accepts legacy alpha space URIs and normalizes them to the current form.
 
 #### idunno.AtProto
 
+* Rejects permissioned space URIs in repository record reads and deletes rather than treating the space authority as a repository.
 * Added optional-CID support for `com.atproto.repo.getRecord` results, with `HasCid` and `TryGetStrongReference()` for safely handling records without a CID.
 * Added service-token verification overloads that use the library's SSRF-protected HTTP client by default while retaining caller-supplied client overloads.
 * Adds separate Ozone administration service-token verification for exact labeler service and PDS bare-DID audiences, retaining method binding, replay identifiers and strict generic/native verification.
@@ -125,6 +128,7 @@
 * Made `Graph.ListItem` public, with constructors and null validation for list and subject values, including object initializers and `with` expressions.
 
 * Added `CreateStarterPack()`, `UpdateStarterPack()` and `DeleteStarterPack()` helpers, and `CollectionNsid.StarterPack`. Creation supports caller-supplied record keys, and updates using repository records compare the previous CID to protect against concurrent changes. These helpers modify only the starter pack record, not its referenced list or feeds.
+* Rejects permissioned space URIs in Bluesky helpers that read, update or delete records in a public repository.
 
 #### idunno.Bluesky.AspNet.Authentication
 
@@ -151,6 +155,10 @@
 * Live backpressure preserves virtual `OnRecordReceived` callbacks, handles expected queue shutdown (including explicit `CloseAsync()` while the queue is full) without false error logs, and keeps queue-wait cancellation separate from socket reads so enumerator and asynchronous Jetstream disposal can complete a bounded graceful close.
 
 ### ⚠️ Breaking Changes
+
+#### idunno.AtProto.Types
+
+* `AtUri.Repo` is now nullable because a permissioned space URI's authority identifies a space, not a repository. Use `AtUri.IsSpaceUri` or `AtUri.TryGetSpaceUri()` to identify and access space-specific components.
 
 #### idunno.Bluesky
 

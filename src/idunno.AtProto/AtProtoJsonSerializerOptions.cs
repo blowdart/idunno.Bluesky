@@ -25,8 +25,13 @@ public static class AtProtoJsonSerializerOptions
     internal static JsonSerializerOptions CreateMutableOptions() => new(JsonSerializerOptions.Web)
     {
         AllowOutOfOrderMetadataProperties = true,
-        TypeInfoResolver = SourceGenerationContext.Default,
+        TypeInfoResolver = SourceGenerationTypeInfoResolver,
     };
+
+#pragma warning disable BSKYSpaces
+    internal static IJsonTypeInfoResolver SourceGenerationTypeInfoResolver { get; } =
+        JsonTypeInfoResolver.Combine(SourceGenerationContext.Default, SpaceSourceGenerationContext.Default);
+#pragma warning restore BSKYSpaces
 
     /// <summary>
     /// Creates read-only JSON options for AtProto types after applying caller configuration.

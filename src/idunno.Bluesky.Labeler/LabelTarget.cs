@@ -46,10 +46,15 @@ public sealed class LabelTarget
     /// <param name="cid">An optional expected record version.</param>
     /// <returns>A record target.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="uri"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException"><paramref name="uri"/> does not identify a complete record.</exception>
+    /// <exception cref="ArgumentException"><paramref name="uri"/> does not identify a complete record, or identifies a record in a permissioned space.</exception>
     public static LabelTarget Record(AtUri uri, Cid? cid = null)
     {
         ArgumentNullException.ThrowIfNull(uri);
+        if (uri.IsSpaceUri)
+        {
+            throw new ArgumentException("A record locator must identify a record in a public repository, not a permissioned space.", nameof(uri));
+        }
+
         if (uri.Collection is null || uri.RecordKey is null)
         {
             throw new ArgumentException("A record locator must contain a collection and record key.", nameof(uri));

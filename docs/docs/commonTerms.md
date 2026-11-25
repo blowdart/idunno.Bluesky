@@ -7,13 +7,20 @@ This documentation contains some common terms that you will see when discussing 
 If you looked at the return value from `agent.Post()` you would have seen that the API returns some information, including a `StrongReference`, a `Uri` and a `Cid`.
 
 ### <a name="uri">at:// uris</a>
-This is not an HTTPS URI, it is an [`at://` uri](https://atproto.com/specs/at-uri-scheme). An `at://` uri is a reference to a record on the network.
+This is not an HTTPS URI, it is an [AT URI](https://atproto.com/specs/at-uri-scheme). A public AT URI is a reference to a record in a repository.
 
-It is made up of three parts, an authority, a collection and a record key:
+The public form is made up of three parts, an authority, a collection and a record key:
 
 `"at://" AUTHORITY [ "/" COLLECTION [ "/" RKEY ] ]`
 
 The authority is a [DID](#dids), which is who or what owns the content, the collection is used as a grouping of record types, and the rKey is the key to the individual record.
+
+Permissioned space data uses a separate URI form:
+
+* A space: `at:space/{spaceDid}/{spaceType}/{skey}`
+* A record in a space: `at:space/{spaceDid}/{spaceType}/{skey}/{authorDid}/{collection}/{rkey}`
+
+The space authority and author are DIDs. Unlike a public AT URI, a space URI's authority identifies a space, not a repository. The C# SDK represents both forms with `AtUri`; `SpaceAtUri` exposes their space-specific components.
 
 ### <a name="cid">CID</a>
 This is a [content identifier](https://github.com/multiformats/cid), a way to reference a revision of a record pointed to by an `at://` uri.

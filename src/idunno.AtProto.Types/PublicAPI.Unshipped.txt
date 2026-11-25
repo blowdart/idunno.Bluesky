@@ -11,3 +11,34 @@ static idunno.AtProto.Nsid.Parse(string! s, System.IFormatProvider? provider) ->
 static idunno.AtProto.Nsid.TryParse(string? s, System.IFormatProvider? provider, out idunno.AtProto.Nsid! result) -> bool
 static idunno.AtProto.RecordKey.Parse(string! s, System.IFormatProvider? provider) -> idunno.AtProto.RecordKey!
 static idunno.AtProto.RecordKey.TryParse(string? s, System.IFormatProvider? provider, out idunno.AtProto.RecordKey! result) -> bool
+*REMOVED*idunno.AtProto.AtUri.Repo.get -> idunno.AtProto.AtIdentifier!
+*REMOVED*override idunno.AtProto.AtUri.Equals(object? obj) -> bool
+*REMOVED*override idunno.AtProto.AtUri.GetHashCode() -> int
+*REMOVED*override idunno.AtProto.AtUri.ToString() -> string!
+idunno.AtProto.AtUri.IsSpaceUri.get -> bool
+idunno.AtProto.AtUri.Repo.get -> idunno.AtProto.AtIdentifier?
+[BSKYSpaces]idunno.AtProto.AtUri.TryGetSpaceUri(out idunno.AtProto.SpaceAtUri? spaceUri) -> bool
+[BSKYSpaces]idunno.AtProto.Json.SpaceAtUriConverter
+[BSKYSpaces]idunno.AtProto.Json.SpaceAtUriConverter.SpaceAtUriConverter() -> void
+[BSKYSpaces]idunno.AtProto.Json.SpaceRecordValueUriConverter
+[BSKYSpaces]idunno.AtProto.Json.SpaceRecordValueUriConverter.SpaceRecordValueUriConverter() -> void
+[BSKYSpaces]idunno.AtProto.SpaceAtUri
+[BSKYSpaces]idunno.AtProto.SpaceAtUri.AuthorDid.get -> idunno.AtProto.Did?
+[BSKYSpaces]idunno.AtProto.SpaceAtUri.IsRecord.get -> bool
+[BSKYSpaces]idunno.AtProto.SpaceAtUri.SpaceAtUri(idunno.AtProto.Did! spaceDid, idunno.AtProto.Nsid! spaceType, string! spaceKey) -> void
+[BSKYSpaces]idunno.AtProto.SpaceAtUri.SpaceAtUri(idunno.AtProto.Did! spaceDid, idunno.AtProto.Nsid! spaceType, string! spaceKey, idunno.AtProto.Did! authorDid, idunno.AtProto.Nsid! collection, idunno.AtProto.RecordKey! recordKey) -> void
+[BSKYSpaces]idunno.AtProto.SpaceAtUri.SpaceAtUri(string! s) -> void
+[BSKYSpaces]idunno.AtProto.SpaceAtUri.SpaceDid.get -> idunno.AtProto.Did!
+[BSKYSpaces]idunno.AtProto.SpaceAtUri.SpaceKey.get -> string!
+[BSKYSpaces]idunno.AtProto.SpaceAtUri.SpaceType.get -> idunno.AtProto.Nsid!
+[BSKYSpaces]override idunno.AtProto.Json.SpaceAtUriConverter.Read(ref System.Text.Json.Utf8JsonReader reader, System.Type! typeToConvert, System.Text.Json.JsonSerializerOptions! options) -> idunno.AtProto.SpaceAtUri?
+[BSKYSpaces]override idunno.AtProto.Json.SpaceAtUriConverter.Write(System.Text.Json.Utf8JsonWriter! writer, idunno.AtProto.SpaceAtUri! value, System.Text.Json.JsonSerializerOptions! options) -> void
+[BSKYSpaces]override idunno.AtProto.Json.SpaceRecordValueUriConverter.CanConvert(System.Type! typeToConvert) -> bool
+[BSKYSpaces]override idunno.AtProto.Json.SpaceRecordValueUriConverter.CreateConverter(System.Type! typeToConvert, System.Text.Json.JsonSerializerOptions! options) -> System.Text.Json.Serialization.JsonConverter!
+override sealed idunno.AtProto.AtUri.Equals(object? obj) -> bool
+override sealed idunno.AtProto.AtUri.GetHashCode() -> int
+override sealed idunno.AtProto.AtUri.ToString() -> string!
+[BSKYSpaces]static idunno.AtProto.SpaceAtUri.Parse(string! s, System.IFormatProvider? provider) -> idunno.AtProto.SpaceAtUri!
+[BSKYSpaces]static idunno.AtProto.SpaceAtUri.TryParse(string? s, out idunno.AtProto.SpaceAtUri? result) -> bool
+[BSKYSpaces]static idunno.AtProto.SpaceAtUri.TryParse(string? s, System.IFormatProvider? provider, out idunno.AtProto.SpaceAtUri! result) -> bool
+[BSKYSpaces]static idunno.AtProto.SpaceAtUri.TryParseRecordValue(string? s, out idunno.AtProto.SpaceAtUri? result) -> bool

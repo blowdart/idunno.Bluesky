@@ -32,7 +32,12 @@ public partial class BlueskyAgent
     {
         ArgumentNullException.ThrowIfNull(profile);
 
-        if (profile.Uri.Authority is not Did recordDid)
+        if (profile.Uri.IsSpaceUri)
+        {
+            throw SpaceUriGuard.NotSupported(profile.Uri, nameof(profile));
+        }
+
+        if (profile.Uri.Repo is not Did recordDid)
         {
             throw new ArgumentException("Uri authority is not a DID", nameof(profile));
         }

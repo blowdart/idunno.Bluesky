@@ -118,6 +118,7 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, or its collection or rkey property is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> identifies a permissioned space.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -131,6 +132,12 @@ public partial class BlueskyAgent
         CancellationToken cancellationToken = default) where TRecord : BlueskyRecord
     {
         ArgumentNullException.ThrowIfNull(uri);
+
+        if (uri.IsSpaceUri)
+        {
+            throw SpaceUriGuard.NotSupported(uri, nameof(uri));
+        }
+
         ArgumentNullException.ThrowIfNull(uri.Collection);
         ArgumentNullException.ThrowIfNull(uri.RecordKey);
 

@@ -24,8 +24,7 @@ internal static class ReportRecordResolver
         using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(token, deadline.Token);
         try
         {
-            Did did = (Did)uri.Repo;
-            if (did.Method is not ("plc" or "web"))
+            if (uri.Repo is not Did did || did.Method is not ("plc" or "web"))
             {
                 return new(null, "pds-unavailable", null, clock.GetUtcNow());
             }

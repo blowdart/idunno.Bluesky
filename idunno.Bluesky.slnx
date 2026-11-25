@@ -126,6 +126,7 @@
     <File Path="docs/docs/requestsAndResponses.md" />
     <File Path="docs/docs/savingAndRestoringAuthentication.md" />
     <File Path="docs/docs/sourceGeneration.md" />
+    <File Path="docs/docs/spaces.md" />
     <File Path="docs/docs/threadGatesAndPostGates.md" />
     <File Path="docs/docs/timeline.md" />
     <File Path="docs/docs/toc.yml" />

@@ -16,7 +16,7 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-    /// <exception cref="ArgumentException">Thrown when the provided subject is not a valid list record.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="subject"/> is not a valid list record, or identifies a permissioned space.</exception>
     public async Task<AtProtoHttpResult<CreateRecordResult>> CreateReferenceListOptOut(AtUri subject, CancellationToken cancellationToken = default)
     {
         return await CreateReferenceListOptOut(rKey: null, subject, cancellationToken).ConfigureAwait(false);
@@ -30,7 +30,7 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-    /// <exception cref="ArgumentException">Thrown when the provided subject is not a valid list record.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="subject"/> is not a valid list record, or identifies a permissioned space.</exception>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
     public async Task<AtProtoHttpResult<CreateRecordResult>> CreateReferenceListOptOut(RecordKey? rKey, AtUri subject, CancellationToken cancellationToken = default)
     {
@@ -39,6 +39,11 @@ public partial class BlueskyAgent
         if (!IsAuthenticated)
         {
             throw new AuthenticationRequiredException();
+        }
+
+        if (subject.IsSpaceUri)
+        {
+            throw SpaceUriGuard.NotSupported(subject, nameof(subject));
         }
 
         if (!Did.TryParse(subject.Repo.Value, out _))

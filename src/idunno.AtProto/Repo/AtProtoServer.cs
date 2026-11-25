@@ -681,6 +681,7 @@ public static partial class AtProtoServer
     /// <exception cref="ArgumentNullException">
     /// Thrown when any of <paramref name="repositoryRecord"/>, <paramref name="service"/>, <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> are <see langword="null"/>.
     /// </exception>
+    /// <exception cref="ArgumentException">Thrown when the URI of <paramref name="repositoryRecord"/> is a space URI.</exception>
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
     [RequiresDynamicCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
     [RequiresUnreferencedCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
@@ -700,6 +701,12 @@ public static partial class AtProtoServer
     {
         ArgumentNullException.ThrowIfNull(repositoryRecord);
         ArgumentNullException.ThrowIfNull(repositoryRecord.Value);
+
+        if (repositoryRecord.Uri.IsSpaceUri)
+        {
+            throw SpaceUriGuard.NotSupported(repositoryRecord.Uri, nameof(repositoryRecord));
+        }
+
         ArgumentNullException.ThrowIfNull(repositoryRecord.Uri.Collection);
         ArgumentNullException.ThrowIfNull(repositoryRecord.Uri.RecordKey);
         ArgumentNullException.ThrowIfNull(service);
@@ -869,6 +876,7 @@ public static partial class AtProtoServer
     /// <exception cref="ArgumentNullException">
     /// Thrown when any of <paramref name="repositoryRecord"/>, <paramref name="service"/>, <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> are <see langword="null"/>.
     /// </exception>
+    /// <exception cref="ArgumentException">Thrown when the URI of <paramref name="repositoryRecord"/> is a space URI.</exception>
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
     [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
     [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
@@ -889,6 +897,12 @@ public static partial class AtProtoServer
     {
         ArgumentNullException.ThrowIfNull(repositoryRecord);
         ArgumentNullException.ThrowIfNull(repositoryRecord.Value);
+
+        if (repositoryRecord.Uri.IsSpaceUri)
+        {
+            throw SpaceUriGuard.NotSupported(repositoryRecord.Uri, nameof(repositoryRecord));
+        }
+
         ArgumentNullException.ThrowIfNull(repositoryRecord.Uri.Collection);
         ArgumentNullException.ThrowIfNull(repositoryRecord.Uri.RecordKey);
         ArgumentNullException.ThrowIfNull(service);

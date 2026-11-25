@@ -165,7 +165,8 @@ public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbedde
         }
 
         // If the document metadata is not an AtUri we can't do anything with it, so return the open graph result (which may be null if there was no open graph metadata).
-        if (!AtUri.TryParse(documentMetadata.Trim(), out AtUri? documentAtUri))
+        // Standard site documents are public records, so a space URI cannot identify one.
+        if (!AtUri.TryParse(documentMetadata.Trim(), out AtUri? documentAtUri) || documentAtUri.IsSpaceUri)
         {
             return result;
         }
@@ -197,7 +198,7 @@ public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbedde
         }
 
         // If the publication metadata is not an AtUri we can't do anything with it, so return the open graph result (which may be null if there was no open graph metadata).
-        if (!AtUri.TryParse(publicationMetadata.Trim(), out AtUri? publicationAtUri))
+        if (!AtUri.TryParse(publicationMetadata.Trim(), out AtUri? publicationAtUri) || publicationAtUri.IsSpaceUri)
         {
             return result;
         }

@@ -141,7 +141,7 @@ public partial class BlueskyAgent
         }
 
         AtUri uri = link.Uri;
-        if (uri.Authority is not Did linkDid ||
+        if (uri.Repo is not Did linkDid ||
             linkDid != Did ||
             uri.Collection != CollectionNsid.Link ||
             uri.RecordKey is null)
