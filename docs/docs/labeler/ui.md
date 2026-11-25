@@ -248,6 +248,13 @@ The UI package does not enable or configure authentication for custom hosts. A h
 must configure its authentication cookie/data-protection lifecycle, HTTPS, and
 forwarded headers according to its deployment needs.
 
+For the optional `/Xenon/ForwardedHeaders` diagnostic page to show values received before
+forwarded-header processing, call `app.UseLabelerForwardedHeadersDiagnostics()` after any
+path-base middleware and before `app.UseForwardedHeaders()`. The middleware captures only
+GET requests for that page; the page remains restricted to signed-in team members.
+It does not configure proxy trust. See the [standalone deployment guide](deployment.md)
+for how to interpret the untrusted values.
+
 ## Authorization and operations
 
 Every administrative page requires an authenticated Bluesky DID. The UI derives the actor only from

@@ -1,0 +1,48 @@
+@page
+@using idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages
+@model ForwardedHeadersModel
+@{
+    ViewData["Title"] = "Forwarded headers";
+}
+<h1>Forwarded headers</h1>
+<section class="panel forwarded-headers">
+    <p><strong>Received before forwarding</strong> shows the connection and selected headers received by this host before forwarded-header processing. Earlier proxies may already have changed them. <strong>Effective after forwarding</strong> shows the values available to the application after processing.</p>
+    <p>ASP.NET Core removes each forwarded value it applies, so a header can be present before processing and absent afterwards. Compare the effective remote IP address with your public IP address. For an HTTPS visit, the effective scheme should be <code>https</code>.</p>
+    <p>All header values are untrusted and can be supplied or modified by clients or proxies. Their presence does not prove the immediate peer was trusted or that forwarded values were applied.</p>
+    @if (Model.Received is null)
+    {
+        <p>Pre-forwarding capture is unavailable. The host must enable diagnostics before forwarded-header middleware.</p>
+    }
+    <h2>Request and standard headers</h2>
+    <table>
+        <thead>
+            <tr><th scope="col">Request field</th><th scope="col">Received before forwarding</th><th scope="col">Effective after forwarding</th></tr>
+        </thead>
+        <tbody>
+            <tr><th scope="row">Request scheme</th><td>@(Model.Received?.Scheme ?? "(capture unavailable)")</td><td>@Model.Scheme</td></tr>
+            <tr><th scope="row">Remote IP address</th><td>@(Model.Received is null ? "(capture unavailable)" : Model.Received.RemoteIpAddress ?? "(none)")</td><td>@(Model.RemoteIpAddress ?? "(none)")</td></tr>
+            @for (int i = 0; i < Model.Headers.Count; i++)
+            {
+                KeyValuePair<string, string?> header = Model.Headers[i];
+                string received = Model.Received is null ? "(capture unavailable)" : ForwardedHeadersModel.DisplayHeader(Model.Received.Headers[i].Value);
+                <tr><th scope="row">@header.Key</th><td>@received</td><td>@ForwardedHeadersModel.DisplayHeader(header.Value)</td></tr>
+            }
+        </tbody>
+    </table>
+    <h2>Hosting-specific headers</h2>
+    <p><strong>Cloudflare-specific headers:</strong> Headers beginning with <code>CF-</code> are Cloudflare-specific. <code>CF-Connecting-IP</code> is displayed for diagnostics, but the host does not use it to configure forwarding.</p>
+    <p><strong>Azure Front Door-specific headers:</strong> Azure Front Door may add <code>X-Azure-ClientIP</code>, <code>X-Azure-SocketIP</code>, <code>X-Azure-Ref</code>, <code>X-Azure-RequestChain</code> and <code>X-Azure-FDID</code>. These are displayed for diagnostics only and do not configure forwarding. Azure App Service Authentication can also add <code>X-MS-CLIENT-PRINCIPAL*</code> identity headers and provider-token headers; they are intentionally not captured or displayed because they can contain sensitive identity or token data.</p>
+    <table>
+        <thead>
+            <tr><th scope="col">Request field</th><th scope="col">Received before forwarding</th><th scope="col">Effective after forwarding</th></tr>
+        </thead>
+        <tbody>
+            @for (int i = 0; i < Model.HostingHeaders.Count; i++)
+            {
+                KeyValuePair<string, string?> header = Model.HostingHeaders[i];
+                string received = Model.Received is null ? "(capture unavailable)" : ForwardedHeadersModel.DisplayHeader(Model.Received.HostingHeaders[i].Value);
+                <tr><th scope="row">@header.Key</th><td>@received</td><td>@ForwardedHeadersModel.DisplayHeader(header.Value)</td></tr>
+            }
+        </tbody>
+    </table>
+</section>

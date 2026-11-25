@@ -160,6 +160,49 @@ public class OAuthAccessTokenValidationTests
         Assert.Equal("Issued token scope does not contain atproto or begin with ref:.", exception.Message);
     }
 
+    [Theory]
+    [InlineData("atproto transition:generic")]
+    [InlineData("ref:scopeReference")]
+    public void ResponseScopeIsUsedWhenTheTokenHasNoScopeClaim(string grantedScope)
+    {
+        CreateOAuthClient().ValidateAccessToken(CreateToken(scope: null), s_authority, Guid.NewGuid(), grantedScope);
+    }
+
+    [Theory]
+    [InlineData("transition:generic")]
+    [InlineData("notatproto")]
+    public void ResponseScopeWithoutAtProtoFailsValidation(string grantedScope)
+    {
+        OAuthException exception = Assert.Throws<OAuthException>(
+            () => CreateOAuthClient().ValidateAccessToken(CreateToken(scope: null), s_authority, Guid.NewGuid(), grantedScope));
+
+        Assert.Equal("Issued token scope does not contain atproto or begin with ref:.", exception.Message);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("transition:generic")]
+    public void ResponseScopeTakesPrecedenceOverTheTokenScopeClaim(string grantedScope)
+    {
+        Assert.Throws<OAuthException>(
+            () => CreateOAuthClient().ValidateAccessToken(CreateToken(scope: "atproto"), s_authority, Guid.NewGuid(), grantedScope));
+    }
+
+    [Theory]
+    [InlineData(null, "atproto transition:generic")]
+    [InlineData("atproto", "atproto")]
+    public void EffectiveScopeIsReturnedForWarnings(string? grantedScope, string expected)
+    {
+        string effective = CreateOAuthClient().ValidateAccessToken(
+            CreateToken(scope: grantedScope is null ? expected : "ignored atproto"),
+            s_authority,
+            Guid.NewGuid(),
+            grantedScope);
+
+        Assert.Equal(grantedScope ?? expected, effective);
+    }
+
     [Fact]
     public void TokenWithNoNotBeforeClaimPassesValidation()
     {

@@ -631,10 +631,25 @@ public class BlueskySignInManager
         
         using var agent = new BlueskyAgent(httpClientFactory: _httpClientFactory, options: CreateAgentOptions());
         OAuthClient oAuthClient = agent.CreateOAuthClient();
-        DPoPAccessCredentials? accessCredentials = await oAuthClient.ProcessOAuth2Response(
-            correlationState,
-            HttpContext.Request.QueryString.Value[1..],
-            HttpContext.RequestAborted).ConfigureAwait(false);
+        DPoPAccessCredentials? accessCredentials;
+        try
+        {
+            accessCredentials = await oAuthClient.ProcessOAuth2Response(
+                correlationState,
+                HttpContext.Request.QueryString.Value[1..],
+                HttpContext.RequestAborted).ConfigureAwait(false);
+        }
+        catch (OAuthException ex)
+        {
+            // The authorization server's response failed validation. This is a failed login, not a server fault,
+            // so it must not surface as an unhandled exception.
+            Logger.SignInFailedOAuth2ResponseRejected(ex.Message);
+            _metrics.SigninsFailed.Add(
+                1,
+                new KeyValuePair<string, object?>(BlueskyAuthenticationMetrics.SignInFailureReasonTagName, "OAuth2ResponseRejected"));
+            return new SignInResult(Succeeded: false, ErrorProcessingOAuth2Response: true);
+        }
+
         if (accessCredentials is null)
         {
             Logger.SignInFailedOAuth2ProcessingFailed();

@@ -74,7 +74,8 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
         bool xenonUi = false,
         bool controlDatabaseTime = false,
         bool ozoneAdministration = false,
-        string[]? ozoneAllowedOrigins = null)
+        string[]? ozoneAllowedOrigins = null,
+        bool captureForwardedHeaders = true)
     {
         TestServerBuilder fixture = new(database);
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
@@ -134,6 +135,15 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
 
                 await next(context);
             });
+        }
+
+        if (xenonUi && captureForwardedHeaders)
+        {
+            fixture._app.UseLabelerForwardedHeadersDiagnostics();
+        }
+
+        if (configureAdministration is not null)
+        {
             ForwardedHeadersOptions forwardedOptions = new()
             {
                 ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,

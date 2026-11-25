@@ -424,16 +424,30 @@ configuration section. Invalid limits fail options validation at startup.
 An exhausted allowance or full peer table returns `429 Too Many Requests`, `Retry-After: 60`
 and `Cache-Control: no-store`, without authenticating, dispatching or writing an audit row.
 Other peers retain their own allowances while table capacity remains available.
-Protected local administration and public label distribution do not consume these allowances.
 
-Admitted insecure, malformed and unauthenticated requests retain their required denial audit;
-audit failure still returns `503 Service Unavailable`. Administrative routes require HTTPS:
-admitted requests for which `HttpRequest.IsHttps` is `false` are audited and rejected with
-`403 Forbidden` before service-token authentication.
+Unauthenticated `invocation-denied` events (for example, invalid tokens, malformed invocations
+and insecure transport) share a process-wide audit budget,
+`LabelerAdministration:MaximumDenialAuditsPerMinute` (1-1,000,000, default 600). Denials over
+the budget are still rejected but not individually audited. The first suppression in each window
+emits a warning; the number suppressed is not logged or persisted in a summary audit row.
+Separate classified rejection warnings can still be emitted for each request and are not limited
+by this budget.
+
+Failures after a service token has been verified, such as a replayed token or inactive team
+membership, are recorded separately by the store as failed `authenticate` events and do not use
+this budget. They remain subject to peer admission and the retention limit below. Admitted denials
+recorded as `invocation-denied` for authenticated callers do not consume the budget. For
+internet-facing deployments also rate limit `/xrpc/*` at your edge proxy. Protected local
+administration and public label distribution do not consume these allowances.
+
+While the budget remains, admitted transport, malformed-invocation and token-verification
+denials are individually audited; failure to record those audits returns `503 Service Unavailable`.
+Administrative routes require HTTPS: admitted requests for which `HttpRequest.IsHttps` is `false`
+are rejected with `403 Forbidden` before service-token authentication and audited while budget remains.
 These admission limits bound each process, not an entire deployment. The built-in SQLite,
 PostgreSQL and MySQL stores additionally retain only the latest 256 boundary-denial events
 per issuer across all clients, reasons and host processes sharing the store. This includes
-`invocation-denied` events and failed service `authenticate` events. Each admitted denial is
+`invocation-denied` events and failed service `authenticate` events. Each recorded denial is
 persisted with its original timestamp, actor and bounded reason; older boundary denials and
 their query projections are pruned in the same transaction. No credential or raw request
 content is retained. The next denial also trims excess boundary-denial history from older

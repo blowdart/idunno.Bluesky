@@ -69,6 +69,10 @@ public partial class XenonUiTests
         Assert.EndsWith(oauthNavigation ? "form-action 'self' https:" : "form-action 'self'", policy, StringComparison.Ordinal);
         Assert.DoesNotContain("unsafe-inline", policy, StringComparison.Ordinal);
         Assert.DoesNotContain("unsafe-eval", policy, StringComparison.Ordinal);
+        Assert.Equal("nosniff", Assert.Single(page.Headers.GetValues("X-Content-Type-Options")));
+        Assert.Single(page.Headers.GetValues("Referrer-Policy"));
+        Assert.Contains("camera=()", Assert.Single(page.Headers.GetValues("Permissions-Policy")), StringComparison.Ordinal);
+        Assert.Equal("DENY", Assert.Single(page.Headers.GetValues("X-Frame-Options")));
         string html = await page.Content.ReadAsStringAsync(token);
         Assert.Contains("<!DOCTYPE html>", html, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("/Xenon/js/theme", html, StringComparison.Ordinal);
@@ -80,6 +84,208 @@ public partial class XenonUiTests
         Assert.Equal(HttpStatusCode.OK, json.StatusCode);
         Assert.Equal("application/json", json.Content.Headers.ContentType?.MediaType);
         Assert.False(json.Headers.Contains("Content-Security-Policy"));
+    }
+
+    [Theory]
+    [InlineData("192.0.2.1", true, true)]
+    [InlineData("192.0.2.77", true, false)]
+    [InlineData("192.0.2.1", false, false)]
+    public async Task ForwardedHeadersPageShowsReceivedAndEffectiveValues(
+        string peer,
+        bool sendForwardedProto,
+        bool forwarded)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new();
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
+            configureAdministration: services =>
+            {
+                services.AddLabelerModeration(TestServerBuilder.s_issuer, identity);
+                services.AddSingleton<IDidHandleResolver, TestHandles>();
+                services.AddLabelerAdministration(s_audience, key, identity);
+            },
+            moderation: true,
+            xenonUi: true);
+        Assert.True((await fixture.Services.GetRequiredService<ILabelAdministrationStore>().BootstrapAsync(
+            s_administrator, "uid:0", "forwarded-bootstrap", token)).Succeeded);
+
+        using HttpResponseMessage anonymous = await fixture.Client.GetAsync("/Xenon/ForwardedHeaders", token);
+        Assert.Equal(HttpStatusCode.Unauthorized, anonymous.StatusCode);
+
+        using HttpRequestMessage request = new(HttpMethod.Get, "/Xenon/ForwardedHeaders");
+        request.Headers.Add("X-Test-Did", s_administrator.Value);
+        request.Headers.Add("X-Test-Remote-IP", peer);
+        request.Headers.Add("X-Forwarded-For", "198.51.100.1");
+        if (sendForwardedProto)
+        {
+            request.Headers.Add("X-Forwarded-Proto", "https");
+        }
+
+        request.Headers.TryAddWithoutValidation("CF-Connecting-IP", "<b>untrusted</b>");
+        request.Headers.TryAddWithoutValidation("X-Azure-ClientIP", "<b>front-door-client</b>");
+        request.Headers.TryAddWithoutValidation("X-Azure-SocketIP", "192.0.2.10");
+        request.Headers.TryAddWithoutValidation("X-Azure-Ref", "reference-id");
+        request.Headers.TryAddWithoutValidation("X-Azure-RequestChain", "hops=1");
+        request.Headers.TryAddWithoutValidation("X-Azure-FDID", "front-door-id");
+        request.Headers.TryAddWithoutValidation("X-MS-CLIENT-PRINCIPAL", "sensitive-principal");
+        request.Headers.TryAddWithoutValidation("X-MS-TOKEN-AAD-ACCESS-TOKEN", "sensitive-provider-token");
+        request.Headers.TryAddWithoutValidation("Authorization", "Bearer sensitive-token");
+        request.Headers.TryAddWithoutValidation("Cookie", "sample=secret-cookie");
+        using HttpResponseMessage response = await fixture.Client.SendAsync(request, token);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(response.Headers.CacheControl?.NoStore);
+        string html = await response.Content.ReadAsStringAsync(token);
+        Assert.Contains("Received before forwarding", html, StringComparison.Ordinal);
+        Assert.Contains("Effective after forwarding", html, StringComparison.Ordinal);
+        int standardSection = html.IndexOf("<h2>Request and standard headers</h2>", StringComparison.Ordinal);
+        int hostingSection = html.IndexOf("<h2>Hosting-specific headers</h2>", StringComparison.Ordinal);
+        Assert.True(standardSection >= 0 && hostingSection > standardSection);
+        int hostingTable = html.IndexOf("<table>", hostingSection, StringComparison.Ordinal);
+        Assert.True(hostingTable > hostingSection);
+        int hostingTableEnd = html.IndexOf("</table>", hostingTable, StringComparison.Ordinal);
+        Assert.True(hostingTableEnd > hostingTable);
+        string standardHtml = html[standardSection..hostingSection];
+        string hostingHtml = html[hostingTable..hostingTableEnd];
+        string[] standardFields = ["Request scheme", "Remote IP address", "X-Forwarded-For", "X-Forwarded-Proto", "X-Original-For", "X-Original-Proto"];
+        foreach (string field in standardFields)
+        {
+            string row = $"<th scope=\"row\">{field}</th>";
+            Assert.Contains(row, standardHtml, StringComparison.Ordinal);
+            Assert.DoesNotContain(row, hostingHtml, StringComparison.Ordinal);
+        }
+
+        string[] hostingFields = ["CF-Connecting-IP", "X-Azure-ClientIP", "X-Azure-SocketIP", "X-Azure-Ref", "X-Azure-RequestChain", "X-Azure-FDID"];
+        foreach (string field in hostingFields)
+        {
+            string row = $"<th scope=\"row\">{field}</th>";
+            Assert.Contains(row, hostingHtml, StringComparison.Ordinal);
+            Assert.DoesNotContain(row, standardHtml, StringComparison.Ordinal);
+        }
+
+        string hostingExplanation = html[hostingSection..hostingTable];
+        Assert.Contains("Cloudflare-specific headers", hostingExplanation, StringComparison.Ordinal);
+        Assert.Contains("Azure Front Door-specific headers", hostingExplanation, StringComparison.Ordinal);
+        Assert.Contains(
+            $"<th scope=\"row\">Request scheme</th><td>http</td><td>{(forwarded ? "https" : "http")}</td>",
+            html,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            $"<th scope=\"row\">Remote IP address</th><td>{peer}</td><td>{(forwarded ? "198.51.100.1" : peer)}</td>",
+            html,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            $"<th scope=\"row\">X-Forwarded-For</th><td>198.51.100.1</td><td>{(forwarded ? "(not present)" : "198.51.100.1")}</td>",
+            html,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            $"<th scope=\"row\">X-Forwarded-Proto</th><td>{(sendForwardedProto ? "https" : "(not present)")}</td><td>{(forwarded || !sendForwardedProto ? "(not present)" : "https")}</td>",
+            html,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            $"<th scope=\"row\">X-Original-Proto</th><td>(not present)</td><td>{(forwarded ? "http" : "(not present)")}</td>",
+            html,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "<th scope=\"row\">CF-Connecting-IP</th><td>&lt;b&gt;untrusted&lt;/b&gt;</td><td>&lt;b&gt;untrusted&lt;/b&gt;</td>",
+            html,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "<th scope=\"row\">X-Azure-ClientIP</th><td>&lt;b&gt;front-door-client&lt;/b&gt;</td><td>&lt;b&gt;front-door-client&lt;/b&gt;</td>",
+            html,
+            StringComparison.Ordinal);
+        Assert.Contains("<th scope=\"row\">X-Azure-SocketIP</th>", html, StringComparison.Ordinal);
+        Assert.Contains("<th scope=\"row\">X-Azure-Ref</th>", html, StringComparison.Ordinal);
+        Assert.Contains("<th scope=\"row\">X-Azure-RequestChain</th>", html, StringComparison.Ordinal);
+        Assert.Contains("<th scope=\"row\">X-Azure-FDID</th>", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("<b>untrusted</b>", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-principal", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-provider-token", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-token", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("secret-cookie", html, StringComparison.Ordinal);
+        Assert.Contains("Their presence does not prove", html, StringComparison.Ordinal);
+        Assert.Contains("Headers beginning with", html, StringComparison.Ordinal);
+        Assert.Contains("are Cloudflare-specific", html, StringComparison.Ordinal);
+        Assert.Contains("Azure Front Door-specific headers", html, StringComparison.Ordinal);
+        Assert.Contains("intentionally not captured or displayed", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ForwardedHeadersPageExplainsWhenCaptureIsUnavailable()
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new();
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
+            configureAdministration: services =>
+            {
+                services.AddLabelerModeration(TestServerBuilder.s_issuer, identity);
+                services.AddSingleton<IDidHandleResolver, TestHandles>();
+                services.AddLabelerAdministration(s_audience, key, identity);
+            },
+            moderation: true,
+            xenonUi: true,
+            captureForwardedHeaders: false);
+        Assert.True((await fixture.Services.GetRequiredService<ILabelAdministrationStore>().BootstrapAsync(
+            s_administrator, "uid:0", "forwarded-bootstrap", token)).Succeeded);
+
+        using HttpResponseMessage response = await GetAsAsync(fixture, s_administrator, "/Xenon/ForwardedHeaders");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        string html = await response.Content.ReadAsStringAsync(token);
+        Assert.Contains("Pre-forwarding capture is unavailable", html, StringComparison.Ordinal);
+        Assert.Contains("<th scope=\"row\">Request scheme</th><td>(capture unavailable)</td><td>http</td>", html, StringComparison.Ordinal);
+        Assert.Contains("<th scope=\"row\">X-Forwarded-For</th><td>(capture unavailable)</td><td>(not present)</td>", html, StringComparison.Ordinal);
+        Assert.Contains("<th scope=\"row\">CF-Connecting-IP</th><td>(capture unavailable)</td><td>(not present)</td>", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ForwardedHeadersPageShowsUnprocessedHopsAndDoesNotReusePreviousCapture()
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new();
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
+            configureAdministration: services =>
+            {
+                services.AddLabelerModeration(TestServerBuilder.s_issuer, identity);
+                services.AddSingleton<IDidHandleResolver, TestHandles>();
+                services.AddLabelerAdministration(s_audience, key, identity);
+            },
+            moderation: true,
+            xenonUi: true);
+        Assert.True((await fixture.Services.GetRequiredService<ILabelAdministrationStore>().BootstrapAsync(
+            s_administrator, "uid:0", "forwarded-bootstrap", token)).Succeeded);
+
+        using HttpRequestMessage request = new(HttpMethod.Get, "/Xenon/ForwardedHeaders");
+        request.Headers.Add("X-Test-Did", s_administrator.Value);
+        request.Headers.Add("X-Test-Remote-IP", "192.0.2.1");
+        request.Headers.Add("X-Forwarded-For", "198.51.100.1, 198.51.100.2");
+        request.Headers.Add("X-Forwarded-Proto", "https, http");
+        request.Headers.Add("CF-Connecting-IP", "198.51.100.3");
+        using HttpResponseMessage response = await fixture.Client.SendAsync(request, token);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        string html = await response.Content.ReadAsStringAsync(token);
+        Assert.Contains(
+            "<th scope=\"row\">X-Forwarded-For</th><td>198.51.100.1, 198.51.100.2</td><td>198.51.100.1</td>",
+            html,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "<th scope=\"row\">X-Forwarded-Proto</th><td>https, http</td><td>https</td>",
+            html,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "<th scope=\"row\">Remote IP address</th><td>192.0.2.1</td><td>198.51.100.2</td>",
+            html,
+            StringComparison.Ordinal);
+
+        using HttpResponseMessage nextResponse = await GetAsAsync(fixture, s_administrator, "/Xenon/ForwardedHeaders");
+        Assert.Equal(HttpStatusCode.OK, nextResponse.StatusCode);
+        string nextHtml = await nextResponse.Content.ReadAsStringAsync(token);
+        Assert.Contains(
+            "<th scope=\"row\">CF-Connecting-IP</th><td>(not present)</td><td>(not present)</td>",
+            nextHtml,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("198.51.100.3", nextHtml, StringComparison.Ordinal);
     }
 
     [Theory]

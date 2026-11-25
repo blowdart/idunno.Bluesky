@@ -147,12 +147,14 @@ provider, or a host-owned configuration file:
 | `LabelerAdministration:RequestsPerMinutePerPeer` | Shared remote administration/issuance/Ozone allowance per peer per fixed one-minute window; defaults to `120`, valid range `1`-`100000` |
 | `LabelerAdministration:MaximumConcurrentRequestsPerPeer` | Concurrent admitted remote requests per peer; defaults to `16`, valid range `1`-`1024` |
 | `LabelerAdministration:MaximumTrackedPeers` | Bounded per-process admission peer table; defaults to `1024`, valid range `1`-`65536` |
+| `LabelerAdministration:MaximumDenialAuditsPerMinute` | Process-wide per-minute budget for unauthenticated `invocation-denied` rows; defaults to `600`, valid range `1`-`1000000` |
 | `LabelerOzone:Enabled` | Startup opt-in to `MapOzoneCompatibility()` discovery and labeler-focused administration; defaults to `false` and does not enable remote administration |
 | `LabelerOzone:AllowedOrigins` | Exact Ozone UI HTTP(S) origin array, including non-default ports and without trailing slashes; defaults to empty (no cross-origin access). For a local UI, set `LabelerOzone__AllowedOrigins__0=http://127.0.0.1:3000`. CORS is automatic and limited to mapped Ozone routes; changes require a restart |
 | `LabelerModeration:Enabled` | Optional Xenon report/case/policy backend; defaults to `false` |
 | `LabelerModeration:VerificationFreshness` | Persisted declaration-observation lifetime; defaults to `00:30:00`; active policies are checked in the background every five minutes |
 | `Labeler:TrustedProxies` | Optional array of exact proxy IP addresses trusted to forward client IP and HTTPS scheme |
-| `Labeler:ForwardLimit` | Positive maximum forwarding hops; defaults to `1` when trusted proxies are configured |
+| `Labeler:TrustedNetworks` | Optional array of IPv4 or IPv6 CIDR networks trusted to forward client IP and HTTPS scheme |
+| `Labeler:ForwardLimit` | Positive maximum forwarding hops; defaults to `1` when trusted proxies or networks are configured |
 
 The host also configures a protected local endpoint. Its default is the Windows named pipe
 `idunno-labeler-admin` or the Linux Unix socket `/run/labeler/admin.sock`. The socket and
@@ -178,7 +180,9 @@ so existing deployments are not silently enabled.
 
 Remote admission runs before authentication and denial auditing, using the connection address
 after trusted forwarding. Exhaustion returns `429` with `Retry-After: 60` and no audit write.
-Admitted denials remain audited and fail closed with `503` if audit persistence fails.
+Unauthenticated invocation-denial audits are suppressed after their process-wide budget is
+exhausted; attempted budgeted audit writes fail closed with `503` if persistence fails. Failed
+service authentication after token verification is audited separately and does not use this budget.
 Admission limits are process-local. Built-in stores also retain at most 256 boundary-denial
 events per issuer across all clients and processes sharing the database, without pruning
 successful or operation-specific audit history. Upgrade every writer to enforce this bound.
@@ -200,14 +204,41 @@ each publication/recovery method separately as needed. The headless host does no
 run the desktop callback listener or distribute an OAuth client secret.
 
 For TLS termination at a reverse proxy, configure the proxy's **actual immediate peer IP**
-in `Labeler:TrustedProxies`, for example `Labeler__TrustedProxies__0=172.20.0.2`, and keep the
-container HTTP port private to that proxy network. The proxy must replace, not append to
+in `Labeler:TrustedProxies`, for example `Labeler__TrustedProxies__0=172.20.0.2`, or its
+trusted IPv4/IPv6 CIDR in `Labeler:TrustedNetworks`, for example
+`Labeler__TrustedNetworks__0=172.20.0.0/24`. Keep the container HTTP port private to that
+proxy network. The proxy must replace, not append to
 untrusted client-supplied headers, and forward both `X-Forwarded-For` and
 `X-Forwarded-Proto: https`. Set `Labeler__ForwardLimit` to the exact supported hop count when
-multiple trusted proxies are involved, and list every trusted proxy IP. No forwarding headers
-are processed when the list is empty; arbitrary client addresses never become trusted.
+multiple trusted proxies are involved, and list every trusted proxy IP or network. No forwarding headers
+are processed when both trusted-proxy settings are empty; arbitrary client addresses never become trusted.
 Without a TLS-terminating proxy, configure Kestrel HTTPS directly. Do not enable the
 ASP.NET Core environment shortcut that trusts all forwarded headers.
+
+To verify the proxy configuration, sign in to Xenon as a team member and browse directly to
+`/Xenon/ForwardedHeaders`; the page is not linked from the menu. It compares the scheme,
+remote IP and selected proxy headers received by the host before forwarding with their
+effective values afterwards, with hosting-specific headers in a separate table. The selected
+headers are `X-Forwarded-For`, `X-Forwarded-Proto`,
+`X-Original-For`, `X-Original-Proto`, `CF-Connecting-IP`, `X-Azure-ClientIP`,
+`X-Azure-SocketIP`, `X-Azure-Ref`, `X-Azure-RequestChain` and `X-Azure-FDID`.
+Capture occurs only for GET requests to this page and lasts for that request.
+
+Headers beginning with `CF-` are Cloudflare-specific. `CF-Connecting-IP` is shown for
+diagnostics only and does not configure forwarding.
+
+Azure Front Door may add the `X-Azure-*` headers listed above. They are shown for
+diagnostics only and do not configure forwarding. Azure App Service Authentication can
+also add `X-MS-CLIENT-PRINCIPAL*` identity headers and provider-token headers; these are
+intentionally not captured or displayed because they can contain sensitive identity or
+token data.
+
+ASP.NET Core removes forwarded values it applies, so a header can be present before
+processing and absent afterwards. For an HTTPS visit, the effective scheme should be `https`
+and the remote IP should be the client's address rather than the proxy's, provided the proxy
+sends the appropriate values and the relevant hops are trusted. All displayed headers are
+untrusted: their presence does not prove that the immediate peer was trusted or that the
+forwarded values were applied. Responses are marked `Cache-Control: private, no-store`.
 
 For a non-development HTTPS public origin, the canonical host and `Xenon.TestHost` apply
 HTTP Strict Transport Security (HSTS) to HTTPS responses, including responses served by
