@@ -18,7 +18,8 @@ internal sealed class TokenResponseCapture
 
 /// <summary>
 /// A handler which records the <c>scope</c> of successful token responses, so the authoritative granted scope can be
-/// validated when the access token itself, which is opaque to clients, carries no scope claim.
+/// validated when the access token itself, which is opaque to clients, carries no scope claim. The body is parsed
+/// whatever its <c>Content-Type</c>, because the token response is parsed that way by the token client.
 /// </summary>
 /// <param name="capture">Where captured values are stored.</param>
 /// <param name="innerHandler">The handler that sends the request.</param>
@@ -28,9 +29,7 @@ internal sealed class TokenResponseCapturingHandler(TokenResponseCapture capture
     {
         HttpResponseMessage response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
-        if (request.Method == HttpMethod.Post &&
-            response.IsSuccessStatusCode &&
-            response.Content.Headers.ContentType?.MediaType?.EndsWith("json", StringComparison.OrdinalIgnoreCase) == true)
+        if (request.Method == HttpMethod.Post && response.IsSuccessStatusCode)
         {
             try
             {

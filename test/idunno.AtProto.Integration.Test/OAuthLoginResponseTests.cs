@@ -392,6 +392,60 @@ public class OAuthLoginResponseTests
     }
 
     [Theory]
+    [InlineData("text/plain", true, "atproto", true)]
+    [InlineData(null, true, "atproto", true)]
+    [InlineData("application/json; charset=utf-8", true, "atproto", true)]
+    [InlineData("text/plain", false, "transition:generic", false)]
+    [InlineData(null, false, "transition:generic", false)]
+    [InlineData("text/plain", false, "", false)]
+    public async Task RefreshValidatesTheResponseScopeRegardlessOfTheTokenResponseContentType(
+        string? contentType,
+        bool omitJwtScope,
+        string responseScope,
+        bool accepted)
+    {
+        LoginTestServer server = new()
+        {
+            OmitJwtScope = omitJwtScope,
+            ResponseScope = responseScope,
+            TokenResponseContentType = contentType
+        };
+
+        Task<DPoPAccessCredentials?> refresh = CreateClient(server).RefreshCredentials(
+            CreateRefreshCredential(),
+            s_authority,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        if (accepted)
+        {
+            Assert.NotNull(await refresh);
+        }
+        else
+        {
+            await Assert.ThrowsAsync<OAuthException>(() => refresh);
+        }
+    }
+
+    [Fact]
+    public async Task RefreshDoesNotReuseTheScopeCapturedByAnEarlierRefresh()
+    {
+        LoginTestServer server = new() { OmitJwtScope = true, ResponseScope = "atproto" };
+        OAuthClient client = CreateClient(server);
+
+        Assert.NotNull(await client.RefreshCredentials(
+            CreateRefreshCredential(),
+            s_authority,
+            cancellationToken: TestContext.Current.CancellationToken));
+
+        server.OmitResponseScope = true;
+
+        await Assert.ThrowsAsync<OAuthException>(() => client.RefreshCredentials(
+            CreateRefreshCredential(),
+            s_authority,
+            cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task ConfidentialLoginAndRefreshNonceRetriesCreateFreshClientAssertions(bool restoreState)
@@ -832,6 +886,21 @@ public class OAuthLoginResponseTests
         }
     }
 
+    /// <summary>
+    /// Creates a refresh credential for the test account whose original request asked for the <c>atproto</c> scope.
+    /// </summary>
+    private static DPoPRefreshCredential CreateRefreshCredential() =>
+        new(new DPoPAccessCredentials(
+            s_service,
+            CreateAccessJwt(new Did(AccountDid)),
+            "refreshToken",
+            JwtBuilder.CreateProofKey(),
+            "nonce")
+        {
+            OAuthClientId = ClientId,
+            RequestedScope = "atproto"
+        });
+
     private static OAuthClient CreateClient(LoginTestServer server, OAuthOptions? options = null) =>
         new(httpClientConfigurator: httpClient => httpClient,
             innerHandlerFactory: server.TestServer.CreateHandler,
@@ -893,6 +962,16 @@ public class OAuthLoginResponseTests
         internal bool OmitJwtScope { get; set; }
 
         internal string ResponseScope { get; set; } = "atproto";
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the token response omits its top level <c>scope</c> member.
+        /// </summary>
+        internal bool OmitResponseScope { get; set; }
+
+        /// <summary>
+        /// Gets or sets the <c>Content-Type</c> of successful token responses; <see langword="null"/> sends none.
+        /// </summary>
+        internal string? TokenResponseContentType { get; set; } = "application/json";
 
         internal bool GateTokenRequests { get; set; }
 
@@ -1035,15 +1114,15 @@ public class OAuthLoginResponseTests
                         TokenRequestedClientId = tokenForm["client_id"].ToString();
                     }
 
+                    string scopeMember = OmitResponseScope ? string.Empty : $",\n  \"scope\": \"{ResponseScope}\"";
                     response.Headers["DPoP-Nonce"] = "serverIssuedNonce";
-                    response.ContentType = "application/json";
+                    response.ContentType = TokenResponseContentType;
                     await response.WriteAsync($$"""
                         {
                           "access_token": "{{(OmitJwtScope ? JwtBuilder.CreateJwt(new Did(AccountDid), issuer: Authority, audience: ServerDid) : CreateAccessJwt(new Did(AccountDid)))}}",
                           "token_type": "{{(IssueBearerToken ? "Bearer" : "DPoP")}}",
                           "expires_in": 900,
-                          "refresh_token": "refreshToken",
-                          "scope": "{{ResponseScope}}"
+                          "refresh_token": "refreshToken"{{scopeMember}}
                         }
                         """);
                     return;
