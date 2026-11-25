@@ -10,6 +10,7 @@ using idunno.AtProto.Authentication;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 
 namespace idunno.AtProto.Integration.Test;
@@ -1162,6 +1163,51 @@ public class OAuthCredentialRefreshTests
         Assert.Equal(0, credentialsUpdatedCount);
     }
 
+    [Fact]
+    public async Task GetSessionSnapshotUpdatesOnlyTheNonceForItsRequestOrigin()
+    {
+        OAuthTestServer server = new();
+        using OAuthTestAgent agent = (OAuthTestAgent)CreateAgent(server);
+        Uri service = new($"https://{DomainName}");
+        string proofKey = JwtBuilder.CreateProofKey();
+        DPoPAccessCredentials currentCredentials = new(
+            service,
+            CreateAccessJwt(new Did(AccountDid)),
+            "initialRefreshToken",
+            proofKey,
+            "initialPdsNonce")
+        {
+            DPoPNonces = new Dictionary<string, string>
+            {
+                ["https://oauth.test.internal"] = "initialPdsNonce",
+                ["https://authorization.test.internal"] = "latestAuthorizationNonce"
+            }
+        };
+        Assert.True(await agent.Login(currentCredentials, TestContext.Current.CancellationToken));
+
+        DPoPAccessCredentials credentialsSnapshot = new(
+            service,
+            currentCredentials.AccessJwt,
+            currentCredentials.RefreshToken,
+            proofKey,
+            currentCredentials.DPoPNonce)
+        {
+            DPoPNonces = new Dictionary<string, string>
+            {
+                ["https://oauth.test.internal"] = "initialPdsNonce",
+                ["https://authorization.test.internal"] = "staleAuthorizationNonce"
+            }
+        };
+
+        AtProtoHttpResult<Session> result = await agent.GetSession(credentialsSnapshot, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(["initialPdsNonce", "rotatedPdsNonce"], server.GetSessionNonces);
+        Assert.Equal("latestAuthorizationNonce", currentCredentials.DPoPNonces["https://authorization.test.internal"]);
+        Assert.Equal("rotatedPdsNonce", currentCredentials.DPoPNonces["https://oauth.test.internal"]);
+        Assert.Equal(currentCredentials.DPoPNonces, credentialsSnapshot.DPoPNonces);
+    }
+
     private static CustomDPoPCredentials CreateCustomCredentials(string refreshToken) =>
         new(new Uri($"https://{DomainName}"), CreateAccessJwt(new Did(AccountDid)), refreshToken);
 
@@ -1255,6 +1301,8 @@ public class OAuthCredentialRefreshTests
         internal List<string> RevocationClientAssertionJtis { get; } = [];
 
         internal List<string> RevocationTokenTypeHints { get; } = [];
+
+        internal List<string?> GetSessionNonces { get; } = [];
 
         internal bool GateRefresh { get; set; }
 
@@ -1400,6 +1448,22 @@ public class OAuthCredentialRefreshTests
                 case "/xrpc/com.atproto.server.describeServer":
                     response.ContentType = "application/json";
                     await response.WriteAsync($$"""{"did":"{{ServerDid}}","availableUserDomains":[".{{DomainName}}"]}""");
+                    return;
+
+                case "/xrpc/com.atproto.server.getSession":
+                    JsonWebToken proof = new(request.Headers["DPoP"].ToString());
+                    GetSessionNonces.Add(proof.TryGetClaim("nonce", out System.Security.Claims.Claim? nonceClaim) ? nonceClaim.Value : null);
+                    if (GetSessionNonces.Count == 1)
+                    {
+                        response.StatusCode = StatusCodes.Status401Unauthorized;
+                        response.Headers["DPoP-Nonce"] = "rotatedPdsNonce";
+                        response.ContentType = "application/json";
+                        await response.WriteAsync("""{"error":"use_dpop_nonce","error_description":"Authorization server requires nonce in DPoP proof"}""");
+                        return;
+                    }
+
+                    response.ContentType = "application/json";
+                    await response.WriteAsync($$"""{"handle":"{{DomainName}}","did":"{{AccountDid}}","active":true}""");
                     return;
 
                 default:

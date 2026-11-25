@@ -749,7 +749,10 @@ public partial class AtProtoAgent
                     if (currentCredentials is IOriginBoundDPoPCredential currentOriginCredential &&
                         updatedAccessCredentials is IOriginBoundDPoPCredential updatedOriginCredential)
                     {
-                        currentOriginCredential.NonceStore.Restore(updatedOriginCredential.NonceStore.Snapshot);
+                        if (!ReferenceEquals(currentOriginCredential.NonceStore, updatedOriginCredential.NonceStore))
+                        {
+                            currentOriginCredential.NonceStore.Restore(updatedOriginCredential.NonceStore.Snapshot);
+                        }
                     }
                     else if (!string.Equals(currentDPoPCredential.DPoPNonce, updatedDPoPCredential.DPoPNonce, StringComparison.Ordinal))
                     {
@@ -2420,7 +2423,35 @@ public partial class AtProtoAgent
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentException.ThrowIfNullOrEmpty(accessCredentials.AccessJwt);
 
+        ShareNonceStoreWithMatchingCredentials(accessCredentials);
+
         return await AtProtoServer.GetSession(accessCredentials, HttpClient, InternalOnCredentialsUpdatedCallBack, LoggerFactory, MaximumResponseSize, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Shares the current OAuth session's nonce store with a matching credential snapshot before it can receive updates.
+    /// </summary>
+    private void ShareNonceStoreWithMatchingCredentials(AccessCredentials accessCredentials)
+    {
+        if (accessCredentials is not IOriginBoundDPoPCredential updatedOriginCredential ||
+            accessCredentials is not IDPoPBoundCredential updatedDPoPCredential)
+        {
+            return;
+        }
+
+        lock (_credentialLock)
+        {
+            if (_credentials is AccessCredentials currentCredentials &&
+                currentCredentials is IOriginBoundDPoPCredential currentOriginCredential &&
+                currentCredentials is IDPoPBoundCredential currentDPoPCredential &&
+                currentCredentials.Service == accessCredentials.Service &&
+                string.Equals(currentCredentials.AccessJwt, accessCredentials.AccessJwt, StringComparison.Ordinal) &&
+                string.Equals(currentCredentials.RefreshToken, accessCredentials.RefreshToken, StringComparison.Ordinal) &&
+                string.Equals(currentDPoPCredential.DPoPProofKey, updatedDPoPCredential.DPoPProofKey, StringComparison.Ordinal))
+            {
+                updatedOriginCredential.NonceStore = currentOriginCredential.NonceStore;
+            }
+        }
     }
 
     /// <summary>
