@@ -48,6 +48,12 @@ internal sealed class TokenResponseCapturingHandler(TokenResponseCapture capture
             {
                 // Not a token response; Duende reports its own error for malformed bodies.
             }
+            catch
+            {
+                // The caller never receives the response if reading it fails or is cancelled, so it must be disposed here.
+                response.Dispose();
+                throw;
+            }
         }
 
         return response;
