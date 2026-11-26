@@ -1,0 +1,32 @@
+{
+  "createSpace": {
+    "statusCode": 200,
+    "body": {
+      "space": "at:space/did:plc:fixture/app.bsky.bookmark/fixture"
+    }
+  },
+  "createRecord": {
+    "statusCode": 200,
+    "body": {
+      "uri": "at:space/did:plc:fixture/app.bsky.bookmark/fixture/did:plc:writer/app.bsky.feed.post/3k4duaz5vfs2b",
+      "cid": "bafyreig32pwtd7tcunqgzycd7hnquetiovko6jfbcwfwtj22gqvic7qqd4",
+      "validationStatus": "valid"
+    }
+  },
+  "putRecord": {
+    "statusCode": 200,
+    "body": {
+      "uri": "at:space/did:plc:fixture/app.bsky.bookmark/fixture/did:plc:writer/app.bsky.feed.post/3k4duaz5vfs2b",
+      "cid": "bafyreihdcj4pqoq37d3z6h6k7ed5iki5csu22ykeciks2dcbwfpdkrn7fe",
+      "validationStatus": "valid"
+    }
+  },
+  "deleteRecord": {
+    "statusCode": 200,
+    "body": {}
+  },
+  "deleteSpace": {
+    "statusCode": 200,
+    "body": null
+  }
+}

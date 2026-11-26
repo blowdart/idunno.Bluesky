@@ -11,4 +11,8 @@
     <ProjectReference Include="..\..\src\idunno.AtProto\idunno.AtProto.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="TestData\SpaceAlphaResponses.json" />
+  </ItemGroup>
+
 </Project>

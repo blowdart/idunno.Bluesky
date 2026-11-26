@@ -202,6 +202,10 @@
 | | [com.atproto.server.getServiceAuth](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/server/getServiceAuth.json) | `AtProtoAgent.GetServiceAuth()` (DID or exact `AtProtoServiceReference` audience) | ✔ |
 | | [com.atproto.server.getSession](https://endpoints.bsky.app/#bluesky-app/tag/comatprotoserver/GET/xrpc/com.atproto.server.getSession) | `AtProtoAgent.GetSession()` | ✔ |
 | | [com.atproto.server.refreshSession](https://endpoints.bsky.app/#bluesky-app/tag/comatprotoserver/POST/xrpc/com.atproto.server.refreshSession) | `AtProtoAgent.RefreshSession()` | ✔ |
+| **Space** | [com.atproto.space.createRecord](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/space/createRecord.json) | `AtProtoAgent.CreateSpaceRecord()` | ✔ Experimental |
+| | [com.atproto.space.createSpace](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/space/createSpace.json) | `AtProtoAgent.CreateSpace()` | ✔ Experimental |
+| | [com.atproto.space.deleteRecord](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/space/deleteRecord.json) | `AtProtoAgent.DeleteSpaceRecord()` | ✔ Experimental |
+| | [com.atproto.space.putRecord](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/space/putRecord.json) | `AtProtoAgent.PutSpaceRecord()` | ✔ Experimental |
 | **Sync** | [com.atproto.sync.getBlob](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/getBlob.json) | `AtProtoAgent.GetBlob()` | ✔ |
 | | [com.atproto.sync.getBlocks](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/getBlocks.json) | `AtProtoAgent.GetBlocks()` | ✔ |
 | | [com.atproto.sync.getHostStatus](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/getHostStatus.json) | `AtProtoAgent.GetHostStatus()` | ✔ |
