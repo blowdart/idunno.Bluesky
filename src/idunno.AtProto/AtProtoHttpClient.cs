@@ -1661,8 +1661,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
 
         Logger.AtProtoClientDetectedDPoPNonceChanged(_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method);
 
-        if (credentials is not IOriginBoundDPoPCredential ||
-            DPoPNonceStore.GetOrigin(httpRequestMessage.RequestUri!) == DPoPNonceStore.GetOrigin(credentials.Service))
+        if (credentials is not IOriginBoundDPoPCredential)
         {
             dPoPBoundCredential.DPoPNonce = returnedDPoPNonce;
         }

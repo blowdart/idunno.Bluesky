@@ -3522,8 +3522,6 @@ public partial class AtProtoAgent
             throw new CredentialException(refreshCredential);
         }
 
-        ShareNonceStoreWithMatchingRefreshCredential(refreshCredential, expectedDid);
-
         // Declined before anything is sent to the token endpoint, so the supplied credential is left unspent and still
         // usable. Rejecting only after the exchange would destroy it.
         if (IsRefreshForADifferentActor(expectedDid, out Did? agentDid))
@@ -3575,6 +3573,8 @@ public partial class AtProtoAgent
 
                         return false;
                     }
+
+                    ShareNonceStoreWithMatchingRefreshCredential(refreshCredential, expectedDid);
 
                     if (HasRefreshTokenAlreadyBeenExchanged(refreshCredential.RefreshToken, tokenHash))
                     {

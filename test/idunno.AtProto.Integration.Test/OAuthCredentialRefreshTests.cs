@@ -1279,8 +1279,118 @@ public class OAuthCredentialRefreshTests
         Assert.Equal(expectedNonce, refreshedCredentials.DPoPNonces["https://oauth.test.internal"]);
     }
 
+    [Fact]
+    public async Task RefreshQueuedBeforeMatchingLoginUsesTheLoginNonceStore()
+    {
+        OAuthTestServer server = new() { ResourceResponseNonce = "rotatedWhileRefreshQueued" };
+        using OAuthTestAgent agent = (OAuthTestAgent)CreateAgent(server);
+        Uri service = new(Authority);
+        string proofKey = JwtBuilder.CreateProofKey();
+        DPoPAccessCredentials currentCredentials = new(
+            service,
+            CreateAccessJwt(new Did(AccountDid)),
+            "initialRefreshToken",
+            proofKey,
+            "activeNonce")
+        {
+            DPoPNonces = new Dictionary<string, string>
+            {
+                ["https://oauth.test.internal"] = "activeNonce"
+            }
+        };
+        DPoPAccessCredentials credentialsSnapshot = new(
+            service,
+            currentCredentials.AccessJwt,
+            currentCredentials.RefreshToken,
+            proofKey,
+            "staleSnapshotNonce")
+        {
+            DPoPNonces = new Dictionary<string, string>
+            {
+                ["https://oauth.test.internal"] = "staleSnapshotNonce"
+            }
+        };
+
+        agent.CredentialRefreshQueueing = async () =>
+        {
+            Assert.True(await agent.Login(currentCredentials, TestContext.Current.CancellationToken));
+
+            using HttpClient httpClient = server.TestServer.CreateClient();
+            AtProtoHttpClient<string> client = new();
+            AtProtoHttpResult<string> resource = await client.Get(
+                service: service,
+                endpoint: "/resource",
+                credentials: currentCredentials,
+                httpClient: httpClient,
+                cancellationToken: TestContext.Current.CancellationToken);
+
+            Assert.True(resource.Succeeded);
+        };
+
+        Assert.True(await agent.RefreshCredentials(credentialsSnapshot, TestContext.Current.CancellationToken));
+
+        DPoPAccessCredentials refreshedCredentials = Assert.IsType<DPoPAccessCredentials>(agent.Credentials);
+        Assert.Equal("rotatedWhileRefreshQueued", refreshedCredentials.DPoPNonces["https://oauth.test.internal"]);
+    }
+
+    [Fact]
+    public async Task OriginBoundNonceUpdateDoesNotUseLegacyNonceSetter()
+    {
+        OAuthTestServer server = new() { ResourceResponseNonce = "resourceNonce" };
+        using HttpClient httpClient = server.TestServer.CreateClient();
+        DPoPAccessCredentials innerCredentials = CreateCredentials();
+        OriginBoundCredentials credentials = new(innerCredentials);
+        AtProtoHttpClient<string> client = new();
+
+        AtProtoHttpResult<string> result = await client.Get(
+            service: innerCredentials.Service,
+            endpoint: "/resource",
+            credentials: credentials,
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal("resourceNonce", ((IOriginBoundDPoPCredential)innerCredentials).NonceStore.Get(innerCredentials.Service));
+    }
+
     private static CustomDPoPCredentials CreateCustomCredentials(string refreshToken) =>
         new(new Uri($"https://{DomainName}"), CreateAccessJwt(new Did(AccountDid)), refreshToken);
+
+    /// <summary>
+    /// Delegates proof creation while rejecting legacy nonce writes to origin-bound credentials.
+    /// </summary>
+    private sealed class OriginBoundCredentials(DPoPAccessCredentials innerCredentials)
+        : AccessCredentials(
+            service: innerCredentials.Service,
+            authenticationType: innerCredentials.AuthenticationType,
+            accessJwt: innerCredentials.AccessJwt,
+            refreshToken: innerCredentials.RefreshToken),
+            IDPoPBoundCredential,
+            IOriginBoundDPoPCredential
+    {
+        private readonly DPoPAccessCredentials _innerCredentials = innerCredentials;
+
+        public string DPoPProofKey
+        {
+            get => _innerCredentials.DPoPProofKey;
+            set => _innerCredentials.DPoPProofKey = value;
+        }
+
+        public string DPoPNonce
+        {
+            get => _innerCredentials.DPoPNonce;
+            set => throw new InvalidOperationException("Origin-bound nonce updates must not use the legacy setter.");
+        }
+
+        DPoPNonceStore IOriginBoundDPoPCredential.NonceStore
+        {
+            get => ((IOriginBoundDPoPCredential)_innerCredentials).NonceStore;
+            set => ((IOriginBoundDPoPCredential)_innerCredentials).NonceStore = value;
+        }
+
+        public override void SetAuthenticationHeaders(HttpRequestMessage httpRequestMessage) =>
+            _innerCredentials.SetAuthenticationHeaders(httpRequestMessage);
+    }
 
     /// <summary>
     /// A DPoP bound credential which does not derive from <see cref="DPoPAccessCredentials"/>, as a caller is free to
