@@ -1208,6 +1208,77 @@ public class OAuthCredentialRefreshTests
         Assert.Equal(currentCredentials.DPoPNonces, credentialsSnapshot.DPoPNonces);
     }
 
+    [Theory]
+    [InlineData(false, "refreshResponseNonce")]
+    [InlineData(true, "resourceResponseNonce")]
+    public async Task RefreshSnapshotSharesNonceStoreWithMatchingActiveCredentials(bool rotateNonceDuringRefresh, string expectedNonce)
+    {
+        OAuthTestServer server = new()
+        {
+            GateDescribeServer = rotateNonceDuringRefresh,
+            TokenResponseNonce = "refreshResponseNonce",
+            ResourceResponseNonce = "resourceResponseNonce"
+        };
+        using AtProtoAgent agent = CreateAgent(server);
+        Uri service = new(Authority);
+        string proofKey = JwtBuilder.CreateProofKey();
+        DPoPAccessCredentials currentCredentials = new(
+            service,
+            CreateAccessJwt(new Did(AccountDid)),
+            "initialRefreshToken",
+            proofKey,
+            "activeNonce")
+        {
+            DPoPNonces = new Dictionary<string, string>
+            {
+                ["https://oauth.test.internal"] = "activeNonce"
+            }
+        };
+        Assert.True(await agent.Login(currentCredentials, TestContext.Current.CancellationToken));
+
+        DPoPAccessCredentials credentialsSnapshot = new(
+            service,
+            currentCredentials.AccessJwt,
+            currentCredentials.RefreshToken,
+            proofKey,
+            "staleSnapshotNonce")
+        {
+            DPoPNonces = new Dictionary<string, string>
+            {
+                ["https://oauth.test.internal"] = "staleSnapshotNonce"
+            }
+        };
+
+        Task<bool> refresh = agent.RefreshCredentials(credentialsSnapshot, TestContext.Current.CancellationToken);
+
+        if (rotateNonceDuringRefresh)
+        {
+            try
+            {
+                await server.DescribeServerEntered.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+                using HttpClient httpClient = server.TestServer.CreateClient();
+                AtProtoHttpClient<string> client = new();
+                AtProtoHttpResult<string> resource = await client.Get(
+                    service: service,
+                    endpoint: "/resource",
+                    credentials: currentCredentials,
+                    httpClient: httpClient,
+                    cancellationToken: TestContext.Current.CancellationToken);
+
+                Assert.True(resource.Succeeded);
+            }
+            finally
+            {
+                server.ReleaseDescribeServer.TrySetResult();
+            }
+        }
+
+        Assert.True(await refresh);
+        DPoPAccessCredentials refreshedCredentials = Assert.IsType<DPoPAccessCredentials>(agent.Credentials);
+        Assert.Equal(expectedNonce, refreshedCredentials.DPoPNonces["https://oauth.test.internal"]);
+    }
+
     private static CustomDPoPCredentials CreateCustomCredentials(string refreshToken) =>
         new(new Uri($"https://{DomainName}"), CreateAccessJwt(new Did(AccountDid)), refreshToken);
 
@@ -1306,7 +1377,13 @@ public class OAuthCredentialRefreshTests
 
         internal bool GateRefresh { get; set; }
 
+        internal bool GateDescribeServer { get; set; }
+
         internal bool ChallengeRevocationNonce { get; set; }
+
+        internal string? TokenResponseNonce { get; set; }
+
+        internal string? ResourceResponseNonce { get; set; }
 
         internal OAuthTestServer()
         {
@@ -1318,6 +1395,10 @@ public class OAuthCredentialRefreshTests
         internal TaskCompletionSource RefreshEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         internal TaskCompletionSource ReleaseRefresh { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        internal TaskCompletionSource DescribeServerEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        internal TaskCompletionSource ReleaseDescribeServer { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         /// <summary>
         /// Gets or sets the DID the token endpoint issues tokens for. Defaults to the account being refreshed.
@@ -1433,6 +1514,11 @@ public class OAuthCredentialRefreshTests
 
                     LastIssuedRefreshToken = $"refreshToken{Interlocked.Increment(ref _tokenSerialNumber)}";
 
+                    if (TokenResponseNonce is string tokenResponseNonce)
+                    {
+                        response.Headers["DPoP-Nonce"] = tokenResponseNonce;
+                    }
+
                     response.ContentType = "application/json";
                     await response.WriteAsync($$"""
                         {
@@ -1446,8 +1532,24 @@ public class OAuthCredentialRefreshTests
                     return;
 
                 case "/xrpc/com.atproto.server.describeServer":
+                    if (GateDescribeServer)
+                    {
+                        DescribeServerEntered.TrySetResult();
+                        await ReleaseDescribeServer.Task.ConfigureAwait(false);
+                    }
+
                     response.ContentType = "application/json";
                     await response.WriteAsync($$"""{"did":"{{ServerDid}}","availableUserDomains":[".{{DomainName}}"]}""");
+                    return;
+
+                case "/resource":
+                    if (ResourceResponseNonce is string resourceResponseNonce)
+                    {
+                        response.Headers["DPoP-Nonce"] = resourceResponseNonce;
+                    }
+
+                    response.ContentType = "application/json";
+                    await response.WriteAsync("\"ok\"");
                     return;
 
                 case "/xrpc/com.atproto.server.getSession":

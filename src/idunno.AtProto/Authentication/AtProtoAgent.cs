@@ -577,28 +577,16 @@ public partial class AtProtoAgent
             // a session is restored across a restart, and that starts a session just as a login does.
             sessionStarted = _credentials is null;
 
-            // The nonce belongs to the connection rather than to the tokens, so the newest one the agent has seen is
-            // carried across to the credentials replacing them. Without this the refreshed credentials start with the
-            // nonce the refresh began with, and a rotation which happened during the refresh is lost, costing a
-            // rejected request and a retry on the next call. Only carried when the proof key and service match, as a
-            // nonce is only meaningful for the binding it was issued against.
+            // Legacy DPoP credentials expose only one nonce. Origin-bound credentials share their nonce store with a
+            // matching active refresh snapshot before the exchange, avoiding a read-then-write merge that could roll
+            // back a nonce rotated while the refresh response was being processed.
             if (_credentials is IDPoPBoundCredential currentDPoPCredentials &&
                 refreshedCredentials is IDPoPBoundCredential refreshedDPoPCredentials &&
                 _credentials.Service == refreshedCredentials.Service &&
-                string.Equals(currentDPoPCredentials.DPoPProofKey, refreshedDPoPCredentials.DPoPProofKey, StringComparison.Ordinal))
+                string.Equals(currentDPoPCredentials.DPoPProofKey, refreshedDPoPCredentials.DPoPProofKey, StringComparison.Ordinal) &&
+                (_credentials is not IOriginBoundDPoPCredential || refreshedCredentials is not IOriginBoundDPoPCredential))
             {
-                if (_credentials is IOriginBoundDPoPCredential currentOriginCredential &&
-                    refreshedCredentials is IOriginBoundDPoPCredential refreshedOriginCredential)
-                {
-                    if (currentOriginCredential.NonceStore.Get(_credentials.Service) is string serviceNonce)
-                    {
-                        refreshedOriginCredential.NonceStore.Set(refreshedCredentials.Service, serviceNonce);
-                    }
-                }
-                else
-                {
-                    refreshedDPoPCredentials.DPoPNonce = currentDPoPCredentials.DPoPNonce;
-                }
+                refreshedDPoPCredentials.DPoPNonce = currentDPoPCredentials.DPoPNonce;
             }
 
             _credentials = refreshedCredentials;
@@ -3534,6 +3522,8 @@ public partial class AtProtoAgent
             throw new CredentialException(refreshCredential);
         }
 
+        ShareNonceStoreWithMatchingRefreshCredential(refreshCredential, expectedDid);
+
         // Declined before anything is sent to the token endpoint, so the supplied credential is left unspent and still
         // usable. Rejecting only after the exchange would destroy it.
         if (IsRefreshForADifferentActor(expectedDid, out Did? agentDid))
@@ -3715,6 +3705,32 @@ public partial class AtProtoAgent
         finally
         {
             FinishNotificationTurn(notificationTurn);
+        }
+    }
+
+    /// <summary>
+    /// Shares the active session's nonce store with a matching refresh snapshot before the token exchange starts.
+    /// </summary>
+    private void ShareNonceStoreWithMatchingRefreshCredential(DPoPRefreshCredential refreshCredential, Did? expectedDid)
+    {
+        if (refreshCredential is not IOriginBoundDPoPCredential refreshOriginCredential ||
+            refreshCredential is not IDPoPBoundCredential refreshDPoPCredential)
+        {
+            return;
+        }
+
+        lock (_credentialLock)
+        {
+            if (_credentials is DPoPAccessCredentials currentCredentials &&
+                _credentials is IOriginBoundDPoPCredential currentOriginCredential &&
+                _credentials is IDPoPBoundCredential currentDPoPCredential &&
+                currentCredentials.Service == refreshCredential.Service &&
+                string.Equals(currentCredentials.RefreshToken, refreshCredential.RefreshToken, StringComparison.Ordinal) &&
+                string.Equals(currentDPoPCredential.DPoPProofKey, refreshDPoPCredential.DPoPProofKey, StringComparison.Ordinal) &&
+                (expectedDid is null || currentCredentials.Did == expectedDid))
+            {
+                refreshOriginCredential.NonceStore = currentOriginCredential.NonceStore;
+            }
         }
     }
 
