@@ -51,6 +51,17 @@ A `TokenRefreshFailed` event is raised when the background refresh fails, or whe
 
 Storing the access token is optional, it is meant to be short lived and may no longer be valid when your application restarts.
 
+For OAuth credentials, also save `OAuthClientId`, `RequestedScope`, `ClientSigningKeyId` and `DPoPNonces` alongside
+`DPoPProofKey` and the tokens. `DPoPNonces` is a snapshot keyed by HTTP origin: authorization-server nonces and PDS
+nonces are independent, including when a successful response rotates a nonce. The ASP.NET identity stores and labeler CLI
+credential cache preserve this map automatically.
+
+When restoring a `DPoPAccessCredentials` or `DPoPRefreshCredential` directly, assign the saved map to its init-only
+`DPoPNonces` property. `new DPoPRefreshCredential(accessCredentials)` retains the same nonce state and proof key.
+The older constructors and `DPoPNonce` property remain supported; their single nonce is scoped to the credential's service,
+and missing origins are learned through the normal nonce challenge and retry. Saving the map avoids those extra challenges.
+Do not regenerate a proof key or replace a retained signing-key ID when restoring a session.
+
 ## <a name="credentialsUpdatedAsync">Persisting updated credentials</a>
 
 Use the `CredentialsUpdatedAsync` callback to store your updated values. Unlike the `CredentialsUpdated` event it can be awaited, so the agent waits

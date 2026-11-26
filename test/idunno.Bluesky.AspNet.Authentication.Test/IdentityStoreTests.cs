@@ -37,7 +37,12 @@ public abstract class IdentityStoreTests
         {
             OAuthClientId = "http://localhost?scope=atproto",
             RequestedScope = "atproto",
-            ClientSigningKeyId = "signing-key"
+            ClientSigningKeyId = "signing-key",
+            DPoPNonces = new Dictionary<string, string>
+            {
+                ["https://service.test"] = "pds-nonce",
+                ["https://auth.test"] = "auth-nonce"
+            }
         };
 
         await store.Add(IIdentityStore.BuildClaimsIdentity(credentials), TestContext.Current.CancellationToken);
@@ -49,6 +54,7 @@ public abstract class IdentityStoreTests
         Assert.Equal(credentials.OAuthClientId, restored.OAuthClientId);
         Assert.Equal(credentials.RequestedScope, restored.RequestedScope);
         Assert.Equal(credentials.ClientSigningKeyId, restored.ClientSigningKeyId);
+        Assert.Equal(credentials.DPoPNonces, restored.DPoPNonces);
     }
 
     [Fact]

@@ -9,8 +9,32 @@ namespace idunno.AtProto.Authentication;
 /// <summary>
 /// Encapsulates the credentials and supporting values necessary to call an authenticated API, with proof of possession.
 /// </summary>
-public sealed class DPoPAccessCredentials : AccessCredentials, IDPoPBoundCredential
+public sealed class DPoPAccessCredentials : AccessCredentials, IDPoPBoundCredential, IOriginBoundDPoPCredential
 {
+    /// <summary>
+    /// Gets or sets nonce state shared with refresh requests for this session.
+    /// </summary>
+    internal DPoPNonceStore NonceStore { get; set; } = new();
+
+    DPoPNonceStore IOriginBoundDPoPCredential.NonceStore { get => NonceStore; set => NonceStore = value; }
+
+    /// <summary>
+    /// Gets a snapshot of DPoP nonces keyed by HTTP origin, or restores a saved snapshot during initialization.
+    /// </summary>
+    /// <remarks>
+    /// <para>Persist this alongside the proof key. Older credentials without this property remain usable and collect fresh nonces on demand.</para>
+    /// </remarks>
+    public IReadOnlyDictionary<string, string> DPoPNonces
+    {
+        get => NonceStore.Snapshot;
+        init
+        {
+            DPoPNonceStore restored = new();
+            restored.Restore(value);
+            NonceStore = restored;
+        }
+    }
+
     /// <summary>
     /// Gets the effective OAuth client identifier used to obtain these credentials, or <see langword="null"/> for older credentials.
     /// </summary>
@@ -65,6 +89,7 @@ public sealed class DPoPAccessCredentials : AccessCredentials, IDPoPBoundCredent
 
         _dPoPProofKey = dPoPProofKey;
         _dPoPNonce = dPoPNonce;
+        NonceStore.Set(service, dPoPNonce);
     }
 
     /// <summary>
@@ -103,7 +128,7 @@ public sealed class DPoPAccessCredentials : AccessCredentials, IDPoPBoundCredent
         {
             lock (_dPoPAccessCredentialsLock)
             {
-                return _dPoPNonce;
+                return NonceStore.Get(Service) ?? _dPoPNonce;
             }
         }
 
@@ -114,6 +139,7 @@ public sealed class DPoPAccessCredentials : AccessCredentials, IDPoPBoundCredent
             lock (_dPoPAccessCredentialsLock)
             {
                 _dPoPNonce = value;
+                NonceStore.Set(Service, value);
             }
         }
     }
@@ -149,7 +175,7 @@ public sealed class DPoPAccessCredentials : AccessCredentials, IDPoPBoundCredent
             DPoPProofRequest dPoPProofRequest = new()
             {
                 AccessToken = accessJwt,
-                DPoPNonce = _dPoPNonce,
+                DPoPNonce = NonceStore.Get(httpRequestMessage.RequestUri!),
                 Method = httpRequestMessage.Method.ToString(),
                 Url = httpRequestMessage.GetDPoPUrl()
             };

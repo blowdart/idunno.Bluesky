@@ -15,6 +15,20 @@ namespace idunno.AtProto.Authentication;
 public sealed class OAuthLoginState : IEquatable<OAuthLoginState>
 {
     /// <summary>
+    /// Gets the origin-bound DPoP nonces learned while preparing this login.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> DPoPNonces
+    {
+        get;
+        init
+        {
+            DPoPNonceStore nonces = new();
+            nonces.Restore(value);
+            field = nonces.Snapshot;
+        }
+    } = new Dictionary<string, string>();
+
+    /// <summary>
     /// Gets the effective OAuth client identifier used to prepare this login, or <see langword="null"/> for older saved state.
     /// </summary>
     public string? OAuthClientId { get; init; }
@@ -275,6 +289,11 @@ public sealed class OAuthLoginState : IEquatable<OAuthLoginState>
         hash.Add(OAuthClientId, StringComparer.Ordinal);
         hash.Add(RequestedScope, StringComparer.Ordinal);
         hash.Add(ClientSigningKeyId, StringComparer.Ordinal);
+        foreach (KeyValuePair<string, string> nonce in DPoPNonces.OrderBy(entry => entry.Key, StringComparer.Ordinal))
+        {
+            hash.Add(nonce.Key, StringComparer.Ordinal);
+            hash.Add(nonce.Value, StringComparer.Ordinal);
+        }
 
         // Equals() compares ExtraProperties by its contents, so the hash code must be calculated from
         // its contents too, rather than from the dictionary's reference based hash code.
@@ -370,7 +389,8 @@ public sealed class OAuthLoginState : IEquatable<OAuthLoginState>
               string.Equals(State, other.State, StringComparison.Ordinal) &&
               string.Equals(OAuthClientId, other.OAuthClientId, StringComparison.Ordinal) &&
               string.Equals(RequestedScope, other.RequestedScope, StringComparison.Ordinal) &&
-              string.Equals(ClientSigningKeyId, other.ClientSigningKeyId, StringComparison.Ordinal);
+              string.Equals(ClientSigningKeyId, other.ClientSigningKeyId, StringComparison.Ordinal) &&
+              DPoPNonces.OrderBy(entry => entry.Key, StringComparer.Ordinal).SequenceEqual(other.DPoPNonces.OrderBy(entry => entry.Key, StringComparer.Ordinal));
     }
 
     /// <summary>

@@ -129,7 +129,7 @@ public sealed class OAuthOptions
     /// </param>
     /// <returns>
     /// The key matching <paramref name="keyId"/>, or <see cref="ClientSigningKey"/> when <paramref name="keyId"/> is
-    /// <see langword="null"/> or does not match a configured key.
+    /// <see langword="null"/>. An unknown identifier returns <see langword="null"/>.
     /// </returns>
     internal OAuthClientSigningKey? GetClientSigningKey(string? keyId, out bool found)
     {
@@ -147,7 +147,7 @@ public sealed class OAuthOptions
         }
 
         found = false;
-        return ClientSigningKey;
+        return null;
     }
 
     /// <summary>

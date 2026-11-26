@@ -6,6 +6,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
+using Microsoft.IdentityModel.Tokens;
+
 namespace idunno.AtProto.Authentication;
 
 /// <summary>
@@ -66,6 +68,125 @@ public sealed class OAuthClientSigningKey
     /// Gets the base64url encoded y coordinate of the public key.
     /// </summary>
     public string Y { get; }
+
+    /// <summary>
+    /// Generates a new ECDSA P-256 client signing key.
+    /// </summary>
+    /// <param name="keyId">The key identifier, or <see langword="null"/> to use the RFC 7638 thumbprint.</param>
+    /// <returns>A new private signing key.</returns>
+    /// <exception cref="ArgumentException"><paramref name="keyId"/> is empty or white space.</exception>
+    /// <remarks>
+    /// <para>Retain the returned key for the lifetime of its sessions. This method does not persist the private key.</para>
+    /// </remarks>
+    public static OAuthClientSigningKey Generate(string? keyId = null)
+    {
+        if (keyId is not null)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(keyId);
+        }
+
+        using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+
+        return new OAuthClientSigningKey(key.ExportParameters(includePrivateParameters: true), keyId);
+    }
+
+    /// <summary>
+    /// Imports an ECDSA P-256 private signing key from a JSON Web Key.
+    /// </summary>
+    /// <param name="jwk">The private JWK, including its public coordinates and private scalar.</param>
+    /// <param name="keyId">The identifier to use instead of the identifier in <paramref name="jwk"/>, or <see langword="null"/> to retain it or compute a thumbprint.</param>
+    /// <returns>A validated private client signing key.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="jwk"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="jwk"/> is not a valid ES256 private signing key, or its key identifier is empty or white space.</exception>
+    public static OAuthClientSigningKey FromJwk(string jwk, string? keyId = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(jwk);
+        if (keyId is not null)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(keyId);
+        }
+
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(jwk);
+            if (document.RootElement.ValueKind != JsonValueKind.Object ||
+                document.RootElement.EnumerateObject().GroupBy(property => property.Name, StringComparer.Ordinal).Any(group => group.Count() > 1))
+            {
+                throw new ArgumentException("The JWK must be an object with unique member names.", nameof(jwk));
+            }
+
+            JsonWebKey key = new(jwk);
+            if (key.Kty != "EC" || key.Crv != Curve ||
+                (key.Alg is not null && key.Alg != Algorithm) ||
+                (key.Use is not null && key.Use != "sig") ||
+                (document.RootElement.TryGetProperty("key_ops", out _) && (!key.KeyOps.Contains("sign", StringComparer.Ordinal) ||
+                    key.KeyOps.Any(operation => operation is not ("sign" or "verify")))))
+            {
+                throw new ArgumentException("The JWK must be an EC P-256 key permitted to sign with ES256.", nameof(jwk));
+            }
+
+            string? effectiveKeyId = keyId ?? key.Kid;
+            if (effectiveKeyId is not null && string.IsNullOrWhiteSpace(effectiveKeyId))
+            {
+                throw new ArgumentException("The JWK key identifier must not be empty or white space.", nameof(jwk));
+            }
+
+            ECParameters parameters = new()
+            {
+                Curve = ECCurve.NamedCurves.nistP256,
+                Q = new ECPoint { X = DecodeJwkParameter(key.X), Y = DecodeJwkParameter(key.Y) },
+                D = DecodeJwkParameter(key.D)
+            };
+            using ECDsa privateKey = ECDsa.Create(parameters);
+            using ECDsa publicKey = ECDsa.Create(new ECParameters { Curve = parameters.Curve, Q = parameters.Q });
+            byte[] challenge = RandomNumberGenerator.GetBytes(32);
+            byte[] signature = privateKey.SignData(challenge, HashAlgorithmName.SHA256);
+            if (!publicKey.VerifyData(challenge, signature, HashAlgorithmName.SHA256))
+            {
+                throw new ArgumentException("The JWK public coordinates do not match its private key.", nameof(jwk));
+            }
+
+            return new OAuthClientSigningKey(privateKey.ExportParameters(includePrivateParameters: true), effectiveKeyId);
+        }
+        catch (Exception e) when (e is JsonException or CryptographicException or FormatException)
+        {
+            throw new ArgumentException("The JWK does not contain a valid ECDSA P-256 private key.", nameof(jwk), e);
+        }
+    }
+
+    /// <summary>
+    /// Exports the public signing key as a JWK suitable for confidential-client metadata.
+    /// </summary>
+    /// <returns>A public-only JWK containing the key identifier and ES256 signing algorithm, never private key material.</returns>
+    public string ToPublicJwk() => Encoding.UTF8.GetString(WriteJson(writer =>
+    {
+        writer.WriteString("kty", "EC");
+        writer.WriteString("crv", Curve);
+        writer.WriteString("alg", Algorithm);
+        writer.WriteString("use", "sig");
+        writer.WriteString("kid", KeyId);
+        writer.WriteString("x", X);
+        writer.WriteString("y", Y);
+    }));
+
+    /// <summary>
+    /// Decodes a canonical 256-bit unsigned JWK coordinate or private scalar.
+    /// </summary>
+    private static byte[] DecodeJwkParameter(string? value)
+    {
+        if (value is null || value.Length != 43 || value.Any(character => !char.IsAsciiLetterOrDigit(character) && character is not ('-' or '_')))
+        {
+            throw new FormatException("The JWK must contain 32-byte base64url x, y and d values.");
+        }
+
+        byte[] decoded = Base64UrlEncoder.DecodeBytes(value);
+        if (Base64UrlEncoder.Encode(decoded) != value)
+        {
+            throw new FormatException("The JWK parameters must use canonical base64url encoding.");
+        }
+
+        return decoded;
+    }
 
     /// <summary>
     /// Creates a client signing key from an ECDSA P-256 private key encoded in <paramref name="pem"/>.

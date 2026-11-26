@@ -47,4 +47,9 @@ public static class AtProtoClaims
     /// The claim name for a DPoPNonce.
     /// </summary>
     public const string DPoPNonce = "urn:atproto:dpop:nonce";
+
+    /// <summary>
+    /// The claim name for a DPoP nonce whose issuer identifies its HTTP origin.
+    /// </summary>
+    public const string DPoPOriginNonce = "urn:atproto:dpop:origin-nonce";
 }

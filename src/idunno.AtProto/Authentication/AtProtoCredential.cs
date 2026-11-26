@@ -221,6 +221,13 @@ public abstract class AtProtoCredential(Uri service, AuthenticationType authenti
                 RequestedScope = claimsIdentity.FindFirst(AtProtoClaims.OAuthRequestedScope)?.Value,
                 ClientSigningKeyId = claimsIdentity.FindFirst(AtProtoClaims.OAuthClientSigningKeyId)?.Value
             };
+            Claim[] originNonces = [.. claimsIdentity.FindAll(AtProtoClaims.DPoPOriginNonce)];
+            if (originNonces.Length != 0)
+            {
+                DPoPNonceStore nonces = new();
+                nonces.Restore(originNonces.ToDictionary(claim => claim.Issuer, claim => claim.Value, StringComparer.Ordinal));
+                ((IOriginBoundDPoPCredential)createdCredentials).NonceStore = nonces;
+            }
         }
         catch (ArgumentException)
         {

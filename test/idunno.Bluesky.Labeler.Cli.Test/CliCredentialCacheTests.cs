@@ -69,6 +69,7 @@ public sealed class CliCredentialCacheTests : IDisposable
             ClientSigningKeyId: credentials.ClientSigningKeyId);
         JsonObject legacy = JsonSerializer.SerializeToNode(entry, CliCredentialCacheJsonContext.Default.CliCredentialCacheEntry)!.AsObject();
         Assert.True(legacy.Remove(nameof(CliCredentialCacheEntry.LabelerOrigins)));
+        Assert.True(legacy.Remove(nameof(CliCredentialCacheEntry.DPoPNonces)));
         byte[] legacyBytes = Encoding.UTF8.GetBytes(legacy.ToJsonString());
         if (OperatingSystem.IsWindows())
         {
@@ -379,7 +380,22 @@ public sealed class CliCredentialCacheTests : IDisposable
     public async Task RoundTripPreservesAllCredentialFieldsAndSigningKey()
     {
         CliCredentialCacheBinding binding = CreateBinding();
-        DPoPAccessCredentials original = CreateCredentials(binding, s_expiration);
+        DPoPAccessCredentials original = new(
+            service: binding.Service,
+            accessJwt: CreateJwt(binding.Actor, s_expiration),
+            refreshToken: "test-refresh-token",
+            dPoPProofKey: "test-private-proof-key",
+            dPoPNonce: "test-nonce")
+        {
+            OAuthClientId = binding.ClientMetadataId,
+            RequestedScope = binding.RequestedScope,
+            ClientSigningKeyId = "original-client-signing-key",
+            DPoPNonces = new Dictionary<string, string>
+            {
+                ["https://pds.example"] = "test-nonce",
+                ["https://auth.example"] = "authorization-nonce"
+            }
+        };
         await using (CliCredentialCache cache = CreateCache(binding))
         {
             Assert.True(await cache.SaveAsync(original, TestContext.Current.CancellationToken));
@@ -392,6 +408,7 @@ public sealed class CliCredentialCacheTests : IDisposable
         Assert.Equal(original.RefreshToken, restored.RefreshToken);
         Assert.Equal(original.DPoPProofKey, restored.DPoPProofKey);
         Assert.Equal(original.DPoPNonce, restored.DPoPNonce);
+        Assert.Equal(original.DPoPNonces, restored.DPoPNonces);
         Assert.Equal(original.ClientSigningKeyId, restored.ClientSigningKeyId);
         Assert.Equal(original.OAuthClientId, restored.OAuthClientId);
         Assert.Equal(original.RequestedScope, restored.RequestedScope);

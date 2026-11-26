@@ -86,6 +86,9 @@
 
 #### idunno.AtProto
 
+* Added validated ES256 private-JWK import, public-only JWK export and in-memory P-256 OAuth client signing-key generation.
+* New OAuth sessions negotiate DPoP proof signing (ES256, PS256 or RS256) and require compatible ES256 confidential-client authentication metadata; restored sessions retain their proof key and signing-key ID.
+* OAuth nonces are tracked and persisted by origin across login, refresh and authenticated resource requests, while retaining older single-nonce credentials.
 * Added optional-CID support for `com.atproto.repo.getRecord` results, with `HasCid` and `TryGetStrongReference()` for safely handling records without a CID.
 * Added service-token verification overloads that use the library's SSRF-protected HTTP client by default while retaining caller-supplied client overloads.
 * Adds separate Ozone administration service-token verification for exact labeler service and PDS bare-DID audiences, retaining method binding, replay identifiers and strict generic/native verification.
@@ -151,6 +154,10 @@
 * Live backpressure preserves virtual `OnRecordReceived` callbacks, handles expected queue shutdown (including explicit `CloseAsync()` while the queue is full) without false error logs, and keeps queue-wait cancellation separate from socket reads so enumerator and asynchronous Jetstream disposal can complete a bounded graceful close.
 
 ### ⚠️ Breaking Changes
+
+#### idunno.AtProto
+
+* New OAuth logins fail explicitly when authorization metadata omits a mutually supported DPoP algorithm or, for confidential clients, ES256 client authentication. Refresh and revocation fail locally if the session's saved signing-key ID is no longer configured, rather than substituting the active key.
 
 #### idunno.Bluesky
 
