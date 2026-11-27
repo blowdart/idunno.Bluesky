@@ -1,4 +1,46 @@
 {
+  "getDelegationToken": {
+    "statusCode": 200,
+    "body": { "token": "<redacted>" }
+  },
+  "authorizeSpaceSync": {
+    "statusCode": 200,
+    "body": { "credential": "<redacted>", "spaceRev": "3n3cwms7dcm2j" }
+  },
+  "getRecord": {
+    "statusCode": 200,
+    "body": {
+      "uri": "at:space/did:plc:fixture/app.bsky.bookmark/fixture/did:plc:fixture/org.example.space.plan/self",
+      "cid": "bafyreicyj7vwd46tjxojgmo3x6hy6witjvohdthvddogfnwgttawpnxk6a",
+      "value": { "text": "space credential live check", "$type": "org.example.space.plan" }
+    }
+  },
+  "listRecords": {
+    "statusCode": 200,
+    "body": {
+      "cursor": "fixture-cursor",
+      "records": [{
+        "collection": "org.example.space.plan",
+        "rkey": "self",
+        "cid": "bafyreicyj7vwd46tjxojgmo3x6hy6witjvohdthvddogfnwgttawpnxk6a",
+        "value": { "text": "space credential live check", "$type": "org.example.space.plan" }
+      }]
+    }
+  },
+  "listRecordsExcluded": {
+    "statusCode": 200,
+    "body": {
+      "records": [{
+        "collection": "org.example.space.plan",
+        "rkey": "self",
+        "cid": "bafyreicyj7vwd46tjxojgmo3x6hy6witjvohdthvddogfnwgttawpnxk6a"
+      }]
+    }
+  },
+  "listRecordsNext": {
+    "statusCode": 200,
+    "body": { "records": [] }
+  },
   "createSpace": {
     "statusCode": 200,
     "body": {

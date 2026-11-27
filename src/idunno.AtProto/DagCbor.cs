@@ -28,6 +28,99 @@ public static class DagCbor
     private const int MaximumDepth = 64;
 
     /// <summary>
+    /// Encodes an original JSON record as canonical DAG-CBOR for CID verification, without rewriting record references.
+    /// </summary>
+    /// <param name="value">The original AT Protocol JSON value.</param>
+    /// <returns>The canonical DAG-CBOR bytes.</returns>
+    /// <exception cref="InvalidDataException">The JSON is outside the AT Protocol data model.</exception>
+    internal static byte[] FromJsonElement(JsonElement value)
+    {
+        try
+        {
+            CborWriter writer = new(CborConformanceMode.Canonical);
+            WriteJsonValue(value, writer, 0);
+            return writer.Encode();
+        }
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or FormatException or CborContentException)
+        {
+            throw new InvalidDataException("The record is not valid AT Protocol JSON.", exception);
+        }
+    }
+
+    /// <summary>Writes canonical maps, arrays, integer values, CID links and byte values from original JSON.</summary>
+    private static void WriteJsonValue(JsonElement value, CborWriter writer, int depth)
+    {
+        if (depth > MaximumDepth)
+        {
+            throw new InvalidDataException("The record exceeds the maximum nesting depth.");
+        }
+
+        switch (value.ValueKind)
+        {
+            case JsonValueKind.Object:
+                JsonProperty[] properties = [.. value.EnumerateObject()];
+                if ((value.TryGetProperty("$link", out _) || value.TryGetProperty("$bytes", out _)) &&
+                    (properties.Length != 1 || properties[0].Value.ValueKind != JsonValueKind.String))
+                {
+                    throw new InvalidDataException("A CID link or byte value must have exactly one reserved string property.");
+                }
+
+                if (properties.Length == 1 && properties[0].Name == "$link" && properties[0].Value.ValueKind == JsonValueKind.String)
+                {
+                    writer.WriteTag((CborTag)CidTag);
+                    writer.WriteByteString([CidMultibasePrefix, .. new Cid(properties[0].Value.GetString()!).ToBytes()]);
+                }
+                else if (properties.Length == 1 && properties[0].Name == "$bytes" && properties[0].Value.ValueKind == JsonValueKind.String)
+                {
+                    writer.WriteByteString(properties[0].Value.GetBytesFromBase64());
+                }
+                else
+                {
+                    writer.WriteStartMap(properties.Length);
+                    HashSet<string> names = [with(StringComparer.Ordinal)];
+                    foreach (JsonProperty property in properties)
+                    {
+                        if (!names.Add(property.Name))
+                        {
+                            throw new InvalidDataException("The record contains duplicate JSON properties.");
+                        }
+
+                        writer.WriteTextString(property.Name);
+                        WriteJsonValue(property.Value, writer, depth + 1);
+                    }
+
+                    writer.WriteEndMap();
+                }
+
+                break;
+            case JsonValueKind.Array:
+                writer.WriteStartArray(value.GetArrayLength());
+                foreach (JsonElement item in value.EnumerateArray())
+                {
+                    WriteJsonValue(item, writer, depth + 1);
+                }
+
+                writer.WriteEndArray();
+                break;
+            case JsonValueKind.String:
+                writer.WriteTextString(value.GetString()!);
+                break;
+            case JsonValueKind.Number when value.TryGetInt64(out long integer):
+                writer.WriteInt64(integer);
+                break;
+            case JsonValueKind.True:
+            case JsonValueKind.False:
+                writer.WriteBoolean(value.GetBoolean());
+                break;
+            case JsonValueKind.Null:
+                writer.WriteNull();
+                break;
+            default:
+                throw new InvalidDataException("The record contains a value outside the AT Protocol data model.");
+        }
+    }
+
+    /// <summary>
     /// Converts the DAG-CBOR encoded <paramref name="value"/> to its JSON representation.
     /// </summary>
     /// <param name="value">The DAG-CBOR encoded value to convert.</param>

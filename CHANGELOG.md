@@ -88,7 +88,8 @@
 
 #### idunno.AtProto
 
-* Added experimental AT Protocol Spaces support for creating, inspecting, listing, updating and deleting spaces; typed space policies, published policy and membership records, member management, managed-space access checks and synchronization definitions; and creating, replacing and deleting records in a space. Reading records and synchronization remain unsupported.
+* Added experimental AT Protocol Spaces support for creating, inspecting, listing, updating and deleting spaces; typed space policies, published policy and membership records, member management, managed-space access checks and synchronization definitions; and creating, replacing, deleting, reading and listing records in a space. Archive synchronization and subscriptions remain unsupported.
+* Added verified single-use space delegation and disposable, expiring proof-key credentials, explicit renewal, signed credential reads and export-only HPKE response-MAC verification for individual records using platform cryptography. Record listings check supplied values against CIDs but have no response-MAC profile and do not authenticate authorship or completeness.
 * Added a framework-neutral managed-space `checkAccess` handler that verifies authority service tokens, prevents replay and delegates access decisions to the managing application.
 
 * Rejects permissioned space URIs in repository record reads and deletes rather than treating the space authority as a repository.

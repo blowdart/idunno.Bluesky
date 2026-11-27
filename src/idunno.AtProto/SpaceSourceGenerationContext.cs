@@ -51,6 +51,12 @@ namespace idunno.AtProto;
 [JsonSerializable(typeof(DeleteSpaceRequest))]
 [JsonSerializable(typeof(SpaceRecordRequest))]
 [JsonSerializable(typeof(DeleteSpaceRecordRequest))]
+[JsonSerializable(typeof(SpaceNotificationRegistration))]
+[JsonSerializable(typeof(SpaceDelegationResponse))]
+[JsonSerializable(typeof(AuthorizeSpaceSyncRequest))]
+[JsonSerializable(typeof(AuthorizeSpaceSyncResponse))]
+[JsonSerializable(typeof(SpaceRecordResponse))]
+[JsonSerializable(typeof(ListSpaceRecordsResponse))]
 [Experimental("BSKYSpaces", UrlFormat = "https://bluesky.idunno.dev/docs/spaces.html")]
 internal partial class SpaceSourceGenerationContext : JsonSerializerContext
 {

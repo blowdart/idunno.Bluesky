@@ -2,11 +2,54 @@
 
 AT Protocol Spaces are an alpha feature for permissioned data. The APIs in this library are experimental and may change or be removed. Using them emits the `BSKYSpaces` diagnostic; see the linked page for current guidance.
 
-The current implementation supports creating, inspecting, listing, updating and deleting spaces, managing members, checking managed-space access, and creating, replacing or deleting records within a space. It does not expose space record reads or synchronization. Record reads use space credentials and authenticated response MACs; they must not be treated as ordinary unauthenticated repository reads.
+The current implementation supports creating, inspecting, listing, updating and deleting spaces, managing members, checking managed-space access, authorizing space credentials, and creating, replacing, deleting, reading or listing records within a space. Archive synchronization and subscriptions are not yet exposed. Space reads are separate from ordinary public repository reads.
 
 ## Authentication
 
 Space methods called with the account's own session reject app passwords, including privileged app passwords, with `InvalidToken` (`Bad token scope`). Use OAuth with the appropriate `space:` scopes, or a full account-password session for scripts and tests. The SDK returns the server error in `AtErrorDetail`; it does not convert an app-password session into a full session. Requests authenticated with a space credential, delegation token, or service authentication are unaffected by this restriction.
+
+## Space credentials and authenticated reads
+
+`GetSpaceDelegationToken` obtains a short-lived user delegation from the account's PDS. `AuthorizeSpaceSync` resolves the space authority's PDS and exchanges that delegation, an optional supplied client attestation, or the policy's other authorization mechanism for a `SpaceCredential`. Despite its name, authorization alone does not synchronize records.
+
+The SDK verifies delegation and credential JWT signatures against the issuer's DID signing key, their exact space and issuer, their lifetime, and the credential's binding to a freshly generated P-256 proof key. Agents use their configured PLC directory for host discovery and issuer/author-key verification. Delegation tokens are single-use: authorization consumes one even if the HTTP request fails, because the authority might have received it. A canceled operation that never starts authorization does not consume it.
+
+Handle unsuccessful results through `StatusCode` and `AtErrorDetail`, as with other agent methods. For example, after obtaining a space reference and full record URI:
+
+```csharp
+AtProtoHttpResult<SpaceDelegationToken> delegation = await accountAgent.GetSpaceDelegationToken(
+    space,
+    cancellationToken: cancellationToken);
+
+if (delegation.Succeeded)
+{
+    AtProtoHttpResult<SpaceCredential> authorization = await readerAgent.AuthorizeSpaceSync(
+        space: space,
+        delegationToken: delegation.Result,
+        cancellationToken: cancellationToken);
+
+    if (authorization.Succeeded)
+    {
+        using SpaceCredential credential = authorization.Result;
+        AtProtoHttpResult<AtProtoRepositoryRecord> record = await readerAgent.GetSpaceRecord(
+            uri: recordUri,
+            credential: credential,
+            cancellationToken: cancellationToken);
+    }
+}
+```
+
+These types are in `idunno.AtProto`, `idunno.AtProto.Space`, and `idunno.AtProto.Repo`. The reading agent does not need an account session. Authorization and reads do not forward the account's access token, even when the destination is the account's PDS.
+
+Each authorization returns a separately owned disposable credential. Dispose it when access is no longer needed; expiry also releases its token and destroys its private key. Renewal is explicit and generates a new proof key. The SDK does not expose raw tokens for persistence or support credential import. A credential is scoped to one space but can be used with different record authors' PDSs in that space. Revocation can invalidate it before its advertised expiry, so handle authorization failures rather than retrying indefinitely.
+
+`GetSpaceRecord` signs the credential and exact repository audience using HTTP Message Signatures. It requests a response MAC using a fresh ephemeral P-256 key, derives the export-only HPKE secret using platform ECDH and HKDF, and checks the response's MAC, requested URI and canonical DAG-CBOR CID before returning the original record value. No additional cryptography package is required. Missing or invalid authentication raises `InvalidDataException`; ordinary endpoint errors still return `AtErrorDetail`. The original JSON is hashed without normalizing embedded alpha-era URI strings.
+
+`ListSpaceRecords` supports an optional collection, limit (1–1000, default 50), cursor and `excludeValues`. It sends the same credential proof and checks supplied values against their CIDs, but **the alpha protocol defines no response MAC for listings**. The listing's CIDs, authorship and completeness are not authenticated. Use `GetSpaceRecord` to authenticate individual returned identities; doing so still cannot prove listing completeness.
+
+The credential proof deliberately covers only the credential and repository audience, not the request method or URL. It is reusable until expiry. Response MACs are not transferable proof of authorship, and neither mechanism encrypts records. Custom HTTP clients must protect resolved services against SSRF and disable automatic redirects.
+
+`SpaceNotificationRegistration` optionally supplies a base HTTPS callback endpoint and opaque secret to authorization. The application must implement registration confirmation and update callbacks itself and retain the same registration when renewing. This SDK does not sign client-attestation JWTs or host those notification callbacks.
 
 ## Reading alpha-era record values
 
@@ -87,6 +130,6 @@ The `managed-space` fragment must match the service entry ID in the managing app
 
 These are separate from the public-repository `CreateRecord`, `PutRecord`, and `DeleteRecord` methods. Space records are permissioned; do not pass space URIs to general repository operations or assume that public repository reads can access them.
 
-The implemented endpoints are [`createSpace`](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/space/createSpace.json), [`getSpace`](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/space/getSpace.json), [`listSpaces`](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/space/listSpaces.json), [`updateSpace`](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/space/updateSpace.json), [`deleteSpace`](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/space/deleteSpace.json), [`createRecord`](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/space/createRecord.json), [`putRecord`](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/space/putRecord.json), and [`deleteRecord`](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/space/deleteRecord.json).
+The [endpoint inventory](endpointStatus.md) lists the implemented Spaces methods and their pinned alpha Lexicons.
 
 The feature is based on the [AT Protocol Spaces alpha announcement](https://atproto.com/blog/atproto-spaces-alpha), the [November 24 alpha migration guidance](https://github.com/bluesky-social/atproto/blob/permissioned-data/alpha-migrations/prompt-11-24-26.md), and the [permissioned data proposal](https://github.com/bluesky-social/proposals/tree/main/0016-permissioned-data).
