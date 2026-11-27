@@ -18,7 +18,6 @@ using idunno.AtProto.Moderation;
 using idunno.AtProto.Moderation.Model;
 using idunno.AtProto.Repo;
 using idunno.AtProto.Repo.Models;
-using idunno.AtProto.Space.Models;
 
 namespace idunno.AtProto;
 
@@ -88,7 +87,6 @@ namespace idunno.AtProto;
 
 [JsonSerializable(typeof(CreateRecordRequest))]
 [JsonSerializable(typeof(CreateRecordResponse))]
-[JsonSerializable(typeof(CreateSpaceRequest))]
 [JsonSerializable(typeof(DeleteRecordRequest))]
 [JsonSerializable(typeof(DeleteRecordResponse))]
 [JsonSerializable(typeof(PutRecordRequest))]

@@ -2,7 +2,7 @@
 
 AT Protocol Spaces are an alpha feature for permissioned data. The APIs in this library are experimental and may change or be removed. Using them emits the `BSKYSpaces` diagnostic; see the linked page for current guidance.
 
-The current implementation supports creating a space and creating, replacing, or deleting records within a space. It does not expose space reads, synchronization, or membership management. In particular, `com.atproto.space.getRecord` uses space credentials and authenticated response MACs; it must not be treated as an ordinary unauthenticated repository read.
+The current implementation supports creating, inspecting, listing, updating and deleting spaces, and creating, replacing or deleting records within a space. It does not expose record reads, synchronization or membership management. Record reads use space credentials and authenticated response MACs; they must not be treated as ordinary unauthenticated repository reads.
 
 ## Authentication
 
@@ -28,13 +28,10 @@ Keep protocol parameters, token subjects, MAC headers, archives, and new record 
 
 ## Creating a space
 
-Pass the space type and a policy object to `AtProtoAgent.CreateSpace`. The policy is a Lexicon union value and must include the policy's `$type` discriminator:
+Pass the space type and a typed policy to `AtProtoAgent.CreateSpace`. The SDK serializes the policy's Lexicon `$type` discriminator:
 
 ```csharp
-JsonObject policy = new()
-{
-    ["$type"] = "com.atproto.personalspace.policy"
-};
+PersonalSpacePolicy policy = new();
 
 AtProtoHttpResult<SpaceAtUri> result = await agent.CreateSpace(
     spaceType: "app.bsky.bookmark",
@@ -47,7 +44,9 @@ if (result.Succeeded)
 }
 ```
 
-The optional key (`skey`) lets the caller choose a stable space key; when omitted, the service generates one. Policy values are defined by the relevant Lexicons, such as [personal-space policy](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/personalspace/policy.json), [member-space policy](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/memberspace/policy.json), and [managed-space policy](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/managedspace/policy.json).
+The optional key (`skey`) lets the caller choose a stable space key; when omitted, the service generates one. The SDK models personal, member and managed-space policies with `PersonalSpacePolicy`, `MemberSpacePolicy` and `ManagedSpacePolicy`. Other policy types are preserved as `UnknownSpacePolicy`, which can also be constructed from a JSON object containing its `$type`. Policy fields are defined by the corresponding Lexicons: [personal-space policy](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/personalspace/policy.json), [member-space policy](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/memberspace/policy.json), and [managed-space policy](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/managedspace/policy.json).
+
+`GetSpace` retrieves a space's policy, and `ListSpaces` returns an authenticated, paginated list filtered optionally by owner DID or space-type NSID. The list limit defaults to 50 and may be set from 1 to 100. `UpdateSpace` replaces the policy; changing its type discards the previous policy's state. `DeleteSpace` removes the space and its authority repository. These methods do not provide access to the records inside a space.
 
 ## Writing records
 
@@ -55,6 +54,6 @@ The optional key (`skey`) lets the caller choose a stable space key; when omitte
 
 These are separate from the public-repository `CreateRecord`, `PutRecord`, and `DeleteRecord` methods. Space records are permissioned; do not pass space URIs to general repository operations or assume that public repository reads can access them.
 
-The endpoints currently supported are [`createSpace`](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/space/createSpace.json), [`createRecord`](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/space/createRecord.json), [`putRecord`](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/space/putRecord.json), and [`deleteRecord`](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/space/deleteRecord.json).
+The implemented endpoints are [`createSpace`](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/space/createSpace.json), [`getSpace`](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/space/getSpace.json), [`listSpaces`](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/space/listSpaces.json), [`updateSpace`](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/space/updateSpace.json), [`deleteSpace`](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/space/deleteSpace.json), [`createRecord`](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/space/createRecord.json), [`putRecord`](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/space/putRecord.json), and [`deleteRecord`](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/space/deleteRecord.json).
 
 The feature is based on the [AT Protocol Spaces alpha announcement](https://atproto.com/blog/atproto-spaces-alpha), the [November 24 alpha migration guidance](https://github.com/bluesky-social/atproto/blob/permissioned-data/alpha-migrations/prompt-11-24-26.md), and the [permissioned data proposal](https://github.com/bluesky-social/proposals/tree/main/0016-permissioned-data).

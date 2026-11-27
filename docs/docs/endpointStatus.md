@@ -205,7 +205,11 @@
 | **Space** | [com.atproto.space.createRecord](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/space/createRecord.json) | `AtProtoAgent.CreateSpaceRecord()` | ✔ Experimental |
 | | [com.atproto.space.createSpace](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/space/createSpace.json) | `AtProtoAgent.CreateSpace()` | ✔ Experimental |
 | | [com.atproto.space.deleteRecord](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/space/deleteRecord.json) | `AtProtoAgent.DeleteSpaceRecord()` | ✔ Experimental |
+| | [com.atproto.space.deleteSpace](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/space/deleteSpace.json) | `AtProtoAgent.DeleteSpace()` | ✔ Experimental |
+| | [com.atproto.space.getSpace](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/space/getSpace.json) | `AtProtoAgent.GetSpace()` | ✔ Experimental |
+| | [com.atproto.space.listSpaces](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/space/listSpaces.json) | `AtProtoAgent.ListSpaces()` | ✔ Experimental |
 | | [com.atproto.space.putRecord](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/space/putRecord.json) | `AtProtoAgent.PutSpaceRecord()` | ✔ Experimental |
+| | [com.atproto.space.updateSpace](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/space/updateSpace.json) | `AtProtoAgent.UpdateSpace()` | ✔ Experimental |
 | **Sync** | [com.atproto.sync.getBlob](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/getBlob.json) | `AtProtoAgent.GetBlob()` | ✔ |
 | | [com.atproto.sync.getBlocks](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/getBlocks.json) | `AtProtoAgent.GetBlocks()` | ✔ |
 | | [com.atproto.sync.getHostStatus](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/getHostStatus.json) | `AtProtoAgent.GetHostStatus()` | ✔ |

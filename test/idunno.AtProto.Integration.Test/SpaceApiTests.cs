@@ -8,6 +8,7 @@ using System.Text.Json.Nodes;
 
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Repo;
+using idunno.AtProto.Space;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
@@ -72,7 +73,7 @@ public class SpaceApiTests
 
         AtProtoHttpResult<SpaceAtUri> createSpace = await agent.CreateSpace(
             spaceType: "app.bsky.bookmark",
-            policy: new JsonObject { ["$type"] = "com.atproto.personalspace.policy" },
+            policy: new PersonalSpacePolicy(),
             skey: "fixture",
             cancellationToken: TestContext.Current.CancellationToken);
 
@@ -190,10 +191,7 @@ public class SpaceApiTests
         using AtProtoAgent agent = new(service, new TestHttpClientFactory(testServer));
         agent.Credentials = credentials;
 
-        JsonObject policy = new()
-        {
-            ["$type"] = "com.atproto.personalspace.policy"
-        };
+        PersonalSpacePolicy policy = new();
         AtProtoHttpResult<SpaceAtUri> createSpaceResult = await agent.CreateSpace(
             spaceType: "app.bsky.bookmark",
             policy: policy,
@@ -274,6 +272,14 @@ public class SpaceApiTests
                 "/xrpc/com.atproto.space.createSpace" => "UnsupportedPolicy",
                 "/xrpc/com.atproto.space.createRecord" when requestCount == 1 => "RecordAlreadyExists",
                 "/xrpc/com.atproto.space.createRecord" => "SpaceNotFound",
+                "/xrpc/com.atproto.space.getSpace" when requestCount == 1 => "SpaceNotFound",
+                "/xrpc/com.atproto.space.getSpace" => "NotAuthorized",
+                "/xrpc/com.atproto.space.listSpaces" => "InvalidCursor",
+                "/xrpc/com.atproto.space.updateSpace" when requestCount == 1 => "SpaceNotFound",
+                "/xrpc/com.atproto.space.updateSpace" when requestCount == 2 => "NotAuthorized",
+                "/xrpc/com.atproto.space.updateSpace" => "UnsupportedPolicy",
+                "/xrpc/com.atproto.space.deleteSpace" when requestCount == 1 => "SpaceNotFound",
+                "/xrpc/com.atproto.space.deleteSpace" => "NotAuthorized",
                 _ => "SpaceNotFound"
             };
 
@@ -290,7 +296,7 @@ public class SpaceApiTests
             refreshToken: "refreshToken");
 
         SpaceAtUri space = new("at:space/did:plc:owner/app.bsky.bookmark/space-key");
-        JsonObject policy = new() { ["$type"] = "com.atproto.personalspace.policy" };
+        PersonalSpacePolicy policy = new();
         TestRecord record = new() { TestValue = "space record" };
 
         AtProtoHttpResult<SpaceAtUri> alreadyExists = await agent.CreateSpace(
@@ -322,6 +328,25 @@ public class SpaceApiTests
             collection: "app.bsky.feed.post",
             rkey: "record-key",
             cancellationToken: TestContext.Current.CancellationToken);
+        AtProtoHttpResult<SpaceDescription> missingSpaceOnGet = await agent.GetSpace(space, cancellationToken: TestContext.Current.CancellationToken);
+        AtProtoHttpResult<SpaceDescription> unauthorizedSpaceOnGet = await agent.GetSpace(space, cancellationToken: TestContext.Current.CancellationToken);
+        AtProtoHttpResult<PagedReadOnlyCollection<SpaceView>> invalidCursor = await agent.ListSpaces(
+            cursor: "invalid",
+            cancellationToken: TestContext.Current.CancellationToken);
+        AtProtoHttpResult<EmptyResponse> missingSpaceOnUpdate = await agent.UpdateSpace(
+            space,
+            policy,
+            cancellationToken: TestContext.Current.CancellationToken);
+        AtProtoHttpResult<EmptyResponse> unauthorizedSpaceOnUpdate = await agent.UpdateSpace(
+            space,
+            policy,
+            cancellationToken: TestContext.Current.CancellationToken);
+        AtProtoHttpResult<EmptyResponse> unsupportedSpacePolicy = await agent.UpdateSpace(
+            space,
+            policy,
+            cancellationToken: TestContext.Current.CancellationToken);
+        AtProtoHttpResult<DeleteResult> missingSpaceOnDeleteSpace = await agent.DeleteSpace(space, cancellationToken: TestContext.Current.CancellationToken);
+        AtProtoHttpResult<DeleteResult> unauthorizedSpaceOnDelete = await agent.DeleteSpace(space, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal("SpaceAlreadyExists", alreadyExists.AtErrorDetail?.Error);
         Assert.Equal("UnsupportedPolicy", unsupportedPolicy.AtErrorDetail?.Error);
@@ -329,6 +354,14 @@ public class SpaceApiTests
         Assert.Equal("SpaceNotFound", missingSpaceOnCreate.AtErrorDetail?.Error);
         Assert.Equal("SpaceNotFound", missingSpaceOnPut.AtErrorDetail?.Error);
         Assert.Equal("SpaceNotFound", missingSpaceOnDelete.AtErrorDetail?.Error);
+        Assert.Equal("SpaceNotFound", missingSpaceOnGet.AtErrorDetail?.Error);
+        Assert.Equal("NotAuthorized", unauthorizedSpaceOnGet.AtErrorDetail?.Error);
+        Assert.Equal("InvalidCursor", invalidCursor.AtErrorDetail?.Error);
+        Assert.Equal("SpaceNotFound", missingSpaceOnUpdate.AtErrorDetail?.Error);
+        Assert.Equal("NotAuthorized", unauthorizedSpaceOnUpdate.AtErrorDetail?.Error);
+        Assert.Equal("UnsupportedPolicy", unsupportedSpacePolicy.AtErrorDetail?.Error);
+        Assert.Equal("SpaceNotFound", missingSpaceOnDeleteSpace.AtErrorDetail?.Error);
+        Assert.Equal("NotAuthorized", unauthorizedSpaceOnDelete.AtErrorDetail?.Error);
     }
 
     [Theory]
@@ -351,13 +384,253 @@ public class SpaceApiTests
 
         AtProtoHttpResult<SpaceAtUri> result = await agent.CreateSpace(
             spaceType: "app.bsky.bookmark",
-            policy: new JsonObject { ["$type"] = "com.atproto.personalspace.policy" },
+            policy: new PersonalSpacePolicy(),
             cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.False(result.Succeeded);
         Assert.Equal(statusCode, (int)result.StatusCode);
         Assert.Equal("InvalidToken", result.AtErrorDetail?.Error);
         Assert.Equal("Bad token scope", result.AtErrorDetail?.Message);
+    }
+
+    [Theory]
+    [InlineData(StatusCodes.Status200OK)]
+    [InlineData(StatusCodes.Status204NoContent)]
+    public async Task AgentCanReadListUpdateAndDeleteSpaces(int statusCode)
+    {
+        const string spaceUri = "at:space/did:plc:owner/app.bsky.bookmark/space-key";
+        const string getQuery = "?space=at%3Aspace%2Fdid%3Aplc%3Aowner%2Fapp.bsky.bookmark%2Fspace-key";
+        string? listQuery = null;
+        Dictionary<string, JsonElement> requestBodies = [];
+        Uri service = TestServerBuilder.DefaultUri;
+        TestServer testServer = TestServerBuilder.CreateServer(service, async context =>
+        {
+            string path = context.Request.Path;
+            if (context.Request.Method == HttpMethods.Get && path == "/xrpc/com.atproto.space.getSpace")
+            {
+                Assert.Equal(getQuery, context.Request.QueryString.Value);
+                await context.Response.WriteAsJsonAsync(new
+                {
+                    space = spaceUri,
+                    policy = JsonNode.Parse("""{"$type":"com.atproto.memberspace.policy","publicRead":true}""")
+                });
+            }
+            else if (context.Request.Method == HttpMethods.Get && path == "/xrpc/com.atproto.space.listSpaces")
+            {
+                listQuery = context.Request.QueryString.Value;
+                await context.Response.WriteAsJsonAsync(new
+                {
+                    spaces = new object[]
+                    {
+                        new
+                        {
+                            space = spaceUri,
+                            repoRev = "3k4duaz5vfs2b",
+                            data = JsonNode.Parse("""{"$bytes":"AQID"}"""),
+                            spaceRev = "3k4duaz5vfs2b"
+                        },
+                        new
+                        {
+                            space = "at:space/did:plc:owner/app.bsky.bookmark/other"
+                        }
+                    },
+                    cursor = "next"
+                });
+            }
+            else if (context.Request.Method == HttpMethods.Post &&
+                path is "/xrpc/com.atproto.space.updateSpace" or "/xrpc/com.atproto.space.deleteSpace")
+            {
+                using JsonDocument body = await JsonDocument.ParseAsync(context.Request.Body);
+                requestBodies[path] = body.RootElement.Clone();
+                context.Response.StatusCode = statusCode;
+            }
+            else
+            {
+                throw new InvalidOperationException("Unexpected Spaces endpoint.");
+            }
+        });
+
+        using AtProtoAgent agent = new(service, new TestHttpClientFactory(testServer));
+        agent.Credentials = new AccessCredentials(
+            service: service,
+            authenticationType: AuthenticationType.UsernamePassword,
+            accessJwt: JwtBuilder.CreateJwt(new Did("did:plc:owner"), service.ToString()),
+            refreshToken: "refreshToken");
+
+        SpaceAtUri space = new(spaceUri);
+        AtProtoHttpResult<SpaceDescription> getResult = await agent.GetSpace(space, cancellationToken: TestContext.Current.CancellationToken);
+        AtProtoHttpResult<PagedReadOnlyCollection<SpaceView>> listResult = await agent.ListSpaces(
+            spaceDid: "did:plc:owner",
+            spaceType: "app.bsky.bookmark",
+            limit: 25,
+            cursor: "after/+",
+            cancellationToken: TestContext.Current.CancellationToken);
+        AtProtoHttpResult<EmptyResponse> updateResult = await agent.UpdateSpace(
+            space,
+            new ManagedSpacePolicy { ManagingApp = "did:plc:app#app" },
+            cancellationToken: TestContext.Current.CancellationToken);
+        AtProtoHttpResult<DeleteResult> deleteResult = await agent.DeleteSpace(space, cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(getResult.Succeeded);
+        Assert.Equal(spaceUri, getResult.Result.Space.ToString());
+        MemberSpacePolicy memberPolicy = Assert.IsType<MemberSpacePolicy>(getResult.Result.Policy);
+        Assert.True(memberPolicy.PublicRead);
+        Assert.True(listResult.Succeeded);
+        Assert.Equal("next", listResult.Result.Cursor);
+        Assert.Equal(2, listResult.Result.Count);
+        SpaceView listedSpace = listResult.Result[0];
+        Assert.Equal(new byte[] { 1, 2, 3 }, listedSpace.Data?.ToBytes());
+        Assert.Null(listResult.Result[1].RepoRev);
+        Assert.Null(listResult.Result[1].Data);
+        Assert.Null(listResult.Result[1].SpaceRev);
+        Assert.Equal("?spaceDid=did%3Aplc%3Aowner&spaceType=app.bsky.bookmark&limit=25&cursor=after%2F%2B", listQuery);
+        Assert.True(updateResult.Succeeded);
+        Assert.True(deleteResult.Succeeded);
+        Assert.Equal(spaceUri, requestBodies["/xrpc/com.atproto.space.updateSpace"].GetProperty("space").GetString());
+        Assert.Equal("com.atproto.managedspace.policy", requestBodies["/xrpc/com.atproto.space.updateSpace"].GetProperty("policy").GetProperty("$type").GetString());
+        Assert.Equal("did:plc:app#app", requestBodies["/xrpc/com.atproto.space.updateSpace"].GetProperty("policy").GetProperty("managingApp").GetString());
+        Assert.Equal(spaceUri, requestBodies["/xrpc/com.atproto.space.deleteSpace"].GetProperty("space").GetString());
+    }
+
+    [Fact]
+    public void SpacePoliciesSerializeWithLexiconDiscriminators()
+    {
+        SpacePolicy[] policies =
+        [
+            new PersonalSpacePolicy(),
+            new MemberSpacePolicy { PublicRead = true, AllowedApps = [new Uri("https://example.com/app")] },
+            new ManagedSpacePolicy { ManagingApp = "did:plc:app#app", PublishPolicy = true }
+        ];
+        string[] discriminators =
+        [
+            "com.atproto.personalspace.policy",
+            "com.atproto.memberspace.policy",
+            "com.atproto.managedspace.policy"
+        ];
+
+        for (int i = 0; i < policies.Length; i++)
+        {
+            string json = JsonSerializer.Serialize(policies[i], policies[i].GetType(), AtProtoJsonSerializerOptions.Default);
+            using JsonDocument document = JsonDocument.Parse(json);
+            Assert.Equal(discriminators[i], document.RootElement.GetProperty("$type").GetString());
+
+            SpacePolicy? deserialized = JsonSerializer.Deserialize<SpacePolicy>(json, AtProtoJsonSerializerOptions.Default);
+            Assert.Equal(policies[i].GetType(), deserialized?.GetType());
+            if (deserialized is MemberSpacePolicy memberPolicy)
+            {
+                Assert.Equal(new Uri("https://example.com/app"), Assert.Single(memberPolicy.AllowedApps!));
+            }
+        }
+    }
+
+    [Theory]
+    [InlineData("""{"$type":"org.example.space.policy","setting":{"enabled":true}}""")]
+    [InlineData("""{"setting":{"enabled":true},"$type":"org.example.space.policy"}""")]
+    public void UnknownSpacePoliciesPreserveTheirContents(string json)
+    {
+        SpacePolicy? policy = JsonSerializer.Deserialize<SpacePolicy>(json, AtProtoJsonSerializerOptions.Default);
+        UnknownSpacePolicy unknown = Assert.IsType<UnknownSpacePolicy>(policy);
+        Assert.Equal("org.example.space.policy", unknown.Value.GetProperty("$type").GetString());
+        Assert.True(unknown.Value.GetProperty("setting").GetProperty("enabled").GetBoolean());
+
+        string serialized = JsonSerializer.Serialize(policy, AtProtoJsonSerializerOptions.Default);
+        using JsonDocument document = JsonDocument.Parse(serialized);
+        Assert.Equal("org.example.space.policy", document.RootElement.GetProperty("$type").GetString());
+        Assert.True(document.RootElement.GetProperty("setting").GetProperty("enabled").GetBoolean());
+
+        string direct = JsonSerializer.Serialize(unknown, AtProtoJsonSerializerOptions.Default);
+        using JsonDocument directDocument = JsonDocument.Parse(direct);
+        Assert.Equal("org.example.space.policy", directDocument.RootElement.GetProperty("$type").GetString());
+    }
+
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("""{"$type":1}""")]
+    [InlineData("""{"$type":""}""")]
+    public void SpacePolicyRejectsMissingOrInvalidDiscriminator(string json)
+    {
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<SpacePolicy>(json, AtProtoJsonSerializerOptions.Default));
+    }
+
+    [Fact]
+    public async Task UnknownPolicyCanBeReadAndWrittenThroughSpaceEndpoints()
+    {
+        const string policyJson = """{"$type":"org.example.space.policy","setting":{"enabled":true}}""";
+        const string spaceUri = "at:space/did:plc:owner/app.bsky.bookmark/space-key";
+        JsonElement? writtenPolicy = null;
+        Uri service = TestServerBuilder.DefaultUri;
+        TestServer testServer = TestServerBuilder.CreateServer(service, async context =>
+        {
+            if (context.Request.Method == HttpMethods.Get)
+            {
+                await context.Response.WriteAsync($$"""{"space":"{{spaceUri}}","policy":{{policyJson}}}""");
+            }
+            else
+            {
+                using JsonDocument body = await JsonDocument.ParseAsync(context.Request.Body);
+                writtenPolicy = body.RootElement.GetProperty("policy").Clone();
+                context.Response.StatusCode = StatusCodes.Status204NoContent;
+            }
+        });
+
+        using AtProtoAgent agent = new(service, new TestHttpClientFactory(testServer));
+        agent.Credentials = new AccessCredentials(
+            service: service,
+            authenticationType: AuthenticationType.UsernamePassword,
+            accessJwt: JwtBuilder.CreateJwt(new Did("did:plc:test"), service.ToString()),
+            refreshToken: "refreshToken");
+
+        SpaceAtUri space = new(spaceUri);
+        AtProtoHttpResult<SpaceDescription> get = await agent.GetSpace(space, cancellationToken: TestContext.Current.CancellationToken);
+        Assert.True(get.Succeeded);
+        Assert.IsType<UnknownSpacePolicy>(get.Result.Policy);
+        AtProtoHttpResult<EmptyResponse> update = await agent.UpdateSpace(space, get.Result.Policy, cancellationToken: TestContext.Current.CancellationToken);
+        Assert.True(update.Succeeded);
+        Assert.True(writtenPolicy.HasValue);
+        Assert.Equal("org.example.space.policy", writtenPolicy.Value.GetProperty("$type").GetString());
+        Assert.True(writtenPolicy.Value.GetProperty("setting").GetProperty("enabled").GetBoolean());
+    }
+
+    [Fact]
+    public void SpaceDefinitionsRoundTripThroughSourceGeneratedMetadata()
+    {
+        SpaceAtUri space = new("at:space/did:plc:owner/app.bsky.bookmark/space-key");
+        TimestampIdentifier revision = "3k4duaz5vfs2b";
+        SpaceCommit commit = new()
+        {
+            Ver = 1,
+            Repo = "did:plc:owner",
+            Space = space,
+            Rev = revision,
+            Data = new byte[] { 1, 2, 3 }
+        };
+        SpaceRepoWrite write = new()
+        {
+            Repo = "did:plc:owner",
+            RepoRev = revision,
+            Data = new byte[] { 4, 5, 6 },
+            SpaceRev = revision
+        };
+        SpaceRepoRemoved removed = new()
+        {
+            Repo = "did:plc:owner",
+            SpaceRev = revision
+        };
+
+        string commitJson = JsonSerializer.Serialize(commit, AtProtoJsonSerializerOptions.Default);
+        string writeJson = JsonSerializer.Serialize(write, AtProtoJsonSerializerOptions.Default);
+        string removedJson = JsonSerializer.Serialize(removed, AtProtoJsonSerializerOptions.Default);
+        using JsonDocument commitDocument = JsonDocument.Parse(commitJson);
+        using JsonDocument writeDocument = JsonDocument.Parse(writeJson);
+        Assert.Equal("AQID", commitDocument.RootElement.GetProperty("data").GetProperty("$bytes").GetString());
+        Assert.Equal("BAUG", writeDocument.RootElement.GetProperty("data").GetProperty("$bytes").GetString());
+        SpaceCommit? commitRoundTrip = JsonSerializer.Deserialize<SpaceCommit>(commitJson, AtProtoJsonSerializerOptions.Default);
+        SpaceRepoWrite? writeRoundTrip = JsonSerializer.Deserialize<SpaceRepoWrite>(writeJson, AtProtoJsonSerializerOptions.Default);
+        SpaceRepoRemoved? removedRoundTrip = JsonSerializer.Deserialize<SpaceRepoRemoved>(removedJson, AtProtoJsonSerializerOptions.Default);
+
+        Assert.Equal(commit.Data, commitRoundTrip?.Data);
+        Assert.Equal(write.Data, writeRoundTrip?.Data);
+        Assert.Equal(removed.SpaceRev, removedRoundTrip?.SpaceRev);
     }
 
     [Fact]
@@ -397,6 +670,78 @@ public class SpaceApiTests
             space: spaceRecord,
             collection: "app.bsky.feed.post",
             rkey: "record-key",
+            cancellationToken: TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<ArgumentException>(() => agent.GetSpace(
+            space: spaceRecord,
+            cancellationToken: TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<ArgumentException>(() => agent.UpdateSpace(
+            space: spaceRecord,
+            policy: new PersonalSpacePolicy(),
+            cancellationToken: TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<ArgumentException>(() => agent.DeleteSpace(
+            space: spaceRecord,
+            cancellationToken: TestContext.Current.CancellationToken));
+
+        Assert.Equal(0, requestCount);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task SpaceReadRejectsRecordUriInResponse(bool getSpace)
+    {
+        const string recordUri = "at:space/did:plc:owner/app.bsky.bookmark/space-key/did:plc:test/app.bsky.feed.post/record-key";
+        Uri service = TestServerBuilder.DefaultUri;
+        TestServer testServer = TestServerBuilder.CreateServer(service, async context =>
+        {
+            context.Response.ContentType = "application/json";
+            string response = getSpace
+                ? $$$"""{"space":"{{{recordUri}}}","policy":{"$type":"com.atproto.personalspace.policy"}}"""
+                : $$$"""{"spaces":[{"space":"{{{recordUri}}}"}]}""";
+            await context.Response.WriteAsync(response);
+        });
+
+        using AtProtoAgent agent = new(service, new TestHttpClientFactory(testServer));
+        agent.Credentials = new AccessCredentials(
+            service: service,
+            authenticationType: AuthenticationType.UsernamePassword,
+            accessJwt: JwtBuilder.CreateJwt(new Did("did:plc:test"), service.ToString()),
+            refreshToken: "refreshToken");
+
+        if (getSpace)
+        {
+            await Assert.ThrowsAsync<JsonException>(() => agent.GetSpace(
+                new SpaceAtUri("at:space/did:plc:owner/app.bsky.bookmark/space-key"),
+                cancellationToken: TestContext.Current.CancellationToken));
+        }
+        else
+        {
+            await Assert.ThrowsAsync<JsonException>(() => agent.ListSpaces(cancellationToken: TestContext.Current.CancellationToken));
+        }
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(101)]
+    public async Task ListSpacesRejectsLimitsOutsideLexiconRange(int limit)
+    {
+        int requestCount = 0;
+        Uri service = TestServerBuilder.DefaultUri;
+        TestServer testServer = TestServerBuilder.CreateServer(service, _ =>
+        {
+            requestCount++;
+            return Task.CompletedTask;
+        });
+
+        using AtProtoAgent agent = new(service, new TestHttpClientFactory(testServer));
+        agent.Credentials = new AccessCredentials(
+            service: service,
+            authenticationType: AuthenticationType.UsernamePassword,
+            accessJwt: JwtBuilder.CreateJwt(new Did("did:plc:test"), service.ToString()),
+            refreshToken: "refreshToken");
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => agent.ListSpaces(
+            limit: limit,
             cancellationToken: TestContext.Current.CancellationToken));
 
         Assert.Equal(0, requestCount);

@@ -88,7 +88,7 @@
 
 #### idunno.AtProto
 
-* Added experimental AT Protocol Spaces support for creating spaces and creating, replacing and deleting records in a space. Space reads remain unsupported pending credential and MAC verification.
+* Added experimental AT Protocol Spaces support for creating, inspecting, listing, updating and deleting spaces; typed space policies and synchronization definitions; and creating, replacing and deleting records in a space. Reading records, synchronization and membership management remain unsupported.
 
 * Rejects permissioned space URIs in repository record reads and deletes rather than treating the space authority as a repository.
 * Added optional-CID support for `com.atproto.repo.getRecord` results, with `HasCid` and `TryGetStrongReference()` for safely handling records without a CID.
