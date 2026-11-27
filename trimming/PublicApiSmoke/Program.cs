@@ -790,7 +790,7 @@ internal sealed class OfflineHttpClientFactory(OfflineHttpMessageHandler handler
 {
     private readonly OfflineHttpMessageHandler _handler = handler;
 
-    public HttpClient CreateClient(string name) => new(_handler, disposeHandler: false);
+    public HttpClient CreateClient(string _) => new(_handler, disposeHandler: false);
 }
 
 internal sealed class OfflineHttpMessageHandler : HttpMessageHandler

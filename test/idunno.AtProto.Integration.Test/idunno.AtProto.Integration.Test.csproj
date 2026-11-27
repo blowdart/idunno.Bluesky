@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="TestData\SpaceAlphaResponses.json" />
+    <EmbeddedResource Include="TestData\SpaceMembershipAlphaResponses.json" />
   </ItemGroup>
 
 </Project>

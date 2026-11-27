@@ -79,6 +79,7 @@ $analysisProjects = @(
 $supportedProjects = @(
     'src/idunno.AtProto.Types/idunno.AtProto.Types.csproj',
     'src/idunno.AtProto/idunno.AtProto.csproj',
+    'src/idunno.AtProto.AspNet.Spaces/idunno.AtProto.AspNet.Spaces.csproj',
     'src/idunno.AtProto.OAuthCallback/idunno.AtProto.OAuthCallback.csproj',
     'src/idunno.Bluesky/idunno.Bluesky.csproj',
     'src/idunno.Bluesky.AspNet.Authentication/idunno.Bluesky.AspNet.Authentication.csproj',
@@ -153,6 +154,7 @@ $escapedPackageFeedPath = [System.Security.SecurityElement]::Escape($packageFeed
     <packageSource key="trimming-packages">
       <package pattern="idunno.AtProto" />
       <package pattern="idunno.AtProto.Types" />
+      <package pattern="idunno.AtProto.AspNet.Spaces" />
       <package pattern="idunno.AtProto.OAuthCallback" />
       <package pattern="idunno.Bluesky" />
       <package pattern="idunno.Bluesky.AspNet.Authentication" />

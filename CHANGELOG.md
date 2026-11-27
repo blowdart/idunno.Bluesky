@@ -88,7 +88,8 @@
 
 #### idunno.AtProto
 
-* Added experimental AT Protocol Spaces support for creating, inspecting, listing, updating and deleting spaces; typed space policies and synchronization definitions; and creating, replacing and deleting records in a space. Reading records, synchronization and membership management remain unsupported.
+* Added experimental AT Protocol Spaces support for creating, inspecting, listing, updating and deleting spaces; typed space policies, published policy and membership records, member management, managed-space access checks and synchronization definitions; and creating, replacing and deleting records in a space. Reading records and synchronization remain unsupported.
+* Added a framework-neutral managed-space `checkAccess` handler that verifies authority service tokens, prevents replay and delegates access decisions to the managing application.
 
 * Rejects permissioned space URIs in repository record reads and deletes rather than treating the space authority as a repository.
 * Added optional-CID support for `com.atproto.repo.getRecord` results, with `HasCid` and `TryGetStrongReference()` for safely handling records without a CID.
@@ -96,6 +97,10 @@
 * Adds separate Ozone administration service-token verification for exact labeler service and PDS bare-DID audiences, retaining method binding, replay identifiers and strict generic/native verification.
 * Allows the exact Ozone compatibility reads `app.bsky.actor.getProfile`, `app.bsky.feed.getPostThread` and `tools.ozone.setting.listOptions`, and the narrow `tools.ozone.setting.upsertOption` procedure, through that verifier without accepting other AppView or settings methods.
 * Added moderation-only service authentication for exact labeler service audiences and bare issuer DIDs used by PDS proxies, with exact-method verification for reports and Ozone label appeals without relaxing administration. Added shared explicit label-policy publication validation without restricting remote DTO deserialization.
+
+#### idunno.AtProto.AspNet.Spaces
+
+* ASP.NET Core dependency-injection and endpoint helpers for hosting the managed-space `checkAccess` handler over HTTPS.
 
 * Added exact `DID#service` token-acquisition overloads and strict AT Protocol service JWT verification. Production native loopback callbacks no longer implicitly permit insecure remote OAuth endpoints.
 * Service-authentication tokens request a 14-minute-55-second lifetime by default, leaving five seconds of client/PDS clock-skew headroom below the default 15-minute verifier maximum; callers can choose another lifetime, and verifiers can configure their maximum accepted lifetime.

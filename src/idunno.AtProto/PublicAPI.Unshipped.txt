@@ -1,4 +1,72 @@
 #nullable enable
+[BSKYSpaces]idunno.AtProto.AtProtoAgent.ListSpaceMembers(idunno.AtProto.SpaceAtUri! space, int? limit = null, string? cursor = null, string? serviceProxy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.PagedReadOnlyCollection<idunno.AtProto.Space.SpaceMember!>!>!>!
+[BSKYSpaces]idunno.AtProto.AtProtoAgent.PutSpaceMembers(idunno.AtProto.SpaceAtUri! space, System.Collections.Generic.IReadOnlyList<idunno.AtProto.Space.SpaceMember!>! members, string? serviceProxy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
+[BSKYSpaces]idunno.AtProto.AtProtoAgent.RemoveSpaceMembers(idunno.AtProto.SpaceAtUri! space, System.Collections.Generic.IReadOnlyList<idunno.AtProto.Did!>! dids, string? serviceProxy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
+[BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccess
+[BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccess.<Clone>$() -> idunno.AtProto.Space.ManagedSpaceAccess!
+[BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccess.Equals(idunno.AtProto.Space.ManagedSpaceAccess? other) -> bool
+[BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccess.ManagedSpaceAccess() -> void
+[BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccess.Read.get -> bool
+[BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccess.Read.init -> void
+[BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccess.Write.get -> bool
+[BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccess.Write.init -> void
+[BSKYSpaces]idunno.AtProto.Space.SpaceMember
+[BSKYSpaces]idunno.AtProto.Space.SpaceMember.Did.get -> idunno.AtProto.Did!
+[BSKYSpaces]idunno.AtProto.Space.SpaceMember.Did.init -> void
+[BSKYSpaces]idunno.AtProto.Space.SpaceMember.Equals(idunno.AtProto.Space.SpaceMember? other) -> bool
+[BSKYSpaces]idunno.AtProto.Space.SpaceMember.Read.get -> bool
+[BSKYSpaces]idunno.AtProto.Space.SpaceMember.Read.init -> void
+[BSKYSpaces]idunno.AtProto.Space.SpaceMember.SpaceMember() -> void
+[BSKYSpaces]idunno.AtProto.Space.SpaceMember.Write.get -> bool
+[BSKYSpaces]idunno.AtProto.Space.SpaceMember.Write.init -> void
+[BSKYSpaces]idunno.AtProto.Space.SpaceMemberRecord
+[BSKYSpaces]idunno.AtProto.Space.SpaceMemberRecord.Read.get -> bool
+[BSKYSpaces]idunno.AtProto.Space.SpaceMemberRecord.Read.init -> void
+[BSKYSpaces]idunno.AtProto.Space.SpaceMemberRecord.SpaceMemberRecord() -> void
+[BSKYSpaces]idunno.AtProto.Space.SpaceMemberRecord.SpaceMemberRecord(idunno.AtProto.Space.SpaceMemberRecord! original) -> void
+[BSKYSpaces]idunno.AtProto.Space.SpaceMemberRecord.Write.get -> bool
+[BSKYSpaces]idunno.AtProto.Space.SpaceMemberRecord.Write.init -> void
+[BSKYSpaces]idunno.AtProto.Space.SpacePolicyRecord
+[BSKYSpaces]idunno.AtProto.Space.SpacePolicyRecord.Policy.get -> idunno.AtProto.Space.SpacePolicy!
+[BSKYSpaces]idunno.AtProto.Space.SpacePolicyRecord.Policy.init -> void
+[BSKYSpaces]idunno.AtProto.Space.SpacePolicyRecord.SpacePolicyRecord() -> void
+[BSKYSpaces]idunno.AtProto.Space.SpacePolicyRecord.SpacePolicyRecord(idunno.AtProto.Space.SpacePolicyRecord! original) -> void
+[BSKYSpaces]override idunno.AtProto.Space.ManagedSpaceAccess.Equals(object? obj) -> bool
+[BSKYSpaces]override idunno.AtProto.Space.ManagedSpaceAccess.GetHashCode() -> int
+[BSKYSpaces]override idunno.AtProto.Space.ManagedSpaceAccess.ToString() -> string!
+[BSKYSpaces]override idunno.AtProto.Space.SpaceMember.<Clone>$() -> idunno.AtProto.Space.SpaceMember!
+[BSKYSpaces]override idunno.AtProto.Space.SpaceMember.Equals(object? obj) -> bool
+[BSKYSpaces]override idunno.AtProto.Space.SpaceMember.GetHashCode() -> int
+[BSKYSpaces]override idunno.AtProto.Space.SpaceMember.ToString() -> string!
+[BSKYSpaces]override idunno.AtProto.Space.SpaceMemberRecord.<Clone>$() -> idunno.AtProto.Space.SpaceMemberRecord!
+[BSKYSpaces]override idunno.AtProto.Space.SpaceMemberRecord.EqualityContract.get -> System.Type!
+[BSKYSpaces]override idunno.AtProto.Space.SpaceMemberRecord.Equals(object? obj) -> bool
+[BSKYSpaces]override idunno.AtProto.Space.SpaceMemberRecord.GetHashCode() -> int
+[BSKYSpaces]override idunno.AtProto.Space.SpaceMemberRecord.PrintMembers(System.Text.StringBuilder! builder) -> bool
+[BSKYSpaces]override idunno.AtProto.Space.SpaceMemberRecord.ToString() -> string!
+[BSKYSpaces]override idunno.AtProto.Space.SpacePolicyRecord.<Clone>$() -> idunno.AtProto.Space.SpacePolicyRecord!
+[BSKYSpaces]override idunno.AtProto.Space.SpacePolicyRecord.EqualityContract.get -> System.Type!
+[BSKYSpaces]override idunno.AtProto.Space.SpacePolicyRecord.Equals(object? obj) -> bool
+[BSKYSpaces]override idunno.AtProto.Space.SpacePolicyRecord.GetHashCode() -> int
+[BSKYSpaces]override idunno.AtProto.Space.SpacePolicyRecord.PrintMembers(System.Text.StringBuilder! builder) -> bool
+[BSKYSpaces]override idunno.AtProto.Space.SpacePolicyRecord.ToString() -> string!
+[BSKYSpaces]override sealed idunno.AtProto.Space.SpaceMember.Equals(idunno.AtProto.Repo.AtProtoObject? other) -> bool
+[BSKYSpaces]override sealed idunno.AtProto.Space.SpaceMemberRecord.Equals(idunno.AtProto.Repo.AtProtoRecord? other) -> bool
+[BSKYSpaces]override sealed idunno.AtProto.Space.SpacePolicyRecord.Equals(idunno.AtProto.Repo.AtProtoRecord? other) -> bool
+[BSKYSpaces]static idunno.AtProto.AtProtoServer.CheckManagedSpaceAccess(idunno.AtProto.SpaceAtUri! space, idunno.AtProto.Did? repo, System.Uri? clientId, System.Uri! service, idunno.AtProto.Authentication.ServiceCredential! serviceCredential, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Space.ManagedSpaceAccess!>!>!
+[BSKYSpaces]static idunno.AtProto.AtProtoServer.ListSpaceMembers(idunno.AtProto.SpaceAtUri! space, int? limit, string? cursor, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, string? serviceProxy = null, System.Func<idunno.AtProto.Authentication.AtProtoCredential!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.PagedReadOnlyCollection<idunno.AtProto.Space.SpaceMember!>!>!>!
+[BSKYSpaces]static idunno.AtProto.AtProtoServer.PutSpaceMembers(idunno.AtProto.SpaceAtUri! space, System.Collections.Generic.IReadOnlyList<idunno.AtProto.Space.SpaceMember!>! members, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, string? serviceProxy = null, System.Func<idunno.AtProto.Authentication.AtProtoCredential!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
+[BSKYSpaces]static idunno.AtProto.AtProtoServer.RemoveSpaceMembers(idunno.AtProto.SpaceAtUri! space, System.Collections.Generic.IReadOnlyList<idunno.AtProto.Did!>! dids, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, string? serviceProxy = null, System.Func<idunno.AtProto.Authentication.AtProtoCredential!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
+[BSKYSpaces]static idunno.AtProto.Space.ManagedSpaceAccess.operator !=(idunno.AtProto.Space.ManagedSpaceAccess? left, idunno.AtProto.Space.ManagedSpaceAccess? right) -> bool
+[BSKYSpaces]static idunno.AtProto.Space.ManagedSpaceAccess.operator ==(idunno.AtProto.Space.ManagedSpaceAccess? left, idunno.AtProto.Space.ManagedSpaceAccess? right) -> bool
+[BSKYSpaces]static idunno.AtProto.Space.SpaceMember.operator !=(idunno.AtProto.Space.SpaceMember? left, idunno.AtProto.Space.SpaceMember? right) -> bool
+[BSKYSpaces]static idunno.AtProto.Space.SpaceMember.operator ==(idunno.AtProto.Space.SpaceMember? left, idunno.AtProto.Space.SpaceMember? right) -> bool
+[BSKYSpaces]static idunno.AtProto.Space.SpaceMemberRecord.operator !=(idunno.AtProto.Space.SpaceMemberRecord? left, idunno.AtProto.Space.SpaceMemberRecord? right) -> bool
+[BSKYSpaces]static idunno.AtProto.Space.SpaceMemberRecord.operator ==(idunno.AtProto.Space.SpaceMemberRecord? left, idunno.AtProto.Space.SpaceMemberRecord? right) -> bool
+[BSKYSpaces]static idunno.AtProto.Space.SpacePolicyRecord.operator !=(idunno.AtProto.Space.SpacePolicyRecord? left, idunno.AtProto.Space.SpacePolicyRecord? right) -> bool
+[BSKYSpaces]static idunno.AtProto.Space.SpacePolicyRecord.operator ==(idunno.AtProto.Space.SpacePolicyRecord? left, idunno.AtProto.Space.SpacePolicyRecord? right) -> bool
+[BSKYSpaces]virtual idunno.AtProto.Space.SpaceMemberRecord.Equals(idunno.AtProto.Space.SpaceMemberRecord? other) -> bool
+[BSKYSpaces]virtual idunno.AtProto.Space.SpacePolicyRecord.Equals(idunno.AtProto.Space.SpacePolicyRecord? other) -> bool
 static idunno.AtProto.ServiceAuthentication.VerifyOzoneAdministrationAsync(string! token, idunno.AtProto.Did! labeler, idunno.AtProto.Nsid! method) -> System.Threading.Tasks.Task<idunno.AtProto.ServiceAuthenticationResult!>!
 static idunno.AtProto.ServiceAuthentication.VerifyOzoneAdministrationAsync(string! token, idunno.AtProto.Did! labeler, idunno.AtProto.Nsid! method, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.ServiceAuthenticationResult!>!
 static idunno.AtProto.ServiceAuthentication.VerifyOzoneAdministrationAsync(string! token, idunno.AtProto.Did! labeler, idunno.AtProto.Nsid! method, System.TimeProvider? timeProvider, System.TimeSpan? maximumLifetime, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.ServiceAuthenticationResult!>!
@@ -207,3 +275,35 @@ idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord>.AtProtoRepositoryRecord(idu
 [BSKYSpaces]static idunno.AtProto.Space.SpaceView.operator !=(idunno.AtProto.Space.SpaceView? left, idunno.AtProto.Space.SpaceView? right) -> bool
 [BSKYSpaces]static idunno.AtProto.Space.SpaceView.operator ==(idunno.AtProto.Space.SpaceView? left, idunno.AtProto.Space.SpaceView? right) -> bool
 [BSKYSpaces]idunno.AtProto.Space.MemberSpacePolicy.AllowedApps.get -> System.Collections.Generic.IReadOnlyList<System.Uri!>?
+[BSKYSpaces]idunno.AtProto.Space.IManagedSpaceAccessDecider
+[BSKYSpaces]idunno.AtProto.Space.IManagedSpaceAccessDecider.CheckAccessAsync(idunno.AtProto.Space.ManagedSpaceAccessCheck! check, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<idunno.AtProto.Space.ManagedSpaceAccess!>
+[BSKYSpaces]idunno.AtProto.Space.InMemoryServiceTokenReplayGuard
+[BSKYSpaces]const idunno.AtProto.Space.InMemoryServiceTokenReplayGuard.DefaultCapacity = 10000 -> int
+[BSKYSpaces]idunno.AtProto.Space.InMemoryServiceTokenReplayGuard.InMemoryServiceTokenReplayGuard(int capacity = 10000, System.TimeProvider? timeProvider = null) -> void
+[BSKYSpaces]idunno.AtProto.Space.InMemoryServiceTokenReplayGuard.TryReserveAsync(idunno.AtProto.ServiceAuthenticationResult! token, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<bool>
+[BSKYSpaces]idunno.AtProto.Space.IServiceTokenReplayGuard
+[BSKYSpaces]idunno.AtProto.Space.IServiceTokenReplayGuard.TryReserveAsync(idunno.AtProto.ServiceAuthenticationResult! token, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<bool>
+[BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessCheck
+[BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessCheck.Authentication.get -> idunno.AtProto.ServiceAuthenticationResult!
+[BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessCheck.ClientId.get -> System.Uri?
+[BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessCheck.Repo.get -> idunno.AtProto.Did?
+[BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessCheck.Space.get -> idunno.AtProto.SpaceAtUri!
+[BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessHandler
+[BSKYSpaces]const idunno.AtProto.Space.ManagedSpaceAccessHandler.MethodName = "com.atproto.managedspace.checkAccess" -> string!
+[BSKYSpaces]const idunno.AtProto.Space.ManagedSpaceAccessHandler.Path = "/xrpc/com.atproto.managedspace.checkAccess" -> string!
+[BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessHandler.HandleAsync(string? authorization, string? space, string? repo, string? clientId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Space.ManagedSpaceAccessResponse!>!
+[BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessHandler.ManagedSpaceAccessHandler(idunno.AtProto.Space.ManagedSpaceAccessHandlerOptions! options, idunno.AtProto.Space.IManagedSpaceAccessDecider! decider, idunno.AtProto.Space.IServiceTokenReplayGuard! replayGuard, System.Net.Http.HttpClient? httpClient = null, System.TimeProvider? timeProvider = null) -> void
+[BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessHandlerOptions
+[BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessHandlerOptions.ManagedSpaceAccessHandlerOptions() -> void
+[BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessHandlerOptions.ManagingApp.get -> idunno.AtProto.AtProtoServiceReference?
+[BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessHandlerOptions.ManagingApp.set -> void
+[BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessHandlerOptions.MaximumTokenLifetime.get -> System.TimeSpan?
+[BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessHandlerOptions.MaximumTokenLifetime.set -> void
+[BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessResponse
+[BSKYSpaces]const idunno.AtProto.Space.ManagedSpaceAccessResponse.ContentType = "application/json" -> string!
+[BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessResponse.Access.get -> idunno.AtProto.Space.ManagedSpaceAccess?
+[BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessResponse.Body.get -> System.ReadOnlyMemory<byte>
+[BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessResponse.Error.get -> string?
+[BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessResponse.Message.get -> string?
+[BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessResponse.StatusCode.get -> int
+[BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessResponse.Succeeded.get -> bool

@@ -82,7 +82,7 @@ used independently to build custom hosts.
 
 ## License
 
-`idunno.Bluesky`, `idunno.AtProto`, `idunno.AtProto.OAuthCallback`, `idunno.AtProto.Types` and `idunno.Bluesky.AspNet.Authentication` are available under the MIT license,
+`idunno.Bluesky`, `idunno.AtProto`, `idunno.AtProto.AspNet.Spaces`, `idunno.AtProto.OAuthCallback`, `idunno.AtProto.Types` and `idunno.Bluesky.AspNet.Authentication` are available under the MIT license,
 see the [LICENSE](LICENSE) file for more information.
 
 ## Support Policy

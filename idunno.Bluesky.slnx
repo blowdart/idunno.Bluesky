@@ -375,6 +375,7 @@
   <Folder Name="/src/">
     <File Path="src/.editorconfig" />
     <File Path="src/Directory.Build.props" />
+    <Project Path="src/idunno.AtProto.AspNet.Spaces/idunno.AtProto.AspNet.Spaces.csproj" />
     <Project Path="src/idunno.AtProto.OAuthCallback/idunno.AtProto.OAuthCallback.csproj" />
     <Project Path="src/idunno.AtProto.Types/idunno.AtProto.Types.csproj" />
     <Project Path="src/idunno.AtProto/idunno.AtProto.csproj" />
@@ -490,6 +491,9 @@
       <Build Solution="CodeQL|*" Project="false" />
     </Project>
     <Project Path="test/idunno.AtProto.Integration.Test/idunno.AtProto.Integration.Test.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+    </Project>
+    <Project Path="test/idunno.AtProto.AspNet.Spaces.Test/idunno.AtProto.AspNet.Spaces.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
     </Project>
     <Project Path="test/idunno.AtProto.OAuthCallback.Test/idunno.AtProto.OAuthCallback.Test.csproj">

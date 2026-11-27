@@ -2,7 +2,7 @@
 
 AT Protocol Spaces are an alpha feature for permissioned data. The APIs in this library are experimental and may change or be removed. Using them emits the `BSKYSpaces` diagnostic; see the linked page for current guidance.
 
-The current implementation supports creating, inspecting, listing, updating and deleting spaces, and creating, replacing or deleting records within a space. It does not expose record reads, synchronization or membership management. Record reads use space credentials and authenticated response MACs; they must not be treated as ordinary unauthenticated repository reads.
+The current implementation supports creating, inspecting, listing, updating and deleting spaces, managing members, checking managed-space access, and creating, replacing or deleting records within a space. It does not expose space record reads or synchronization. Record reads use space credentials and authenticated response MACs; they must not be treated as ordinary unauthenticated repository reads.
 
 ## Authentication
 
@@ -47,6 +47,39 @@ if (result.Succeeded)
 The optional key (`skey`) lets the caller choose a stable space key; when omitted, the service generates one. The SDK models personal, member and managed-space policies with `PersonalSpacePolicy`, `MemberSpacePolicy` and `ManagedSpacePolicy`. Other policy types are preserved as `UnknownSpacePolicy`, which can also be constructed from a JSON object containing its `$type`. Policy fields are defined by the corresponding Lexicons: [personal-space policy](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/personalspace/policy.json), [member-space policy](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/memberspace/policy.json), and [managed-space policy](https://github.com/bluesky-social/atproto/blob/047d6032a21be01df8447489f0d6b59d2cc60af8/lexicons/com/atproto/managedspace/policy.json).
 
 `GetSpace` retrieves a space's policy, and `ListSpaces` returns an authenticated, paginated list filtered optionally by owner DID or space-type NSID. The list limit defaults to 50 and may be set from 1 to 100. `UpdateSpace` replaces the policy; changing its type discards the previous policy's state. `DeleteSpace` removes the space and its authority repository. These methods do not provide access to the records inside a space.
+
+## Policy and membership
+
+`PutSpaceMembers` adds members or updates their read and write access, and `RemoveSpaceMembers` removes them; each accepts at most 100 entries. `ListSpaceMembers` returns a page of members with an optional cursor. Its limit is 1–1000, with a server default of 100. These methods require authentication as the space authority and a member-space policy; nonexistent members are ignored on removal.
+
+```csharp
+SpaceMember member = new() { Did = "did:plc:example", Read = true, Write = false };
+AtProtoHttpResult<EmptyResponse> update = await agent.PutSpaceMembers(
+    space,
+    [member],
+    cancellationToken: cancellationToken);
+```
+
+`SpacePolicyRecord` represents the published `com.atproto.space.policy` record at key `self`. `SpaceMemberRecord` represents a published `com.atproto.memberspace.member` record keyed by the member DID; unlike `SpaceMember`, it does not contain the DID in its value. These records are authoritative only in the space authority's repository. Unknown policy union values are retained.
+
+For hosts implementing managed spaces, `AtProtoServer.CheckManagedSpaceAccess` calls the managing application, not the authority's PDS. It requires a service-auth credential intended for that application, obtained by the host; an ordinary account session is not a substitute. Its optional `repo` and attested OAuth `clientId` identify the requester.
+
+The managing-app endpoint URL comes from the DID document, not from `publishPolicy`. The managed-space policy's `managingApp` field contains a DID service reference in the form `did#serviceId`. The authority's PDS resolves that DID, selects the matching DID-document service entry by its fragment (for example, `#managed-space`), and takes the entry's `serviceEndpoint` as the base URL. It then appends `/xrpc/com.atproto.managedspace.checkAccess` and supplies the `space`, optional `repo`, optional `clientId`, and a service token whose audience is the `managingApp` reference and whose method is `com.atproto.managedspace.checkAccess`. Configure the managing application's DID document with an HTTPS `serviceEndpoint` that is reachable by the authority PDS.
+
+The framework-neutral `ManagedSpaceAccessHandler` in `idunno.AtProto` verifies that token and passes an authenticated check to your `IManagedSpaceAccessDecider`. The `idunno.AtProto.AspNet.Spaces` package builds on it with dependency-injection and endpoint helpers:
+
+```csharp
+builder.Services.AddManagedSpaceAccess<MyAccessDecider>(options =>
+{
+    options.ManagingApp = new AtProtoServiceReference(
+        new Did("did:plc:your-managing-app"),
+        "managed-space");
+});
+
+app.MapManagedSpaceCheckAccess();
+```
+
+The `managed-space` fragment must match the service entry ID in the managing application's DID document. The helper requires HTTPS, rejects repeated request values, and returns the standard XRPC success or error shape. Its replay guard is in-memory by default; multi-instance managing apps should provide a shared implementation of `IServiceTokenReplayGuard`.
 
 ## Writing records
 

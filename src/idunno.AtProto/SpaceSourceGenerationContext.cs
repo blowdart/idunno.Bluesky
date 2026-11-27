@@ -4,6 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
+using idunno.AtProto.Repo;
 using idunno.AtProto.Space;
 using idunno.AtProto.Space.Models;
 
@@ -33,6 +34,15 @@ namespace idunno.AtProto;
 [JsonSerializable(typeof(SpaceRepoRemoved))]
 [JsonSerializable(typeof(SpaceDescription))]
 [JsonSerializable(typeof(SpaceView))]
+[JsonSerializable(typeof(SpacePolicyRecord))]
+[JsonSerializable(typeof(AtProtoRepositoryRecord<SpacePolicyRecord>))]
+[JsonSerializable(typeof(SpaceMemberRecord))]
+[JsonSerializable(typeof(AtProtoRepositoryRecord<SpaceMemberRecord>))]
+[JsonSerializable(typeof(SpaceMember))]
+[JsonSerializable(typeof(ManagedSpaceAccess))]
+[JsonSerializable(typeof(PutSpaceMembersRequest))]
+[JsonSerializable(typeof(RemoveSpaceMembersRequest))]
+[JsonSerializable(typeof(ListSpaceMembersResponse))]
 [JsonSerializable(typeof(CreateSpaceRequest))]
 [JsonSerializable(typeof(CreateSpaceResponse))]
 [JsonSerializable(typeof(GetSpaceResponse))]
