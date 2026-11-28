@@ -21,7 +21,7 @@ namespace idunno.AtProto.Space;
 /// asks an <see cref="IManagedSpaceAccessDecider"/> for the decision. A check for the space authority's own repository is always
 /// granted read and write access without calling the decider.</para>
 /// <para>Hosts must serve the handler over HTTPS, pass the request's single <c>Authorization</c> header and query values, and
-/// reject repeated values before calling <see cref="HandleAsync(string?, string?, string?, string?, CancellationToken)"/>.</para>
+/// reject repeated values before calling <see cref="Handle(string?, string?, string?, string?, CancellationToken)"/>.</para>
 /// </remarks>
 [Experimental("BSKYSpaces", UrlFormat = "https://bluesky.idunno.dev/docs/spaces.html")]
 public sealed class ManagedSpaceAccessHandler
@@ -112,7 +112,7 @@ public sealed class ManagedSpaceAccessHandler
     /// was already used, and 503 <c>ServiceUnavailable</c> when the issuer's DID document cannot be retrieved. Exceptions
     /// thrown by the decider are not caught.</para>
     /// </remarks>
-    public async Task<ManagedSpaceAccessResponse> HandleAsync(
+    public async Task<ManagedSpaceAccessResponse> Handle(
         string? authorization,
         string? space,
         string? repo,
@@ -174,7 +174,7 @@ public sealed class ManagedSpaceAccessHandler
             return ManagedSpaceAccessResponse.Failure(401, "InvalidToken", "The service token was not issued by the space authority.");
         }
 
-        if (!await _replayGuard.TryReserveAsync(authentication, cancellationToken).ConfigureAwait(false))
+        if (!await _replayGuard.TryReserve(authentication, cancellationToken).ConfigureAwait(false))
         {
             return ManagedSpaceAccessResponse.Failure(401, "InvalidToken", "The service token has already been used.");
         }
@@ -184,7 +184,7 @@ public sealed class ManagedSpaceAccessHandler
             return ManagedSpaceAccessResponse.Success(s_fullAccess);
         }
 
-        ManagedSpaceAccess access = await _decider.CheckAccessAsync(
+        ManagedSpaceAccess access = await _decider.CheckAccess(
             new ManagedSpaceAccessCheck(
                 space: spaceUri,
                 repo: repoDid,

@@ -104,6 +104,7 @@ public class SpaceCredentialTests
         AtProtoHttpResult<SpaceCredential> response = await reader.AuthorizeSpaceSync(s_space, delegation, cancellationToken: TestContext.Current.CancellationToken);
         Assert.False(response.Succeeded);
         Assert.Equal(error, response.AtErrorDetail!.Error);
+        Assert.IsType<AtProtoError>(response.AtErrorDetail, exactMatch: false);
         Assert.True(delegation.IsUsed);
         await Assert.ThrowsAsync<InvalidOperationException>(() => reader.AuthorizeSpaceSync(s_space, delegation, cancellationToken: TestContext.Current.CancellationToken));
         Assert.Equal(1, fixture.Authorizations);
@@ -229,6 +230,7 @@ public class SpaceCredentialTests
         }
 
         Assert.Equal(error, detail!.Error);
+        Assert.NotEqual(typeof(AtErrorDetail), detail.GetType());
     }
 
     [Theory]

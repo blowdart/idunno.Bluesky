@@ -28,7 +28,7 @@ public sealed class ManagedSpaceAccessHandlerTests
     /// Confirms a valid authority token reaches the decider and returns its access decision.
     /// </summary>
     [Fact]
-    public async Task HandleAsync_ValidToken_ReturnsDeciderAccess()
+    public async Task Handle_ValidToken_ReturnsDeciderAccess()
     {
         FakeTimeProvider time = CreateClock();
         using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
@@ -38,7 +38,7 @@ public sealed class ManagedSpaceAccessHandlerTests
         ManagedSpaceAccessHandler handler = CreateHandler(decider, client, time);
         string token = CreateToken(key, time, TestDid, s_managingApp.ToString(), s_method.ToString(), "valid-token");
 
-        ManagedSpaceAccessResponse response = await handler.HandleAsync(
+        ManagedSpaceAccessResponse response = await handler.Handle(
             authorization: $"Bearer {token}",
             space: SpaceUri,
             repo: OtherDid,
@@ -63,7 +63,7 @@ public sealed class ManagedSpaceAccessHandlerTests
     /// Confirms the authority repository receives full access without invoking the decider.
     /// </summary>
     [Fact]
-    public async Task HandleAsync_AuthorityRepository_ReturnsFullAccessWithoutDecider()
+    public async Task Handle_AuthorityRepository_ReturnsFullAccessWithoutDecider()
     {
         FakeTimeProvider time = CreateClock();
         using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
@@ -73,7 +73,7 @@ public sealed class ManagedSpaceAccessHandlerTests
         ManagedSpaceAccessHandler handler = CreateHandler(decider, client, time);
         string token = CreateToken(key, time, TestDid, s_managingApp.ToString(), s_method.ToString(), "authority-token");
 
-        ManagedSpaceAccessResponse response = await handler.HandleAsync(
+        ManagedSpaceAccessResponse response = await handler.Handle(
             authorization: $"Bearer {token}",
             space: SpaceUri,
             repo: TestDid,
@@ -91,7 +91,7 @@ public sealed class ManagedSpaceAccessHandlerTests
     /// Confirms a service token cannot be accepted more than once by one replay guard.
     /// </summary>
     [Fact]
-    public async Task HandleAsync_ReplayedToken_RejectsSecondRequest()
+    public async Task Handle_ReplayedToken_RejectsSecondRequest()
     {
         FakeTimeProvider time = CreateClock();
         using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
@@ -102,13 +102,13 @@ public sealed class ManagedSpaceAccessHandlerTests
         string token = CreateToken(key, time, TestDid, s_managingApp.ToString(), s_method.ToString(), "replayed-token");
         string authorization = $"Bearer {token}";
 
-        ManagedSpaceAccessResponse first = await handler.HandleAsync(
+        ManagedSpaceAccessResponse first = await handler.Handle(
             authorization,
             SpaceUri,
             repo: null,
             clientId: null,
             cancellationToken: TestContext.Current.CancellationToken);
-        ManagedSpaceAccessResponse second = await handler.HandleAsync(
+        ManagedSpaceAccessResponse second = await handler.Handle(
             authorization,
             SpaceUri,
             repo: null,
@@ -128,7 +128,7 @@ public sealed class ManagedSpaceAccessHandlerTests
     [InlineData("at://did:plc:ewvi7nxzyoun6zhxsrcy6jgr/app.bsky.bookmark/key", null, null)]
     [InlineData(SpaceUri, "not-a-did", null)]
     [InlineData(SpaceUri, null, "/relative-client")]
-    public async Task HandleAsync_InvalidRequestValues_ReturnsBadRequest(string space, string? repo, string? clientId)
+    public async Task Handle_InvalidRequestValues_ReturnsBadRequest(string space, string? repo, string? clientId)
     {
         FakeTimeProvider time = CreateClock();
         using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
@@ -136,7 +136,7 @@ public sealed class ManagedSpaceAccessHandlerTests
         ManagedSpaceAccessHandler handler = CreateHandler(decider, httpClient: null, time);
         string token = CreateToken(key, time, TestDid, s_managingApp.ToString(), s_method.ToString(), "invalid-request-token");
 
-        ManagedSpaceAccessResponse response = await handler.HandleAsync(
+        ManagedSpaceAccessResponse response = await handler.Handle(
             authorization: $"Bearer {token}",
             space: space,
             repo: repo,
@@ -154,7 +154,7 @@ public sealed class ManagedSpaceAccessHandlerTests
     [Theory]
     [InlineData("did:plc:g6ylltenitt4tp27bpwalh7b#another-service", "com.atproto.managedspace.checkAccess")]
     [InlineData("did:plc:g6ylltenitt4tp27bpwalh7b#managed-space", "com.atproto.repo.getRecord")]
-    public async Task HandleAsync_WrongAudienceOrMethod_ReturnsUnauthorized(string audience, string method)
+    public async Task Handle_WrongAudienceOrMethod_ReturnsUnauthorized(string audience, string method)
     {
         FakeTimeProvider time = CreateClock();
         using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
@@ -162,7 +162,7 @@ public sealed class ManagedSpaceAccessHandlerTests
         ManagedSpaceAccessHandler handler = CreateHandler(decider, httpClient: null, time);
         string token = CreateToken(key, time, TestDid, audience, method, "wrong-scope-token");
 
-        ManagedSpaceAccessResponse response = await handler.HandleAsync(
+        ManagedSpaceAccessResponse response = await handler.Handle(
             authorization: $"Bearer {token}",
             space: SpaceUri,
             repo: null,
@@ -178,7 +178,7 @@ public sealed class ManagedSpaceAccessHandlerTests
     /// Confirms a valid token issued by a different DID is not accepted for the space authority.
     /// </summary>
     [Fact]
-    public async Task HandleAsync_TokenIssuerIsNotSpaceAuthority_ReturnsUnauthorized()
+    public async Task Handle_TokenIssuerIsNotSpaceAuthority_ReturnsUnauthorized()
     {
         FakeTimeProvider time = CreateClock();
         using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
@@ -188,7 +188,7 @@ public sealed class ManagedSpaceAccessHandlerTests
         ManagedSpaceAccessHandler handler = CreateHandler(decider, client, time);
         string token = CreateToken(key, time, OtherDid, s_managingApp.ToString(), s_method.ToString(), "wrong-issuer-token");
 
-        ManagedSpaceAccessResponse response = await handler.HandleAsync(
+        ManagedSpaceAccessResponse response = await handler.Handle(
             authorization: $"Bearer {token}",
             space: SpaceUri,
             repo: null,
@@ -293,7 +293,7 @@ public sealed class ManagedSpaceAccessHandlerTests
         /// <param name="check">The authenticated access check.</param>
         /// <param name="cancellationToken">A cancellation token.</param>
         /// <returns>The configured decision.</returns>
-        public ValueTask<ManagedSpaceAccess> CheckAccessAsync(
+        public ValueTask<ManagedSpaceAccess> CheckAccess(
             ManagedSpaceAccessCheck check,
             CancellationToken cancellationToken)
         {

@@ -89,6 +89,33 @@ public class AtProtoErrorTests
         Assert.Same(atErrorDetail, mapped);
     }
 
+    [Theory]
+    [InlineData("AccountNotAuthorized")]
+    [InlineData("AppNotAuthorized")]
+    [InlineData("InvalidClientAttestation")]
+    [InlineData("InvalidCursor")]
+    [InlineData("InvalidDelegationToken")]
+    [InlineData("InvalidSpaceMac")]
+    [InlineData("NotAuthorized")]
+    [InlineData("PolicyMismatch")]
+    [InlineData("RecordAlreadyExists")]
+    [InlineData("RegistrationNotConfirmed")]
+    [InlineData("SegmentNotFound")]
+    [InlineData("SpaceAlreadyExists")]
+    [InlineData("SpaceDeleted")]
+    [InlineData("SpaceNotFound")]
+    [InlineData("UnsupportedPolicy")]
+    public void MapReturnsTypedErrorsForLexiconErrors(string errorTitle)
+    {
+        AtErrorDetail atErrorDetail = CreateErrorDetail(errorTitle);
+
+        AtErrorDetail? mapped = AtProtoError.Map(atErrorDetail);
+
+        AtProtoError typedError = Assert.IsType<AtProtoError>(mapped, exactMatch: false);
+        Assert.Equal(errorTitle, typedError.GetType().Name);
+        Assert.Equal(errorTitle, typedError.Error);
+    }
+
     [Fact]
     public void MapIsCaseSensitive()
     {

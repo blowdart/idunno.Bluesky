@@ -24,5 +24,5 @@ public interface IServiceTokenReplayGuard
     /// <param name="token">The verified service token.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns><see langword="true"/> if the token was reserved; otherwise, <see langword="false"/> when it was already used or cannot be reserved.</returns>
-    ValueTask<bool> TryReserveAsync(ServiceAuthenticationResult token, CancellationToken cancellationToken);
+    ValueTask<bool> TryReserve(ServiceAuthenticationResult token, CancellationToken cancellationToken);
 }

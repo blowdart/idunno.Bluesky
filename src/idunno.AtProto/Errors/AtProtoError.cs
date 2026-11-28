@@ -32,10 +32,13 @@ public abstract class AtProtoError : AtErrorDetail
             return null;
         }
 
+#pragma warning disable BSKYSpaces
         return atErrorDetail.Error switch
         {
+            AccountNotAuthorized.ErrorTitle => new AccountNotAuthorized(atErrorDetail),
             AccountNotFound.ErrorTitle => new AccountNotFound(atErrorDetail),
             AccountTakedown.ErrorTitle => new AccountTakedown(atErrorDetail),
+            AppNotAuthorized.ErrorTitle => new AppNotAuthorized(atErrorDetail),
             AuthenticationRequired.ErrorTitle => new AuthenticationRequired(atErrorDetail),
             AuthFactorTokenRequired.ErrorTitle => new AuthFactorTokenRequired(atErrorDetail),
             BadExpiration.ErrorTitle => new BadExpiration(atErrorDetail),
@@ -56,32 +59,46 @@ public abstract class AtProtoError : AtErrorDetail
             IncompatibleDidDoc.ErrorTitle => new IncompatibleDidDoc(atErrorDetail),
             InsufficientScope.ErrorTitle => new InsufficientScope(atErrorDetail),
             InternalServerError.ErrorTitle => new InternalServerError(atErrorDetail),
+            InvalidClientAttestation.ErrorTitle => new InvalidClientAttestation(atErrorDetail),
+            InvalidCursor.ErrorTitle => new InvalidCursor(atErrorDetail),
+            InvalidDelegationToken.ErrorTitle => new InvalidDelegationToken(atErrorDetail),
             InvalidEmail.ErrorTitle => new InvalidEmail(atErrorDetail),
             InvalidHandle.ErrorTitle => new InvalidHandle(atErrorDetail),
             InvalidInviteCode.ErrorTitle => new InvalidInviteCode(atErrorDetail),
             InvalidPassword.ErrorTitle => new InvalidPassword(atErrorDetail),
             InvalidRequest.ErrorTitle => new InvalidRequest(atErrorDetail),
+            InvalidSpaceMac.ErrorTitle => new InvalidSpaceMac(atErrorDetail),
             InvalidSwap.ErrorTitle => new InvalidSwap(atErrorDetail),
             InvalidToken.ErrorTitle => new InvalidToken(atErrorDetail),
             MethodNotImplemented.ErrorTitle => new MethodNotImplemented(atErrorDetail),
             NotAcceptable.ErrorTitle => new NotAcceptable(atErrorDetail),
+            NotAuthorized.ErrorTitle => new NotAuthorized(atErrorDetail),
             NotEnoughResources.ErrorTitle => new NotEnoughResources(atErrorDetail),
             PayloadTooLarge.ErrorTitle => new PayloadTooLarge(atErrorDetail),
+            PolicyMismatch.ErrorTitle => new PolicyMismatch(atErrorDetail),
             RateLimitExceeded.ErrorTitle => new RateLimitExceeded(atErrorDetail),
+            RecordAlreadyExists.ErrorTitle => new RecordAlreadyExists(atErrorDetail),
             RecordNotFound.ErrorTitle => new RecordNotFound(atErrorDetail),
+            RegistrationNotConfirmed.ErrorTitle => new RegistrationNotConfirmed(atErrorDetail),
             RepoDeactivated.ErrorTitle => new RepoDeactivated(atErrorDetail),
             RepoNotFound.ErrorTitle => new RepoNotFound(atErrorDetail),
             RepoSuspended.ErrorTitle => new RepoSuspended(atErrorDetail),
             RepoTakenDown.ErrorTitle => new RepoTakenDown(atErrorDetail),
+            SegmentNotFound.ErrorTitle => new SegmentNotFound(atErrorDetail),
             ScopeMissingError.ErrorTitle => new ScopeMissingError(atErrorDetail),
+            SpaceAlreadyExists.ErrorTitle => new SpaceAlreadyExists(atErrorDetail),
+            SpaceDeleted.ErrorTitle => new SpaceDeleted(atErrorDetail),
+            SpaceNotFound.ErrorTitle => new SpaceNotFound(atErrorDetail),
             TokenRequired.ErrorTitle => new TokenRequired(atErrorDetail),
             UnresolvableDid.ErrorTitle => new UnresolvableDid(atErrorDetail),
             UnsupportedDomain.ErrorTitle => new UnsupportedDomain(atErrorDetail),
             UnsupportedMediaType.ErrorTitle => new UnsupportedMediaType(atErrorDetail),
+            UnsupportedPolicy.ErrorTitle => new UnsupportedPolicy(atErrorDetail),
             UpstreamFailure.ErrorTitle => new UpstreamFailure(atErrorDetail),
             UpstreamTimeout.ErrorTitle => new UpstreamTimeout(atErrorDetail),
             XrpcNotSupported.ErrorTitle => new XrpcNotSupported(atErrorDetail),
             _ => atErrorDetail
         };
+#pragma warning restore BSKYSpaces
     }
 }

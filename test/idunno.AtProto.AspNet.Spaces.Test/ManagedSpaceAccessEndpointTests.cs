@@ -264,7 +264,7 @@ public sealed class ManagedSpaceAccessEndpointTests
         /// <param name="check">The authenticated access check.</param>
         /// <param name="cancellationToken">A cancellation token.</param>
         /// <returns>The test access decision.</returns>
-        public ValueTask<ManagedSpaceAccess> CheckAccessAsync(
+        public ValueTask<ManagedSpaceAccess> CheckAccess(
             ManagedSpaceAccessCheck check,
             CancellationToken cancellationToken) =>
             ValueTask.FromResult(new ManagedSpaceAccess { Read = true, Write = true });

@@ -348,20 +348,20 @@ public class SpaceApiTests
         AtProtoHttpResult<DeleteResult> missingSpaceOnDeleteSpace = await agent.DeleteSpace(space, cancellationToken: TestContext.Current.CancellationToken);
         AtProtoHttpResult<DeleteResult> unauthorizedSpaceOnDelete = await agent.DeleteSpace(space, cancellationToken: TestContext.Current.CancellationToken);
 
-        Assert.Equal("SpaceAlreadyExists", alreadyExists.AtErrorDetail?.Error);
-        Assert.Equal("UnsupportedPolicy", unsupportedPolicy.AtErrorDetail?.Error);
-        Assert.Equal("RecordAlreadyExists", recordAlreadyExists.AtErrorDetail?.Error);
-        Assert.Equal("SpaceNotFound", missingSpaceOnCreate.AtErrorDetail?.Error);
-        Assert.Equal("SpaceNotFound", missingSpaceOnPut.AtErrorDetail?.Error);
-        Assert.Equal("SpaceNotFound", missingSpaceOnDelete.AtErrorDetail?.Error);
-        Assert.Equal("SpaceNotFound", missingSpaceOnGet.AtErrorDetail?.Error);
-        Assert.Equal("NotAuthorized", unauthorizedSpaceOnGet.AtErrorDetail?.Error);
-        Assert.Equal("InvalidCursor", invalidCursor.AtErrorDetail?.Error);
-        Assert.Equal("SpaceNotFound", missingSpaceOnUpdate.AtErrorDetail?.Error);
-        Assert.Equal("NotAuthorized", unauthorizedSpaceOnUpdate.AtErrorDetail?.Error);
-        Assert.Equal("UnsupportedPolicy", unsupportedSpacePolicy.AtErrorDetail?.Error);
-        Assert.Equal("SpaceNotFound", missingSpaceOnDeleteSpace.AtErrorDetail?.Error);
-        Assert.Equal("NotAuthorized", unauthorizedSpaceOnDelete.AtErrorDetail?.Error);
+        Assert.IsType<SpaceAlreadyExists>(alreadyExists.AtErrorDetail);
+        Assert.IsType<UnsupportedPolicy>(unsupportedPolicy.AtErrorDetail);
+        Assert.IsType<RecordAlreadyExists>(recordAlreadyExists.AtErrorDetail);
+        Assert.IsType<SpaceNotFound>(missingSpaceOnCreate.AtErrorDetail);
+        Assert.IsType<SpaceNotFound>(missingSpaceOnPut.AtErrorDetail);
+        Assert.IsType<SpaceNotFound>(missingSpaceOnDelete.AtErrorDetail);
+        Assert.IsType<SpaceNotFound>(missingSpaceOnGet.AtErrorDetail);
+        Assert.IsType<NotAuthorized>(unauthorizedSpaceOnGet.AtErrorDetail);
+        Assert.IsType<InvalidCursor>(invalidCursor.AtErrorDetail);
+        Assert.IsType<SpaceNotFound>(missingSpaceOnUpdate.AtErrorDetail);
+        Assert.IsType<NotAuthorized>(unauthorizedSpaceOnUpdate.AtErrorDetail);
+        Assert.IsType<UnsupportedPolicy>(unsupportedSpacePolicy.AtErrorDetail);
+        Assert.IsType<SpaceNotFound>(missingSpaceOnDeleteSpace.AtErrorDetail);
+        Assert.IsType<NotAuthorized>(unauthorizedSpaceOnDelete.AtErrorDetail);
     }
 
     [Theory]

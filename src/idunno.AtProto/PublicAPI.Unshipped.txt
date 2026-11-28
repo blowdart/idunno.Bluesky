@@ -303,13 +303,13 @@ idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord>.AtProtoRepositoryRecord(idu
 [BSKYSpaces]static idunno.AtProto.Space.SpaceView.operator ==(idunno.AtProto.Space.SpaceView? left, idunno.AtProto.Space.SpaceView? right) -> bool
 [BSKYSpaces]idunno.AtProto.Space.MemberSpacePolicy.AllowedApps.get -> System.Collections.Generic.IReadOnlyList<System.Uri!>?
 [BSKYSpaces]idunno.AtProto.Space.IManagedSpaceAccessDecider
-[BSKYSpaces]idunno.AtProto.Space.IManagedSpaceAccessDecider.CheckAccessAsync(idunno.AtProto.Space.ManagedSpaceAccessCheck! check, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<idunno.AtProto.Space.ManagedSpaceAccess!>
+[BSKYSpaces]idunno.AtProto.Space.IManagedSpaceAccessDecider.CheckAccess(idunno.AtProto.Space.ManagedSpaceAccessCheck! check, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<idunno.AtProto.Space.ManagedSpaceAccess!>
 [BSKYSpaces]idunno.AtProto.Space.InMemoryServiceTokenReplayGuard
 [BSKYSpaces]const idunno.AtProto.Space.InMemoryServiceTokenReplayGuard.DefaultCapacity = 10000 -> int
 [BSKYSpaces]idunno.AtProto.Space.InMemoryServiceTokenReplayGuard.InMemoryServiceTokenReplayGuard(int capacity = 10000, System.TimeProvider? timeProvider = null) -> void
-[BSKYSpaces]idunno.AtProto.Space.InMemoryServiceTokenReplayGuard.TryReserveAsync(idunno.AtProto.ServiceAuthenticationResult! token, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<bool>
+[BSKYSpaces]idunno.AtProto.Space.InMemoryServiceTokenReplayGuard.TryReserve(idunno.AtProto.ServiceAuthenticationResult! token, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<bool>
 [BSKYSpaces]idunno.AtProto.Space.IServiceTokenReplayGuard
-[BSKYSpaces]idunno.AtProto.Space.IServiceTokenReplayGuard.TryReserveAsync(idunno.AtProto.ServiceAuthenticationResult! token, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<bool>
+[BSKYSpaces]idunno.AtProto.Space.IServiceTokenReplayGuard.TryReserve(idunno.AtProto.ServiceAuthenticationResult! token, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<bool>
 [BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessCheck
 [BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessCheck.Authentication.get -> idunno.AtProto.ServiceAuthenticationResult!
 [BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessCheck.ClientId.get -> System.Uri?
@@ -318,7 +318,7 @@ idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord>.AtProtoRepositoryRecord(idu
 [BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessHandler
 [BSKYSpaces]const idunno.AtProto.Space.ManagedSpaceAccessHandler.MethodName = "com.atproto.managedspace.checkAccess" -> string!
 [BSKYSpaces]const idunno.AtProto.Space.ManagedSpaceAccessHandler.Path = "/xrpc/com.atproto.managedspace.checkAccess" -> string!
-[BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessHandler.HandleAsync(string? authorization, string? space, string? repo, string? clientId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Space.ManagedSpaceAccessResponse!>!
+[BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessHandler.Handle(string? authorization, string? space, string? repo, string? clientId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Space.ManagedSpaceAccessResponse!>!
 [BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessHandler.ManagedSpaceAccessHandler(idunno.AtProto.Space.ManagedSpaceAccessHandlerOptions! options, idunno.AtProto.Space.IManagedSpaceAccessDecider! decider, idunno.AtProto.Space.IServiceTokenReplayGuard! replayGuard, System.Net.Http.HttpClient? httpClient = null, System.TimeProvider? timeProvider = null) -> void
 [BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessHandlerOptions
 [BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessHandlerOptions.ManagedSpaceAccessHandlerOptions() -> void
@@ -334,3 +334,33 @@ idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord>.AtProtoRepositoryRecord(idu
 [BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessResponse.Message.get -> string?
 [BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessResponse.StatusCode.get -> int
 [BSKYSpaces]idunno.AtProto.Space.ManagedSpaceAccessResponse.Succeeded.get -> bool
+[BSKYSpaces]idunno.AtProto.AccountNotAuthorized
+[BSKYSpaces]idunno.AtProto.AccountNotAuthorized.AccountNotAuthorized(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
+[BSKYSpaces]idunno.AtProto.AppNotAuthorized
+[BSKYSpaces]idunno.AtProto.AppNotAuthorized.AppNotAuthorized(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
+[BSKYSpaces]idunno.AtProto.InvalidClientAttestation
+[BSKYSpaces]idunno.AtProto.InvalidClientAttestation.InvalidClientAttestation(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
+[BSKYSpaces]idunno.AtProto.InvalidCursor
+[BSKYSpaces]idunno.AtProto.InvalidCursor.InvalidCursor(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
+[BSKYSpaces]idunno.AtProto.InvalidDelegationToken
+[BSKYSpaces]idunno.AtProto.InvalidDelegationToken.InvalidDelegationToken(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
+[BSKYSpaces]idunno.AtProto.InvalidSpaceMac
+[BSKYSpaces]idunno.AtProto.InvalidSpaceMac.InvalidSpaceMac(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
+[BSKYSpaces]idunno.AtProto.NotAuthorized
+[BSKYSpaces]idunno.AtProto.NotAuthorized.NotAuthorized(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
+[BSKYSpaces]idunno.AtProto.PolicyMismatch
+[BSKYSpaces]idunno.AtProto.PolicyMismatch.PolicyMismatch(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
+[BSKYSpaces]idunno.AtProto.RecordAlreadyExists
+[BSKYSpaces]idunno.AtProto.RecordAlreadyExists.RecordAlreadyExists(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
+[BSKYSpaces]idunno.AtProto.RegistrationNotConfirmed
+[BSKYSpaces]idunno.AtProto.RegistrationNotConfirmed.RegistrationNotConfirmed(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
+[BSKYSpaces]idunno.AtProto.SpaceAlreadyExists
+[BSKYSpaces]idunno.AtProto.SpaceAlreadyExists.SpaceAlreadyExists(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
+[BSKYSpaces]idunno.AtProto.SpaceDeleted
+[BSKYSpaces]idunno.AtProto.SpaceDeleted.SpaceDeleted(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
+[BSKYSpaces]idunno.AtProto.SpaceNotFound
+[BSKYSpaces]idunno.AtProto.SpaceNotFound.SpaceNotFound(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
+[BSKYSpaces]idunno.AtProto.UnsupportedPolicy
+[BSKYSpaces]idunno.AtProto.UnsupportedPolicy.UnsupportedPolicy(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
+idunno.AtProto.SegmentNotFound
+idunno.AtProto.SegmentNotFound.SegmentNotFound(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void

@@ -115,6 +115,7 @@ public class SpaceMembershipTests
             _ => (await agent.ListSpaceMembers(space, cancellationToken: TestContext.Current.CancellationToken)).AtErrorDetail
         };
         Assert.Equal(error, detail?.Error);
+        Assert.Equal(error, Assert.IsType<AtProtoError>(detail, exactMatch: false).GetType().Name);
     }
 
     [Theory]
@@ -281,7 +282,7 @@ public class SpaceMembershipTests
             cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.False(result.Succeeded);
-        Assert.Equal("NotAuthorized", result.AtErrorDetail?.Error);
+        Assert.IsType<NotAuthorized>(result.AtErrorDetail);
     }
 
     [Fact]

@@ -24,5 +24,5 @@ public interface IManagedSpaceAccessDecider
     /// <param name="check">The verified access check.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>The access granted to the requested repository and client.</returns>
-    ValueTask<ManagedSpaceAccess> CheckAccessAsync(ManagedSpaceAccessCheck check, CancellationToken cancellationToken);
+    ValueTask<ManagedSpaceAccess> CheckAccess(ManagedSpaceAccessCheck check, CancellationToken cancellationToken);
 }

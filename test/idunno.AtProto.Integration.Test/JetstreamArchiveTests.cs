@@ -201,6 +201,7 @@ public class JetstreamArchiveTests
                 download.ReadExactlyAsync(new byte[1], TestContext.Current.CancellationToken));
             Assert.Contains("does not serve", exception.Message, StringComparison.Ordinal);
         }
+
         else
         {
             HttpRequestException exception = await Assert.ThrowsAsync<HttpRequestException>(() =>
@@ -209,6 +210,30 @@ public class JetstreamArchiveTests
             Assert.Contains(error, exception.Message, StringComparison.Ordinal);
             Assert.Contains("Archive entry is missing", exception.Message, StringComparison.Ordinal);
         }
+    }
+
+    [Theory]
+    [InlineData("SegmentNotFound", false)]
+    [InlineData("BlockNotFound", true)]
+    public async Task ArchiveResponsesMapKnownErrors(string error, bool block)
+    {
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            context.Response.StatusCode = 404;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync($$"""{"error":"{{error}}","message":"Archive entry is missing"}""");
+        });
+        using HttpClient client = server.CreateClient();
+
+        AtProtoHttpResult<Stream> result = block
+            ? await AtProtoServer.GetBlock(Segment, 0, TestServerBuilder.DefaultUri, "test-key", client,
+                cancellationToken: TestContext.Current.CancellationToken)
+            : await AtProtoServer.GetSegment(Segment, TestServerBuilder.DefaultUri, "test-key", client,
+                cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(error, result.AtErrorDetail?.Error);
+        Assert.IsType<AtProtoError>(result.AtErrorDetail, exactMatch: false);
     }
 
     [Fact]

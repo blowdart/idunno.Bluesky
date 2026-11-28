@@ -120,7 +120,7 @@ public static class ManagedSpaceAccessEndpointRouteBuilderExtensions
         context.Request.Query.TryGetValue("clientId", out StringValues clientId);
 
         ManagedSpaceAccessHandler handler = context.RequestServices.GetRequiredService<ManagedSpaceAccessHandler>();
-        ManagedSpaceAccessResponse response = await handler.HandleAsync(
+        ManagedSpaceAccessResponse response = await handler.Handle(
             authorization: context.Request.Headers.Authorization.ToString(),
             space: space.Count == 0 ? null : space[0],
             repo: repo.Count == 0 ? null : repo[0],

@@ -50,7 +50,7 @@ public sealed class InMemoryServiceTokenReplayGuard : IServiceTokenReplayGuard
 
     /// <inheritdoc/>
     /// <exception cref="ArgumentNullException"><paramref name="token"/> is <see langword="null"/>.</exception>
-    public ValueTask<bool> TryReserveAsync(ServiceAuthenticationResult token, CancellationToken cancellationToken)
+    public ValueTask<bool> TryReserve(ServiceAuthenticationResult token, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(token);
         cancellationToken.ThrowIfCancellationRequested();

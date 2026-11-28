@@ -297,6 +297,7 @@ public class ServerTests
         Assert.Null(result.Result);
         Assert.Equal(System.Net.HttpStatusCode.BadRequest, result.StatusCode);
         Assert.Equal("BlobNotFound", result.AtErrorDetail?.Error);
+        Assert.IsType<AtProtoError>(result.AtErrorDetail, exactMatch: false);
         Assert.Equal("Blob not found.", result.AtErrorDetail?.Message);
     }
 
@@ -361,6 +362,7 @@ public class ServerTests
         Assert.False(result.Succeeded);
         Assert.Equal(System.Net.HttpStatusCode.BadRequest, result.StatusCode);
         Assert.Equal("BlockNotFound", result.AtErrorDetail?.Error);
+        Assert.IsType<BlockNotFound>(result.AtErrorDetail);
     }
 
     [Fact]
@@ -438,6 +440,7 @@ public class ServerTests
         Assert.False(result.Succeeded);
         Assert.Equal(System.Net.HttpStatusCode.BadRequest, result.StatusCode);
         Assert.Equal(error, result.AtErrorDetail?.Error);
+        Assert.IsType<AtErrorDetail>(result.AtErrorDetail, exactMatch: false);
     }
 
     [Theory]

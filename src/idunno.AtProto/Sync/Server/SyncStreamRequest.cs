@@ -68,7 +68,7 @@ public static partial class AtProtoServer
                     result: null,
                     statusCode: response.StatusCode,
                     httpResponseHeaders: response.Headers,
-                    atErrorDetail: errorDetail);
+                    atErrorDetail: AtProtoError.Map(errorDetail));
             }
         }
 
