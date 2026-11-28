@@ -92,8 +92,10 @@
 * Added verified single-use space delegation and disposable, expiring proof-key credentials, explicit renewal, signed credential reads and export-only HPKE response-MAC verification for individual records using platform cryptography. Record listings check supplied values against CIDs but have no response-MAC profile and do not authenticate authorship or completeness.
 * Added a framework-neutral managed-space `checkAccess` handler that verifies authority service tokens, prevents replay and delegates access decisions to the managing application.
 * Streaming synchronization and Jetstream archive responses preserve typed protocol errors, including the archive's `SegmentNotFound` error.
-
 * Rejects permissioned space URIs in repository record reads and deletes rather than treating the space authority as a repository.
+* Added validated ES256 private-JWK import, public-only JWK export and in-memory P-256 OAuth client signing-key generation.
+* New OAuth sessions negotiate DPoP proof signing (ES256, PS256 or RS256) and require compatible ES256 confidential-client authentication metadata; restored sessions retain their proof key and signing-key ID.
+* OAuth nonces are tracked and persisted by origin across login, refresh and authenticated resource requests, while retaining older single-nonce credentials.
 * Added optional-CID support for `com.atproto.repo.getRecord` results, with `HasCid` and `TryGetStrongReference()` for safely handling records without a CID.
 * Added service-token verification overloads that use the library's SSRF-protected HTTP client by default while retaining caller-supplied client overloads.
 * Adds separate Ozone administration service-token verification for exact labeler service and PDS bare-DID audiences, retaining method binding, replay identifiers and strict generic/native verification.
@@ -169,6 +171,10 @@
 #### idunno.AtProto.Types
 
 * `AtUri.Repo` is now nullable because a permissioned space URI's authority identifies a space, not a repository. Use `AtUri.IsSpaceUri` or `AtUri.TryGetSpaceUri()` to identify and access space-specific components.
+
+#### idunno.AtProto
+
+* New OAuth logins fail explicitly when authorization metadata omits a mutually supported DPoP algorithm or, for confidential clients, ES256 client authentication. Refresh and revocation fail locally if the session's saved signing-key ID is no longer configured, rather than substituting the active key.
 
 #### idunno.Bluesky
 

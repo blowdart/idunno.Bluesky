@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -30,6 +31,182 @@ public class OAuthLoginResponseTests
     private static readonly Uri s_returnUri = new("https://client.test/callback");
 
     private static readonly string s_signingKeyJson = CreatePublicSigningKeyJson();
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PublicClientsRetryNonceChallengesWithoutAddingClientAssertions(bool restoreState)
+    {
+        LoginTestServer server = new() { ChallengeNonce = true };
+        OAuthClient client = CreateClient(server);
+        await client.BuildOAuth2LoginUri(
+            service: s_service,
+            authority: s_authority,
+            returnUri: s_returnUri,
+            cancellationToken: TestContext.Current.CancellationToken);
+        OAuthLoginState state = client.State!;
+        DPoPAccessCredentials? credentials = restoreState
+            ? await CreateClient(server).ProcessOAuth2Response(state, CallbackData(state.State), TestContext.Current.CancellationToken)
+            : await client.ProcessOAuth2LoginResponse(CallbackData(state.State), cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(credentials);
+        Assert.Empty(server.ParClientAssertion!);
+        Assert.Empty(server.TokenClientAssertion!);
+        DPoPAccessCredentials? refreshed = await CreateClient(server).RefreshCredentials(
+            refreshCredential: new DPoPRefreshCredential(credentials),
+            authority: s_authority,
+            cancellationToken: TestContext.Current.CancellationToken);
+        Assert.NotNull(refreshed);
+        Assert.Empty(server.TokenClientAssertion!);
+    }
+
+    [Fact]
+    public async Task LoginResourceRequestsAndRefreshKeepNoncesAtTheirDestinationOrigins()
+    {
+        Uri service = new("https://pds.other.test:8443");
+        LoginTestServer server = new();
+        OAuthClient client = CreateClient(server);
+        await client.BuildOAuth2LoginUri(
+            service: service,
+            authority: s_authority,
+            returnUri: s_returnUri,
+            cancellationToken: TestContext.Current.CancellationToken);
+        OAuthLoginState state = OAuthLoginState.FromJson(client.State!.ToJson())!;
+        Assert.Equal("par-success-nonce", state.DPoPNonces[s_authority.GetLeftPart(UriPartial.Authority)]);
+
+        DPoPAccessCredentials? credentials = await CreateClient(server).ProcessOAuth2Response(
+            state,
+            CallbackData(state.State),
+            TestContext.Current.CancellationToken);
+        Assert.NotNull(credentials);
+        Assert.Equal("par-success-nonce", Assert.Single(server.TokenNonces));
+        using HttpClient httpClient = server.TestServer.CreateClient();
+        AtProtoHttpClient<string> resourceClient = new();
+        AtProtoHttpResult<string> resource = await resourceClient.Get(
+            service: service,
+            endpoint: "/resource",
+            credentials: credentials,
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken);
+        Assert.True(resource.Succeeded);
+        Assert.Equal([null, "pds-nonce"], server.ResourceNonces);
+
+        DPoPAccessCredentials restored = new(
+            service: service,
+            accessJwt: credentials.AccessJwt,
+            refreshToken: credentials.RefreshToken,
+            dPoPProofKey: credentials.DPoPProofKey,
+            dPoPNonce: credentials.DPoPNonce)
+        {
+            DPoPNonces = credentials.DPoPNonces
+        };
+        server.IssuedNonce = "refresh-success-nonce";
+        DPoPAccessCredentials? refreshed = await CreateClient(server).RefreshCredentials(
+            refreshCredential: new DPoPRefreshCredential(restored),
+            authority: s_authority,
+            cancellationToken: TestContext.Current.CancellationToken);
+        Assert.NotNull(refreshed);
+        Assert.Equal("serverIssuedNonce", server.TokenNonces[^1]);
+        Assert.Equal("refresh-success-nonce", refreshed.DPoPNonces[s_authority.GetLeftPart(UriPartial.Authority)]);
+        Assert.Equal("pds-rotated-nonce", refreshed.DPoPNonces[service.GetLeftPart(UriPartial.Authority)]);
+
+        resource = await resourceClient.Get(
+            service: service,
+            endpoint: "/resource",
+            credentials: refreshed,
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken);
+        Assert.True(resource.Succeeded);
+        Assert.Equal("pds-rotated-nonce", server.ResourceNonces[^1]);
+        Assert.Equal("refresh-success-nonce", refreshed.DPoPNonces[s_authority.GetLeftPart(UriPartial.Authority)]);
+        DPoPAccessCredentials? refreshedAgain = await CreateClient(server).RefreshCredentials(
+            refreshCredential: new DPoPRefreshCredential(refreshed),
+            authority: s_authority,
+            cancellationToken: TestContext.Current.CancellationToken);
+        Assert.NotNull(refreshedAgain);
+        Assert.Equal("refresh-success-nonce", server.TokenNonces[^1]);
+    }
+
+    [Theory]
+    [InlineData("""["ES256"]""", "ES256")]
+    [InlineData("""["PS256"]""", "PS256")]
+    [InlineData("""["RS256"]""", "RS256")]
+    [InlineData("""["PS256","ES256"]""", "ES256")]
+    public async Task NewLoginsNegotiateProofAlgorithmsAndKeepTheKeyAfterStateRestorationAndRefresh(string advertised, string expected)
+    {
+        LoginTestServer server = new() { DPoPAlgorithms = advertised };
+        OAuthClient client = CreateClient(server);
+        await client.BuildOAuth2LoginUri(
+            service: s_service,
+            authority: s_authority,
+            returnUri: s_returnUri,
+            cancellationToken: TestContext.Current.CancellationToken);
+        OAuthLoginState state = OAuthLoginState.FromJson(client.State!.ToJson())!;
+        Assert.Equal(expected, new JsonWebKey(state.ProofKey).Alg);
+
+        server.DPoPAlgorithms = """["unsupported"]""";
+        DPoPAccessCredentials? credentials = await CreateClient(server).ProcessOAuth2Response(
+            state,
+            CallbackData(state.State),
+            TestContext.Current.CancellationToken);
+        Assert.NotNull(credentials);
+        Assert.Equal(expected, server.TokenProofAlgorithm);
+        Assert.Equal(state.ProofKey, credentials.DPoPProofKey);
+        DPoPAccessCredentials? refreshed = await CreateClient(server).RefreshCredentials(
+            refreshCredential: new DPoPRefreshCredential(credentials),
+            authority: s_authority,
+            cancellationToken: TestContext.Current.CancellationToken);
+        Assert.NotNull(refreshed);
+        Assert.Equal(state.ProofKey, refreshed.DPoPProofKey);
+        Assert.Equal(expected, server.TokenProofAlgorithm);
+    }
+
+    [Theory]
+    [InlineData("""[]""")]
+    [InlineData("""["none","HS256","ES384"]""")]
+    [InlineData("""["es256"]""")]
+    public async Task NewLoginsFailExplicitlyWhenNoProofAlgorithmOverlaps(string advertised)
+    {
+        LoginTestServer server = new() { DPoPAlgorithms = advertised };
+        OAuthClient client = CreateClient(server);
+        await Assert.ThrowsAsync<OAuthException>(() => client.BuildOAuth2LoginUri(
+            service: s_service,
+            authority: s_authority,
+            returnUri: s_returnUri,
+            cancellationToken: TestContext.Current.CancellationToken));
+        Assert.Null(client.State);
+        Assert.Null(server.RequestedClientId);
+    }
+
+    [Theory]
+    [InlineData("""["ES256"]""", true)]
+    [InlineData("""["RS256","ES256"]""", true)]
+    [InlineData("""["RS256"]""", false)]
+    [InlineData("""[]""", false)]
+    public async Task ConfidentialLoginsRequireASupportedConfiguredSigningAlgorithm(string algorithms, bool compatible)
+    {
+        LoginTestServer server = new() { ClientSigningAlgorithms = algorithms };
+        OAuthOptions options = new(ClientId, s_returnUri) { ClientSigningKey = OAuthClientSigningKey.Generate("active") };
+        OAuthClient client = CreateClient(server, options);
+        if (!compatible)
+        {
+            await Assert.ThrowsAsync<OAuthException>(() => client.BuildOAuth2LoginUri(
+                service: s_service,
+                authority: s_authority,
+                returnUri: s_returnUri,
+                cancellationToken: TestContext.Current.CancellationToken));
+            Assert.Null(server.ParClientAssertion);
+            return;
+        }
+
+        await client.BuildOAuth2LoginUri(
+            service: s_service,
+            authority: s_authority,
+            returnUri: s_returnUri,
+            cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Equal("active", new JsonWebToken(server.ParClientAssertion!).Kid);
+        Assert.Equal("active", client.State!.ClientSigningKeyId);
+    }
 
     [Theory]
     [InlineData(false, false)]
@@ -869,7 +1046,7 @@ public class OAuthLoginResponseTests
         foreach (string field in new[]
         {
             "_loginGeneration", "_authorizeState", "_expectedAuthority", "_expectedService", "_proofKey",
-            "_stateExtraProperties", "_loginClientId", "_loginRequestedScope", "_loginSigningKeyId"
+            "_stateExtraProperties", "_loginClientId", "_loginRequestedScope", "_loginSigningKeyId", "_loginNonces"
         })
         {
             Assert.Null(GetPrivateField(client, field));
@@ -956,6 +1133,18 @@ public class OAuthLoginResponseTests
         /// Gets or sets a value indicating whether the token endpoint issues a bearer token rather than a DPoP bound one.
         /// </summary>
         internal bool IssueBearerToken { get; set; }
+
+        internal string DPoPAlgorithms { get; set; } = """["ES256","PS256","RS256"]""";
+
+        internal string ClientSigningAlgorithms { get; set; } = """["ES256"]""";
+
+        internal string? TokenProofAlgorithm { get; private set; }
+
+        internal List<string?> TokenNonces { get; } = [];
+
+        internal List<string?> ResourceNonces { get; } = [];
+
+        internal string IssuedNonce { get; set; } = "serverIssuedNonce";
 
         internal bool ChallengeNonce { get; set; }
 
@@ -1046,6 +1235,8 @@ public class OAuthLoginResponseTests
                           "end_session_endpoint": "https://{{DomainName}}/logout",
                           "jwks_uri": "https://{{DomainName}}/jwks",
                           "response_types_supported": [ "code" ],
+                          "dpop_signing_alg_values_supported": {{DPoPAlgorithms}},
+                          "token_endpoint_auth_signing_alg_values_supported": {{ClientSigningAlgorithms}},
                           "grant_types_supported": [ "authorization_code", "refresh_token" ],
                           "code_challenge_methods_supported": [ "S256" ]
                         }
@@ -1070,6 +1261,7 @@ public class OAuthLoginResponseTests
                     }
 
                     response.StatusCode = StatusCodes.Status201Created;
+                    response.Headers["DPoP-Nonce"] = "par-success-nonce";
                     response.ContentType = "application/json";
                     await response.WriteAsync("""{"request_uri":"urn:ietf:params:oauth:request_uri:test","expires_in":90}""");
                     return;
@@ -1095,6 +1287,9 @@ public class OAuthLoginResponseTests
                     }
 
                     RecordProofKey(request);
+                    TokenProofAlgorithm = new JsonWebToken(request.Headers["DPoP"].ToString()).Alg;
+                    JsonWebToken tokenProof = new(request.Headers["DPoP"].ToString());
+                    TokenNonces.Add(tokenProof.TryGetClaim("nonce", out Claim? tokenNonce) ? tokenNonce.Value : null);
                     IFormCollection tokenForm = await request.ReadFormAsync();
                     TokenClientAssertion = tokenForm["client_assertion"].ToString();
                     TokenRedirectUri = tokenForm["redirect_uri"].ToString();
@@ -1115,7 +1310,7 @@ public class OAuthLoginResponseTests
                     }
 
                     string scopeMember = OmitResponseScope ? string.Empty : $",\n  \"scope\": \"{ResponseScope}\"";
-                    response.Headers["DPoP-Nonce"] = "serverIssuedNonce";
+                    response.Headers["DPoP-Nonce"] = IssuedNonce;
                     response.ContentType = TokenResponseContentType;
                     await response.WriteAsync($$"""
                         {
@@ -1125,6 +1320,23 @@ public class OAuthLoginResponseTests
                           "refresh_token": "refreshToken"{{scopeMember}}
                         }
                         """);
+                    return;
+
+                case "/resource":
+                    JsonWebToken resourceProof = new(request.Headers["DPoP"].ToString());
+                    string? resourceNonce = resourceProof.TryGetClaim("nonce", out Claim? nonceClaim) ? nonceClaim.Value : null;
+                    ResourceNonces.Add(resourceNonce);
+                    response.ContentType = "application/json";
+                    if (resourceNonce is not ("pds-nonce" or "pds-rotated-nonce"))
+                    {
+                        response.StatusCode = StatusCodes.Status401Unauthorized;
+                        response.Headers["DPoP-Nonce"] = "pds-nonce";
+                        await response.WriteAsync("""{"error":"use_dpop_nonce"}""");
+                        return;
+                    }
+
+                    response.Headers["DPoP-Nonce"] = "pds-rotated-nonce";
+                    await response.WriteAsync("{}");
                     return;
 
                 case "/xrpc/com.atproto.server.describeServer":
@@ -1140,9 +1352,12 @@ public class OAuthLoginResponseTests
 
         private async Task<bool> ChallengeOrRejectAssertion(HttpContext context, string assertion, string operation)
         {
-            string jti = new JsonWebToken(assertion).Id;
-            bool reused = AssertionJtis.Contains(jti, StringComparer.Ordinal);
-            AssertionJtis.Add(jti);
+            string? jti = string.IsNullOrEmpty(assertion) ? null : new JsonWebToken(assertion).Id;
+            bool reused = jti is not null && AssertionJtis.Contains(jti, StringComparer.Ordinal);
+            if (jti is not null)
+            {
+                AssertionJtis.Add(jti);
+            }
             AssertionOperations.Add(operation);
             string nonce = $"{operation}-nonce";
             JsonWebToken proof = new(context.Request.Headers["DPoP"].ToString());

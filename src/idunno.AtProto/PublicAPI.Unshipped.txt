@@ -94,6 +94,16 @@
 [BSKYSpaces]static idunno.AtProto.Space.SpacePolicyRecord.operator ==(idunno.AtProto.Space.SpacePolicyRecord? left, idunno.AtProto.Space.SpacePolicyRecord? right) -> bool
 [BSKYSpaces]virtual idunno.AtProto.Space.SpaceMemberRecord.Equals(idunno.AtProto.Space.SpaceMemberRecord? other) -> bool
 [BSKYSpaces]virtual idunno.AtProto.Space.SpacePolicyRecord.Equals(idunno.AtProto.Space.SpacePolicyRecord? other) -> bool
+const idunno.AtProto.Authentication.AtProtoClaims.DPoPOriginNonce = "urn:atproto:dpop:origin-nonce" -> string!
+idunno.AtProto.Authentication.DPoPAccessCredentials.DPoPNonces.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+idunno.AtProto.Authentication.DPoPAccessCredentials.DPoPNonces.init -> void
+idunno.AtProto.Authentication.DPoPRefreshCredential.DPoPNonces.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+idunno.AtProto.Authentication.DPoPRefreshCredential.DPoPNonces.init -> void
+idunno.AtProto.Authentication.OAuthLoginState.DPoPNonces.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+idunno.AtProto.Authentication.OAuthLoginState.DPoPNonces.init -> void
+static idunno.AtProto.Authentication.OAuthClientSigningKey.Generate(string? keyId = null) -> idunno.AtProto.Authentication.OAuthClientSigningKey!
+static idunno.AtProto.Authentication.OAuthClientSigningKey.FromJwk(string! jwk, string? keyId = null) -> idunno.AtProto.Authentication.OAuthClientSigningKey!
+idunno.AtProto.Authentication.OAuthClientSigningKey.ToPublicJwk() -> string!
 static idunno.AtProto.ServiceAuthentication.VerifyOzoneAdministrationAsync(string! token, idunno.AtProto.Did! labeler, idunno.AtProto.Nsid! method) -> System.Threading.Tasks.Task<idunno.AtProto.ServiceAuthenticationResult!>!
 static idunno.AtProto.ServiceAuthentication.VerifyOzoneAdministrationAsync(string! token, idunno.AtProto.Did! labeler, idunno.AtProto.Nsid! method, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.ServiceAuthenticationResult!>!
 static idunno.AtProto.ServiceAuthentication.VerifyOzoneAdministrationAsync(string! token, idunno.AtProto.Did! labeler, idunno.AtProto.Nsid! method, System.TimeProvider? timeProvider, System.TimeSpan? maximumLifetime, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.ServiceAuthenticationResult!>!

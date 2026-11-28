@@ -27,7 +27,8 @@ public class OAuthLoginStateTests
         {
             OAuthClientId = clientId,
             RequestedScope = requestedScope,
-            ClientSigningKeyId = signingKeyId
+            ClientSigningKeyId = signingKeyId,
+            DPoPNonces = new Dictionary<string, string> { ["https://authority.test"] = "authority-nonce" }
         };
 
         OAuthLoginState restored = Assert.IsType<OAuthLoginState>(OAuthLoginState.FromJson(state.ToJson()));
@@ -35,6 +36,7 @@ public class OAuthLoginStateTests
         Assert.Equal(clientId, restored.OAuthClientId);
         Assert.Equal(requestedScope, restored.RequestedScope);
         Assert.Equal(signingKeyId, restored.ClientSigningKeyId);
+        Assert.Equal(state.DPoPNonces, restored.DPoPNonces);
         Assert.Equal(state, restored);
         Assert.Equal(state.GetHashCode(), restored.GetHashCode());
     }

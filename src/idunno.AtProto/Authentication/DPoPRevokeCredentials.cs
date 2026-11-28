@@ -6,8 +6,11 @@ using Duende.IdentityModel.OidcClient.DPoP;
 
 namespace idunno.AtProto.Authentication;
 
-internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential
+internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential, IOriginBoundDPoPCredential
 {
+    /// <inheritdoc/>
+    public DPoPNonceStore NonceStore { get; set; } = new();
+
 #if NET9_0_OR_GREATER
     private readonly Lock _dPoPRevokeCredentialsLock = new();
 #else
@@ -34,6 +37,7 @@ internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential
         DPoPProofKey = accessCredentials.DPoPProofKey;
         DPoPNonce = accessCredentials.DPoPNonce;
         Token = accessCredentials.AccessJwt;
+        NonceStore = ((IOriginBoundDPoPCredential)accessCredentials).NonceStore;
     }
 
     public string Token
@@ -104,6 +108,7 @@ internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential
             lock (_dPoPRevokeCredentialsLock)
             {
                 field = value ?? string.Empty;
+                NonceStore.Set(Service, value);
             }
         }
     }
@@ -133,7 +138,7 @@ internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential
             // Do not set AccessToken here. See the remarks above.
             DPoPProofRequest dPoPProofRequest = new()
             {
-                DPoPNonce = DPoPNonce,
+                DPoPNonce = NonceStore.Get(httpRequestMessage.RequestUri!),
                 Method = httpRequestMessage.Method.ToString(),
                 Url = httpRequestMessage.GetDPoPUrl()
             };

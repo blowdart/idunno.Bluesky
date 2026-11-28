@@ -17,6 +17,61 @@ public class DPoPCredentialTests
 {
     private static readonly Uri s_service = new("https://pds.test.internal");
 
+    [Theory]
+    [InlineData("https://PDS.test.internal:443/path?query=value", "resource-nonce")]
+    [InlineData("https://user@pds.test.internal/path", "resource-nonce")]
+    [InlineData("https://pds.test.internal:8443/path", null)]
+    [InlineData("http://pds.test.internal/path", null)]
+    [InlineData("https://authority.test/token", "authority-nonce")]
+    [InlineData("https://unrelated.test/path", null)]
+    public void ProofNoncesAreScopedBySchemeHostAndPortForAllCredentialKinds(string destination, string? expectedNonce)
+    {
+        DPoPAccessCredentials access = new(
+            service: s_service,
+            accessJwt: JwtBuilder.CreateJwt(new Did("did:plc:identifier")),
+            refreshToken: "refresh",
+            dPoPProofKey: Duende.IdentityModel.OidcClient.DPoP.JsonWebKeys.CreateECDsaJson(),
+            dPoPNonce: "legacy-nonce")
+        {
+            DPoPNonces = new Dictionary<string, string>
+            {
+                ["https://pds.test.internal"] = "resource-nonce",
+                ["https://authority.test"] = "authority-nonce"
+            }
+        };
+        AtProtoCredential[] credentials = [access, new DPoPRefreshCredential(access), new DPoPRevokeCredentials(access)];
+        foreach (AtProtoCredential credential in credentials)
+        {
+            using HttpRequestMessage request = new(HttpMethod.Post, destination);
+            credential.SetAuthenticationHeaders(request);
+            JsonWebToken proof = new(Assert.Single(request.Headers.GetValues("DPoP")));
+            string? nonce = proof.TryGetClaim("nonce", out System.Security.Claims.Claim? claim) ? claim.Value : null;
+            Assert.Equal(expectedNonce, nonce);
+        }
+    }
+
+    [Fact]
+    public void RestoredNonceMapsAreCopiedAndReturnedSnapshotsDoNotChange()
+    {
+        Dictionary<string, string> persisted = new() { ["https://pds.test.internal"] = "original" };
+        DPoPAccessCredentials access = new(
+            service: s_service,
+            accessJwt: JwtBuilder.CreateJwt(new Did("did:plc:identifier")),
+            refreshToken: "refresh",
+            dPoPProofKey: JwtBuilder.CreateProofKey(),
+            dPoPNonce: "legacy-nonce")
+        {
+            DPoPNonces = persisted
+        };
+        persisted["https://pds.test.internal"] = "mutated";
+        IReadOnlyDictionary<string, string> snapshot = access.DPoPNonces;
+        DPoPRefreshCredential refresh = new(access);
+        access.DPoPNonce = "updated";
+
+        Assert.Equal("original", snapshot["https://pds.test.internal"]);
+        Assert.Equal("updated", refresh.DPoPNonces["https://pds.test.internal"]);
+    }
+
     [Fact]
     public void DPoPAccessCredentialsBindsProofToTheTokenInTheAuthorizationHeader()
     {
