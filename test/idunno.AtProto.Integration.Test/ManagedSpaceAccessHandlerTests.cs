@@ -27,8 +27,11 @@ public sealed class ManagedSpaceAccessHandlerTests
     /// <summary>
     /// Confirms a valid authority token reaches the decider and returns its access decision.
     /// </summary>
-    [Fact]
-    public async Task Handle_ValidToken_ReturnsDeciderAccess()
+    [Theory]
+    [InlineData("https://example.com/client.json")]
+    [InlineData("http://localhost/?redirect_uri=http%3A%2F%2F127.0.0.1%2Fcallback")]
+    [InlineData("urn:example:client")]
+    public async Task Handle_ValidToken_ReturnsDeciderAccess(string clientId)
     {
         FakeTimeProvider time = CreateClock();
         using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
@@ -42,7 +45,7 @@ public sealed class ManagedSpaceAccessHandlerTests
             authorization: $"Bearer {token}",
             space: SpaceUri,
             repo: OtherDid,
-            clientId: "https://example.com/client.json",
+            clientId: clientId,
             cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(200, response.StatusCode);
@@ -53,7 +56,7 @@ public sealed class ManagedSpaceAccessHandlerTests
         Assert.Equal(1, decider.Calls);
         Assert.Equal(new SpaceAtUri(SpaceUri), decider.LastCheck?.Space);
         Assert.Equal(new Did(OtherDid), decider.LastCheck?.Repo);
-        Assert.Equal(new Uri("https://example.com/client.json"), decider.LastCheck?.ClientId);
+        Assert.Equal(new Uri(clientId), decider.LastCheck?.ClientId);
         using JsonDocument body = JsonDocument.Parse(response.Body);
         Assert.True(body.RootElement.GetProperty("read").GetBoolean());
         Assert.False(body.RootElement.GetProperty("write").GetBoolean());
@@ -128,12 +131,18 @@ public sealed class ManagedSpaceAccessHandlerTests
     [InlineData("at://did:plc:ewvi7nxzyoun6zhxsrcy6jgr/app.bsky.bookmark/key", null, null)]
     [InlineData(SpaceUri, "not-a-did", null)]
     [InlineData(SpaceUri, null, "/relative-client")]
+    [InlineData(SpaceUri, null, "relative-client")]
+    [InlineData(SpaceUri, null, "//example.com/client.json")]
+    [InlineData(SpaceUri, null, @"C:\client.json")]
+    [InlineData(SpaceUri, null, "https://example.com/client id")]
     public async Task Handle_InvalidRequestValues_ReturnsBadRequest(string space, string? repo, string? clientId)
     {
         FakeTimeProvider time = CreateClock();
         using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        using TestServer resolver = CreateResolver(TestDid, key);
+        using HttpClient client = resolver.CreateClient();
         CountingDecider decider = new(new ManagedSpaceAccess { Read = true, Write = true });
-        ManagedSpaceAccessHandler handler = CreateHandler(decider, httpClient: null, time);
+        ManagedSpaceAccessHandler handler = CreateHandler(decider, client, time);
         string token = CreateToken(key, time, TestDid, s_managingApp.ToString(), s_method.ToString(), "invalid-request-token");
 
         ManagedSpaceAccessResponse response = await handler.Handle(

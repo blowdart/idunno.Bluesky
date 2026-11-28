@@ -101,7 +101,7 @@ public sealed class ManagedSpaceAccessHandler
     /// <param name="authorization">The request's <c>Authorization</c> header value.</param>
     /// <param name="space">The value of the request's space query parameter.</param>
     /// <param name="repo">The optional value of the request's repo query parameter.</param>
-    /// <param name="clientId">The optional value of the request's client ID query parameter.</param>
+    /// <param name="clientId">The optional well-formed absolute URI from the request's client ID query parameter.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>The response to send, including its status code and JSON body.</returns>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> is canceled.</exception>
@@ -146,7 +146,9 @@ public sealed class ManagedSpaceAccessHandler
 
         Uri? clientUri = null;
         if (clientId is not null &&
-            (clientId.Length > MaximumClientIdLength || !Uri.TryCreate(clientId, UriKind.Absolute, out clientUri)))
+            (clientId.Length > MaximumClientIdLength ||
+             !Uri.TryCreate(clientId, UriKind.Absolute, out clientUri) ||
+             !clientUri.IsWellFormedOriginalString()))
         {
             return ManagedSpaceAccessResponse.Failure(400, "InvalidRequest", "The clientId parameter must be an absolute URI.");
         }

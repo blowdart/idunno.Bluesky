@@ -90,7 +90,7 @@
 
 * Added experimental AT Protocol Spaces support for creating, inspecting, listing, updating and deleting spaces; typed space policies, published policy and membership records, member management, managed-space access checks and synchronization definitions; creating, replacing, deleting, reading and listing records in a space; and typed `AtProtoError` mappings for the Spaces lexicon errors, such as `SpaceNotFound` and `SpaceDeleted`. Archive synchronization and subscriptions remain unsupported.
 * Added verified single-use space delegation and disposable, expiring proof-key credentials, explicit renewal, signed credential reads and export-only HPKE response-MAC verification for individual records using platform cryptography. Record listings check supplied values against CIDs but have no response-MAC profile and do not authenticate authorship or completeness.
-* Added a framework-neutral managed-space `checkAccess` handler that verifies authority service tokens, prevents replay and delegates access decisions to the managing application.
+* Added a framework-neutral managed-space `checkAccess` handler that verifies authority service tokens, prevents replay, rejects malformed client ID URIs and delegates access decisions to the managing application.
 * Streaming synchronization and Jetstream archive responses preserve typed protocol errors, including the archive's `SegmentNotFound` error.
 * Rejects permissioned space URIs in repository record reads and deletes rather than treating the space authority as a repository.
 * Added validated ES256 private-JWK import, public-only JWK export and in-memory P-256 OAuth client signing-key generation.
