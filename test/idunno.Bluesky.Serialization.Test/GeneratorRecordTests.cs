@@ -4,6 +4,7 @@
 using System.Text.Json;
 
 using idunno.AtProto;
+using idunno.AtProto.Json;
 using idunno.AtProto.Repo;
 using idunno.Bluesky.Feed;
 using idunno.Bluesky.Feed.Gates;
@@ -14,6 +15,53 @@ namespace idunno.Bluesky.Serialization.Test;
 [ExcludeFromCodeCoverage]
 public class GeneratorRecordTests
 {
+#pragma warning disable BSKYSpaces
+    [Fact]
+    public void AlphaRecordValueCanBeReadWithoutChangingItsEnvelopeOrRawJson()
+    {
+        const string legacy = "at://did:plc:asdf123/space/com.example.group/default/did:plc:user1/com.atproto.feed.post/abc123";
+        const string current = "at:space/did:plc:asdf123/com.example.group/default/did:plc:user1/com.atproto.feed.post/abc123";
+        string json = $$"""
+            {
+                "uri": "at://did:plc:user1/app.bsky.feed.repost/test",
+                "cid": "bafyreihszwqbe7nxh2mv4o2wk365yanh3p3zimbunfrjdtq7gcmmzohx6i",
+                "value": {
+                    "$type": "app.bsky.feed.repost",
+                    "subject": {
+                        "uri": "{{legacy}}",
+                        "cid": "bafyreihszwqbe7nxh2mv4o2wk365yanh3p3zimbunfrjdtq7gcmmzohx6i"
+                    },
+                    "createdAt": "2025-04-21T10:49:31.969Z",
+                    "exampleText": "{{legacy}}"
+                }
+            }
+            """;
+
+        AtProtoRepositoryRecord record = Assert.IsType<AtProtoRepositoryRecord>(
+            JsonSerializer.Deserialize<AtProtoRepositoryRecord>(json, BlueskyServer.BlueskyJsonSerializerOptions));
+        Assert.NotNull(record.Value);
+        string originalValue = record.Value.ToJsonString();
+        Assert.Throws<JsonException>(() => record.Value.Deserialize<Repost>(BlueskyServer.BlueskyJsonSerializerOptions));
+
+        JsonSerializerOptions recordOptions = BlueskyJsonSerializerOptions.Create(
+            options => options.Converters.Add(new SpaceRecordValueUriConverter()));
+        Repost repost = Assert.IsType<Repost>(record.Value.Deserialize<Repost>(recordOptions));
+
+        Assert.IsType<SpaceAtUri>(repost.Subject.Uri);
+        Assert.Equal(current, repost.Subject.Uri.ToString());
+        Assert.Equal(legacy, repost.ExtensionData["exampleText"].GetString());
+        Assert.Equal(originalValue, record.Value.ToJsonString());
+        Assert.Equal(legacy, record.Value["subject"]?["uri"]?.GetValue<string>());
+        using JsonDocument serialized = JsonDocument.Parse(JsonSerializer.Serialize(repost, BlueskyServer.BlueskyJsonSerializerOptions));
+        Assert.Equal(current, serialized.RootElement.GetProperty("subject").GetProperty("uri").GetString());
+        Assert.Equal(legacy, serialized.RootElement.GetProperty("exampleText").GetString());
+        Assert.Throws<JsonException>(() => record.Value.Deserialize<Repost>(BlueskyServer.BlueskyJsonSerializerOptions));
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<AtProtoRepositoryRecord>(
+            json.Replace("at://did:plc:user1/app.bsky.feed.repost/test", legacy, StringComparison.Ordinal),
+            BlueskyServer.BlueskyJsonSerializerOptions));
+    }
+#pragma warning restore BSKYSpaces
+
     public static TheoryData<string> BlueskyRecordDiscriminatorDocuments =>
     [
         """{"$type":"app.bsky.feed.post","text":"Test post","createdAt":"2025-04-21T10:49:31.969Z"}""",

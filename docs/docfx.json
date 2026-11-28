@@ -8,6 +8,7 @@
                     "files": [
                         "idunno.AtProto.Types/bin/Release/**/idunno.AtProto.Types.dll",
                         "idunno.AtProto/bin/Release/**/idunno.AtProto.dll",
+                        "idunno.AtProto.AspNet.Spaces/bin/Release/**/idunno.AtProto.AspNet.Spaces.dll",
                         "idunno.AtProto.OAuthCallback/bin/Release/**/idunno.AtProto.Callback.dll",
                         "idunno.Bluesky/bin/Release/**/idunno.Bluesky.dll"
                     ]

@@ -176,6 +176,7 @@ public class ContactDiscoveryTests
         Assert.False(result.Succeeded);
         Assert.Equal(HttpStatusCode.BadRequest, result.StatusCode);
         Assert.Equal(error, result.Error?.Error);
+        Assert.Equal(error, result.Error?.GetType().Name);
         Assert.Null(result.Value);
     }
 

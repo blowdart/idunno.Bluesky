@@ -31,7 +31,7 @@ public class UnknownMetadataTests
         using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
         {
             Assert.Equal("/xrpc/com.atproto.repo.getRecord", context.Request.Path.Value);
-            Assert.Equal(uri.Repo.Value, context.Request.Query["repo"]);
+            Assert.Equal(uri.Repo!.Value, context.Request.Query["repo"]);
             Assert.Equal("app.bsky.feed.post", context.Request.Query["collection"]);
             Assert.Equal(uri.RecordKey!.Value, context.Request.Query["rkey"]);
             requested = true;

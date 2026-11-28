@@ -159,10 +159,10 @@ public class AuthenticationRequirementTests
                 HttpRequest request = context.Request;
                 HttpResponse httpResponse = context.Response;
 
-                if (request.Host.Host == "plc.directory" && request.Path == $"/{s_otherPost.Repo}")
+                if (request.Host.Host == "plc.directory" && request.Path == $"/{s_otherPost.Repo!}")
                 {
                     DidDocument didDocument = new(
-                        id: s_otherPost.Repo.ToString(),
+                        id: s_otherPost.Repo!.ToString(),
                         context: ["https://www.w3.org/ns/did/v1"],
                         alsoKnownAs: null,
                         verificationMethods: null,
@@ -197,7 +197,7 @@ public class AuthenticationRequirementTests
         Assert.NotNull(captured);
         Assert.Equal(authorPdsHost, captured.Host);
         Assert.False(captured.HadAuthorization);
-        Assert.Contains($"repo={Uri.EscapeDataString(s_otherPost.Repo.ToString())}", captured.QueryString, StringComparison.Ordinal);
+        Assert.Contains($"repo={Uri.EscapeDataString(s_otherPost.Repo!.ToString())}", captured.QueryString, StringComparison.Ordinal);
         Assert.Contains($"collection={Uri.EscapeDataString(gateCollection)}", captured.QueryString, StringComparison.Ordinal);
         Assert.Contains("rkey=3lcf6ry7xy22x", captured.QueryString, StringComparison.Ordinal);
     }

@@ -88,6 +88,8 @@ items:
         href: didHandleCache.md
       - name: atproto Labels
         href: labels.md
+      - name: AT Protocol Spaces (experimental)
+        href: spaces.md
       - name: Json Source Generation, AOT & Trimming
         href: sourceGeneration.md
       - name: Sending "raw" requests

@@ -122,6 +122,11 @@ Each lexicon record must also declare its own `[JsonPolymorphic]` and `[JsonDeri
 * **Follow the lexicon.** Build parameters, outputs and errors from the lexicon JSON. List the lexicon's named errors in the
   method's `<remarks>`. Reuse an existing type when its shape matches the lexicon output (e.g. `Repo.Commit` for `{ cid, rev }`)
   rather than creating a duplicate.
+* **Typed errors.** Map each lexicon-declared error for an implemented endpoint to an `AtErrorDetail` subclass. Reuse an
+  existing mapped error where appropriate; otherwise add a typed error and register it with the appropriate mapper:
+  `AtProtoError.Map`, `BlueskyError.Map`, or a package-specific mapper (create one if needed). Wire new mappers into the
+  relevant client's mapper chain without dropping common mappings, preserve error details and leave unknown errors unchanged.
+  Add mapper tests for each error's concrete type.
 * **Open string enums.** A lexicon string with `knownValues` becomes a C# enum with a trailing `Unknown` member and a hand-written
   `JsonConverter` that maps unrecognised values to `Unknown` (see `AccountStatus` / `HostStatus`). Do not rely on
   `JsonStringEnumConverter`.
@@ -194,7 +199,7 @@ Before considering a change complete, identify the assumptions and invariants it
 * Prefer a single `[Theory]` with `[InlineData]`/`[MemberData]` over many near-duplicate `[Fact]` methods.
 * Test projects are split by purpose: `*.Test` (unit), `*.Serialization.Test` (JSON (de)serialization, often against captured responses), and `*.Integration.Test` (uses `TestServerBuilder` to stand up a mock server).
 * Add endpoint tests to the matching `*.Integration.Test` project, using `TestServerBuilder`. Assert the request path and query
-  parameters, a successful response, and each lexicon error surfacing through `AtErrorDetail`. A test that asserts on
+  parameters, a successful response, and the expected typed `AtErrorDetail` for each lexicon error. A test that asserts on
   `Content-Length` must set it explicitly, because `TestServer` does not send it by default.
 * Any code you commit must build cleanly and keep related tests passing. Actually run the build and the affected tests to confirm — don't assume a fix works.
 

@@ -71,6 +71,12 @@ public partial class BlueskyAgent
     {
         ArgumentNullException.ThrowIfNull(uri);
         ArgumentNullException.ThrowIfNull(starterPack);
+
+        if (uri.IsSpaceUri)
+        {
+            throw SpaceUriGuard.NotSupported(uri, nameof(uri));
+        }
+
         ArgumentNullException.ThrowIfNull(uri.Collection);
         ArgumentNullException.ThrowIfNull(uri.RecordKey);
         ArgumentOutOfRangeException.ThrowIfNotEqual(uri.Collection, CollectionNsid.StarterPack);

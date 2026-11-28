@@ -17,6 +17,8 @@
     <ProjectReference Include="..\..\src\idunno.Bluesky.AspNet.Authentication.Redis\idunno.Bluesky.AspNet.Authentication.Redis.csproj" />
     <ProjectReference Include="..\..\src\idunno.Bluesky.AspNet.Authentication.SQLite\idunno.Bluesky.AspNet.Authentication.SQLite.csproj" />
     <ProjectReference Include="..\..\src\idunno.Bluesky.AspNet.Labeler\idunno.Bluesky.AspNet.Labeler.csproj" />
+    <ProjectReference Include="..\..\src\idunno.AtProto.AspNet.Spaces\idunno.AtProto.AspNet.Spaces.csproj" Condition="'$(TargetFramework)' == 'net10.0'" />
+    <TrimmerRootAssembly Include="idunno.AtProto.AspNet.Spaces" Condition="'$(TargetFramework)' == 'net10.0'" />
     <TrimmerRootAssembly Include="idunno.AtProto.OAuthCallback" />
     <TrimmerRootAssembly Include="idunno.Bluesky.AspNet.Authentication" />
     <TrimmerRootAssembly Include="idunno.Bluesky.AspNet.Authentication.MySQL" />

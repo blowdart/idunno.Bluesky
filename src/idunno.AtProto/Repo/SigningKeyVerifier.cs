@@ -200,6 +200,25 @@ internal sealed class SigningKey(string curveOid, byte[] x, byte[] y)
     internal string JwtAlgorithm => curveOid == "1.3.132.0.10" ? "ES256K" : "ES256";
 
     /// <summary>
+    /// Creates a P-256 key agreement provider for this validated public point.
+    /// </summary>
+    /// <returns>A public-only key agreement provider owned by the caller.</returns>
+    /// <exception cref="InvalidDataException">The key is not a P-256 key.</exception>
+    internal ECDiffieHellman CreateKeyAgreement()
+    {
+        if (JwtAlgorithm != "ES256")
+        {
+            throw new InvalidDataException("A space KEM key must use P-256.");
+        }
+
+        return ECDiffieHellman.Create(new ECParameters
+        {
+            Curve = ECCurve.NamedCurves.nistP256,
+            Q = new ECPoint { X = x, Y = y }
+        });
+    }
+
+    /// <summary>
     /// Verifies a label signature, including the protocol's low-S requirement.
     /// </summary>
     internal void VerifyLabel(ReadOnlySpan<byte> signedData, ReadOnlySpan<byte> signature)

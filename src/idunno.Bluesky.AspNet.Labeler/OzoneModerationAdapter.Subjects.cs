@@ -17,7 +17,7 @@ internal sealed partial class OzoneModerationAdapter
 {
     /// <summary>Extracts a repository identity without treating an unversioned record as an account.</summary>
     private static string EventRepository(string subject) =>
-        subject.StartsWith("at://", StringComparison.Ordinal) ? new AtUri(subject).Repo.ToString() : subject;
+        subject.StartsWith("at://", StringComparison.Ordinal) ? new AtUri(subject).Repo?.ToString() ?? subject : subject;
 
     /// <summary>Hydrates bounded event subjects with the same resolution and authority as individual reads.</summary>
     private async Task<byte[]> GetSubjectsAsync(

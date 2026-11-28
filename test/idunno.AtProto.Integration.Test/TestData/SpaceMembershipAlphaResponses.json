@@ -1,0 +1,48 @@
+{
+  "membersAdded": {
+    "cursor": "did:plc:fixture",
+    "members": [
+      {
+        "did": "did:plc:fixture",
+        "read": true,
+        "write": false
+      }
+    ]
+  },
+  "membersUpdated": {
+    "cursor": "did:plc:fixture",
+    "members": [
+      {
+        "did": "did:plc:fixture",
+        "read": true,
+        "write": true
+      }
+    ]
+  },
+  "membersRemoved": {
+    "members": []
+  },
+  "policyRecord": {
+    "uri": "at:space/did:plc:fixture/app.bsky.bookmark/fixture/did:plc:fixture/com.atproto.space.policy/self",
+    "cid": "bafyreifov3toaen6phrdukkj2hdtolxs7x4ucij2ishztx3p6cnt2fv6ne",
+    "value": {
+      "$type": "com.atproto.space.policy",
+      "policy": {
+        "$type": "com.atproto.memberspace.policy",
+        "publicRead": false,
+        "publicWrite": false,
+        "publishPolicy": true,
+        "publishMembers": true
+      }
+    }
+  },
+  "memberRecord": {
+    "uri": "at:space/did:plc:fixture/app.bsky.bookmark/fixture/did:plc:fixture/com.atproto.memberspace.member/did:plc:fixture",
+    "cid": "bafyreiamuup7apqammdpk27smbjhw6fhpza6karg5gwsxyjsx6ffqhmy5e",
+    "value": {
+      "read": true,
+      "$type": "com.atproto.memberspace.member",
+      "write": false
+    }
+  }
+}

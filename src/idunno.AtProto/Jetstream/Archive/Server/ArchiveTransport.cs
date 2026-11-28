@@ -64,7 +64,7 @@ public static partial class AtProtoServer
         if (!response.IsSuccessStatusCode)
         {
             AtErrorDetail error = await ReadArchiveError(response, message, cancellationToken).ConfigureAwait(false);
-            return new(null, response.StatusCode, response.Headers, error);
+            return new(null, response.StatusCode, response.Headers, AtProtoError.Map(error));
         }
 
         using PooledContent json = await HttpContentReader.ReadAsPooledBytes(
@@ -157,7 +157,7 @@ public static partial class AtProtoServer
         using (response)
         {
             AtErrorDetail error = await ReadArchiveError(response, message, cancellationToken).ConfigureAwait(false);
-            return new(null, response.StatusCode, response.Headers, error);
+            return new(null, response.StatusCode, response.Headers, AtProtoError.Map(error));
         }
     }
 

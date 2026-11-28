@@ -21,6 +21,7 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or its Collection or RecordKey property is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="uri"/> does not point to a list.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> identifies a permissioned space.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
@@ -73,6 +74,12 @@ public partial class BlueskyAgent
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(uri);
+
+        if (uri.IsSpaceUri)
+        {
+            throw SpaceUriGuard.NotSupported(uri, nameof(uri));
+        }
+
         ArgumentNullException.ThrowIfNull(uri.RecordKey);
 
         return await PutRecord<BlueskyTimestampedRecord>(
@@ -92,6 +99,7 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="list"/> or its Uri, or the URI Collection or RecordKey property is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the <paramref name="list"/> Uri does not point to a list.</exception>
+    /// <exception cref="ArgumentException">Thrown when the <paramref name="list"/> Uri identifies a permissioned space.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     public async Task<AtProtoHttpResult<PutRecordResult>> UpdateList(
         AtProtoRepositoryRecord<List> list)
@@ -122,6 +130,7 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="list"/> or its Uri, or the URI Collection or RecordKey property is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the <paramref name="list"/> Uri does not point to a list.</exception>
+    /// <exception cref="ArgumentException">Thrown when the <paramref name="list"/> Uri identifies a permissioned space.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     public async Task<AtProtoHttpResult<PutRecordResult>> UpdateList(
         AtProtoRepositoryRecord<List> list,
@@ -153,6 +162,7 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or its Collection or RecordKey property is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="uri"/> does not point to a list.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> identifies a permissioned space.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",

@@ -58,6 +58,7 @@
 #### idunno.Bluesky.Labeler
 
 * Host-neutral label issuance and signed negation for accounts or records, with optional CID scope and expiry, authorization and policy providers, durable retries and audited no-ops.
+* Rejects permissioned space URIs as label record targets; label record targets must identify records in public repositories.
 * Signed-label storage and distribution contracts with immutable snapshots, ordered replay, stable cursors, operation receipts and persistence metrics.
 * Xenon reports, exact-subject cases and appeals with retained evidence, assignment, escalation, temporary mutes and atomic label and report decisions. Intake never labels content automatically.
 * Verified DID and handle enrollment, Administrator, Moderator and Viewer roles, local OS delegations, live revocation, last-administrator and owner protection with explicit ownership transfer, and administrative audit.
@@ -83,9 +84,15 @@
 #### idunno.AtProto.Types
 
 * Added `IParsable<T>` support to `AtUri`, `Cid`, `Did`, `Handle`, `Nsid` and `RecordKey`, including `Parse` and `TryParse` overloads accepting an `IFormatProvider`.
+* Added `SpaceAtUri` for permissioned space and space-record URIs. `AtUri` parsing, string factories and JSON deserialization recognize both URI forms, while preserving value-based equality across `AtUri` and `SpaceAtUri`. An experimental, record-value-only compatibility path accepts legacy alpha space URIs and normalizes them to the current form.
 
 #### idunno.AtProto
 
+* Added experimental AT Protocol Spaces support for creating, inspecting, listing, updating and deleting spaces; typed space policies, published policy and membership records, member management, managed-space access checks and synchronization definitions; creating, replacing, deleting, reading and listing records in a space; and typed `AtProtoError` mappings for the Spaces lexicon errors, such as `SpaceNotFound` and `SpaceDeleted`. Archive synchronization and subscriptions remain unsupported.
+* Added verified single-use space delegation and disposable, expiring proof-key credentials, explicit renewal, signed credential reads and export-only HPKE response-MAC verification for individual records using platform cryptography. Record listings check supplied values against CIDs but have no response-MAC profile and do not authenticate authorship or completeness.
+* Added a framework-neutral managed-space `checkAccess` handler that verifies authority service tokens, prevents replay, rejects malformed client ID URIs and delegates access decisions to the managing application.
+* Streaming synchronization and Jetstream archive responses preserve typed protocol errors, including the archive's `SegmentNotFound` error.
+* Rejects permissioned space URIs in repository record reads and deletes rather than treating the space authority as a repository.
 * Added validated ES256 private-JWK import, public-only JWK export and in-memory P-256 OAuth client signing-key generation.
 * New OAuth sessions negotiate DPoP proof signing (ES256, PS256 or RS256) and require compatible ES256 confidential-client authentication metadata; restored sessions retain their proof key and signing-key ID.
 * OAuth nonces are tracked and persisted by origin across login, refresh and authenticated resource requests, while retaining older single-nonce credentials.
@@ -94,6 +101,10 @@
 * Adds separate Ozone administration service-token verification for exact labeler service and PDS bare-DID audiences, retaining method binding, replay identifiers and strict generic/native verification.
 * Allows the exact Ozone compatibility reads `app.bsky.actor.getProfile`, `app.bsky.feed.getPostThread` and `tools.ozone.setting.listOptions`, and the narrow `tools.ozone.setting.upsertOption` procedure, through that verifier without accepting other AppView or settings methods.
 * Added moderation-only service authentication for exact labeler service audiences and bare issuer DIDs used by PDS proxies, with exact-method verification for reports and Ozone label appeals without relaxing administration. Added shared explicit label-policy publication validation without restricting remote DTO deserialization.
+
+#### idunno.AtProto.AspNet.Spaces
+
+* ASP.NET Core dependency-injection and endpoint helpers for hosting the managed-space `checkAccess` handler over HTTPS.
 
 * Added exact `DID#service` token-acquisition overloads and strict AT Protocol service JWT verification. Production native loopback callbacks no longer implicitly permit insecure remote OAuth endpoints.
 * Service-authentication tokens request a 14-minute-55-second lifetime by default, leaving five seconds of client/PDS clock-skew headroom below the default 15-minute verifier maximum; callers can choose another lifetime, and verifiers can configure their maximum accepted lifetime.
@@ -108,6 +119,7 @@
 
 #### idunno.Bluesky
 
+* Added typed `BlueskyError` mappings for contact-discovery endpoint errors.
 * Added optional-authentication `getFeedSkeleton` and `sendInteractions` feed-generator APIs, including typed skeleton reasons, feed contexts and interaction events.
 * Added the experimental `getAtmosphereExploreArticleRecommendations` API for the Atmosphere Explore article skeleton.
 * Added `FeedFilter.PostsAndRepliesOnly`, lowercase `includePins` query values, and the lexicon's `posts_with_replies` default for `GetAuthorFeed`.
@@ -128,6 +140,7 @@
 * Made `Graph.ListItem` public, with constructors and null validation for list and subject values, including object initializers and `with` expressions.
 
 * Added `CreateStarterPack()`, `UpdateStarterPack()` and `DeleteStarterPack()` helpers, and `CollectionNsid.StarterPack`. Creation supports caller-supplied record keys, and updates using repository records compare the previous CID to protect against concurrent changes. These helpers modify only the starter pack record, not its referenced list or feeds.
+* Rejects permissioned space URIs in Bluesky helpers that read, update or delete records in a public repository.
 
 #### idunno.Bluesky.AspNet.Authentication
 
@@ -154,6 +167,10 @@
 * Live backpressure preserves virtual `OnRecordReceived` callbacks, handles expected queue shutdown (including explicit `CloseAsync()` while the queue is full) without false error logs, and keeps queue-wait cancellation separate from socket reads so enumerator and asynchronous Jetstream disposal can complete a bounded graceful close.
 
 ### ⚠️ Breaking Changes
+
+#### idunno.AtProto.Types
+
+* `AtUri.Repo` is now nullable because a permissioned space URI's authority identifies a space, not a repository. Use `AtUri.IsSpaceUri` or `AtUri.TryGetSpaceUri()` to identify and access space-specific components.
 
 #### idunno.AtProto
 

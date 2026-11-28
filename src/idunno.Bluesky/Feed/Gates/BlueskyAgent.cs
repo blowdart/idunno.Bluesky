@@ -22,7 +22,8 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">
-    ///   Thrown when <paramref name="post"/>has a <see langword="null"/> repo, does not point to a post record or the current user does not own the record pointed to.
+    ///   Thrown when <paramref name="post"/> does not point to a post record or the current user does not own the record pointed to.
+    ///   Also thrown when <paramref name="post"/> identifies a permissioned space.
     /// </exception>
     /// <exception cref="ArgumentOutOfRangeException">
     ///   Thrown when <paramref name="rules"/> or <paramref name="hiddenReplies"/> have more than the maximum number of entries.
@@ -36,14 +37,14 @@ public partial class BlueskyAgent
     {
         ArgumentNullException.ThrowIfNull(post);
 
+        if (post.IsSpaceUri)
+        {
+            throw SpaceUriGuard.NotSupported(post, nameof(post));
+        }
+
         if (!IsAuthenticated)
         {
             throw new AuthenticationRequiredException();
-        }
-
-        if (post.Repo is null)
-        {
-            throw new ArgumentException("Repo is null", nameof(post));
         }
 
         if (post.Collection != CollectionNsid.Post)
@@ -78,7 +79,7 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="threadGate"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="threadGate"/>'s post is not owned by the current user.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="threadGate"/>'s post is not owned by the current user. Also thrown when the gated post is in a permissioned space.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
@@ -92,6 +93,11 @@ public partial class BlueskyAgent
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(threadGate);
+
+        if (threadGate.Post.IsSpaceUri)
+        {
+            throw SpaceUriGuard.NotSupported(threadGate.Post, nameof(threadGate));
+        }
 
         if (!IsAuthenticated)
         {
@@ -118,13 +124,18 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is <see langword="null"/>. Also thrown when <paramref name="post"/> identifies a permissioned space.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
     public async Task<AtProtoHttpResult<DeleteResult>> DeleteThreadGate(
         AtUri post,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(post);
+
+        if (post.IsSpaceUri)
+        {
+            throw SpaceUriGuard.NotSupported(post, nameof(post));
+        }
 
         if (!IsAuthenticated)
         {
@@ -161,6 +172,7 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="threadGate"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">
     ///     Thrown when the <paramref name="threadGate"/>'s RecordKey is <see langword="null"/>, or it does not point to a Post record or it does not belong to the current user.
+    ///     Also thrown when the gated post is in a permissioned space.
     /// </exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
     [UnconditionalSuppressMessage(
@@ -183,7 +195,7 @@ public partial class BlueskyAgent
     /// <param name="threadGate">The <see cref="ThreadGate"/> to update.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="threadGate"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when the post the gate applies to does not point to a post record, its RecordKey is <see langword="null"/>, or it is not owned by the current user.</exception>
+    /// <exception cref="ArgumentException">Thrown when the post the gate applies to does not point to a post record, its RecordKey is <see langword="null"/>, or it is not owned by the current user. Also thrown when the gated post is in a permissioned space.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
     public async Task<AtProtoHttpResult<PutRecordResult>> UpdateThreadGate(ThreadGate threadGate)
     {
@@ -198,7 +210,7 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="threadGate"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when the post the gate applies to does not point to a post record, its RecordKey is <see langword="null"/>, or it is not owned by the current user.</exception>
+    /// <exception cref="ArgumentException">Thrown when the post the gate applies to does not point to a post record, its RecordKey is <see langword="null"/>, or it is not owned by the current user. Also thrown when the gated post is in a permissioned space.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
     /// <remarks>
     /// <para>Use <see cref="GetThreadGateRecord(AtUri, CancellationToken)"/> to read the <see cref="Cid"/> of the record being replaced. The update
@@ -217,6 +229,11 @@ public partial class BlueskyAgent
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(threadGate);
+
+        if (threadGate.Post.IsSpaceUri)
+        {
+            throw SpaceUriGuard.NotSupported(threadGate.Post, nameof(threadGate));
+        }
 
         if (!IsAuthenticated)
         {
@@ -254,7 +271,7 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is <see langword="null"/>. Also thrown when <paramref name="post"/> identifies a permissioned space.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -267,6 +284,11 @@ public partial class BlueskyAgent
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(post);
+
+        if (post.IsSpaceUri)
+        {
+            throw SpaceUriGuard.NotSupported(post, nameof(post));
+        }
 
         if (post.RecordKey is null)
         {
@@ -307,7 +329,7 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is <see langword="null"/>. Also thrown when <paramref name="post"/> identifies a permissioned space.</exception>
     /// <remarks>
     /// <para>Unlike <see cref="GetThreadGate(AtUri, CancellationToken)"/> the returned record carries its <see cref="Cid"/>, which
     /// <see cref="UpdateThreadGate(ThreadGate, Cid?, CancellationToken)"/> takes as a <c>swapRecord</c> to make an update conditional.</para>
@@ -325,6 +347,11 @@ public partial class BlueskyAgent
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(post);
+
+        if (post.IsSpaceUri)
+        {
+            throw SpaceUriGuard.NotSupported(post, nameof(post));
+        }
 
         if (post.RecordKey is null)
         {
@@ -356,7 +383,7 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> is not owned by the current user.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> is not owned by the current user. Also thrown when <paramref name="post"/> identifies a permissioned space.</exception>
     /// <exception cref="ArgumentOutOfRangeException">
     ///   Thrown when <paramref name="rules"/> is empty or has larger than the maximum number of rules allowed, or
     ///   when <paramref name="detachedEmbeddingUris"/> has larger than the number of uris allowed.</exception>
@@ -368,6 +395,11 @@ public partial class BlueskyAgent
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(post);
+
+        if (post.IsSpaceUri)
+        {
+            throw SpaceUriGuard.NotSupported(post, nameof(post));
+        }
 
         if (!IsAuthenticated)
         {
@@ -406,6 +438,7 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="postGate"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">
     ///     Thrown when the <paramref name="postGate"/>'s RecordKey is <see langword="null"/>, or it does not point to a Post record or it does not belong to the current user.
+    ///     Also thrown when the gated post is in a permissioned space.
     /// </exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
     [UnconditionalSuppressMessage(
@@ -420,6 +453,11 @@ public partial class BlueskyAgent
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(postGate);
+
+        if (postGate.Post.IsSpaceUri)
+        {
+            throw SpaceUriGuard.NotSupported(postGate.Post, nameof(postGate));
+        }
 
         if (!IsAuthenticated)
         {
@@ -456,13 +494,18 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is <see langword="null"/>. Also thrown when <paramref name="post"/> identifies a permissioned space.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
     public async Task<AtProtoHttpResult<DeleteResult>> DeletePostGate(
         AtUri post,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(post);
+
+        if (post.IsSpaceUri)
+        {
+            throw SpaceUriGuard.NotSupported(post, nameof(post));
+        }
 
         if (post.RecordKey is null)
         {
@@ -497,7 +540,7 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is <see langword="null"/>. Also thrown when <paramref name="post"/> identifies a permissioned space.</exception>
     [UnconditionalSuppressMessage(
          "Trimming",
          "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -510,6 +553,11 @@ public partial class BlueskyAgent
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(post);
+
+        if (post.IsSpaceUri)
+        {
+            throw SpaceUriGuard.NotSupported(post, nameof(post));
+        }
 
         if (post.RecordKey is null)
         {
@@ -550,7 +598,7 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is <see langword="null"/>. Also thrown when <paramref name="post"/> identifies a permissioned space.</exception>
     /// <remarks>
     /// <para>Unlike <see cref="GetPostGate(AtUri, CancellationToken)"/> the returned record carries its <see cref="Cid"/>, which
     /// <see cref="UpdatePostGate(PostGate, Cid?, CancellationToken)"/> takes as a <c>swapRecord</c> to make an update conditional.</para>
@@ -568,6 +616,11 @@ public partial class BlueskyAgent
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(post);
+
+        if (post.IsSpaceUri)
+        {
+            throw SpaceUriGuard.NotSupported(post, nameof(post));
+        }
 
         if (post.RecordKey is null)
         {
@@ -599,6 +652,7 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="postGate"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">
     ///     Thrown when the <paramref name="postGate"/>'s RecordKey is <see langword="null"/>, or it does not point to a Post record or it does not belong to the current user.
+    ///     Also thrown when the gated post is in a permissioned space.
     /// </exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
     [UnconditionalSuppressMessage(
@@ -623,6 +677,7 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="postGate"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">
     ///     Thrown when the <paramref name="postGate"/>'s RecordKey is <see langword="null"/>, or it does not point to a Post record or it does not belong to the current user.
+    ///     Also thrown when the gated post is in a permissioned space.
     /// </exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
     public async Task<AtProtoHttpResult<PutRecordResult>> UpdatePostGate(PostGate postGate)
@@ -640,6 +695,7 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="postGate"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">
     ///     Thrown when the <paramref name="postGate"/>'s RecordKey is <see langword="null"/>, or it does not point to a Post record or it does not belong to the current user.
+    ///     Also thrown when the gated post is in a permissioned space.
     /// </exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
     /// <remarks>
@@ -659,6 +715,11 @@ public partial class BlueskyAgent
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(postGate);
+
+        if (postGate.Post.IsSpaceUri)
+        {
+            throw SpaceUriGuard.NotSupported(postGate.Post, nameof(postGate));
+        }
 
         if (!IsAuthenticated)
         {

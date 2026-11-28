@@ -40,7 +40,7 @@ public partial class AtProtoServer
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
             IgnoreReadOnlyProperties = false,
             RespectNullableAnnotations = true,
-            TypeInfoResolver = SourceGenerationContext.Default,
+            TypeInfoResolver = global::idunno.AtProto.AtProtoJsonSerializerOptions.SourceGenerationTypeInfoResolver,
             UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip,
         };
         if (adaptContracts)
@@ -69,7 +69,7 @@ public partial class AtProtoServer
             RespectNullableAnnotations = true,
             TypeInfoResolver = JsonSerializer.IsReflectionEnabledByDefault
                 ? new DefaultJsonTypeInfoResolver()
-                : JsonTypeInfoResolver.Combine(SourceGenerationContext.Default)
+                : global::idunno.AtProto.AtProtoJsonSerializerOptions.SourceGenerationTypeInfoResolver
         };
         Json.TolerantPolymorphicConverter.Configure(options);
         return options;

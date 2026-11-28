@@ -31,6 +31,19 @@ public class LabelIssuanceServiceConformanceTests
         Assert.ThrowsAny<ArgumentException>(() => new Cid("not-a-cid"));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void RecordTargetsRejectSpaceRecords(bool useFactory)
+    {
+        const string value = "at:space/did:plc:owner/com.example.group/default/did:plc:author/app.bsky.feed.post/key";
+        AtUri uri = useFactory ? AtUri.FromString(value) : new AtUri(value);
+
+        ArgumentException exception = Assert.Throws<ArgumentException>(() => LabelTarget.Record(uri));
+
+        Assert.Equal(nameof(uri), exception.ParamName);
+    }
+
     [Theory(Timeout = 120_000)]
     [InlineData("sqlite")]
     [InlineData("postgresql")]

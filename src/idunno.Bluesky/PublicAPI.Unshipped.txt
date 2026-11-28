@@ -302,3 +302,19 @@ virtual idunno.Bluesky.Feed.SkeletonReason.EqualityContract.get -> System.Type!
 virtual idunno.Bluesky.Feed.SkeletonReason.Equals(idunno.Bluesky.Feed.SkeletonReason? other) -> bool
 virtual idunno.Bluesky.Feed.SkeletonReason.PrintMembers(System.Text.StringBuilder! builder) -> bool
 [BSKYUnspecced]static idunno.Bluesky.BlueskyServer.GetAtmosphereExploreArticleRecommendations(idunno.AtProto.Did? viewer, int? limit, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Func<idunno.AtProto.Authentication.AtProtoCredential!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Unspecced.RecommendationReadOnlyCollection<idunno.Bluesky.Unspecced.AtmosphereExploreArticle!>!>!>!
+idunno.Bluesky.AlreadyLeftConvo
+idunno.Bluesky.AlreadyLeftConvo.AlreadyLeftConvo(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
+idunno.Bluesky.InternalError
+idunno.Bluesky.InternalError.InternalError(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
+idunno.Bluesky.InvalidContacts
+idunno.Bluesky.InvalidContacts.InvalidContacts(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
+idunno.Bluesky.InvalidCursor
+idunno.Bluesky.InvalidCursor.InvalidCursor(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
+idunno.Bluesky.InvalidDid
+idunno.Bluesky.InvalidDid.InvalidDid(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
+idunno.Bluesky.InvalidLimit
+idunno.Bluesky.InvalidLimit.InvalidLimit(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
+idunno.Bluesky.InvalidPhone
+idunno.Bluesky.InvalidPhone.InvalidPhone(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
+idunno.Bluesky.TooManyContacts
+idunno.Bluesky.TooManyContacts.TooManyContacts(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void

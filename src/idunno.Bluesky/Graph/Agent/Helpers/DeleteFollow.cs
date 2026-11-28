@@ -18,11 +18,16 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-    /// <exception cref="ArgumentException">Thrown when the <paramref name="uri"/> does not point to a Bluesky follow record, or its RecordKey is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when the <paramref name="uri"/> does not point to a Bluesky follow record, its RecordKey is <see langword="null"/>, or it identifies a permissioned space.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The return type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public async Task<AtProtoHttpResult<DeleteResult>> DeleteFollow(AtUri uri, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(uri);
+
+        if (uri.IsSpaceUri)
+        {
+            throw SpaceUriGuard.NotSupported(uri, nameof(uri));
+        }
 
         if (!IsAuthenticated)
         {

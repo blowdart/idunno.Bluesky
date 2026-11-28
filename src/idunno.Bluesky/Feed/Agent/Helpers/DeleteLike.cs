@@ -19,12 +19,18 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">if <paramref name="uri"/> is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
-    /// <exception cref="ArgumentException">Thrown when the <paramref name="uri"/> does not point to a Bluesky feed post or like record, or its RecordKey is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when the <paramref name="uri"/> does not point to a Bluesky feed post or like record, its RecordKey is <see langword="null"/>, or it identifies a permissioned space.</exception>
     /// <exception cref="BlueskyException">Thrown when the like record discovery returns an invalid <see cref="AtUri"/> with no record key.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The return type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public async Task<AtProtoHttpResult<DeleteResult>> DeleteLike(AtUri uri, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(uri);
+
+        if (uri.IsSpaceUri)
+        {
+            throw SpaceUriGuard.NotSupported(uri, nameof(uri));
+        }
+
         ArgumentNullException.ThrowIfNull(uri.Collection);
         ArgumentNullException.ThrowIfNull(uri.RecordKey);
 

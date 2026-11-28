@@ -9,6 +9,42 @@ namespace idunno.AtProto.Test;
 public class DagCborTests
 {
     [Theory]
+    [InlineData("""{"b":2,"a":1}""", "A2616101616202")]
+    [InlineData("""{"array":[true,null,-1],"bytes":{"$bytes":"AQI="}}""", "A265617272617983F5F620656279746573420102")]
+    public void OriginalJsonEncodesAsCanonicalDagCbor(string json, string expected)
+    {
+        using JsonDocument document = JsonDocument.Parse(json);
+        Assert.Equal(Convert.FromHexString(expected), DagCbor.FromJsonElement(document.RootElement));
+    }
+
+    [Theory]
+    [InlineData("""{"a":1,"a":2}""")]
+    [InlineData("""{"number":1.5}""")]
+    [InlineData("""{"number":9223372036854775808}""")]
+    [InlineData("""{"bytes":{"$bytes":"invalid!"}}""")]
+    [InlineData("""{"link":{"$link":"invalid"}}""")]
+    [InlineData("""{"link":{"$link":"invalid","extra":1}}""")]
+    [InlineData("""{"bytes":{"$bytes":12}}""")]
+    [InlineData("""{"nested":{"a":1,"a":2}}""")]
+    [InlineData("""{"value":"\uD800"}""")]
+    public void InvalidRecordValuesCannotBeAssignedACanonicalCid(string json)
+    {
+        using JsonDocument document = JsonDocument.Parse(json);
+        Assert.Throws<InvalidDataException>(() => DagCbor.FromJsonElement(document.RootElement));
+    }
+
+    [Fact]
+    public void OriginalCidLinksAndLegacyUriStringsArePreservedDuringEncoding()
+    {
+        Cid cid = Cid.FromDagCbor([0xa0]);
+        string json = $$$"""{"uri":"at://did:plc:owner/space/legacy","link":{"$link":"{{{cid}}}"}}""";
+        using JsonDocument document = JsonDocument.Parse(json);
+        JsonElement roundTrip = DagCbor.ToJsonElement(DagCbor.FromJsonElement(document.RootElement));
+        Assert.Equal("at://did:plc:owner/space/legacy", roundTrip.GetProperty("uri").GetString());
+        Assert.Equal(cid.Value, roundTrip.GetProperty("link").GetProperty("$link").GetString());
+    }
+
+    [Theory]
     [InlineData(new byte[] { 0x00 }, "0")]
     [InlineData(new byte[] { 0x18, 0x2a }, "42")]
     [InlineData(new byte[] { 0x20 }, "-1")]

@@ -30,7 +30,7 @@ public sealed class AtUriConverter : JsonConverter<AtUri>
 
         try
         {
-            atUri = new AtUri(reader.GetString()!);
+            atUri = AtUri.FromString(reader.GetString()!);
         }
         catch (ArgumentException e)
         {

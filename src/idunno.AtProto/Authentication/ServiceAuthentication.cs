@@ -872,7 +872,7 @@ public static class ServiceAuthentication
     /// <summary>
     /// Decodes a canonical, unpadded base64url JWT segment.
     /// </summary>
-    private static byte[] DecodeSegment(string segment)
+    internal static byte[] DecodeSegment(string segment)
     {
         if (segment.Length == 0 || segment.Any(character => !char.IsAsciiLetterOrDigit(character) && character is not '-' and not '_'))
         {
@@ -893,7 +893,7 @@ public static class ServiceAuthentication
     /// <summary>
     /// Rejects duplicate properties and invalid Unicode anywhere in a JWT JSON object.
     /// </summary>
-    private static void ValidateObject(JsonElement element)
+    internal static void ValidateObject(JsonElement element)
     {
         if (element.ValueKind != JsonValueKind.Object)
         {
@@ -944,7 +944,7 @@ public static class ServiceAuthentication
     /// <summary>
     /// Reads a required scalar string without coercing JSON values.
     /// </summary>
-    private static string ReadString(JsonElement element, string name)
+    internal static string ReadString(JsonElement element, string name)
     {
         if (!element.TryGetProperty(name, out JsonElement value) || value.ValueKind != JsonValueKind.String)
         {
@@ -957,7 +957,7 @@ public static class ServiceAuthentication
     /// <summary>
     /// Reads a required finite integer timestamp within the supported date range.
     /// </summary>
-    private static DateTimeOffset ReadTimestamp(JsonElement payload, string name)
+    internal static DateTimeOffset ReadTimestamp(JsonElement payload, string name)
     {
         if (!payload.TryGetProperty(name, out JsonElement value) ||
             value.ValueKind != JsonValueKind.Number || !value.TryGetInt64(out long seconds))

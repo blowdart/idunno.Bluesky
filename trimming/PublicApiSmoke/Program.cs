@@ -9,6 +9,7 @@ using idunno.AtProto.Jetstream;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
 using idunno.AtProto.Server;
+using idunno.AtProto.Space;
 using idunno.Bluesky;
 using idunno.Bluesky.Actor;
 using idunno.Bluesky.Embed;
@@ -20,6 +21,22 @@ using idunno.Bluesky.Record;
 using idunno.Bluesky.RichText;
 
 using Microsoft.Extensions.DependencyInjection;
+
+#pragma warning disable BSKYSpaces
+using (OfflineHttpMessageHandler spaceHandler = new())
+using (HttpClient spaceClient = new(spaceHandler))
+{
+    AtProtoHttpResult<SpaceCredential> authorization = await AtProtoServer.AuthorizeSpaceSync(
+        space: new SpaceAtUri("at:space/did:plc:smoke/app.bsky.bookmark/test"),
+        service: new Uri("https://offline.invalid"),
+        httpClient: spaceClient,
+        notify: new SpaceNotificationRegistration(new Uri("https://offline.invalid/notify"), "smoke-secret"));
+    if (authorization.Succeeded || authorization.AtErrorDetail?.Error != "NotAuthorized")
+    {
+        throw new InvalidOperationException("The trimmed space authorization did not preserve its request or endpoint error.");
+    }
+}
+#pragma warning restore BSKYSpaces
 
 string labelDatabase = Path.Combine(Path.GetTempPath(), $"labeler-smoke-{Guid.NewGuid():N}.db");
 try
@@ -790,7 +807,7 @@ internal sealed class OfflineHttpClientFactory(OfflineHttpMessageHandler handler
 {
     private readonly OfflineHttpMessageHandler _handler = handler;
 
-    public HttpClient CreateClient(string name) => new(_handler, disposeHandler: false);
+    public HttpClient CreateClient(string _) => new(_handler, disposeHandler: false);
 }
 
 internal sealed class OfflineHttpMessageHandler : HttpMessageHandler
@@ -839,7 +856,7 @@ internal sealed class OfflineHttpMessageHandler : HttpMessageHandler
 
     public int RequestCount { get; private set; }
 
-    protected override Task<HttpResponseMessage> SendAsync(
+    protected override async Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
@@ -852,6 +869,23 @@ internal sealed class OfflineHttpMessageHandler : HttpMessageHandler
 
         RequestCount++;
 
+        if (request.RequestUri?.AbsolutePath == "/xrpc/com.atproto.space.authorizeSpaceSync")
+        {
+            using JsonDocument body = JsonDocument.Parse(await request.Content!.ReadAsByteArrayAsync(cancellationToken));
+            if (body.RootElement.GetProperty("space").GetString() != "at:space/did:plc:smoke/app.bsky.bookmark/test" ||
+                body.RootElement.GetProperty("credentialKey").GetString()?.StartsWith("did:key:z", StringComparison.Ordinal) is not true ||
+                body.RootElement.GetProperty("notify").GetProperty("token").GetString() != "smoke-secret")
+            {
+                throw new InvalidOperationException("The trimmed space authorization could not serialize its public proof key and registration.");
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.Forbidden)
+            {
+                Content = new StringContent("""{"error":"NotAuthorized","message":"offline smoke check"}""", Encoding.UTF8, "application/json"),
+                RequestMessage = request
+            };
+        }
+
         string response = request.RequestUri?.AbsolutePath switch
         {
             "/xrpc/com.atproto.server.describeServer" => DescribeServerResponse,
@@ -860,10 +894,10 @@ internal sealed class OfflineHttpMessageHandler : HttpMessageHandler
             _ => throw new InvalidOperationException($"Unexpected request URI {request.RequestUri}.")
         };
 
-        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        return new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new StringContent(response, Encoding.UTF8, "application/json"),
             RequestMessage = request
-        });
+        };
     }
 }

@@ -810,6 +810,7 @@ public partial class AtProtoAgent : Agent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, the uri collection or the uri record key is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> identifies a permissioned space.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The return type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public async Task<AtProtoHttpResult<DeleteResult>> DeleteRecord(
@@ -818,6 +819,11 @@ public partial class AtProtoAgent : Agent
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(uri);
+
+        if (uri.IsSpaceUri)
+        {
+            throw SpaceUriGuard.NotSupported(uri, nameof(uri));
+        }
 
         ArgumentNullException.ThrowIfNull(uri.Collection);
         ArgumentNullException.ThrowIfNull(uri.RecordKey);
@@ -882,7 +888,12 @@ public partial class AtProtoAgent : Agent
     {
         ArgumentNullException.ThrowIfNull(strongReference);
         ArgumentNullException.ThrowIfNull(strongReference.Uri);
-        ArgumentNullException.ThrowIfNull(strongReference.Uri.Repo);
+
+        if (strongReference.Uri.IsSpaceUri)
+        {
+            throw SpaceUriGuard.NotSupported(strongReference.Uri, nameof(strongReference));
+        }
+
         ArgumentNullException.ThrowIfNull(strongReference.Uri.Collection);
         ArgumentNullException.ThrowIfNull(strongReference.Uri.RecordKey);
 
@@ -1323,6 +1334,11 @@ public partial class AtProtoAgent : Agent
     {
         ArgumentNullException.ThrowIfNull(uri);
 
+        if (uri.IsSpaceUri)
+        {
+            throw SpaceUriGuard.NotSupported(uri, nameof(uri));
+        }
+
         if (uri.Collection is null)
         {
             throw new ArgumentException($"{uri} does not have a collection.", nameof(uri));
@@ -1437,6 +1453,11 @@ public partial class AtProtoAgent : Agent
     {
         ArgumentNullException.ThrowIfNull(uri);
 
+        if (uri.IsSpaceUri)
+        {
+            throw SpaceUriGuard.NotSupported(uri, nameof(uri));
+        }
+
         if (uri.Collection is null)
         {
             throw new ArgumentException($"{uri} does not have a collection.", nameof(uri));
@@ -1539,6 +1560,11 @@ public partial class AtProtoAgent : Agent
     {
         ArgumentNullException.ThrowIfNull(uri);
 
+        if (uri.IsSpaceUri)
+        {
+            throw SpaceUriGuard.NotSupported(uri, nameof(uri));
+        }
+
         if (uri.Collection is null)
         {
             throw new ArgumentException($"{uri} does not have a collection.", nameof(uri));
@@ -1574,6 +1600,11 @@ public partial class AtProtoAgent : Agent
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(uri);
+
+        if (uri.IsSpaceUri)
+        {
+            throw SpaceUriGuard.NotSupported(uri, nameof(uri));
+        }
 
         if (uri.Collection is null)
         {
@@ -1614,6 +1645,11 @@ public partial class AtProtoAgent : Agent
         ArgumentNullException.ThrowIfNull(uri);
         ArgumentNullException.ThrowIfNull(pds);
 
+        if (uri.IsSpaceUri)
+        {
+            throw SpaceUriGuard.NotSupported(uri, nameof(uri));
+        }
+
         if (uri.Collection is null)
         {
             throw new ArgumentException($"{uri} does not have a collection.", nameof(uri));
@@ -1640,6 +1676,11 @@ public partial class AtProtoAgent : Agent
         Cid cid)
     {
         ArgumentNullException.ThrowIfNull(uri);
+
+        if (uri.IsSpaceUri)
+        {
+            throw SpaceUriGuard.NotSupported(uri, nameof(uri));
+        }
 
         if (uri.Collection is null)
         {
@@ -1678,6 +1719,11 @@ public partial class AtProtoAgent : Agent
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(uri);
+
+        if (uri.IsSpaceUri)
+        {
+            throw SpaceUriGuard.NotSupported(uri, nameof(uri));
+        }
 
         if (uri.Collection is null)
         {
@@ -1720,6 +1766,11 @@ public partial class AtProtoAgent : Agent
         ArgumentNullException.ThrowIfNull(uri);
         ArgumentNullException.ThrowIfNull(cid);
         ArgumentNullException.ThrowIfNull(pds);
+
+        if (uri.IsSpaceUri)
+        {
+            throw SpaceUriGuard.NotSupported(uri, nameof(uri));
+        }
 
         if (uri.Collection is null)
         {

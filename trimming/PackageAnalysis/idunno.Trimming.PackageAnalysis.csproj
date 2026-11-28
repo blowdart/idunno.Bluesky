@@ -13,6 +13,7 @@
   <ItemGroup Condition="'$(UsePackedPackages)' != 'true'">
     <ProjectReference Include="..\..\src\idunno.AtProto.Types\idunno.AtProto.Types.csproj" />
     <ProjectReference Include="..\..\src\idunno.AtProto\idunno.AtProto.csproj" />
+    <ProjectReference Include="..\..\src\idunno.AtProto.AspNet.Spaces\idunno.AtProto.AspNet.Spaces.csproj" Condition="'$(TargetFramework)' == 'net10.0'" />
     <ProjectReference Include="..\..\src\idunno.AtProto.OAuthCallback\idunno.AtProto.OAuthCallback.csproj" />
     <ProjectReference Include="..\..\src\idunno.Bluesky\idunno.Bluesky.csproj" />
     <ProjectReference Include="..\..\src\idunno.Bluesky.AspNet.Authentication\idunno.Bluesky.AspNet.Authentication.csproj" />
@@ -35,6 +36,7 @@
   <ItemGroup Condition="'$(UsePackedPackages)' == 'true'">
     <PackageReference Include="idunno.AtProto.Types" VersionOverride="$(IdunnoPackageVersion)" />
     <PackageReference Include="idunno.AtProto" VersionOverride="$(IdunnoPackageVersion)" />
+    <PackageReference Include="idunno.AtProto.AspNet.Spaces" VersionOverride="$(IdunnoPackageVersion)" Condition="'$(TargetFramework)' == 'net10.0'" />
     <PackageReference Include="idunno.AtProto.OAuthCallback" VersionOverride="$(IdunnoPackageVersion)" />
     <PackageReference Include="idunno.Bluesky" VersionOverride="$(IdunnoPackageVersion)" />
     <PackageReference Include="idunno.Bluesky.AspNet.Authentication" VersionOverride="$(IdunnoPackageVersion)" />
@@ -57,6 +59,7 @@
   <ItemGroup>
     <TrimmerRootAssembly Include="idunno.AtProto.Types" />
     <TrimmerRootAssembly Include="idunno.AtProto" />
+    <TrimmerRootAssembly Include="idunno.AtProto.AspNet.Spaces" Condition="'$(TargetFramework)' == 'net10.0'" />
     <TrimmerRootAssembly Include="idunno.AtProto.OAuthCallback" />
     <TrimmerRootAssembly Include="idunno.Bluesky" />
     <TrimmerRootAssembly Include="idunno.Bluesky.AspNet.Authentication" />

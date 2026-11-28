@@ -1,0 +1,4 @@
+#nullable enable
+[BSKYSpaces]idunno.AtProto.AspNet.Spaces.ManagedSpaceAccessEndpointRouteBuilderExtensions
+[BSKYSpaces]static idunno.AtProto.AspNet.Spaces.ManagedSpaceAccessEndpointRouteBuilderExtensions.AddManagedSpaceAccess<TDecider>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<idunno.AtProto.Space.ManagedSpaceAccessHandlerOptions!>! configureOptions) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+[BSKYSpaces]static idunno.AtProto.AspNet.Spaces.ManagedSpaceAccessEndpointRouteBuilderExtensions.MapManagedSpaceCheckAccess(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints) -> Microsoft.AspNetCore.Builder.IEndpointConventionBuilder!
